@@ -168,7 +168,7 @@ export default function ScanPage() {
   if (!initialized) {
     return (
       <div className="min-h-dvh bg-[var(--color-bg)] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+        <div role="status" className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
