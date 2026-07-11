@@ -45,6 +45,25 @@ export async function getCurrentMerchantId(): Promise<string | null> {
 }
 
 /**
+ * Get the current user's phone number from the Supabase auth session.
+ * Returns null if not available.
+ */
+export async function getCurrentUserPhone(): Promise<string | null> {
+  try {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user?.phone) {
+      return user.phone;
+    }
+  } catch {
+    // Supabase not available
+  }
+
+  return null;
+}
+
+/**
  * Sign out the current user and clear stored session.
  */
 export async function signOut() {
