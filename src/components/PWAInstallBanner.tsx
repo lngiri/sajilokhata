@@ -33,7 +33,7 @@ export default function PWAInstallBanner() {
     if (standalone) return;
 
     // Detect iOS Safari
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as typeof window & { MSStream?: unknown }).MSStream;
     setIsIOS(ios);
 
     // For Android/Chrome: capture beforeinstallprompt
