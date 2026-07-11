@@ -23,12 +23,16 @@ export async function getMerchantProfile(merchantId: string): Promise<any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateMerchantProfile(
   merchantId: string,
-  updates: { name?: string; business_name?: string; address?: string }
+  updates: {
+    name?: string;
+    business_name?: string;
+    business_type?: string;
+    address?: string;
+  }
 ): Promise<any> {
   const { data, error } = await supabase
     .from("merchants")
-    .update(updates)
-    .eq("id", merchantId)
+    .upsert({ id: merchantId, ...updates }, { onConflict: "id" })
     .select()
     .single();
 
@@ -227,6 +231,54 @@ export async function getMerchantByPhone(
 
   if (error) throw error;
   return data;
+}
+
+/**
+ * Get customer statistics — total outstanding balance across all shops,
+ * number of shops they owe at, and a per-shop breakdown.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCustomerStats(
+  customerPhone: string
+): Promise<{
+  totalOutstanding: number;
+  shopsCount: number;
+  totalCreditLimit: number;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  relationships: any[];
+} | null> {
+  // First find the customer record(s) by phone
+  const { data: customers } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("phone", customerPhone);
+
+  if (!customers || customers.length === 0) return null;
+
+  const customerIds = customers.map((c: any) => c.id);
+
+  // Get all merchant relationships with balance info
+  // Using a left join (no !inner) so orphaned merchant_customers records
+  // still show their balance even if merchant metadata is missing.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: relationships, error } = (await supabase
+    .from("merchant_customers")
+    .select("current_balance, credit_limit, merchants(id, name, business_name)")
+    .in("customer_id", customerIds)) as any;
+
+  if (error) throw error;
+
+  const totalOutstanding =
+    relationships?.reduce((sum: number, r: any) => sum + (r.current_balance || 0), 0) || 0;
+  const totalCreditLimit =
+    relationships?.reduce((sum: number, r: any) => sum + (r.credit_limit || 0), 0) || 0;
+
+  return {
+    totalOutstanding,
+    shopsCount: relationships?.length || 0,
+    totalCreditLimit,
+    relationships: relationships || [],
+  };
 }
 
 /**

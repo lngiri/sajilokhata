@@ -30,9 +30,15 @@ function loadCustomerSession(): CustomerSession | null {
   return null;
 }
 
+/** Cookie name used by middleware to protect /customer/* routes server-side */
+const CUSTOMER_COOKIE_NAME = "customer_session";
+
 function saveCustomerSession(phone: string, name: string) {
   try {
     localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone, name }));
+    // Also set a cookie so middleware can verify the session server-side
+    // This prevents flash-of-content when navigating directly to /customer/*
+    document.cookie = `${CUSTOMER_COOKIE_NAME}=${encodeURIComponent(JSON.stringify({ phone, name }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
   } catch {
     // localStorage full or unavailable
   }
@@ -41,6 +47,8 @@ function saveCustomerSession(phone: string, name: string) {
 function clearCustomerSession() {
   try {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+    // Expire the cookie immediately
+    document.cookie = `${CUSTOMER_COOKIE_NAME}=; path=/; max-age=0`;
   } catch {
     // Ignore
   }

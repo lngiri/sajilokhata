@@ -277,3 +277,11 @@ GROUP BY
 
 CREATE UNIQUE INDEX idx_customer_summary
   ON customer_summary(merchant_id, customer_id);
+
+-- ============================================================
+-- ENABLE REALTIME FOR LIVE DASHBOARD UPDATES
+-- credit_logs: merchant sees new entries instantly
+-- merchant_customers: balance updates reflect in real-time
+-- ============================================================
+ALTER PUBLICATION supabase_realtime ADD TABLE credit_logs;
+ALTER PUBLICATION supabase_realtime ADD TABLE merchant_customers;

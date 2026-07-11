@@ -43,14 +43,31 @@ export async function middleware(request: NextRequest) {
   const bypassCookie = request.cookies.get("auth_bypass");
   const isBypassed = bypassCookie?.value === "true";
 
+  // === Merchant / Delivery Protection (Supabase Auth) ===
   if (
     !user &&
-    !isBypassed &&
-    (request.nextUrl.pathname.startsWith("/merchant") ||
-      request.nextUrl.pathname.startsWith("/delivery"))
+    !isBypassed
   ) {
+    if (
+      request.nextUrl.pathname.startsWith("/merchant") ||
+      request.nextUrl.pathname.startsWith("/delivery")
+    ) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // === Customer Protection (Cookie-based, localStorage fallback) ===
+  // Customers use a localStorage-based session (set on /scan page).
+  // A matching cookie is also set so middleware can prevent content flash
+  // on server-rendered pages until the client-side useEffect redirect fires.
+  const customerSessionCookie = request.cookies.get("customer_session");
+  const isCustomerPath = request.nextUrl.pathname.startsWith("/customer/");
+
+  if (isCustomerPath && !customerSessionCookie) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = "/scan";
     return NextResponse.redirect(url);
   }
 

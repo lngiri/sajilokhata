@@ -5,7 +5,14 @@ import BottomNav from "@/components/BottomNav";
 import NetworkStatus from "@/components/NetworkStatus";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import PullToRefresh from "@/components/PullToRefresh";
-import { getMerchantStats, getMerchantCreditLogs } from "@/lib/actions";
+import { QRDisplay } from "@/components/QRCode";
+import { useToast } from "@/components/Toast";
+import { createClient } from "@/lib/supabase/client";
+import {
+  getMerchantStats,
+  getMerchantCreditLogs,
+  getMerchantProfile,
+} from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
@@ -25,8 +32,18 @@ function timeAgo(dateString: string): string {
   return `${days}d ago`;
 }
 
+interface MerchantProfile {
+  id: string;
+  name: string;
+  business_type: string;
+  business_name: string | null;
+  phone?: string;
+}
+
 export default function MerchantDashboard() {
+  const { addToast } = useToast();
   const [merchantId, setMerchantId] = useState<string | null>(null);
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [stats, setStats] = useState<{
     totalOutstanding: number;
     totalCreditLimit: number;
@@ -44,13 +61,28 @@ export default function MerchantDashboard() {
       customers: { name: string | null; phone: string } | null;
     }[]
   >([]);
+  const [recentActivity, setRecentActivity] = useState<
+    {
+      id: string;
+      amount: number;
+      type: string;
+      status: string;
+      description: string | null;
+      created_at: string;
+      customers: { name: string | null; phone: string } | null;
+    }[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
 
+  // QR Modal state (Issue 3: pull-to-refresh)
+  const [showQRModal, setShowQRModal] = useState(false);
+
+  const supabase = useRef(createClient()).current;
+
   const loadData = useCallback(async () => {
-    // Use the latest merchantId from ref to avoid stale closures
     const id = merchantIdRef.current || (await getCurrentMerchantId());
     if (!mountedRef.current) return;
 
@@ -59,13 +91,17 @@ export default function MerchantDashboard() {
 
     if (id) {
       try {
-        const [statsData, logsData] = await Promise.all([
+        const [statsData, pendingData, activityData, profileData] = await Promise.all([
           getMerchantStats(id),
           getMerchantCreditLogs(id, { status: "pending", limit: 10 }),
+          getMerchantCreditLogs(id, { limit: 15 }),
+          getMerchantProfile(id).catch(() => null),
         ]);
         if (!mountedRef.current) return;
         setStats(statsData);
-        setPendingLogs(logsData as typeof pendingLogs);
+        setPendingLogs(pendingData as typeof pendingLogs);
+        setRecentActivity(activityData as typeof recentActivity);
+        setMerchantProfile(profileData);
         setLastRefreshed(new Date());
       } catch {
         // Empty state - no data yet
@@ -87,7 +123,6 @@ export default function MerchantDashboard() {
       }
     }, POLL_INTERVAL);
 
-    // Also refresh when the page becomes visible again (tab switch)
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         loadData();
@@ -101,6 +136,104 @@ export default function MerchantDashboard() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [loadData]);
+
+  // ================================================================
+  // Issue 1: Supabase Realtime — new credit log INSERT for this merchant
+  // ================================================================
+  useEffect(() => {
+    if (!merchantId) return;
+
+    const channel = supabase
+      .channel("merchant-dashboard-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "credit_logs",
+          filter: `merchant_id=eq.${merchantId}`,
+        },
+        (payload: any) => {
+          if (!mountedRef.current) return;
+          const customerName = payload.new?.description || "a customer";
+          addToast(
+            `📥 New credit request: NPR ${Number(payload.new?.amount || 0).toLocaleString()} — ${customerName}`,
+            "info"
+          );
+          loadData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [merchantId, addToast, loadData, supabase]);
+
+  // ================================================================
+  // Issue 1: Realtime — credit_log UPDATE (status changes)
+  // ================================================================
+  useEffect(() => {
+    if (!merchantId) return;
+
+    const channel = supabase
+      .channel("merchant-dashboard-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "credit_logs",
+          filter: `merchant_id=eq.${merchantId}`,
+        },
+        (payload: any) => {
+          if (!mountedRef.current) return;
+          const oldStatus = payload.old?.status;
+          const newStatus = payload.new?.status;
+          if (oldStatus !== newStatus && newStatus) {
+            addToast(
+              `📝 Entry ${newStatus}: NPR ${Number(payload.new?.amount || 0).toLocaleString()}`,
+              newStatus === "approved" ? "success" : "warning"
+            );
+            loadData();
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [merchantId, addToast, loadData, supabase]);
+
+  // ================================================================
+  // Issue 3: Handle pull-to-refresh — show QR modal + silent refetch
+  // ================================================================
+  const handlePullRefresh = async () => {
+    setShowQRModal(true);
+    try {
+      await loadData();
+    } catch {
+      // Silent — data already refreshed
+    }
+  };
+
+  const handleCloseQR = () => {
+    setShowQRModal(false);
+  };
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case "approved":
+        return "text-green-600 bg-green-50";
+      case "pending":
+        return "text-amber-600 bg-amber-50";
+      case "rejected":
+        return "text-red-500 bg-red-50";
+      default:
+        return "text-gray-500 bg-gray-100";
+    }
+  };
 
   return (
     <div className="pb-20">
@@ -126,153 +259,258 @@ export default function MerchantDashboard() {
           <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <PullToRefresh onRefresh={loadData}>
-        <div className="px-4 py-4 space-y-4">
-          {/* Stats Cards */}
-          {stats && (
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                  Outstanding
-                </p>
-                <p className="text-xl font-bold text-[var(--color-danger)]">
-                  NPR {stats.totalOutstanding.toLocaleString()}
-                </p>
+        <PullToRefresh onRefresh={handlePullRefresh}>
+          <div className="px-4 py-4 space-y-4">
+            {/* Stats Cards */}
+            {stats && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                    Outstanding
+                  </p>
+                  <p className="text-xl font-bold text-[var(--color-danger)]">
+                    NPR {stats.totalOutstanding.toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                    Today
+                  </p>
+                  <p className="text-xl font-bold text-[var(--color-primary)]">
+                    NPR {stats.todayTotal.toLocaleString()}
+                  </p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                    Customers
+                  </p>
+                  <p className="text-xl font-bold text-[var(--color-text)]">
+                    {stats.customerCount}
+                  </p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
+                    Pending
+                  </p>
+                  <p className="text-xl font-bold text-[var(--color-accent)]">
+                    {stats.pendingCount}
+                  </p>
+                  {stats.pendingCount > 0 && (
+                    <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
+                  )}
+                </div>
               </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                  Today
-                </p>
-                <p className="text-xl font-bold text-[var(--color-primary)]">
-                  NPR {stats.todayTotal.toLocaleString()}
-                </p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                  Customers
-                </p>
-                <p className="text-xl font-bold text-[var(--color-text)]">
-                  {stats.customerCount}
-                </p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                  Pending
-                </p>
-                <p className="text-xl font-bold text-[var(--color-accent)]">
-                  {stats.pendingCount}
-                </p>
-                {stats.pendingCount > 0 && (
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
-                )}
-              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div className="flex gap-3">
+              <a
+                href="/merchant/scan"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+                </svg>
+                Scan QR
+              </a>
+              <a
+                href="/merchant/qr"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                </svg>
+                Show QR
+              </a>
+              <a
+                href="/merchant/logs"
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Ledger
+              </a>
             </div>
-          )}
 
-          {/* Quick Actions */}
-          <div className="flex gap-3">
-            <a
-              href="/merchant/scan"
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
-              </svg>
-              Scan QR
-            </a>
-            <a
-              href="/merchant/qr"
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-              </svg>
-              Show QR
-            </a>
-            <a
-              href="/merchant/logs"
-              className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Ledger
-            </a>
-          </div>
-
-          {/* Pending Approvals */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
+            {/* Issue 4: Recent Customer Activity Feed */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-[var(--color-text)]">
-                  Pending Approvals
+                  Recent Activity
                 </h2>
-                {lastRefreshed && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[var(--color-primary)]/5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                    <span className="text-[10px] text-[var(--color-primary)] font-medium">
-                      Live
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
                 {lastRefreshed && (
                   <span className="text-[10px] text-[var(--color-text-muted)]">
                     {timeAgo(lastRefreshed.toISOString())}
                   </span>
                 )}
-                {pendingLogs.length > 0 && (
-                  <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-xs font-medium rounded-full">
-                    {pendingLogs.length}
-                  </span>
-                )}
+              </div>
+
+              {recentActivity.length === 0 ? (
+                <div className="text-center py-8 text-[var(--color-text-muted)]">
+                  <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm">No activity yet</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  {recentActivity.slice(0, 10).map((log) => (
+                    <div
+                      key={log.id}
+                      className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3"
+                    >
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
+                        <span className="text-sm font-bold">
+                          {log.type === "debit" ? "+" : "-"}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                            {log.customers?.name || log.customers?.phone || "Unknown"}
+                          </p>
+                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium capitalize ${statusColor(log.status)}`}>
+                            {log.status}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[var(--color-text-muted)] truncate">
+                          {log.description || timeAgo(log.created_at)}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className={`font-bold text-xs ${log.status === "approved" ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"}`}>
+                          NPR {log.amount.toLocaleString()}
+                        </p>
+                        <p className="text-[9px] text-[var(--color-text-muted)]">
+                          {timeAgo(log.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Pending Approvals */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold text-[var(--color-text)]">
+                    Pending Approvals
+                  </h2>
+                  {lastRefreshed && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[var(--color-primary)]/5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                      <span className="text-[10px] text-[var(--color-primary)] font-medium">
+                        Live
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {lastRefreshed && (
+                    <span className="text-[10px] text-[var(--color-text-muted)]">
+                      {timeAgo(lastRefreshed.toISOString())}
+                    </span>
+                  )}
+                  {pendingLogs.length > 0 && (
+                    <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-xs font-medium rounded-full">
+                      {pendingLogs.length}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {pendingLogs.length === 0 ? (
+                <div className="text-center py-8 text-[var(--color-text-muted)]">
+                  <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+                  </svg>
+                  <p className="text-sm">No pending entries</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {pendingLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
+                        <span className="text-lg font-bold text-[var(--color-accent)]">
+                          {log.type === "debit" ? "+" : "-"}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                          {log.customers?.name || log.customers?.phone || "Unknown"}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)] truncate">
+                          {log.description || "No description"}
+                        </p>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-[var(--color-text)]">
+                          NPR {log.amount.toLocaleString()}
+                        </p>
+                        <p className="text-[10px] text-[var(--color-text-muted)]">
+                          {timeAgo(log.created_at)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </PullToRefresh>
+      )}
+
+      {/* ================================================================ */}
+      {/* Issue 3: QR Modal — appears on pull-to-refresh tap/release */}
+      {/* ================================================================ */}
+      {showQRModal && merchantProfile && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          onClick={handleCloseQR}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-2xl animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center mb-4">
+              <h2 className="text-lg font-bold text-[var(--color-text)]">
+                {merchantProfile.name}
+              </h2>
+              <p className="text-sm text-[var(--color-text-muted)] capitalize">
+                {merchantProfile.business_type} Shop
+              </p>
+            </div>
+
+            <QRDisplay
+              merchantId={merchantProfile.id}
+              merchantName={merchantProfile.name}
+              businessType={merchantProfile.business_type}
+            />
+
+            <div className="bg-[var(--color-primary)]/5 rounded-xl p-3 mt-4">
+              <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
+                <svg className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p>Data refreshed. Tap outside this card to close.</p>
               </div>
             </div>
 
-            {pendingLogs.length === 0 ? (
-              <div className="text-center py-8 text-[var(--color-text-muted)]">
-                <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                </svg>
-                <p className="text-sm">No pending entries</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {pendingLogs.map((log) => (
-                  <div
-                    key={log.id}
-                    className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
-                      <span className="text-lg font-bold text-[var(--color-accent)]">
-                        {log.type === "debit" ? "+" : "-"}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                        {log.customers?.name || log.customers?.phone || "Unknown"}
-                      </p>
-                      <p className="text-xs text-[var(--color-text-muted)] truncate">
-                        {log.description || "No description"}
-                      </p>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="font-bold text-[var(--color-text)]">
-                        NPR {log.amount.toLocaleString()}
-                      </p>
-                      <p className="text-[10px] text-[var(--color-text-muted)]">
-                        {timeAgo(log.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <button
+              onClick={handleCloseQR}
+              className="w-full mt-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+            >
+              Close
+            </button>
           </div>
         </div>
-        </PullToRefresh>
       )}
 
       <BottomNav />

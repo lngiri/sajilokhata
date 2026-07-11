@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import CustomerBottomNav from "@/components/CustomerBottomNav";
+import { createClient } from "@/lib/supabase/client";
 import {
   getMerchantByPhone,
   findOrCreateCustomer,
   linkCustomerToMerchant,
   createCreditLog,
-  getCustomerCreditLogs,
+  getCustomerStats,
 } from "@/lib/actions";
 
-type Flow = "menu" | "scan-qr" | "search-phone" | "enter-amount" | "confirm" | "history" | "success";
+type Flow = "menu" | "scan-qr" | "search-phone" | "enter-amount" | "success";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -30,6 +32,20 @@ export default function CustomerDashboard() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  // Stats
+  const [stats, setStats] = useState<{
+    totalOutstanding: number;
+    shopsCount: number;
+    totalCreditLimit: number;
+    relationships: Array<{
+      current_balance: number;
+      credit_limit: number;
+      merchants: { id: string; name: string; business_name: string | null } | null;
+    }>;
+  } | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   // Search state
   const [searchPhone, setSearchPhone] = useState("");
@@ -41,11 +57,6 @@ export default function CustomerDashboard() {
     business_type: string;
   } | null>(null);
   const [searchError, setSearchError] = useState("");
-
-  // History state
-  const [history, setHistory] = useState<any[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [initialized, setInitialized] = useState(false);
 
   // On mount, restore customer session from localStorage
   useEffect(() => {
@@ -65,12 +76,101 @@ export default function CustomerDashboard() {
     }
   }, []);
 
+  // Load stats when phone is available
+  useEffect(() => {
+    if (initialized && customerPhone) {
+      loadStats();
+    }
+  }, [initialized, customerPhone]);
+
   // If no customer phone, redirect to scan page to set it up
   useEffect(() => {
     if (initialized && flow === "menu" && !customerPhone) {
       window.location.href = "/scan";
     }
   }, [initialized, flow, customerPhone]);
+
+  // ================================================================
+  // Issue 1: Supabase Realtime — listen for credit_log status changes
+  // Shows toast when a merchant approves/rejects a customer's request
+  // Uses refs to avoid memory leaks on unmount (critical fix)
+  // ================================================================
+  const realtimeClientRef = useRef(createClient());
+  const realtimeChannelRef = useRef<any>(null);
+  const realtimeSetupStartedRef = useRef(false);
+
+  useEffect(() => {
+    if (!initialized || !customerPhone) return;
+    if (realtimeSetupStartedRef.current) return;
+    realtimeSetupStartedRef.current = true;
+
+    const loadStatsRef = loadStats;
+    const supabase = realtimeClientRef.current;
+
+    const setupRealtime = async () => {
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("phone", customerPhone);
+
+      if (!customers || customers.length === 0) return;
+
+      const customerIds = customers.map((c: any) => c.id);
+
+      realtimeChannelRef.current = supabase
+        .channel("customer-dashboard-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "credit_logs",
+            filter: `customer_id=in.(${customerIds.join(",")})`,
+          },
+          (payload: any) => {
+            const oldStatus = payload.old?.status;
+            const newStatus = payload.new?.status;
+            if (oldStatus && newStatus && oldStatus !== newStatus) {
+              const verb =
+                newStatus === "approved"
+                  ? "✅ Approved!"
+                  : newStatus === "rejected"
+                    ? "❌ Rejected"
+                    : `📝 ${newStatus}`;
+              addToast(
+                `${verb} NPR ${Number(payload.new?.amount || 0).toLocaleString()} request`,
+                newStatus === "approved" ? "success" : "warning"
+              );
+              loadStatsRef();
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      realtimeSetupStartedRef.current = false;
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, [initialized, customerPhone, addToast]);
+
+  const loadStats = async () => {
+    if (!customerPhone) return;
+    setStatsLoading(true);
+    try {
+      const data = await getCustomerStats(customerPhone);
+      setStats(data);
+    } catch {
+      // No data yet — first time customer
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   // Shared submit: creates the credit log
   const submitCreditEntry = async () => {
@@ -92,6 +192,8 @@ export default function CustomerDashboard() {
       });
 
       setFlow("success");
+      // Reload stats to reflect new pending entry
+      loadStats();
       addToast("Credit request sent! Awaiting merchant approval.", "success");
     } catch (err) {
       console.error("Failed to submit credit entry:", err);
@@ -152,20 +254,6 @@ export default function CustomerDashboard() {
     setFlow("enter-amount");
   };
 
-  // === Load history ===
-  const loadHistory = async () => {
-    if (!customerPhone) return;
-    setHistoryLoading(true);
-    try {
-      const logs = await getCustomerCreditLogs(customerPhone, { limit: 20 });
-      setHistory(logs);
-    } catch {
-      addToast("Failed to load history.", "error");
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
   // === Reset for a new transaction ===
   const resetTransaction = () => {
     setMerchantId("");
@@ -173,19 +261,6 @@ export default function CustomerDashboard() {
     setAmount("");
     setDescription("");
     setFlow("menu");
-  };
-
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-amber-50 text-amber-700";
-      case "approved":
-        return "bg-green-50 text-green-700";
-      case "rejected":
-        return "bg-red-50 text-red-700";
-      default:
-        return "bg-gray-50 text-gray-600";
-    }
   };
 
   // Prevent flash while reading localStorage
@@ -198,7 +273,7 @@ export default function CustomerDashboard() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--color-bg)] pb-8">
+    <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center px-4 py-3">
@@ -208,14 +283,17 @@ export default function CustomerDashboard() {
             </svg>
           </a>
           <h1 className="text-lg font-bold text-[var(--color-text)]">
-            {flow === "menu" ? "Customer Dashboard"
+            {flow === "menu" ? "My Dashboard"
               : flow === "scan-qr" ? "Scan Shop QR"
               : flow === "search-phone" ? "Find Shop"
               : flow === "enter-amount" ? "Enter Amount"
-              : flow === "confirm" ? "Confirm Entry"
-              : flow === "history" ? "My Requests"
               : "Success!"}
           </h1>
+          {customerPhone && (
+            <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">
+              ID: {customerPhone.slice(-4)}
+            </span>
+          )}
         </div>
       </div>
 
@@ -242,7 +320,47 @@ export default function CustomerDashboard() {
               </a>
             </div>
 
-            {/* Action cards */}
+            {/* Outstanding Balance Card */}
+            {statsLoading ? (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : stats ? (
+              <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-5 shadow-sm text-white">
+                <p className="text-sm opacity-80 mb-1">Total Outstanding Balance</p>
+                <p className="text-3xl font-bold mb-1">
+                  NPR {stats.totalOutstanding.toLocaleString()}
+                </p>
+                <p className="text-xs opacity-60">
+                  Across {stats.shopsCount} shop{stats.shopsCount !== 1 ? "s" : ""}
+                  {stats.totalCreditLimit > 0 && (
+                    <> &middot; Limit NPR {stats.totalCreditLimit.toLocaleString()}</>
+                  )}
+                </p>
+
+                {stats.relationships.length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
+                    {stats.relationships.map((rel, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <span className="opacity-80">{rel.merchants?.name || "Unknown Shop"}</span>
+                        <span className="font-semibold">NPR {rel.current_balance.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 text-center">
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  No outstanding credit yet
+                </p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                  Submit a credit request to get started
+                </p>
+              </div>
+            )}
+
+            {/* Quick Actions */}
             <div className="space-y-2">
               <button
                 onClick={() => { resetTransaction(); setFlow("scan-qr"); }}
@@ -277,8 +395,8 @@ export default function CustomerDashboard() {
                 <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
               </button>
 
-              <button
-                onClick={() => { loadHistory(); setFlow("history"); }}
+              <a
+                href="/customer/history"
                 className="w-full flex items-center gap-4 p-5 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-[0.98] transition-transform text-left"
               >
                 <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
@@ -287,11 +405,11 @@ export default function CustomerDashboard() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-[var(--color-text)]">My Requests</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">View your credit request history and status</p>
+                  <p className="font-semibold text-[var(--color-text)]">Transaction History</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">View all your credit requests and their status</p>
                 </div>
                 <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-              </button>
+              </a>
             </div>
           </div>
         )}
@@ -375,7 +493,7 @@ export default function CustomerDashboard() {
                       <p className="text-xs text-green-600 capitalize">{searchResult.business_type} Shop</p>
                     </div>
                     <span className="text-xs text-green-700 font-medium px-2.5 py-1 bg-green-100 rounded-full">
-                      Select →
+                      Select &rarr;
                     </span>
                   </div>
                 </div>
@@ -468,75 +586,18 @@ export default function CustomerDashboard() {
               >
                 New Request
               </button>
-              <button
-                onClick={() => { loadHistory(); setFlow("history"); }}
-                className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform"
+              <a
+                href="/customer/history"
+                className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform inline-flex items-center justify-center"
               >
-                View My Requests
-              </button>
+                View History
+              </a>
             </div>
           </div>
         )}
-
-        {/* ===== HISTORY ===== */}
-        {flow === "history" && (
-          <div className="space-y-3 animate-fade-in">
-            {historyLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : history.length === 0 ? (
-              <div className="text-center py-12 text-[var(--color-text-muted)]">
-                <svg className="w-16 h-16 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="font-medium">No requests yet</p>
-                <p className="text-sm mt-1">Scan a shop QR or search by phone to submit your first request.</p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {history.map((log: any) => (
-                  <div key={log.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-amber-50" : "bg-green-50"}`}>
-                        <span className="text-lg font-bold text-amber-600">{log.type === "debit" ? "+" : "-"}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                          {log.merchants?.name || "Shop"}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)] truncate">
-                          {log.description || "No description"}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-sm text-[var(--color-danger)]">
-                          NPR {log.amount.toLocaleString()}
-                        </p>
-                        <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium capitalize mt-1 ${statusBadge(log.status)}`}>
-                          {log.status}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
-                      {new Date(log.created_at).toLocaleDateString("en-US", {
-                        month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <button
-              onClick={() => setFlow("menu")}
-              className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
-            >
-              Back to Menu
-            </button>
-          </div>
-        )}
       </div>
+
+      <CustomerBottomNav />
     </div>
   );
 }
