@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ToastProvider } from "@/components/Toast";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -48,6 +49,7 @@ export default function RootLayout({
         <ServiceWorkerRegistrar />
         <ToastProvider>
           <main className="mx-auto max-w-md min-h-dvh">{children}</main>
+          <PWAInstallBanner />
         </ToastProvider>
       </body>
     </html>

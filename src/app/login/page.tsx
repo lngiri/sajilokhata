@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 
 type Step = "phone" | "otp";
 
+/** Bypass codes that skip real Supabase OTP verification during testing */
+const BYPASS_CODES = ["123456", "000000"];
+
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -37,12 +40,61 @@ export default function LoginPage() {
     }
   };
 
+  const signInWithPhoneAndPassword = async (password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      phone: `+977${phone}`,
+      password,
+    });
+
+    if (error) throw error;
+    return data;
+  };
+
   const handleOtpSubmit = async () => {
     if (otp.length < 4) return;
     setLoading(true);
     setError("");
 
     try {
+      // === BYPASS CODES for testing (pre-revenue phase) ===
+      if (BYPASS_CODES.includes(otp)) {
+        console.info("🔓 Bypass code entered — attempting auto-authentication");
+
+        // 1. Try to create/get a real Supabase auth user via admin API
+        const res = await fetch("/api/auth/bypass", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: `+977${phone}` }),
+        });
+
+        const bypassResult = await res.json();
+
+        if (res.ok && bypassResult.password) {
+          // Admin API worked — sign in with phone + password to get a real session
+          await signInWithPhoneAndPassword(bypassResult.password);
+          const userId = bypassResult.user_id;
+          localStorage.setItem("merchant_id", userId);
+          window.location.href = "/merchant/dashboard";
+          return;
+        }
+
+        // 2. Fallback: no service_role key, use localStorage bypass
+        console.warn(
+          "⚠️ Admin API unavailable, using localStorage bypass. RLS policies will limit database access."
+        );
+
+        // Store the bypass info for the middleware
+        document.cookie = `auth_bypass=true; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = `auth_bypass_phone=${phone}; path=/; max-age=86400; SameSite=Lax`;
+
+        const fallbackId =
+          bypassResult.bypass_id || `bypass-${phone}-${Date.now()}`;
+        localStorage.setItem("merchant_id", fallbackId);
+        window.location.href = "/merchant/dashboard";
+        return;
+      }
+
+      // === NORMAL OTP FLOW (real Supabase SMS) ===
       const { data, error } = await supabase.auth.verifyOtp({
         phone: `+977${phone}`,
         token: otp,
