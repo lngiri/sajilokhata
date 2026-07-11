@@ -42,29 +42,15 @@ export function QRDisplay({
 }
 
 // ============================================================
-// Reverse QR - Customer generates QR, merchant scans it
+// Customer QR - Customer shows their phone, merchant scans it
 // ============================================================
-interface ReverseQRProps {
-  merchantId: string;
+interface CustomerQRProps {
   customerId: string;
-  amount: number;
-  description?: string;
 }
 
-export function ReverseQR({
-  merchantId,
-  customerId,
-  amount,
-  description,
-}: ReverseQRProps) {
-  const qrData = JSON.stringify({
-    type: "reverse_scan",
-    merchantId,
-    customerId,
-    amount,
-    description,
-    timestamp: Date.now(),
-  });
+export function CustomerQR({ customerId }: CustomerQRProps) {
+  // Simple format: no merchant ID, no amount — just the customer's phone
+  const qrData = `sajilokhata:customer:${customerId}`;
 
   return (
     <div className="flex flex-col items-center p-6 bg-[var(--color-primary)]/5 rounded-2xl">
@@ -81,12 +67,9 @@ export function ReverseQR({
           includeMargin={true}
         />
       </div>
-      <p className="mt-3 text-lg font-bold text-[var(--color-text)]">
-        NPR {amount.toLocaleString()}
+      <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+        Customer ID: {customerId}
       </p>
-      {description && (
-        <p className="text-xs text-[var(--color-text-muted)]">{description}</p>
-      )}
     </div>
   );
 }

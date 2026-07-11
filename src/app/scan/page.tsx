@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { QRScanner, ReverseQR } from "@/components/QRCode";
+import { QRScanner, CustomerQR } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
-import { saveOfflineCustomer, getOfflineCustomerByPhone } from "@/lib/offline/db";
+import { saveOfflineCustomer } from "@/lib/offline/db";
 
 type Step = "phone" | "scan" | "enter" | "reverse" | "done";
 
@@ -273,12 +273,7 @@ export default function ScanPage() {
       {step === "reverse" && (
         <div className="px-4 py-6 space-y-6 animate-fade-in">
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-            <ReverseQR
-              merchantId={merchantId}
-              customerId={phone}
-              amount={Number(amount)}
-              description={description}
-            />
+            <CustomerQR customerId={phone} />
           </div>
 
           <div className="bg-[var(--color-primary)]/5 rounded-2xl p-4">

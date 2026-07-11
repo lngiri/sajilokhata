@@ -11,47 +11,55 @@ import {
   createCreditLog,
 } from "@/lib/actions";
 
-type Step = "scan" | "confirm" | "success";
+type Step = "scan" | "enter" | "confirm" | "success";
 
-interface ScannedData {
-  type: string;
-  merchantId: string;
-  customerId: string;
-  amount: number;
-  description?: string;
-}
+/** Prefix that identifies a customer identity QR */
+const CUSTOMER_QR_PREFIX = "sajilokhata:customer:";
 
 export default function MerchantScanPage() {
   const { addToast } = useToast();
   const [step, setStep] = useState<Step>("scan");
-  const [scannedData, setScannedData] = useState<ScannedData | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState<string | null>(null);
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleScan = useCallback(
-    async (data: string) => {
+    (data: string) => {
       try {
-        const parsed = JSON.parse(data);
-
-        if (parsed.type !== "reverse_scan") {
-          addToast("Invalid QR. Please scan a customer's credit QR.", "error");
+        // Accept both the new simple format and old JSON format for backward compat
+        if (data.startsWith(CUSTOMER_QR_PREFIX)) {
+          const phone = data.slice(CUSTOMER_QR_PREFIX.length);
+          if (phone.length < 6) {
+            addToast("Invalid customer QR code.", "error");
+            return;
+          }
+          setCustomerPhone(phone);
+          setStep("enter");
           return;
         }
 
-        // Verify it belongs to the logged-in merchant
-        const currentMerchantId = await getCurrentMerchantId();
-        if (!currentMerchantId) {
-          addToast("Not logged in. Please login first.", "error");
-          return;
+        // Fallback: try parsing as JSON (backward compat with old ReverseQR)
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === "reverse_scan") {
+            // Old format — ignore merchantId validation, just extract customer
+            const phone = parsed.customerId;
+            if (phone && phone.length >= 6) {
+              setCustomerPhone(phone);
+              // If amount/description were embedded, pre-fill them
+              if (parsed.amount) setAmount(String(parsed.amount));
+              if (parsed.description) setDescription(parsed.description);
+              setStep("enter");
+              return;
+            }
+          }
+        } catch {
+          // Not JSON either — invalid
         }
 
-        if (parsed.merchantId !== currentMerchantId) {
-          addToast("This QR belongs to a different shop.", "error");
-          return;
-        }
-
-        setScannedData(parsed);
-        setStep("confirm");
+        addToast("Please scan a valid customer QR code.", "error");
       } catch {
         addToast("Invalid QR code format.", "error");
       }
@@ -59,8 +67,15 @@ export default function MerchantScanPage() {
     [addToast]
   );
 
+  const handleEnterNext = () => {
+    if (!amount || Number(amount) <= 0) {
+      addToast("Please enter a valid amount.", "error");
+      return;
+    }
+    setStep("confirm");
+  };
+
   const handleConfirm = async () => {
-    if (!scannedData) return;
     setSaving(true);
 
     try {
@@ -72,7 +87,7 @@ export default function MerchantScanPage() {
       }
 
       // 1. Find or create the customer by phone
-      const customer = await findOrCreateCustomer(scannedData.customerId);
+      const customer = await findOrCreateCustomer(customerPhone);
       setCustomerName(customer.name || null);
 
       // 2. Link customer to merchant
@@ -82,8 +97,8 @@ export default function MerchantScanPage() {
       await createCreditLog({
         merchant_id: merchantId,
         customer_id: customer.id,
-        amount: scannedData.amount,
-        description: scannedData.description || null,
+        amount: Number(amount),
+        description: description || null,
         type: "debit",
         status: "pending",
         sync_status: "online",
@@ -101,8 +116,10 @@ export default function MerchantScanPage() {
 
   const handleReset = () => {
     setStep("scan");
-    setScannedData(null);
+    setCustomerPhone("");
     setCustomerName(null);
+    setAmount("");
+    setDescription("");
   };
 
   return (
@@ -131,6 +148,8 @@ export default function MerchantScanPage() {
           <h1 className="text-lg font-bold text-[var(--color-text)]">
             {step === "scan"
               ? "Scan Customer QR"
+              : step === "enter"
+              ? "Enter Details"
               : step === "confirm"
               ? "Confirm Entry"
               : "Entry Saved!"}
@@ -139,6 +158,7 @@ export default function MerchantScanPage() {
       </div>
 
       <div className="px-4 py-4 space-y-4">
+        {/* Step 1: Scan QR */}
         {step === "scan" && (
           <div className="space-y-4 animate-fade-in">
             <div className="text-center">
@@ -185,17 +205,94 @@ export default function MerchantScanPage() {
                   />
                 </svg>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  Ask the customer to show the QR from their phone. The entry
-                  will be saved as pending — you can approve it from the Ledger.
+                  Ask the customer to show their QR. The entry will be saved as
+                  pending — you can approve it from the Ledger.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {step === "confirm" && scannedData && (
+        {/* Step 2: Enter Amount & Description */}
+        {step === "enter" && (
           <div className="space-y-4 animate-fade-in">
-            {/* Scanned Details Card */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                  <svg
+                    className="w-5 h-5 text-green-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Customer Phone
+                  </p>
+                  <p className="font-mono font-medium text-[var(--color-text)]">
+                    {customerPhone}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  Amount (NPR)
+                </label>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rice 10kg, Milk 2L"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleReset}
+                className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEnterNext}
+                disabled={!amount || Number(amount) <= 0}
+                className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Confirm */}
+        {step === "confirm" && (
+          <div className="space-y-4 animate-fade-in">
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div className="text-center pb-2 border-b border-gray-50">
                 <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
@@ -214,7 +311,7 @@ export default function MerchantScanPage() {
                   </svg>
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  QR Scanned Successfully
+                  Review Entry Details
                 </p>
               </div>
 
@@ -224,7 +321,7 @@ export default function MerchantScanPage() {
                     Customer Phone
                   </p>
                   <p className="font-mono font-medium text-[var(--color-text)]">
-                    {scannedData.customerId}
+                    {customerPhone}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -233,7 +330,7 @@ export default function MerchantScanPage() {
                       Amount
                     </p>
                     <p className="text-2xl font-bold text-[var(--color-danger)]">
-                      NPR {scannedData.amount.toLocaleString()}
+                      NPR {Number(amount).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex-1">
@@ -245,27 +342,26 @@ export default function MerchantScanPage() {
                     </span>
                   </div>
                 </div>
-                {scannedData.description && (
+                {description && (
                   <div>
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">
                       Description
                     </p>
                     <p className="text-sm text-[var(--color-text)]">
-                      {scannedData.description}
+                      {description}
                     </p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-3">
               <button
-                onClick={handleReset}
+                onClick={() => setStep("enter")}
                 disabled={saving}
                 className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                Cancel
+                Edit
               </button>
               <button
                 onClick={handleConfirm}
@@ -297,6 +393,7 @@ export default function MerchantScanPage() {
           </div>
         )}
 
+        {/* Step 4: Success */}
         {step === "success" && (
           <div className="text-center py-8 space-y-6 animate-fade-in">
             <div className="w-20 h-20 mx-auto rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
@@ -320,8 +417,8 @@ export default function MerchantScanPage() {
               </h2>
               <p className="text-sm text-[var(--color-text-muted)]">
                 {customerName
-                  ? `Credit of NPR ${scannedData?.amount.toLocaleString()} added for ${customerName}`
-                  : `Credit of NPR ${scannedData?.amount.toLocaleString()} saved as pending`}
+                  ? `Credit of NPR ${Number(amount).toLocaleString()} added for ${customerName}`
+                  : `Credit of NPR ${Number(amount).toLocaleString()} saved as pending`}
               </p>
             </div>
 
