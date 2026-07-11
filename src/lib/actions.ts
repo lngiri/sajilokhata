@@ -208,6 +208,72 @@ export async function updateCustomerCreditLimit(
 }
 
 // ============================================================
+// Merchant Lookup (for customer-facing flows)
+// ============================================================
+
+/**
+ * Find a merchant by their registered phone number.
+ * Used by customers to submit remote credit requests.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getMerchantByPhone(
+  phone: string
+): Promise<{ id: string; name: string; business_name: string | null; business_type: string; phone: string } | null> {
+  const { data, error } = await supabase
+    .from("merchants")
+    .select("id, name, business_name, business_type, phone")
+    .eq("phone", phone)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Get credit logs associated with a customer (by their phone number).
+ * Returns entries across all merchants this customer has transacted with.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCustomerCreditLogs(
+  customerPhone: string,
+  options?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }
+): Promise<any[]> {
+  // First find the customer record(s) by phone
+  const { data: customers } = await supabase
+    .from("customers")
+    .select("id, name")
+    .eq("phone", customerPhone);
+
+  if (!customers || customers.length === 0) return [];
+
+  const customerIds = customers.map((c) => c.id);
+
+  let query = supabase
+    .from("credit_logs")
+    .select("*, customers(name, phone), merchants!inner(id, name, business_name)")
+    .in("customer_id", customerIds)
+    .order("created_at", { ascending: false });
+
+  if (options?.status) {
+    query = query.eq("status", options.status);
+  }
+  if (options?.limit) {
+    query = query.range(
+      options.offset || 0,
+      (options.offset || 0) + options.limit - 1
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+// ============================================================
 // Stats
 // ============================================================
 

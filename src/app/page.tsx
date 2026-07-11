@@ -81,7 +81,7 @@ export default function Home() {
         </Link>
 
         <Link
-          href="/scan"
+          href="/customer/dashboard"
           className="flex items-center w-full p-5 bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md hover:border-[var(--color-accent)] transition-all active:scale-[0.98]"
           onClick={() => setSelectedRole("customer")}
         >
@@ -110,7 +110,7 @@ export default function Home() {
               Customer
             </h3>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Scan QR to log a credit entry
+              Submit credit requests & manage entries
             </p>
           </div>
           <svg
