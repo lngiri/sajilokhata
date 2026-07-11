@@ -108,8 +108,20 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        // Store merchant ID in localStorage for client-side use
         localStorage.setItem("merchant_id", data.session.user.id);
+        // Create a minimal merchants row so FK constraints work
+        try {
+          await fetch("/api/merchant/setup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              merchant_id: data.session.user.id,
+              phone: `+977${phone}`,
+            }),
+          });
+        } catch {
+          // Non-critical — merchant can set up profile later
+        }
         window.location.href = "/merchant/dashboard";
       }
     } catch {
@@ -170,8 +182,18 @@ export default function LoginPage() {
           </button>
 
           <button
-            onClick={() => {
-              localStorage.setItem("merchant_id", "demo-merchant-id");
+            onClick={async () => {
+              const id = crypto.randomUUID();
+              localStorage.setItem("merchant_id", id);
+              // Try to create a minimal merchants row so FK constraints work
+              try {
+                await supabase.from("merchants").upsert(
+                  { id, phone: `+977${phone}` || null, name: "Shop", business_type: "kirana" },
+                  { onConflict: "id" }
+                );
+              } catch {
+                // Supabase not available — merchant can set up profile later
+              }
               window.location.href = "/merchant/dashboard";
             }}
             className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"

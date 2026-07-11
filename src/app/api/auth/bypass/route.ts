@@ -32,6 +32,24 @@ export async function POST(request: Request) {
     // Generate a random password for this session
     const bypassPassword = `sajilo-bypass-${Math.random().toString(36).slice(2, 10)}`;
 
+    // Helper: ensure a merchants row exists for the given user ID
+    async function ensureMerchantRow(userId: string, userPhone: string) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: upsertError } = await (adminClient!.from("merchants") as any)
+        .upsert(
+          {
+            id: userId,
+            phone: userPhone,
+            name: "Shop",
+            business_type: "kirana",
+          },
+          { onConflict: "id" }
+        );
+      if (upsertError) {
+        console.error("Failed to create merchants row:", upsertError);
+      }
+    }
+
     // 1. Try creating a new user first (simplest path when phone is available)
     const { data: newUser, error: createError } =
       await adminClient.auth.admin.createUser({
@@ -41,6 +59,7 @@ export async function POST(request: Request) {
       });
 
     if (!createError && newUser?.user) {
+      await ensureMerchantRow(newUser.user.id, phone);
       return NextResponse.json({
         user_id: newUser.user.id,
         password: bypassPassword,
@@ -105,6 +124,8 @@ export async function POST(request: Request) {
         phone_confirm: true,
       });
     }
+
+    await ensureMerchantRow(foundUser.id, phone);
 
     return NextResponse.json({
       user_id: foundUser.id,
