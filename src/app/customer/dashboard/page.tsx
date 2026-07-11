@@ -45,6 +45,7 @@ export default function CustomerDashboard() {
   // History state
   const [history, setHistory] = useState<any[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   // On mount, restore customer session from localStorage
   useEffect(() => {
@@ -59,15 +60,17 @@ export default function CustomerDashboard() {
       }
     } catch {
       // Ignore
+    } finally {
+      setInitialized(true);
     }
   }, []);
 
   // If no customer phone, redirect to scan page to set it up
   useEffect(() => {
-    if (flow === "menu" && !customerPhone) {
+    if (initialized && flow === "menu" && !customerPhone) {
       window.location.href = "/scan";
     }
-  }, [flow, customerPhone]);
+  }, [initialized, flow, customerPhone]);
 
   // Shared submit: creates the credit log
   const submitCreditEntry = async () => {
@@ -184,6 +187,15 @@ export default function CustomerDashboard() {
         return "bg-gray-50 text-gray-600";
     }
   };
+
+  // Prevent flash while reading localStorage
+  if (!initialized) {
+    return (
+      <div className="min-h-dvh bg-[var(--color-bg)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)] pb-8">
