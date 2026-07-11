@@ -356,6 +356,29 @@ export async function syncPendingLogs(
 }
 
 // ============================================================
+// Sync Health Tracking
+// ============================================================
+
+const LAST_SYNC_KEY = "last_sync_timestamp";
+
+/**
+ * Record the current time as the last successful sync.
+ */
+export async function recordSyncComplete() {
+  await setSetting(LAST_SYNC_KEY, Date.now().toString());
+}
+
+/**
+ * Get the last sync timestamp, or null if never synced.
+ */
+export async function getLastSyncTime(): Promise<Date | null> {
+  const val = await getSetting(LAST_SYNC_KEY);
+  if (!val) return null;
+  const ts = Number(val);
+  return isNaN(ts) ? null : new Date(ts);
+}
+
+// ============================================================
 // Network Status Detection
 // ============================================================
 

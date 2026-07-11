@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import NetworkStatus from "@/components/NetworkStatus";
-import OfflineIndicator from "@/components/OfflineIndicator";
+import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
 import { QRDisplay } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
@@ -250,7 +250,7 @@ export default function MerchantDashboard() {
               Digital Diary
             </p>
           </div>
-          <OfflineIndicator />
+          <SyncStatus />
         </div>
       </div>
 

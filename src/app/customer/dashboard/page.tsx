@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import SyncStatus from "@/components/SyncStatus";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
@@ -292,11 +293,14 @@ export default function CustomerDashboard() {
               : flow === "enter-amount" ? "Enter Amount"
               : "Success!"}
           </h1>
-          {customerPhone && (
-            <span className="ml-auto text-[10px] text-[var(--color-text-muted)]">
-              ID: {customerPhone.slice(-4)}
-            </span>
-          )}
+          <div className="ml-auto flex items-center gap-2">
+            <SyncStatus />
+            {customerPhone && (
+              <span className="text-[10px] text-[var(--color-text-muted)]">
+                ID: {customerPhone.slice(-4)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
