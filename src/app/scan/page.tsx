@@ -3,7 +3,12 @@
 import { useState, useCallback, useEffect } from "react";
 import { QRScanner, CustomerQR } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
-import { saveOfflineCustomer } from "@/lib/offline/db";
+import {
+  findOrCreateCustomer,
+  linkCustomerToMerchant,
+  createCreditLog,
+} from "@/lib/actions";
+import { isOnline, saveOfflineCustomer, savePendingLog } from "@/lib/offline/db";
 
 type Step = "phone" | "scan" | "enter" | "reverse" | "done";
 
@@ -63,6 +68,7 @@ export default function ScanPage() {
   const [merchantName, setMerchantName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
   // On mount, restore customer session from localStorage
@@ -117,9 +123,45 @@ export default function ScanPage() {
     [addToast]
   );
 
-  const handleSubmitEntry = () => {
+  const handleSubmitEntry = async () => {
     if (!amount || Number(amount) <= 0) return;
-    setStep("reverse");
+    setLoading(true);
+
+    try {
+      if (isOnline()) {
+        const customer = await findOrCreateCustomer(phone, name || undefined);
+        await linkCustomerToMerchant(merchantId, customer.id);
+        await createCreditLog({
+          merchant_id: merchantId,
+          customer_id: customer.id,
+          amount: Number(amount),
+          description: description || null,
+          type: "debit",
+          status: "pending",
+          sync_status: "online",
+        });
+        addToast("Credit request sent! Awaiting merchant approval.", "success");
+        setStep("done");
+      } else {
+        await savePendingLog({
+          id: crypto.randomUUID(),
+          merchant_id: merchantId,
+          customer_id: "",
+          amount: Number(amount),
+          description: description || null,
+          type: "debit",
+          status: "pending",
+          sync_status: "offline_pending",
+          created_at: new Date().toISOString(),
+        });
+        setStep("reverse");
+      }
+    } catch (err) {
+      console.error("Failed to submit entry:", err);
+      addToast("Failed to submit. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Prevent flash of phone screen while checking localStorage
@@ -268,10 +310,16 @@ export default function ScanPage() {
             </button>
             <button
               onClick={handleSubmitEntry}
-              disabled={!amount || Number(amount) <= 0}
-              className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] disabled:opacity-50"
+              disabled={!amount || Number(amount) <= 0 || loading}
+              className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Generate QR
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : isOnline() ? (
+                "Submit Entry"
+              ) : (
+                "Generate QR"
+              )}
             </button>
           </div>
         </div>
@@ -284,15 +332,15 @@ export default function ScanPage() {
             <CustomerQR customerId={phone} />
           </div>
 
-          <div className="bg-[var(--color-primary)]/5 rounded-2xl p-4">
+          <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
             <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
               </svg>
               <div>
-                <p className="text-sm font-medium text-[var(--color-text)]">Show this QR to the shopkeeper</p>
-                <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                  The shopkeeper will scan this QR to confirm your entry. Works offline too!
+                <p className="text-sm font-medium text-amber-800">You are offline</p>
+                <p className="text-xs text-amber-700 mt-1">
+                  Show this QR to the shopkeeper so they can scan and save your entry. It will sync when you&apos;re back online.
                 </p>
               </div>
             </div>
@@ -327,18 +375,26 @@ export default function ScanPage() {
           <p className="text-sm text-[var(--color-text-muted)] mb-8">
             The shopkeeper will review and approve your entry.
           </p>
-          <button
-            onClick={() => {
-              setAmount("");
-              setDescription("");
-              setMerchantId("");
-              setMerchantName("");
-              setStep("scan");
-            }}
-            className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98]"
-          >
-            Make Another Entry
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setAmount("");
+                setDescription("");
+                setMerchantId("");
+                setMerchantName("");
+                setStep("scan");
+              }}
+              className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold active:scale-[0.98]"
+            >
+              New Entry
+            </button>
+            <a
+              href="/customer/dashboard"
+              className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] inline-flex items-center justify-center"
+            >
+              Go to Dashboard
+            </a>
+          </div>
         </div>
       )}
     </div>

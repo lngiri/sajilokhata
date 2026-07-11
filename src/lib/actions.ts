@@ -2,7 +2,14 @@
 
 import { createClient } from "@/lib/supabase/client";
 
-const supabase = createClient();
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+
+function getClient() {
+  if (!supabaseClient) {
+    supabaseClient = createClient();
+  }
+  return supabaseClient;
+}
 
 // ============================================================
 // Merchant Actions
@@ -10,7 +17,7 @@ const supabase = createClient();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getMerchantProfile(merchantId: string): Promise<any> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchants")
     .select("*")
     .eq("id", merchantId)
@@ -30,7 +37,7 @@ export async function updateMerchantProfile(
     address?: string;
   }
 ): Promise<any> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchants")
     .upsert({ id: merchantId, ...updates }, { onConflict: "id" })
     .select()
@@ -49,14 +56,14 @@ export async function findOrCreateCustomer(
   phone: string,
   name?: string
 ): Promise<any> {
-  let { data: customer } = await supabase
+  let { data: customer } = await getClient()
     .from("customers")
     .select("*")
     .eq("phone", phone)
     .single();
 
   if (!customer) {
-    const { data: newCustomer, error } = await supabase
+    const { data: newCustomer, error } = await getClient()
       .from("customers")
       .insert({ phone, name: name || null })
       .select()
@@ -75,7 +82,7 @@ export async function linkCustomerToMerchant(
   customerId: string,
   creditLimit: number = 5000
 ): Promise<any> {
-  const { data: existing } = await supabase
+  const { data: existing } = await getClient()
     .from("merchant_customers")
     .select("*")
     .eq("merchant_id", merchantId)
@@ -84,7 +91,7 @@ export async function linkCustomerToMerchant(
 
   if (existing) return existing;
 
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchant_customers")
     .insert({
       merchant_id: merchantId,
@@ -105,7 +112,7 @@ export async function linkCustomerToMerchant(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createCreditLog(log: Record<string, any>): Promise<any> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("credit_logs")
     .insert(log)
     .select()
@@ -125,7 +132,7 @@ export async function getMerchantCreditLogs(
     offset?: number;
   }
 ): Promise<any[]> {
-  let query = supabase
+  let query = getClient()
     .from("credit_logs")
     .select("*, customers(name, phone)")
     .eq("merchant_id", merchantId)
@@ -159,7 +166,7 @@ export async function updateCreditLogStatus(
     updates.approved_at = new Date().toISOString();
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("credit_logs")
     .update(updates)
     .eq("id", logId)
@@ -168,7 +175,7 @@ export async function updateCreditLogStatus(
 
   if (error) throw error;
 
-  await supabase.from("audit_logs").insert({
+  await getClient().from("audit_logs").insert({
     credit_log_id: logId,
     action: status,
     actor_type: "merchant",
@@ -183,7 +190,7 @@ export async function updateCreditLogStatus(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getMerchantCustomers(merchantId: string): Promise<any[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchant_customers")
     .select("*, customers(id, name, phone)")
     .eq("merchant_id", merchantId)
@@ -199,7 +206,7 @@ export async function updateCustomerCreditLimit(
   customerId: string,
   creditLimit: number
 ): Promise<any> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchant_customers")
     .update({ credit_limit: creditLimit })
     .eq("merchant_id", merchantId)
@@ -223,7 +230,7 @@ export async function updateCustomerCreditLimit(
 export async function getMerchantByPhone(
   phone: string
 ): Promise<{ id: string; name: string; business_name: string | null; business_type: string; phone: string } | null> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchants")
     .select("id, name, business_name, business_type, phone")
     .eq("phone", phone)
@@ -248,7 +255,7 @@ export async function getCustomerStats(
   relationships: any[];
 } | null> {
   // First find the customer record(s) by phone
-  const { data: customers } = await supabase
+  const { data: customers } = await getClient()
     .from("customers")
     .select("id")
     .eq("phone", customerPhone);
@@ -261,7 +268,7 @@ export async function getCustomerStats(
   // Using a left join (no !inner) so orphaned merchant_customers records
   // still show their balance even if merchant metadata is missing.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: relationships, error } = (await supabase
+  const { data: relationships, error } = (await getClient()
     .from("merchant_customers")
     .select("current_balance, credit_limit, merchants(id, name, business_name)")
     .in("customer_id", customerIds)) as any;
@@ -295,7 +302,7 @@ export async function getCustomerCreditLogs(
   }
 ): Promise<any[]> {
   // First find the customer record(s) by phone
-  const { data: customers } = await supabase
+  const { data: customers } = await getClient()
     .from("customers")
     .select("id, name")
     .eq("phone", customerPhone);
@@ -304,7 +311,7 @@ export async function getCustomerCreditLogs(
 
   const customerIds = customers.map((c) => c.id);
 
-  let query = supabase
+  let query = getClient()
     .from("credit_logs")
     .select("*, customers(name, phone), merchants!inner(id, name, business_name)")
     .in("customer_id", customerIds)
@@ -359,7 +366,7 @@ function parseGeoPoint(geo: unknown): { lat: number; lng: number } | null {
 export async function getDeliveryCustomers(
   merchantId: string
 ): Promise<any[]> {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from("merchant_customers")
     .select("*, customers!inner(id, name, phone, home_location_gps)")
     .eq("merchant_id", merchantId);
@@ -390,20 +397,20 @@ interface StatsResult {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getMerchantStats(merchantId: string): Promise<StatsResult> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: customers } = await supabase
+  const { data: customers } = await getClient()
     .from("merchant_customers")
     .select("current_balance, credit_limit")
     .eq("merchant_id", merchantId) as { data: any[] | null };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: pendingLogs } = await supabase
+  const { data: pendingLogs } = await getClient()
     .from("credit_logs")
     .select("id, amount")
     .eq("merchant_id", merchantId)
     .eq("status", "pending") as { data: any[] | null };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: todayLogs } = await supabase
+  const { data: todayLogs } = await getClient()
     .from("credit_logs")
     .select("id, amount, type")
     .eq("merchant_id", merchantId)

@@ -2,6 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/Toast";
+import { getCurrentMerchantId } from "@/lib/auth";
+import { getMerchantCreditLogs, updateCustomerCreditLimit } from "@/lib/actions";
+
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  status: string;
+  description: string | null;
+  created_at: string;
+}
 
 interface CustomerDetail {
   id: string;
@@ -11,47 +24,102 @@ interface CustomerDetail {
   current_balance: number;
   total_debit_amount: number;
   total_credit_amount: number;
-  transactions: {
-    id: string;
-    amount: number;
-    type: string;
-    status: string;
-    description: string | null;
-    created_at: string;
-  }[];
+  transactions: Transaction[];
 }
 
 export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { addToast } = useToast();
   const customerId = params?.id as string;
 
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCreditLimitModal, setShowCreditLimitModal] = useState(false);
   const [newLimit, setNewLimit] = useState("");
+  const [savingLimit, setSavingLimit] = useState(false);
+
+  const supabase = createClient();
 
   useEffect(() => {
     loadCustomer();
   }, [customerId]);
 
   const loadCustomer = async () => {
-    // Demo data
-    setCustomer({
-      id: customerId,
-      name: "Ram Shrestha",
-      phone: "9841234567",
-      credit_limit: 5000,
-      current_balance: 3200,
-      total_debit_amount: 12500,
-      total_credit_amount: 9300,
-      transactions: [
-        { id: "1", amount: 1500, type: "debit", status: "approved", description: "Rice 15kg", created_at: new Date(Date.now() - 3600000).toISOString() },
-        { id: "2", amount: 500, type: "credit", status: "approved", description: "Cash payment", created_at: new Date(Date.now() - 86400000).toISOString() },
-        { id: "3", amount: 2200, type: "debit", status: "approved", description: "Groceries weekly", created_at: new Date(Date.now() - 172800000).toISOString() },
-      ],
-    });
-    setLoading(false);
+    setLoading(true);
+    try {
+      const merchantId = await getCurrentMerchantId();
+      if (!merchantId || !customerId) {
+        setLoading(false);
+        return;
+      }
+
+      // Get the merchant_customer link (balance + limit)
+      const { data: mc } = await supabase
+        .from("merchant_customers")
+        .select("*, customers(id, name, phone)")
+        .eq("merchant_id", merchantId)
+        .eq("customer_id", customerId)
+        .single();
+
+      if (!mc) {
+        setLoading(false);
+        return;
+      }
+
+      // Get transaction history for this customer
+      const logs = await getMerchantCreditLogs(merchantId, {
+        customerId,
+        limit: 50,
+      });
+
+      // Calculate stats
+      const approvedLogs = logs.filter((l: any) => l.status === "approved");
+      const totalDebit = approvedLogs
+        .filter((l: any) => l.type === "debit")
+        .reduce((sum: number, l: any) => sum + l.amount, 0);
+      const totalCredit = approvedLogs
+        .filter((l: any) => l.type === "credit")
+        .reduce((sum: number, l: any) => sum + l.amount, 0);
+
+      setCustomer({
+        id: customerId,
+        name: mc.customers?.name || null,
+        phone: mc.customers?.phone || "",
+        credit_limit: mc.credit_limit,
+        current_balance: mc.current_balance,
+        total_debit_amount: totalDebit,
+        total_credit_amount: totalCredit,
+        transactions: (logs as Transaction[]) || [],
+      });
+    } catch {
+      addToast("Failed to load customer details.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveLimit = async () => {
+    if (!newLimit || Number(newLimit) < 0) {
+      addToast("Please enter a valid credit limit.", "error");
+      return;
+    }
+    setSavingLimit(true);
+    try {
+      const merchantId = await getCurrentMerchantId();
+      if (merchantId) {
+        await updateCustomerCreditLimit(merchantId, customerId, Number(newLimit));
+        setCustomer((prev) =>
+          prev ? { ...prev, credit_limit: Number(newLimit) } : prev
+        );
+        addToast("Credit limit updated!", "success");
+        setShowCreditLimitModal(false);
+      }
+    } catch {
+      addToast("Failed to update credit limit.", "error");
+    } finally {
+      setSavingLimit(false);
+    }
   };
 
   if (loading) {
@@ -64,7 +132,9 @@ export default function CustomerDetailPage() {
 
   if (!customer) return null;
 
-  const balancePercent = (customer.current_balance / customer.credit_limit) * 100;
+  const balancePercent = customer.credit_limit > 0
+    ? (customer.current_balance / customer.credit_limit) * 100
+    : 0;
 
   return (
     <div className="pb-20 min-h-dvh bg-[var(--color-bg)]">
@@ -150,24 +220,30 @@ export default function CustomerDetailPage() {
         <div>
           <h3 className="font-semibold text-[var(--color-text)] mb-3">Recent Transactions</h3>
           <div className="space-y-2">
-            {customer.transactions.map((tx) => (
-              <div key={tx.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-[var(--color-danger)]/10" : "bg-[var(--color-primary)]/10"}`}>
-                  <span className={`text-lg font-bold ${tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                    {tx.type === "debit" ? "+" : "-"}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-[var(--color-text)] truncate">{tx.description || "No description"}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            {customer.transactions.length === 0 ? (
+              <div className="text-center py-8 text-[var(--color-text-muted)]">
+                <p className="text-sm">No transactions yet</p>
+              </div>
+            ) : (
+              customer.transactions.map((tx) => (
+                <div key={tx.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-[var(--color-danger)]/10" : "bg-[var(--color-primary)]/10"}`}>
+                    <span className={`text-lg font-bold ${tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
+                      {tx.type === "debit" ? "+" : "-"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-[var(--color-text)] truncate">{tx.description || "No description"}</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                    </p>
+                  </div>
+                  <p className={`font-bold text-sm ${tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
+                    {tx.type === "debit" ? "+" : "-"}NPR {tx.amount.toLocaleString()}
                   </p>
                 </div>
-                <p className={`font-bold text-sm ${tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                  {tx.type === "debit" ? "+" : "-"}NPR {tx.amount.toLocaleString()}
-                </p>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -194,13 +270,15 @@ export default function CustomerDetailPage() {
               />
             </div>
             <button
-              onClick={() => {
-                setShowCreditLimitModal(false);
-                // Update would happen here
-              }}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform"
+              onClick={handleSaveLimit}
+              disabled={savingLimit}
+              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              Save Limit
+              {savingLimit ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Save Limit"
+              )}
             </button>
           </div>
         </div>
