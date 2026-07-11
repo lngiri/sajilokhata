@@ -197,6 +197,113 @@ export async function getAllOfflineCustomers() {
 }
 
 // ============================================================
+// Delivery Logs (separate queue for delivery-specific offline entries)
+// ============================================================
+
+/**
+ * Save a delivery-specific pending log to the offline queue.
+ * These are separate from credit_log pending syncs and track
+ * deliveries that haven't been synced to the server yet.
+ */
+export async function saveDeliveryLog(log: {
+  id: string;
+  merchantId: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  quantity: number;
+  unit: string;
+  description: string;
+  completedAt: string;
+}) {
+  const db = await getDB();
+  const key = `delivery_${log.id}`;
+  await db.put("settings", { key, value: JSON.stringify(log) });
+  return log;
+}
+
+/**
+ * Get all pending delivery logs that haven't been synced.
+ */
+export async function getDeliveryLogs(): Promise<
+  Array<{
+    id: string;
+    merchantId: string;
+    customerId: string;
+    customerName: string;
+    amount: number;
+    quantity: number;
+    unit: string;
+    description: string;
+    completedAt: string;
+  }>
+> {
+  const db = await getDB();
+  const all = await db.getAll("settings");
+  return all
+    .filter((s) => s.key.startsWith("delivery_"))
+    .map((s) => JSON.parse(s.value))
+    .sort((a, b) =>
+      new Date(a.completedAt).getTime() - new Date(b.completedAt).getTime()
+    );
+}
+
+/**
+ * Remove a synced delivery log from the queue.
+ */
+export async function removeDeliveryLog(id: string) {
+  const db = await getDB();
+  await db.delete("settings", `delivery_${id}`);
+}
+
+/**
+ * Sync all pending delivery logs to Supabase.
+ */
+export async function syncDeliveryLogs(
+  syncFn: (log: {
+    merchant_id: string;
+    customer_id: string;
+    amount: number;
+    quantity: number;
+    unit: string;
+    description: string;
+    type: "debit";
+    status: "pending";
+    sync_status: "online";
+    device_info: string;
+    created_at: string;
+  }) => Promise<any>
+): Promise<{ synced: number; failed: number }> {
+  const logs = await getDeliveryLogs();
+  let synced = 0;
+  let failed = 0;
+
+  for (const log of logs) {
+    try {
+      await syncFn({
+        merchant_id: log.merchantId,
+        customer_id: log.customerId,
+        amount: log.amount,
+        quantity: log.quantity,
+        unit: log.unit,
+        description: log.description,
+        type: "debit",
+        status: "pending",
+        sync_status: "online",
+        device_info: navigator.userAgent,
+        created_at: log.completedAt,
+      });
+      await removeDeliveryLog(log.id);
+      synced++;
+    } catch {
+      failed++;
+    }
+  }
+
+  return { synced, failed };
+}
+
+// ============================================================
 // Settings
 // ============================================================
 

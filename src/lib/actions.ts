@@ -326,6 +326,56 @@ export async function getCustomerCreditLogs(
 }
 
 // ============================================================
+// Delivery Customers
+// ============================================================
+
+/**
+ * Parse a PostGIS GeoJSON geography point into lat/lng.
+ * PostGIS GEOGRAPHY(POINT, 4326) is returned as GeoJSON:
+ *   { "type": "Point", "coordinates": [lng, lat] }
+ */
+function parseGeoPoint(geo: unknown): { lat: number; lng: number } | null {
+  if (!geo) return null;
+  try {
+    const parsed = typeof geo === "string" ? JSON.parse(geo) : geo;
+    if (
+      parsed?.type === "Point" &&
+      Array.isArray(parsed.coordinates) &&
+      parsed.coordinates.length === 2
+    ) {
+      return { lng: parsed.coordinates[0], lat: parsed.coordinates[1] };
+    }
+  } catch {
+    // Invalid GeoJSON
+  }
+  return null;
+}
+
+/**
+ * Fetch customers linked to a merchant, with their home GPS coordinates.
+ * Used by the Delivery Dashboard for route planning and geofencing.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getDeliveryCustomers(
+  merchantId: string
+): Promise<any[]> {
+  const { data, error } = await supabase
+    .from("merchant_customers")
+    .select("*, customers!inner(id, name, phone, home_location_gps)")
+    .eq("merchant_id", merchantId);
+
+  if (error) throw error;
+
+  // Convert PostGIS GeoJSON to lat/lng for client-side use
+  return (data || []).map((mc: any) => ({
+    ...mc,
+    home_location: mc.customers?.home_location_gps
+      ? parseGeoPoint(mc.customers.home_location_gps)
+      : null,
+  }));
+}
+
+// ============================================================
 // Stats
 // ============================================================
 
