@@ -83,9 +83,9 @@ export default function LoginPage() {
           "⚠️ Admin API unavailable, using localStorage bypass. RLS policies will limit database access."
         );
 
-        // Store the bypass info for the middleware
-        document.cookie = `auth_bypass=true; path=/; max-age=86400; SameSite=Lax`;
-        document.cookie = `auth_bypass_phone=${phone}; path=/; max-age=86400; SameSite=Lax`;
+        // Store the bypass info for the middleware (1-year expiry)
+        document.cookie = `auth_bypass=true; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        document.cookie = `auth_bypass_phone=${phone}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
 
         const fallbackId =
           bypassResult.bypass_id || `bypass-${phone}-${Date.now()}`;

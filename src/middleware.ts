@@ -22,7 +22,13 @@ export async function middleware(request: NextRequest) {
             request,
           });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, {
+              ...options,
+              // 1-year expiry for persistent sessions — users stay logged in
+              // until they manually click "Sign Out"
+              maxAge: 365 * 24 * 60 * 60,
+              path: "/",
+            })
           );
         },
       },

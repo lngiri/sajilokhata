@@ -1,11 +1,50 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { QRScanner, ReverseQR } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import { saveOfflineCustomer, getOfflineCustomerByPhone } from "@/lib/offline/db";
 
 type Step = "phone" | "scan" | "enter" | "reverse" | "done";
+
+/** Key used to persist customer session in localStorage */
+const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
+
+interface CustomerSession {
+  phone: string;
+  name: string;
+}
+
+function loadCustomerSession(): CustomerSession | null {
+  try {
+    const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+    if (raw) {
+      const session = JSON.parse(raw) as CustomerSession;
+      if (session.phone && session.phone.length >= 10) {
+        return session;
+      }
+    }
+  } catch {
+    // Corrupted data — ignore
+  }
+  return null;
+}
+
+function saveCustomerSession(phone: string, name: string) {
+  try {
+    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone, name }));
+  } catch {
+    // localStorage full or unavailable
+  }
+}
+
+function clearCustomerSession() {
+  try {
+    localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+  } catch {
+    // Ignore
+  }
+}
 
 export default function ScanPage() {
   const { addToast } = useToast();
@@ -16,6 +55,18 @@ export default function ScanPage() {
   const [merchantName, setMerchantName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [initialized, setInitialized] = useState(false);
+
+  // On mount, restore customer session from localStorage
+  useEffect(() => {
+    const session = loadCustomerSession();
+    if (session) {
+      setPhone(session.phone);
+      setName(session.name);
+      setStep("scan");
+    }
+    setInitialized(true);
+  }, []);
 
   const handlePhoneSubmit = async () => {
     if (!phone || phone.length < 10) return;
@@ -27,7 +78,17 @@ export default function ScanPage() {
       name: name || undefined,
     });
 
+    // Persist session so they never see the phone screen again
+    saveCustomerSession(phone, name);
+
     setStep("scan");
+  };
+
+  const handleResetPhone = () => {
+    clearCustomerSession();
+    setPhone("");
+    setName("");
+    setStep("phone");
   };
 
   const handleQRScan = useCallback(
@@ -53,6 +114,15 @@ export default function ScanPage() {
     setStep("reverse");
   };
 
+  // Prevent flash of phone screen while checking localStorage
+  if (!initialized) {
+    return (
+      <div className="min-h-dvh bg-[var(--color-bg)] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
       {/* Header */}
@@ -70,6 +140,7 @@ export default function ScanPage() {
       </div>
 
       {/* Step 1: Phone Entry */}
+
       {step === "phone" && (
         <div className="px-6 py-12 space-y-6 animate-fade-in">
           <div className="text-center mb-8">
@@ -79,7 +150,7 @@ export default function ScanPage() {
               </svg>
             </div>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Enter your phone number (saved locally for next time)
+              Enter your phone number to get started (one-time)
             </p>
           </div>
 
@@ -114,6 +185,31 @@ export default function ScanPage() {
       {/* Step 2: Scan QR */}
       {step === "scan" && (
         <div className="px-4 py-6 space-y-4 animate-fade-in">
+          {/* Persisted customer badge */}
+          <div className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 shadow-sm border border-gray-50">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
+                <svg className="w-4 h-4 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">
+                  {name || phone}
+                </p>
+                <p className="text-[10px] text-[var(--color-text-muted)]">
+                  {name ? `${phone} · Saved` : "Saved"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleResetPhone}
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-danger)] px-2.5 py-1 rounded-lg active:scale-95 transition-all"
+            >
+              Change
+            </button>
+          </div>
+
           <p className="text-center text-sm text-[var(--color-text-muted)]">
             Point your camera at the shop&apos;s QR code
           </p>
@@ -230,15 +326,13 @@ export default function ScanPage() {
           </p>
           <button
             onClick={() => {
-              setStep("phone");
-              setPhone("");
-              setName("");
               setAmount("");
               setDescription("");
               setMerchantId("");
               setMerchantName("");
+              setStep("scan");
             }}
-            className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98]"
+            className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98]"
           >
             Make Another Entry
           </button>
