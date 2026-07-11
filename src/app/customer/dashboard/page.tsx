@@ -113,6 +113,9 @@ export default function CustomerDashboard() {
         .select("id")
         .eq("phone", customerPhone);
 
+      // Guard: if cleanup already ran while we were awaiting, abort
+      if (!realtimeSetupStartedRef.current) return;
+
       if (!customers || customers.length === 0) return;
 
       const customerIds = customers.map((c: any) => c.id);
