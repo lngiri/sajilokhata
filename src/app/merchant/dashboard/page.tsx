@@ -1,11 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import NetworkStatus from "@/components/NetworkStatus";
 import OfflineIndicator from "@/components/OfflineIndicator";
+import PullToRefresh from "@/components/PullToRefresh";
 import { getMerchantStats, getMerchantCreditLogs } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
+
+/** Polling interval for auto-refreshing pending approvals (in ms) */
+const POLL_INTERVAL = 30_000;
+
+/** Format a timestamp as a relative time string (e.g. "2 min ago") */
+function timeAgo(dateString: string): string {
+  const now = Date.now();
+  const then = new Date(dateString).getTime();
+  const seconds = Math.floor((now - then) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 export default function MerchantDashboard() {
   const [merchantId, setMerchantId] = useState<string | null>(null);
@@ -27,30 +45,62 @@ export default function MerchantDashboard() {
     }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const mountedRef = useRef(true);
+  const merchantIdRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const loadData = useCallback(async () => {
+    // Use the latest merchantId from ref to avoid stale closures
+    const id = merchantIdRef.current || (await getCurrentMerchantId());
+    if (!mountedRef.current) return;
 
-  const loadData = async () => {
-    try {
-      const id = await getCurrentMerchantId();
-      setMerchantId(id);
+    setMerchantId(id);
+    merchantIdRef.current = id;
 
-      if (id) {
+    if (id) {
+      try {
         const [statsData, logsData] = await Promise.all([
           getMerchantStats(id),
           getMerchantCreditLogs(id, { status: "pending", limit: 10 }),
         ]);
+        if (!mountedRef.current) return;
         setStats(statsData);
         setPendingLogs(logsData as typeof pendingLogs);
+        setLastRefreshed(new Date());
+      } catch {
+        // Empty state - no data yet
       }
-    } catch {
-      // Empty state - no data yet
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
+
+  // Initial load + polling
+  useEffect(() => {
+    mountedRef.current = true;
+
+    loadData().finally(() => {
+      if (mountedRef.current) setLoading(false);
+    });
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        loadData();
+      }
+    }, POLL_INTERVAL);
+
+    // Also refresh when the page becomes visible again (tab switch)
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        loadData();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      mountedRef.current = false;
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [loadData]);
 
   return (
     <div className="pb-20">
@@ -76,6 +126,7 @@ export default function MerchantDashboard() {
           <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
+        <PullToRefresh onRefresh={loadData}>
         <div className="px-4 py-4 space-y-4">
           {/* Stats Cards */}
           {stats && (
@@ -153,14 +204,31 @@ export default function MerchantDashboard() {
           {/* Pending Approvals */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="font-semibold text-[var(--color-text)]">
-                Pending Approvals
-              </h2>
-              {pendingLogs.length > 0 && (
-                <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-xs font-medium rounded-full">
-                  {pendingLogs.length}
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                <h2 className="font-semibold text-[var(--color-text)]">
+                  Pending Approvals
+                </h2>
+                {lastRefreshed && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[var(--color-primary)]/5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
+                    <span className="text-[10px] text-[var(--color-primary)] font-medium">
+                      Live
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {lastRefreshed && (
+                  <span className="text-[10px] text-[var(--color-text-muted)]">
+                    {timeAgo(lastRefreshed.toISOString())}
+                  </span>
+                )}
+                {pendingLogs.length > 0 && (
+                  <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-xs font-medium rounded-full">
+                    {pendingLogs.length}
+                  </span>
+                )}
+              </div>
             </div>
 
             {pendingLogs.length === 0 ? (
@@ -195,10 +263,7 @@ export default function MerchantDashboard() {
                         NPR {log.amount.toLocaleString()}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">
-                        {new Date(log.created_at).toLocaleTimeString("en-US", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
+                        {timeAgo(log.created_at)}
                       </p>
                     </div>
                   </div>
@@ -207,6 +272,7 @@ export default function MerchantDashboard() {
             )}
           </div>
         </div>
+        </PullToRefresh>
       )}
 
       <BottomNav />
