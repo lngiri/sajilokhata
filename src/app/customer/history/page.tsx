@@ -5,6 +5,7 @@ import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs } from "@/lib/actions";
+import { useSearchParams } from "next/navigation";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -44,6 +45,9 @@ function getStatusConfig(status: string) {
 
 export default function CustomerHistoryPage() {
   const { addToast } = useToast();
+  const searchParams = useSearchParams();
+  const merchantIdParam = searchParams?.get("merchantId") || "";
+  const shopNameParam = searchParams?.get("shopName") || "";
   const [customerPhone, setCustomerPhone] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [logs, setLogs] = useState<HistoryEntry[]>([]);
@@ -80,7 +84,7 @@ export default function CustomerHistoryPage() {
     if (customerPhone) {
       loadLogs();
     }
-  }, [customerPhone, filter]);
+  }, [customerPhone, filter, merchantIdParam]);
 
   const loadLogs = async () => {
     if (!customerPhone) return;
@@ -88,6 +92,7 @@ export default function CustomerHistoryPage() {
     try {
       const data = await getCustomerCreditLogs(customerPhone, {
         status: filter === "all" ? undefined : filter,
+        merchant_id: merchantIdParam || undefined,
         limit: 100,
       });
       setLogs(data as HistoryEntry[]);
@@ -139,7 +144,9 @@ export default function CustomerHistoryPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </a>
-            <h1 className="text-lg font-bold text-[var(--color-text)]">Transaction History</h1>
+            <h1 className="text-lg font-bold text-[var(--color-text)]">
+              {shopNameParam ? `${shopNameParam} History` : "Transaction History"}
+            </h1>
           </div>
           <button
             onClick={handleSignOut}

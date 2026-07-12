@@ -46,8 +46,14 @@ export default function CustomerDashboard() {
   const [merchantName, setMerchantName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
   const [saving, setSaving] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
+
+  // Edit profile modal
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
 
   // On mount, restore customer session from localStorage
   useEffect(() => {
@@ -167,7 +173,7 @@ export default function CustomerDashboard() {
         const parsed = JSON.parse(data);
         if (parsed.type === "merchant_scan") {
           setMerchantId(parsed.merchantId);
-          setMerchantName(parsed.merchantName);
+          setMerchantName(parsed.merchantName || "Shop");
           setScanStep("enter");
         } else {
           addToast("Please scan a valid shop QR code.", "error");
@@ -192,7 +198,7 @@ export default function CustomerDashboard() {
           customer_id: customer.id,
           amount: Number(amount),
           description: description || null,
-          type: "debit",
+          type: entryType,
           status: "pending",
           sync_status: "online",
         });
@@ -204,7 +210,7 @@ export default function CustomerDashboard() {
           customerPhone: customerPhone,
           amount: Number(amount),
           description: description || null,
-          type: "debit",
+          type: entryType,
           status: "pending",
           sync_status: "offline_pending",
           created_at: new Date().toISOString(),
@@ -213,7 +219,12 @@ export default function CustomerDashboard() {
       setScanStep("success");
       setShowPendingModal(true);
       loadStats();
-      addToast("Credit request sent! Awaiting merchant approval.", "success");
+      addToast(
+        entryType === "credit"
+          ? "Payment submitted! Awaiting merchant confirmation."
+          : "Credit request sent! Awaiting merchant approval.",
+        "success"
+      );
     } catch (err) {
       console.error("Failed to submit credit entry:", err);
       addToast("Failed to submit. Please try again.", "error");
@@ -232,6 +243,7 @@ export default function CustomerDashboard() {
       setMerchantName("");
       setAmount("");
       setDescription("");
+      setEntryType("debit");
     }, 200);
   };
 
@@ -279,12 +291,12 @@ export default function CustomerDashboard() {
             <p className="font-medium text-[var(--color-text)]">{customerName || customerPhone}</p>
             <p className="text-xs text-[var(--color-text-muted)]">{customerName ? customerPhone : ""}</p>
           </div>
-          <a
-            href="/scan"
+          <button
+            onClick={() => { setEditName(customerName); setEditPhone(customerPhone); setShowEditProfile(true); }}
             className="text-xs text-[var(--color-primary)] font-medium px-3 py-1.5 rounded-lg bg-[var(--color-primary)]/5 active:scale-95 transition-transform"
           >
-            Change
-          </a>
+            Edit
+          </button>
         </div>
 
         {/* Outstanding Balance Card */}
@@ -308,10 +320,14 @@ export default function CustomerDashboard() {
             {stats.relationships.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
                 {stats.relationships.map((rel, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm">
+                  <a
+                    key={i}
+                    href={`/customer/history?merchantId=${rel.merchants?.id || ""}&shopName=${encodeURIComponent(rel.merchants?.name || "Shop")}`}
+                    className="flex items-center justify-between text-sm py-1.5 -mx-1 px-2 rounded-lg active:bg-white/10 transition-colors"
+                  >
                     <span className="opacity-80">{rel.merchants?.name || "Unknown Shop"}</span>
                     <span className="font-semibold">NPR {rel.current_balance.toLocaleString()}</span>
-                  </div>
+                  </a>
                 ))}
               </div>
             )}
@@ -394,8 +410,32 @@ export default function CustomerDashboard() {
             {scanStep === "enter" && (
               <div className="space-y-4">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Submitting credit request at</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Entry at</p>
                   <p className="font-bold text-lg text-[var(--color-text)]">{merchantName}</p>
+                </div>
+
+                {/* Debit / Credit toggle */}
+                <div className="flex bg-gray-100 rounded-xl p-1">
+                  <button
+                    onClick={() => setEntryType("debit")}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      entryType === "debit"
+                        ? "bg-white text-[var(--color-danger)] shadow-sm"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Credit Taken
+                  </button>
+                  <button
+                    onClick={() => setEntryType("credit")}
+                    className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      entryType === "credit"
+                        ? "bg-white text-[var(--color-primary)] shadow-sm"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    Payment
+                  </button>
                 </div>
 
                 <div>
@@ -471,6 +511,63 @@ export default function CustomerDashboard() {
         </div>
       )}
 
+      {/* ===== EDIT PROFILE MODAL ===== */}
+      {showEditProfile && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowEditProfile(false); }}
+        >
+          <div className="w-full max-w-sm bg-white rounded-3xl p-6 animate-slide-up shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-bold text-lg text-[var(--color-text)]">Edit Profile</h2>
+              <button onClick={() => setShowEditProfile(false)} className="p-1">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">Phone</label>
+                <input
+                  type="tel"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (editPhone) {
+                    setCustomerName(editName);
+                    setCustomerPhone(editPhone);
+                    try {
+                      localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name: editName, phone: editPhone }));
+                    } catch { /* ignore */ }
+                    setShowEditProfile(false);
+                    addToast("Profile updated!", "success");
+                    loadStats();
+                  }
+                }}
+                disabled={!editPhone}
+                className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CustomerBottomNav />
 
       <PendingApprovalModal
@@ -479,7 +576,7 @@ export default function CustomerDashboard() {
         amount={Number(amount)}
         shopName={merchantName}
         onViewHistory={() => {
-          window.location.href = "/customer/history";
+          window.location.href = `/customer/history?merchantId=${merchantId}&shopName=${encodeURIComponent(merchantName)}`;
         }}
         onClose={() => setShowPendingModal(false)}
       />

@@ -92,20 +92,24 @@ export default function LedgerPage() {
   };
 
   const handleApprove = async (logId: string) => {
+    setLogs((prev) => prev.filter((l) => l.id !== logId));
     try {
       await updateCreditLogStatus(logId, "approved");
       addToast("Entry approved!", "success");
     } catch {
       addToast("Failed to approve entry. Please try again.", "error");
+      loadLogs();
     }
   };
 
   const handleReject = async (logId: string) => {
+    setLogs((prev) => prev.filter((l) => l.id !== logId));
     try {
       await updateCreditLogStatus(logId, "rejected");
       addToast("Entry rejected.", "warning");
     } catch {
       addToast("Failed to reject entry. Please try again.", "error");
+      loadLogs();
     }
   };
 
@@ -248,18 +252,20 @@ export default function LedgerPage() {
         mode="merchant"
         entries={pendingEntries}
         onApprove={async (id) => {
-          await handleApprove(id);
-          const updated = pendingEntries.filter((e) => e.id !== id);
-          setPendingEntries(updated);
-          if (updated.length === 0) setShowApprovalModal(false);
-          loadLogs();
+          setPendingEntries((prev) => prev.filter((e) => e.id !== id));
+          setLogs((prev) => prev.filter((l) => l.id !== id));
+          await updateCreditLogStatus(id, "approved").then(
+            () => addToast("Entry approved!", "success"),
+            () => { addToast("Failed to approve entry. Please try again.", "error"); loadLogs(); }
+          );
         }}
         onReject={async (id) => {
-          await handleReject(id);
-          const updated = pendingEntries.filter((e) => e.id !== id);
-          setPendingEntries(updated);
-          if (updated.length === 0) setShowApprovalModal(false);
-          loadLogs();
+          setPendingEntries((prev) => prev.filter((e) => e.id !== id));
+          setLogs((prev) => prev.filter((l) => l.id !== id));
+          await updateCreditLogStatus(id, "rejected").then(
+            () => addToast("Entry rejected.", "warning"),
+            () => { addToast("Failed to reject entry. Please try again.", "error"); loadLogs(); }
+          );
         }}
         onClose={() => {
           setShowApprovalModal(false);

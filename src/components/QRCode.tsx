@@ -17,7 +17,7 @@ export function QRDisplay({
   const qrData = JSON.stringify({
     type: "merchant_scan",
     merchantId,
-    merchantName,
+    merchantName: merchantName || "Shop",
     businessType,
     timestamp: Date.now(),
   });

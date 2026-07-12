@@ -364,6 +364,7 @@ export async function getCustomerCreditLogs(
     status?: string;
     limit?: number;
     offset?: number;
+    merchant_id?: string;
   }
 ): Promise<any[]> {
   // First find the customer record(s) by phone
@@ -384,6 +385,9 @@ export async function getCustomerCreditLogs(
 
   if (options?.status) {
     query = query.eq("status", options.status);
+  }
+  if (options?.merchant_id) {
+    query = query.eq("merchant_id", options.merchant_id);
   }
   if (options?.limit) {
     query = query.range(
@@ -465,47 +469,31 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
   const { data: customers } = await getClient()
     .from("merchant_customers")
     .select("credit_limit")
-    .eq("merchant_id", merchantId) as { data: any[] | null };
+    .eq("merchant_id", merchantId) as any;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: pendingLogs } = await getClient()
     .from("credit_logs")
     .select("id, amount")
     .eq("merchant_id", merchantId)
-    .eq("status", "pending") as { data: any[] | null };
+    .eq("status", "pending") as any;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: approvedLogs } = await getClient()
     .from("credit_logs")
-    .select("amount, type")
+    .select("amount, type, created_at")
     .eq("merchant_id", merchantId)
-    .eq("status", "approved") as { data: any[] | null };
+    .eq("status", "approved") as any;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: todayLogs } = await getClient()
-    .from("credit_logs")
-    .select("id, amount, type")
-    .eq("merchant_id", merchantId)
-    .eq("status", "approved")
-    .gte("created_at", new Date().toISOString().split("T")[0]) as { data: any[] | null };
+  const today = new Date().toISOString().split("T")[0];
 
-  const totalOutstanding =
-    approvedLogs?.reduce((sum, l) => {
-      return sum + (l.type === "debit" ? l.amount : -l.amount);
-    }, 0) || 0;
-  const totalCreditLimit =
-    customers?.reduce((sum, c) => sum + (c.credit_limit || 0), 0) || 0;
+  const totalOutstanding = approvedLogs?.reduce((sum: number, l: any) => sum + (l.type === "debit" ? l.amount : -l.amount), 0) || 0;
+  const totalCreditLimit = customers?.reduce((sum: number, c: any) => sum + (c.credit_limit || 0), 0) || 0;
   const pendingCount = pendingLogs?.length || 0;
-  const todayTotal =
-    todayLogs?.reduce((sum, l) => {
-      return sum + (l.type === "debit" ? l.amount : -l.amount);
-    }, 0) || 0;
+  const todayTotal = approvedLogs?.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return sum + (l.type === "debit" ? l.amount : -l.amount);
+  }, 0) || 0;
 
-  return {
-    totalOutstanding,
-    totalCreditLimit,
-    customerCount: customers?.length || 0,
-    pendingCount,
-    todayTotal,
-  };
+  return { totalOutstanding, totalCreditLimit, customerCount: customers?.length || 0, pendingCount, todayTotal };
 }

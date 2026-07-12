@@ -69,6 +69,7 @@ export default function ScanPage() {
   const [merchantName, setMerchantName] = useState("");
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
@@ -113,7 +114,7 @@ export default function ScanPage() {
         const parsed = JSON.parse(data);
         if (parsed.type === "merchant_scan") {
           setMerchantId(parsed.merchantId);
-          setMerchantName(parsed.merchantName);
+          setMerchantName(parsed.merchantName || "Shop");
           setStep("enter");
         } else {
           addToast("Invalid QR code. Please scan a shop QR.", "error");
@@ -138,11 +139,16 @@ export default function ScanPage() {
           customer_id: customer.id,
           amount: Number(amount),
           description: description || null,
-          type: "debit",
+          type: entryType,
           status: "pending",
           sync_status: "online",
         });
-        addToast("Credit request sent! Awaiting merchant approval.", "success");
+        addToast(
+          entryType === "credit"
+            ? "Payment submitted! Awaiting merchant confirmation."
+            : "Credit request sent! Awaiting merchant approval.",
+          "success"
+        );
         setStep("done");
         setShowPendingModal(true);
       } else {
@@ -153,7 +159,7 @@ export default function ScanPage() {
           customerPhone: phone,
           amount: Number(amount),
           description: description || null,
-          type: "debit",
+          type: entryType,
           status: "pending",
           sync_status: "offline_pending",
           created_at: new Date().toISOString(),
@@ -282,8 +288,32 @@ export default function ScanPage() {
       {step === "enter" && (
         <div className="px-6 py-8 space-y-6 animate-fade-in">
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 text-center">
-            <p className="text-xs text-[var(--color-text-muted)] mb-1">Logging entry at</p>
+            <p className="text-xs text-[var(--color-text-muted)] mb-1">Entry at</p>
             <p className="font-bold text-lg text-[var(--color-text)]">{merchantName}</p>
+          </div>
+
+          {/* Debit / Credit toggle */}
+          <div className="flex bg-gray-100 rounded-xl p-1">
+            <button
+              onClick={() => setEntryType("debit")}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                entryType === "debit"
+                  ? "bg-white text-[var(--color-danger)] shadow-sm"
+                  : "text-gray-500"
+              }`}
+            >
+              Credit Taken
+            </button>
+            <button
+              onClick={() => setEntryType("credit")}
+              className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                entryType === "credit"
+                  ? "bg-white text-[var(--color-primary)] shadow-sm"
+                  : "text-gray-500"
+              }`}
+            >
+              Payment
+            </button>
           </div>
 
           <div className="space-y-3">
@@ -393,6 +423,7 @@ export default function ScanPage() {
                 setDescription("");
                 setMerchantId("");
                 setMerchantName("");
+                setEntryType("debit");
                 setStep("scan");
               }}
               className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold active:scale-[0.98]"
@@ -415,7 +446,7 @@ export default function ScanPage() {
         amount={Number(amount)}
         shopName={merchantName}
         onViewHistory={() => {
-          window.location.href = "/customer/history";
+          window.location.href = `/customer/history?merchantId=${merchantId}&shopName=${encodeURIComponent(merchantName)}`;
         }}
         onClose={() => setShowPendingModal(false)}
       />
