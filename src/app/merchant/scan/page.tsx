@@ -14,6 +14,7 @@ import {
   getMerchantCustomers,
   getMerchantCustomerBalance,
 } from "@/lib/actions";
+import { useSearchParams } from "next/navigation";
 
 
 type Step = "scan" | "enter" | "confirm" | "success";
@@ -30,11 +31,16 @@ interface CustomerOption {
 
 export default function MerchantScanPage() {
   const { addToast } = useToast();
-  const isManual =
-    typeof window !== "undefined"
-      ? new URLSearchParams(window.location.search).get("manual") === "true"
-      : false;
-  const [step, setStep] = useState<Step>(isManual ? "enter" : "scan");
+  const searchParams = useSearchParams();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Defer client-only URL check until after hydration to prevent mismatch
+  const isManual = isMounted && searchParams?.get("manual") === "true";
+  const [step, setStep] = useState<Step>("scan");
 
   // Shared state
   const [customerPhone, setCustomerPhone] = useState("");
@@ -58,6 +64,12 @@ export default function MerchantScanPage() {
   useEffect(() => {
     getCurrentMerchantId().then(setMerchantId);
   }, []);
+
+  useEffect(() => {
+    if (isManual && step === "scan") {
+      setStep("enter");
+    }
+  }, [isManual, step]);
 
   useEffect(() => {
     if (isManual && merchantId) {
@@ -225,6 +237,11 @@ export default function MerchantScanPage() {
     setSearchQuery("");
     setShowDropdown(false);
   };
+
+  // ─── Hydration guard: return matching skeleton until mounted ────
+  if (!isMounted) {
+    return <div className="min-h-screen bg-gray-50" />;
+  }
 
   // ─── Manual mode: short-circuit, no camera ──────────────────────
   if (isManual) {
