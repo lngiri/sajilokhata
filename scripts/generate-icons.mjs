@@ -28,39 +28,26 @@ function makeChunk(type, data) {
   return Buffer.concat([len, typeB, data, crc]);
 }
 
-function createPNG(size) {
+function createSolidPNG(size) {
   const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
   const ihdr = Buffer.alloc(13);
-  ihdr.writeUInt32BE(size, 0);    // width
-  ihdr.writeUInt32BE(size, 4);    // height
-  ihdr[8] = 8;                     // bit depth
-  ihdr[9] = 6;                     // color type RGBA
-  ihdr[10] = 0;                    // compression
-  ihdr[11] = 0;                    // filter
-  ihdr[12] = 0;                    // interlace
+  ihdr.writeUInt32BE(size, 0);
+  ihdr.writeUInt32BE(size, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6; // RGBA
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
   const ihdrChunk = makeChunk("IHDR", ihdr);
 
-  const emerald = [5, 150, 105];   // rgb(5, 150, 105)
-  const emeraldDark = [4, 120, 84];
-
+  // Solid emerald (#059669) pixels
+  const emerald = [5, 150, 105];
   const rawRows = [];
   for (let y = 0; y < size; y++) {
-    rawRows.push(0); // filter byte
-    const t = y / size; // 0..1 top->bottom
-    const r = Math.round(emerald[0] + (emeraldDark[0] - emerald[0]) * t);
-    const g = Math.round(emerald[1] + (emeraldDark[1] - emerald[1]) * t);
-    const b = Math.round(emerald[2] + (emeraldDark[2] - emerald[2]) * t);
+    rawRows.push(0); // filter byte - none
     for (let x = 0; x < size; x++) {
-      const cx = x / size - 0.5;
-      const cy = y / size - 0.5;
-      const inset = 0.22;
-      const inRect = Math.abs(cx) < 0.5 - inset && Math.abs(cy) < 0.5 - inset;
-      const white = inRect ? 1 : 0;
-      rawRows.push(white ? 255 : r);
-      rawRows.push(white ? 255 : g);
-      rawRows.push(white ? 255 : b);
-      rawRows.push(255); // alpha
+      rawRows.push(emerald[0], emerald[1], emerald[2], 255);
     }
   }
 
@@ -75,10 +62,9 @@ function createPNG(size) {
 const dir = "public/icons";
 mkdirSync(dir, { recursive: true });
 
-const sizes = [192, 512];
-for (const size of sizes) {
-  const png = createPNG(size);
+for (const size of [192, 512]) {
+  const png = createSolidPNG(size);
   const path = `${dir}/icon-${size}x${size}.png`;
   writeFileSync(path, png);
-  console.log(`Created ${path} (${png.length} bytes)`);
+  console.log(`Created ${path} (${png.length} bytes) - valid PNG: ${png[0] === 0x89 && png[1] === 0x50}`);
 }

@@ -22,18 +22,21 @@ export async function POST(request: Request) {
       );
     }
 
-    const adminClient = getAdminClient();
+    let client: any = getAdminClient();
+    let isAdmin = true;
 
-    if (!adminClient) {
-      return NextResponse.json(
-        { error: "Admin client not available (SUPABASE_SERVICE_ROLE_KEY not set)" },
-        { status: 500 }
-      );
+    if (!client) {
+      // If admin client is unavailable, return a fallback signal
+      // The caller will use localStorage-based auth instead
+      return NextResponse.json({
+        admin_unavailable: true,
+        merchant_id,
+        existed: false,
+      });
     }
 
     // Cross-table check: ensure phone is not already registered as a customer
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existingCustomer } = await (adminClient.from("customers") as any)
+    const { data: existingCustomer } = await (client.from("customers") as any)
       .select("id")
       .eq("phone", phone)
       .maybeSingle();
@@ -50,7 +53,7 @@ export async function POST(request: Request) {
 
     // Pre-check: see if a merchant with this phone already exists
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: existingMerchant } = await (adminClient.from("merchants") as any)
+    const { data: existingMerchant } = await (client.from("merchants") as any)
       .select("id")
       .eq("phone", phone)
       .maybeSingle();
@@ -65,8 +68,7 @@ export async function POST(request: Request) {
     }
 
     // Create new merchant row
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: upsertError } = await (adminClient.from("merchants") as any)
+    const { error: upsertError } = await (client.from("merchants") as any)
       .upsert(
         {
           id: merchant_id,

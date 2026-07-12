@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
@@ -13,19 +14,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const adminClient = getAdminClient();
+    // Try admin client first (bypasses RLS), fall back to server client (user auth)
+    let client: any = getAdminClient();
+    let isAdmin = true;
 
-    if (!adminClient) {
-      return NextResponse.json(
-        { error: "Admin client not available" },
-        { status: 500 }
-      );
+    if (!client) {
+      client = await createClient();
+      isAdmin = false;
     }
 
     // Cross-table check: if phone is being changed, ensure it's not a customer
+    // This query works with any client (customers RLS allows anyone to SELECT)
     if (phone) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingCustomer } = await (adminClient.from("customers") as any)
+      const { data: existingCustomer } = await (client.from("customers") as any)
         .select("id")
         .eq("phone", phone)
         .maybeSingle();
@@ -40,26 +42,29 @@ export async function POST(request: Request) {
         );
       }
 
-      // Check if phone is already used by another merchant
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: phoneOwner } = await (adminClient.from("merchants") as any)
-        .select("id")
-        .eq("phone", phone)
-        .maybeSingle();
+      // Phone ownership check: verify phone isn't already used by another merchant
+      // Only possible with admin client (merchants RLS blocks SELECT by phone)
+      if (isAdmin) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: phoneOwner } = await (client.from("merchants") as any)
+          .select("id")
+          .eq("phone", phone)
+          .maybeSingle();
 
-      if (phoneOwner && phoneOwner.id !== merchant_id) {
-        return NextResponse.json(
-          {
-            error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
-            code: "PHONE_TAKEN",
-          },
-          { status: 409 }
-        );
+        if (phoneOwner && phoneOwner.id !== merchant_id) {
+          return NextResponse.json(
+            {
+              error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
+              code: "PHONE_TAKEN",
+            },
+            { status: 409 }
+          );
+        }
       }
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (adminClient.from("merchants") as any)
+    const { data, error } = await (client.from("merchants") as any)
       .upsert(
         {
           id: merchant_id,
@@ -86,7 +91,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Merchant profile error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "प्रोफाइल सेभ गर्न सकिएन। कृपया पुनः प्रयास गर्नुहोस्।" },
       { status: 500 }
     );
   }

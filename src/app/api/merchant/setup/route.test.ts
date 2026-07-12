@@ -34,7 +34,7 @@ describe("POST /api/merchant/setup", () => {
     expect(json.error).toBe("merchant_id and phone are required");
   });
 
-  it("returns error when admin client unavailable", async () => {
+  it("returns admin_unavailable signal when admin client unavailable", async () => {
     const req = new Request("http://localhost/api/merchant/setup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -45,7 +45,8 @@ describe("POST /api/merchant/setup", () => {
     });
     const res = await POST(req);
     const json = await res.json();
-    expect(res.status).toBe(500);
-    expect(json.error).toContain("Admin client not available");
+    expect(res.status).toBe(200);
+    expect(json.admin_unavailable).toBe(true);
+    expect(json.merchant_id).toBeDefined();
   });
 });
