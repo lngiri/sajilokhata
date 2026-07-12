@@ -147,6 +147,7 @@ export default function ScanPage() {
           id: crypto.randomUUID(),
           merchant_id: merchantId,
           customer_id: "",
+          customerPhone: phone,
           amount: Number(amount),
           description: description || null,
           type: "debit",

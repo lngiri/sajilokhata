@@ -16,6 +16,7 @@ interface SajiloKhataDB extends DBSchema {
       id: string;
       merchantId: string;
       customerId: string;
+      customerPhone: string;
       amount: number;
       quantity?: number;
       unit?: CreditUnit;
@@ -85,12 +86,13 @@ function getDB() {
 // Pending Logs CRUD
 // ============================================================
 
-export async function savePendingLog(log: CreditLogInsert & { id: string }) {
+export async function savePendingLog(log: CreditLogInsert & { id: string; customerPhone?: string }) {
   const db = await getDB();
   const entry = {
     id: log.id,
     merchantId: log.merchant_id,
     customerId: log.customer_id,
+    customerPhone: log.customerPhone ?? "",
     amount: log.amount,
     quantity: log.quantity ?? undefined,
     unit: log.unit ?? undefined,
@@ -111,6 +113,7 @@ export async function getPendingLogs(): Promise<
     id: string;
     merchantId: string;
     customerId: string;
+    customerPhone: string;
     amount: number;
     quantity?: number;
     unit?: CreditUnit;
@@ -134,6 +137,7 @@ export async function getPendingLogsByMerchant(
     id: string;
     merchantId: string;
     customerId: string;
+    customerPhone: string;
     amount: number;
     quantity?: number;
     unit?: CreditUnit;
@@ -323,7 +327,8 @@ export async function setSetting(key: string, value: string) {
 // ============================================================
 
 export async function syncPendingLogs(
-  syncFn: (log: CreditLogInsert) => Promise<CreditLog>
+  syncFn: (log: CreditLogInsert) => Promise<CreditLog>,
+  resolveCustomer?: (phone: string, merchantId: string) => Promise<{ id: string }>
 ): Promise<{ synced: number; failed: number }> {
   const pendingLogs = await getPendingLogs();
   let synced = 0;
@@ -331,9 +336,20 @@ export async function syncPendingLogs(
 
   for (const log of pendingLogs) {
     try {
+      let resolvedCustomerId = log.customerId;
+
+      if (resolveCustomer && log.customerPhone) {
+        try {
+          const customer = await resolveCustomer(log.customerPhone, log.merchantId);
+          resolvedCustomerId = customer.id;
+        } catch {
+          // fall through with original customerId
+        }
+      }
+
       await syncFn({
         merchant_id: log.merchantId,
-        customer_id: log.customerId,
+        customer_id: resolvedCustomerId,
         amount: log.amount,
         quantity: log.quantity,
         unit: log.unit,

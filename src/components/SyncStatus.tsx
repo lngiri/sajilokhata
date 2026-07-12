@@ -12,7 +12,7 @@ import {
   recordSyncComplete,
   getLastSyncTime,
 } from "@/lib/offline/db";
-import { createCreditLog } from "@/lib/actions";
+import { createCreditLog, findOrCreateCustomer, linkCustomerToMerchant } from "@/lib/actions";
 
 /** Format a timestamp as a relative string (e.g. "2 min ago") */
 function timeAgo(date: Date): string {
@@ -25,6 +25,12 @@ function timeAgo(date: Date): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+async function resolveOfflineCustomer(phone: string, merchantId: string) {
+  const customer = await findOrCreateCustomer(phone);
+  await linkCustomerToMerchant(merchantId, customer.id);
+  return customer;
 }
 
 export default function SyncStatus() {
@@ -74,7 +80,7 @@ export default function SyncStatus() {
 
     try {
       // Sync credit logs first, then delivery logs
-      const creditResult = await syncPendingLogs(createCreditLog);
+      const creditResult = await syncPendingLogs(createCreditLog, resolveOfflineCustomer);
       const deliveryResult = await syncDeliveryLogs(createCreditLog);
       const total = creditResult.synced + deliveryResult.synced;
       const failed = creditResult.failed + deliveryResult.failed;
@@ -102,7 +108,7 @@ export default function SyncStatus() {
       if (syncing || !isOnline() || totalPending === 0) return;
       setSyncing(true);
       try {
-        const creditResult = await syncPendingLogs(createCreditLog);
+        const creditResult = await syncPendingLogs(createCreditLog, resolveOfflineCustomer);
         const deliveryResult = await syncDeliveryLogs(createCreditLog);
         const total = creditResult.synced + deliveryResult.synced;
         await recordSyncComplete();
