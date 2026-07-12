@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/Toast";
 import NetworkStatus from "@/components/NetworkStatus";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import { AuthProvider } from "@/components/AuthProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -47,12 +48,14 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-sans antialiased bg-[var(--color-bg)] text-[var(--color-text)]">
-        <ServiceWorkerRegistrar />
-        <ToastProvider>
-          <NetworkStatus />
-          <main className="mx-auto max-w-md min-h-dvh">{children}</main>
-          <PWAInstallBanner />
-        </ToastProvider>
+        <AuthProvider>
+          <ServiceWorkerRegistrar />
+          <ToastProvider>
+            <NetworkStatus />
+            <main className="mx-auto max-w-md min-h-dvh">{children}</main>
+            <PWAInstallBanner />
+          </ToastProvider>
+        </AuthProvider>
       </body>
     </html>
   );

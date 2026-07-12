@@ -116,8 +116,21 @@ export default function MerchantDashboard() {
   const supabase = useRef(createClient()).current;
 
   const loadData = useCallback(async () => {
-    const id = merchantIdRef.current || (await getCurrentMerchantId());
+    let id = merchantIdRef.current || (await getCurrentMerchantId());
     if (!mountedRef.current) return;
+
+    // Cross-check against authoritative Supabase auth session.
+    // If the stored merchant_id differs from the actual auth.uid(),
+    // it means localStorage is stale — use the auth session ID instead.
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.id !== id) {
+        id = user.id;
+        localStorage.setItem("merchant_id", user.id);
+      }
+    } catch {
+      // Auth unavailable (bypass/demo mode); keep the existing value
+    }
 
     setMerchantId(id);
     merchantIdRef.current = id;

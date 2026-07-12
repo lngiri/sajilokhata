@@ -3,43 +3,27 @@
 import { createClient } from "@/lib/supabase/client";
 import { clearCachedClient } from "@/lib/actions";
 
-let cachedMerchantId: string | null = null;
-let cacheTimestamp = 0;
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
 /**
- * Get the current merchant ID from Supabase session or localStorage fallback.
- * Used by all merchant pages to replace DEMO_MERCHANT_ID.
- * Results are cached for 5 minutes to avoid redundant auth checks.
+ * Get the current merchant ID from the Supabase auth session.
+ * Always fetches from the server — no stale in-memory cache.
+ * Falls back to localStorage only when no auth session exists (bypass/demo mode).
  */
 export async function getCurrentMerchantId(): Promise<string | null> {
-  const now = Date.now();
-
-  // Return cached value if still valid
-  if (cachedMerchantId !== null && now - cacheTimestamp < CACHE_TTL) {
-    return cachedMerchantId;
-  }
-
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (user) {
       localStorage.setItem("merchant_id", user.id);
-      cachedMerchantId = user.id;
-      cacheTimestamp = now;
       return user.id;
     }
   } catch {
-    // Supabase not configured, fall back to localStorage
+    // Supabase not available
   }
 
-  // Fallback: check localStorage for a stored merchant_id
+  // Fallback: localStorage (bypass/demo mode where there's no real auth session)
   if (typeof window !== "undefined") {
-    const stored = localStorage.getItem("merchant_id");
-    cachedMerchantId = stored;
-    cacheTimestamp = now;
-    return stored;
+    return localStorage.getItem("merchant_id");
   }
 
   return null;
@@ -84,7 +68,6 @@ export async function signOut() {
   }
   clearCachedClient();
   localStorage.removeItem("merchant_id");
-  cachedMerchantId = null;
-  cacheTimestamp = 0;
+  localStorage.removeItem("sajilo_customer_session");
   window.location.href = "/login";
 }
