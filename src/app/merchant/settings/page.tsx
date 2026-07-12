@@ -419,7 +419,7 @@ export default function SettingsPage() {
                 </svg>
               </div>
               <div>
-                <p className="font-bold text-[var(--color-text)]">
+                <p className="font-extrabold text-[var(--color-primary)]">
                   Sajilo Khata
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)]">

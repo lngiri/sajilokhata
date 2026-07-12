@@ -682,10 +682,11 @@ export async function getCreditLogByToken(
   merchant_id: string;
   proposed_amount: number | null;
   customers: { name: string | null; phone: string } | null;
+  merchants: { name: string | null } | null;
 } | null> {
   const { data, error } = await getClient()
     .from("credit_logs")
-    .select("id, amount, type, status, description, customer_id, merchant_id, proposed_amount, customers(name, phone)")
+    .select("id, amount, type, status, description, customer_id, merchant_id, proposed_amount, customers(name, phone), merchants(name)")
     .eq("verification_token", token)
     .maybeSingle();
 

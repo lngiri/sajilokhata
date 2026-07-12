@@ -27,7 +27,7 @@ export default function Home() {
             />
           </svg>
         </div>
-        <h1 className="text-3xl font-bold text-[var(--color-text)]">
+        <h1 className="text-3xl font-extrabold text-[var(--color-primary)]">
           Sajilo Khata
         </h1>
         <p className="mt-2 text-[var(--color-text-muted)]">
