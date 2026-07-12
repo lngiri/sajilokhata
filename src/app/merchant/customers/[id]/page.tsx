@@ -6,11 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { getMerchantCreditLogs, updateCustomerCreditLimit } from "@/lib/actions";
+import TransactionIcon from "@/components/TransactionIcon";
 
 interface Transaction {
   id: string;
   amount: number;
-  type: string;
+  type: "debit" | "credit";
   status: string;
   description: string | null;
   created_at: string;
@@ -239,10 +240,8 @@ export default function CustomerDetailPage() {
             ) : (
               customer.transactions.map((tx) => (
                 <div key={tx.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-[var(--color-danger)]/10" : "bg-[var(--color-primary)]/10"}`}>
-                    <span className={`text-lg font-bold ${tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                      {tx.type === "debit" ? "+" : "-"}
-                    </span>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
+                    <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600" : "text-green-600"} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm text-[var(--color-text)] truncate">{tx.description || "No description"}</p>

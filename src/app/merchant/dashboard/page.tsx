@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useRouter } from "next/navigation";
+import TransactionIcon from "@/components/TransactionIcon";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
 const POLL_INTERVAL = 30_000;
@@ -56,7 +57,7 @@ export default function MerchantDashboard() {
     {
       id: string;
       amount: number;
-      type: string;
+      type: "debit" | "credit";
       description: string | null;
       created_at: string;
       customers: { name: string | null; phone: string } | null;
@@ -66,7 +67,7 @@ export default function MerchantDashboard() {
     {
       id: string;
       amount: number;
-      type: string;
+      type: "debit" | "credit";
       status: string;
       description: string | null;
       created_at: string;
@@ -429,10 +430,8 @@ export default function MerchantDashboard() {
                         href={href}
                         className={`block bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}
                       >
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
-                          <span className="text-sm font-bold">
-                            {log.type === "debit" ? "+" : "-"}
-                          </span>
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
+                          <TransactionIcon type={log.type} size={14} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -510,10 +509,8 @@ export default function MerchantDashboard() {
                         href={href}
                         className="block bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform"
                       >
-                        <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
-                          <span className="text-lg font-bold text-[var(--color-accent)]">
-                            {log.type === "debit" ? "+" : "-"}
-                          </span>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
+                          <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-[var(--color-text)] truncate">

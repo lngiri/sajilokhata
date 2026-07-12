@@ -5,6 +5,7 @@ import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/lib/actions";
+import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
 
 /** Key used to persist customer session in localStorage */
@@ -13,7 +14,7 @@ const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
 interface HistoryEntry {
   id: string;
   amount: number;
-  type: string;
+  type: "debit" | "credit";
   status: string;
   description: string | null;
   created_at: string;
@@ -284,21 +285,9 @@ export default function CustomerHistoryPage() {
                   {/* Transaction card */}
                   <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}>
                     <div className="flex items-start gap-3">
-                      {/* Status indicator */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.bg}`}>
-                        {(log.status === "approved") ? (
-                          <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                          </svg>
-                        ) : (log.status === "pending" || log.status === "unverified") ? (
-                          <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        )}
+                      {/* Type icon */}
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
+                        <TransactionIcon type={log.type} size={18} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
                       </div>
 
                       {/* Details */}

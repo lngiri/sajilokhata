@@ -6,13 +6,14 @@ import PullToRefresh from "@/components/PullToRefresh";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
+import TransactionIcon from "@/components/TransactionIcon";
 import { getMerchantCreditLogs, updateCreditLogStatus } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
 
 interface LogEntry {
   id: string;
   amount: number;
-  type: string;
+  type: "debit" | "credit";
   status: string;
   description: string | null;
   quantity: number | null;
@@ -227,8 +228,8 @@ export default function LedgerPage() {
               {logs.map((log) => (
                 <div key={log.id} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 ${log.status === "rejected" ? "opacity-60" : ""}`}>
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
-                      <span className="text-lg font-bold">{log.type === "debit" ? "+" : "-"}</span>
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
+                      <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
