@@ -54,6 +54,14 @@ export async function updateMerchantProfile(
     throw new Error(data.error || "Failed to save profile");
   }
 
+  // If the API resolved a different merchant_id (e.g. merged duplicates),
+  // sync it back to localStorage so the frontend uses the correct ID.
+  if (data.merchant_id && data.merchant_id !== merchantId) {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("merchant_id", data.merchant_id);
+    }
+  }
+
   return data.profile;
 }
 

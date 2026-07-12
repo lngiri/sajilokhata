@@ -10,8 +10,6 @@ const STATIC_ASSETS = [
   "/merchant/qr",
   "/merchant/settings",
   "/manifest.json",
-  "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png",
 ];
 
 // Install: cache all static assets
@@ -72,10 +70,8 @@ self.addEventListener("fetch", (event) => {
   // For static assets (JS, CSS, images): cache-first
   if (
     url.pathname.startsWith("/_next/static/") ||
-    url.pathname.startsWith("/icons/") ||
     url.pathname.endsWith(".js") ||
     url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".png") ||
     url.pathname.endsWith(".svg") ||
     url.pathname.endsWith(".woff2")
   ) {

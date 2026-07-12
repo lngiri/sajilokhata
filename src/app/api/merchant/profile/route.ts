@@ -40,12 +40,27 @@ export async function POST(request: Request) {
       }
     }
 
+    // If phone is provided, look up existing merchant by phone to resolve ID.
+    // This handles stale localStorage merchant_id and duplicate records.
+    let resolvedId = merchant_id;
+    if (phone) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingByPhone } = await (client.from("merchants") as any)
+        .select("id")
+        .eq("phone", phone)
+        .maybeSingle();
+
+      if (existingByPhone && existingByPhone.id !== merchant_id) {
+        resolvedId = existingByPhone.id;
+      }
+    }
+
     // Upsert merchant profile — DB UNIQUE constraint on phone prevents duplicates
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from("merchants") as any)
       .upsert(
         {
-          id: merchant_id,
+          id: resolvedId,
           ...(name !== undefined && { name }),
           ...(business_name !== undefined && { business_name }),
           ...(business_type !== undefined && { business_type }),
@@ -75,7 +90,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, profile: data });
+    return NextResponse.json({ success: true, profile: data, merchant_id: resolvedId });
   } catch (err) {
     console.error("Merchant profile error:", err);
     return NextResponse.json(
