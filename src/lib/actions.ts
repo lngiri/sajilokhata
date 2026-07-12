@@ -181,7 +181,7 @@ export async function getMerchantCreditLogs(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateCreditLogStatus(
   logId: string,
-  status: "approved" | "disputed" | "rejected" | "pending" | "unverified",
+  status: "approved" | "disputed" | "rejected" | "pending" | "unverified" | "edit_requested",
   actorType?: "merchant" | "customer"
 ): Promise<any> {
   const updates: Record<string, unknown> = {};
@@ -679,11 +679,13 @@ export async function getCreditLogByToken(
   status: string;
   description: string | null;
   customer_id: string;
+  merchant_id: string;
+  proposed_amount: number | null;
   customers: { name: string | null; phone: string } | null;
 } | null> {
   const { data, error } = await getClient()
     .from("credit_logs")
-    .select("id, amount, type, status, description, customer_id, customers(name, phone)")
+    .select("id, amount, type, status, description, customer_id, merchant_id, proposed_amount, customers(name, phone)")
     .eq("verification_token", token)
     .maybeSingle();
 
@@ -694,33 +696,92 @@ export async function getCreditLogByToken(
 export async function approveByToken(
   token: string
 ): Promise<any> {
-  const { data: log } = await getClient()
-    .from("credit_logs")
-    .select("id")
-    .eq("verification_token", token)
-    .maybeSingle();
+  const res = await fetch("/api/verify/approve", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
 
-  if (!log) throw new Error("Invalid verification token");
+  const data = await res.json();
 
-  return updateCreditLogStatus(log.id, "approved", "customer");
+  if (!res.ok) {
+    const msg = data.code === "CREDIT_LIMIT_EXCEEDED" ? data.error : (data.error || "Failed to approve");
+    throw new Error(msg);
+  }
+
+  return data;
 }
 
 export async function disputeByToken(
   token: string,
   reason: string
 ): Promise<any> {
-  const { data: log } = await getClient()
-    .from("credit_logs")
-    .select("id")
-    .eq("verification_token", token)
-    .maybeSingle();
+  const res = await fetch("/api/verify/dispute", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, reason }),
+  });
 
-  if (!log) throw new Error("Invalid verification token");
+  const data = await res.json();
 
-  await getClient()
-    .from("credit_logs")
-    .update({ disputed_reason: reason })
-    .eq("id", log.id);
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to dispute");
+  }
 
-  return updateCreditLogStatus(log.id, "disputed", "customer");
+  return data;
+}
+
+export async function requestAmountEdit(
+  token: string,
+  proposedAmount: number
+): Promise<any> {
+  const res = await fetch("/api/verify/edit-request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, proposedAmount }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to submit edit request");
+  }
+
+  return data;
+}
+
+export async function acceptEditRequest(
+  logId: string
+): Promise<any> {
+  const res = await fetch("/api/verify/accept-edit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ logId }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to accept edit");
+  }
+
+  return data;
+}
+
+export async function rejectEditRequest(
+  logId: string
+): Promise<any> {
+  const res = await fetch("/api/verify/reject-edit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ logId }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to reject edit");
+  }
+
+  return data;
 }

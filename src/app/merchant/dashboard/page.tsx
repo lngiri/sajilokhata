@@ -12,6 +12,8 @@ import {
   getMerchantStats,
   getMerchantCreditLogs,
   getMerchantProfile,
+  acceptEditRequest,
+  rejectEditRequest,
 } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useRouter } from "next/navigation";
@@ -58,8 +60,11 @@ export default function MerchantDashboard() {
       id: string;
       amount: number;
       type: "debit" | "credit";
+      status: string;
       description: string | null;
+      proposed_amount: number | null;
       created_at: string;
+      customer_id: string | null;
       customers: { name: string | null; phone: string } | null;
     }[]
   >([]);
@@ -105,15 +110,16 @@ export default function MerchantDashboard() {
 
     if (id) {
       try {
-        const [statsData, pendingData, activityData, profileData] = await Promise.all([
+        const [statsData, pendingData, editRequestedData, activityData, profileData] = await Promise.all([
           getMerchantStats(id),
           getMerchantCreditLogs(id, { status: "pending", limit: 10 }),
+          getMerchantCreditLogs(id, { status: "edit_requested", limit: 10 }),
           getMerchantCreditLogs(id, { limit: 15 }),
           getMerchantProfile(id).catch(() => null),
         ]);
         if (!mountedRef.current) return;
         setStats(statsData);
-        setPendingLogs(pendingData as typeof pendingLogs);
+        setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
         setRecentActivity(activityData as typeof recentActivity);
         setMerchantProfile(profileData);
         setLastRefreshed(new Date());
@@ -501,13 +507,15 @@ export default function MerchantDashboard() {
               ) : (
                 <div className="space-y-2">
                   {pendingLogs.map((log) => {
-                    const customerId = (log as any).customer_id;
+                    const isEditRequest = log.status === "edit_requested";
+                    const customerId = log.customer_id;
                     const href = customerId ? `/merchant/customers/${customerId}` : "#";
                     return (
-                      <a
+                      <div
                         key={log.id}
-                        href={href}
-                        className="block bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform"
+                        className={`bg-white rounded-xl p-4 shadow-sm border flex items-center gap-3 ${
+                          isEditRequest ? "border-blue-200 bg-blue-50/30" : "border-gray-50"
+                        }`}
                       >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
                           <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
@@ -519,16 +527,56 @@ export default function MerchantDashboard() {
                           <p className="text-xs text-[var(--color-text-muted)] truncate">
                             {log.description || "No description"}
                           </p>
+                          {isEditRequest && log.proposed_amount && (
+                            <p className="text-xs text-blue-700 font-medium mt-1">
+                              ग्राहकले रकम NPR {log.amount.toLocaleString()} बाट NPR {log.proposed_amount.toLocaleString()} मा परिवर्तन गर्न अनुरोध गरेको छ
+                            </p>
+                          )}
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="font-bold text-[var(--color-text)]">
-                            NPR {log.amount.toLocaleString()}
-                          </p>
-                          <p className="text-[10px] text-[var(--color-text-muted)]">
-                            {timeAgo(log.created_at)}
-                          </p>
+                        <div className="flex-shrink-0 space-y-1">
+                          {isEditRequest ? (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await acceptEditRequest(log.id);
+                                    addToast("Edit accepted", "success");
+                                    loadData();
+                                  } catch {
+                                    addToast("Failed to accept edit", "error");
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                              >
+                                स्वीकार गर्नुहोस्
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await rejectEditRequest(log.id);
+                                    addToast("Edit rejected", "success");
+                                    loadData();
+                                  } catch {
+                                    addToast("Failed to reject edit", "error");
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                              >
+                                अस्वीकार गर्नुहोस्
+                              </button>
+                            </>
+                          ) : (
+                            <a href={href} className="block text-right">
+                              <p className="font-bold text-[var(--color-text)]">
+                                NPR {log.amount.toLocaleString()}
+                              </p>
+                              <p className="text-[10px] text-[var(--color-text-muted)]">
+                                {timeAgo(log.created_at)}
+                              </p>
+                            </a>
+                          )}
                         </div>
-                      </a>
+                      </div>
                     );
                   })}
                 </div>

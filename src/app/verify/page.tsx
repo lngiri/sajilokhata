@@ -7,6 +7,7 @@ import {
   getCreditLogByToken,
   approveByToken,
   disputeByToken,
+  requestAmountEdit,
 } from "@/lib/actions";
 
 type Step = "loading" | "invalid" | "phone" | "otp" | "action" | "done";
@@ -22,7 +23,14 @@ export default function VerifyPage() {
   const [message, setMessage] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [actionDone, setActionDone] = useState<"approved" | "disputed" | null>(null);
+  const [actionDone, setActionDone] = useState<"approved" | "disputed" | "edit_requested" | null>(null);
+  const [creditCheck, setCreditCheck] = useState<{
+    overLimit: boolean;
+    remainingLimit: number;
+    message: string;
+  } | null>(null);
+  const [showEditInput, setShowEditInput] = useState(false);
+  const [proposedAmount, setProposedAmount] = useState("");
 
   useEffect(() => {
     if (!token) {
@@ -101,6 +109,55 @@ export default function VerifyPage() {
     }
   };
 
+  useEffect(() => {
+    if (step !== "action" || !log) return;
+    if (log.type !== "debit") {
+      setCreditCheck(null);
+      return;
+    }
+    const check = async () => {
+      try {
+        const supabase = createClient();
+        const { data: mc } = await supabase
+          .from("merchant_customers")
+          .select("credit_limit")
+          .eq("merchant_id", log.merchant_id)
+          .eq("customer_id", log.customer_id)
+          .maybeSingle();
+
+        const creditLimit = (mc as any)?.credit_limit || 0;
+        const { data: approvedLogs } = await supabase
+          .from("credit_logs")
+          .select("amount, type")
+          .eq("merchant_id", log.merchant_id)
+          .eq("customer_id", log.customer_id)
+          .eq("status", "approved");
+
+        const currentBalance = (approvedLogs as any[])?.reduce((sum: number, l: any) => {
+          return sum + (l.type === "debit" ? l.amount : -l.amount);
+        }, 0) || 0;
+
+        const remainingLimit = creditLimit - currentBalance;
+        if (log.amount > remainingLimit) {
+          setCreditCheck({
+            overLimit: true,
+            remainingLimit,
+            message: `तपाईंको उधारो सिमा (Limit) पुगिसकेको छ। बाँकी: NPR ${remainingLimit.toLocaleString()}`,
+          });
+        } else {
+          setCreditCheck({
+            overLimit: false,
+            remainingLimit,
+            message: `बाँकी उधारो सिमा: NPR ${remainingLimit.toLocaleString()}`,
+          });
+        }
+      } catch {
+        setCreditCheck(null);
+      }
+    };
+    check();
+  }, [step, log]);
+
   const handleApprove = async () => {
     setSubmitting(true);
     setMessage("");
@@ -125,6 +182,25 @@ export default function VerifyPage() {
     try {
       await disputeByToken(token, disputeReason);
       setActionDone("disputed");
+      setStep("done");
+    } catch (e: any) {
+      setMessage(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleRequestEdit = async () => {
+    const amt = parseFloat(proposedAmount);
+    if (!amt || amt <= 0) {
+      setMessage("कृपया मान्य रकम प्रविष्ट गर्नुहोस् (Enter a valid amount)");
+      return;
+    }
+    setSubmitting(true);
+    setMessage("");
+    try {
+      await requestAmountEdit(token, amt);
+      setActionDone("edit_requested");
       setStep("done");
     } catch (e: any) {
       setMessage(e.message);
@@ -226,7 +302,7 @@ export default function VerifyPage() {
           </div>
         )}
 
-        {/* Action (Approve/Dispute) */}
+        {/* Action (Approve/Dispute/Edit) */}
         {step === "action" && log && (
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
@@ -252,50 +328,113 @@ export default function VerifyPage() {
               </div>
             </div>
 
-            {/* Dispute reason */}
-            <div>
-              <label className="text-xs font-medium text-[var(--color-text)]">
-                विवादको कारण (Dispute Reason) — optional
-              </label>
-              <textarea
-                value={disputeReason}
-                onChange={(e) => setDisputeReason(e.target.value)}
-                rows={2}
-                className="w-full mt-1 px-3 py-2 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
-                placeholder="e.g. Amount is incorrect"
-              />
-            </div>
+            {/* Credit limit info */}
+            {creditCheck && log.type === "debit" && (
+              <div className={`rounded-xl p-3 text-sm ${creditCheck.overLimit ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                {creditCheck.message}
+              </div>
+            )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={handleDispute}
-                disabled={submitting}
-                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
-              >
-                विवाद (Dispute)
-              </button>
-              <button
-                onClick={handleApprove}
-                disabled={submitting}
-                className="flex-1 py-3 bg-green-600 text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {submitting ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>स्वीकृत गर्नुहोस् (Approve)</>
-                )}
-              </button>
-            </div>
+            {/* Edit amount input */}
+            {showEditInput && (
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-[var(--color-text)]">
+                  सही रकम (Correct Amount)
+                </label>
+                <input
+                  type="number"
+                  value={proposedAmount}
+                  onChange={(e) => setProposedAmount(e.target.value.replace(/\D/g, ""))}
+                  placeholder={log.amount.toString()}
+                  min={1}
+                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-bold"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setShowEditInput(false); setProposedAmount(""); }}
+                    className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                  >
+                    रद्द गर्नुहोस् (Cancel)
+                  </button>
+                  <button
+                    onClick={handleRequestEdit}
+                    disabled={submitting || !proposedAmount || parseFloat(proposedAmount) <= 0}
+                    className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+                  >
+                    {submitting ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                    ) : (
+                      "पेश गर्नुहोस् (Submit)"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Dispute reason */}
+            {!showEditInput && (
+              <div>
+                <label className="text-xs font-medium text-[var(--color-text)]">
+                  विवादको कारण (Dispute Reason) — optional
+                </label>
+                <textarea
+                  value={disputeReason}
+                  onChange={(e) => setDisputeReason(e.target.value)}
+                  rows={2}
+                  className="w-full mt-1 px-3 py-2 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
+                  placeholder="e.g. Amount is incorrect"
+                />
+              </div>
+            )}
+
+            {!showEditInput && (
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowEditInput(true)}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                >
+                  रकम सच्याउनुहोस् (Edit Amount)
+                </button>
+                <button
+                  onClick={handleDispute}
+                  disabled={submitting}
+                  className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                >
+                  विवाद (Dispute)
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={submitting || creditCheck?.overLimit}
+                  className={`flex-1 py-3 rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2 ${
+                    creditCheck?.overLimit ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-green-600 text-white"
+                  }`}
+                >
+                  {submitting ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>स्वीकृत गर्नुहोस् (Approve)</>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         )}
 
         {/* Done */}
         {step === "done" && (
           <div className="text-center py-6">
-            <div className={`w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center ${actionDone === "approved" ? "bg-green-50" : "bg-amber-50"}`}>
+            <div className={`w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center ${
+              actionDone === "approved" ? "bg-green-50" :
+              actionDone === "edit_requested" ? "bg-blue-50" : "bg-amber-50"
+            }`}>
               {actionDone === "approved" ? (
                 <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              ) : actionDone === "edit_requested" ? (
+                <svg className="w-7 h-7 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
                 </svg>
               ) : (
                 <svg className="w-7 h-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -304,11 +443,15 @@ export default function VerifyPage() {
               )}
             </div>
             <p className="font-bold text-[var(--color-text)]">
-              {actionDone === "approved" ? "स्वीकृत गरियो (Approved!)" : "विवाद दर्ता गरियो (Disputed!)"}
+              {actionDone === "approved" ? "स्वीकृत गरियो (Approved!)" :
+               actionDone === "edit_requested" ? "रकम परिवर्तन अनुरोध पेश गरियो (Edit Requested!)" :
+               "विवाद दर्ता गरियो (Disputed!)"}
             </p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {actionDone === "approved"
                 ? "कारोबार स्वीकृत गरिएको छ। धन्यवाद!"
+                : actionDone === "edit_requested"
+                ? "तपाईंको रकम परिवर्तन अनुरोध व्यापारीले समीक्षा गर्नेछ।"
                 : "तपाईंको विवाद पेश गरिएको छ। व्यापारीलाई सूचित गरिनेछ।"}
             </p>
           </div>

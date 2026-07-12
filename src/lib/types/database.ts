@@ -13,10 +13,10 @@ export type Json =
 export type BusinessType = "kirana" | "dairy" | "meat";
 export type CreditUnit = "liter" | "jar" | "kg" | "piece" | "npr";
 export type TransactionType = "debit" | "credit";
-export type TransactionStatus = "pending" | "unverified" | "approved" | "disputed" | "rejected";
+export type TransactionStatus = "pending" | "unverified" | "approved" | "disputed" | "rejected" | "edit_requested";
 export type SyncStatus = "online" | "offline_pending";
 export type ActorType = "merchant" | "customer" | "admin";
-export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified";
+export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected";
 
 export interface Database {
   public: {
@@ -115,6 +115,7 @@ export interface Database {
           device_info: string | null;
           verification_token: string | null;
           disputed_reason: string | null;
+          proposed_amount: number | null;
           created_at: string;
           approved_at: string | null;
           updated_at: string;
@@ -134,6 +135,7 @@ export interface Database {
           device_info?: string | null;
           verification_token?: string | null;
           disputed_reason?: string | null;
+          proposed_amount?: number | null;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
@@ -153,6 +155,7 @@ export interface Database {
           device_info?: string | null;
           verification_token?: string | null;
           disputed_reason?: string | null;
+          proposed_amount?: number | null;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
