@@ -6,6 +6,14 @@ interface UserMatch {
   phone_confirmed_at: string | null;
 }
 
+/**
+ * Development-only bypass auth endpoint.
+ * Returns a cryptographically-generated password that the client uses
+ * to sign in via supabase.auth.signInWithPassword().
+ *
+ * In production, replace this with OTP/SMS-based auth using
+ * supabase.auth.signInWithOtp().
+ */
 export async function POST(request: Request) {
   try {
     const { phone } = await request.json();
@@ -19,9 +27,7 @@ export async function POST(request: Request) {
 
     const adminClient = getAdminClient();
 
-    // If service_role key is not configured, fall back to a lightweight bypass
     if (!adminClient) {
-      // The client will use localStorage + cookie approach as fallback
       return NextResponse.json({
         bypass_id: crypto.randomUUID(),
         phone,
@@ -29,10 +35,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // Generate a random password for this session
-    const bypassPassword = `sajilo-bypass-${Math.random().toString(36).slice(2, 10)}`;
+    // Cryptographically secure random password
+    const bypassPassword = `sajilo-bypass-${crypto.randomUUID().slice(0, 12)}`;
 
-    // Helper: ensure a merchants row exists for the given user ID
     async function ensureMerchantRow(userId: string, userPhone: string) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: upsertError } = await (adminClient!.from("merchants") as any)
@@ -50,7 +55,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Try creating a new user first (simplest path when phone is available)
+    // 1. Try creating a new user
     const { data: newUser, error: createError } =
       await adminClient.auth.admin.createUser({
         phone,
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. If user already exists, find them by paginating through auth.users
+    // 2. If user already exists, find them
     const isDuplicate =
       createError?.message?.toLowerCase().includes("already exists") ||
       createError?.message?.toLowerCase().includes("already registered");
@@ -81,13 +86,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find existing user by phone (admin API lacks getUserByPhone)
+    // Find existing user by phone
     let foundUser: UserMatch | null = null;
     let page = 1;
     const perPage = 100;
 
     while (!foundUser && page <= 5) {
-      // Safety limit: 5 pages × 100 = 500 users
       const { data: pageData } = await adminClient.auth.admin.listUsers({
         page,
         perPage,
@@ -113,12 +117,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Update password so client can sign in
     await adminClient.auth.admin.updateUserById(foundUser.id, {
       password: bypassPassword,
     });
 
-    // Ensure phone is confirmed
     if (!foundUser.phone_confirmed_at) {
       await adminClient.auth.admin.updateUserById(foundUser.id, {
         phone_confirm: true,
