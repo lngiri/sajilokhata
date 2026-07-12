@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { QRScanner, CustomerQR } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import {
   findOrCreateCustomer,
@@ -328,6 +329,7 @@ export default function ScanPage() {
                 onChange={(e) => setAmount(e.target.value)}
                 className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               />
+              <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
             </div>
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Description</label>

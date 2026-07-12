@@ -1,15 +1,22 @@
 "use client";
 
-import { useState, useEffect, useCallback, createContext, useContext } from "react";
+import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
+
+interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 
 interface Toast {
   id: string;
   message: string;
   type: "success" | "error" | "info" | "warning";
+  action?: ToastAction;
+  countdown?: number;
 }
 
 interface ToastContextType {
-  addToast: (message: string, type?: Toast["type"]) => void;
+  addToast: (message: string, type?: Toast["type"], action?: ToastAction, countdown?: number) => void;
 }
 
 const ToastContext = createContext<ToastContextType | null>(null);
@@ -26,9 +33,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback(
-    (message: string, type: Toast["type"] = "info") => {
+    (message: string, type: Toast["type"] = "info", action?: ToastAction, countdown?: number) => {
       const id = crypto.randomUUID();
-      setToasts((prev) => [...prev, { id, message, type }]);
+      setToasts((prev) => [...prev, { id, message, type, action, countdown }]);
     },
     []
   );
@@ -60,10 +67,36 @@ function ToastItem({
   toast: Toast;
   onRemove: () => void;
 }) {
+  const [remaining, setRemaining] = useState<number | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-    const timer = setTimeout(onRemove, 4000);
-    return () => clearTimeout(timer);
-  }, [onRemove]);
+    if (toast.countdown && toast.countdown > 0) {
+      setRemaining(toast.countdown);
+      intervalRef.current = setInterval(() => {
+        setRemaining((prev) => {
+          if (prev === null || prev <= 1) {
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            onRemove();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      };
+    } else {
+      const timer = setTimeout(onRemove, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast.countdown, onRemove]);
+
+  const handleAction = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    toast.action?.onClick();
+    onRemove();
+  };
 
   const bgColor = {
     success: "bg-emerald-500",
@@ -97,11 +130,20 @@ function ToastItem({
 
   return (
     <div
-      className={`${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto animate-slide-up`}
+      className={`${bgColor} text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 pointer-events-auto animate-slide-up max-w-sm`}
     >
       {icon}
       <p className="text-sm font-medium flex-1">{toast.message}</p>
-      <button onClick={onRemove} className="text-white/70 hover:text-white">
+      {toast.action && (
+        <button
+          onClick={handleAction}
+          className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg whitespace-nowrap transition-colors"
+        >
+          {toast.action.label}
+          {remaining !== null && ` (${remaining}s)`}
+        </button>
+      )}
+      <button onClick={onRemove} className="text-white/70 hover:text-white flex-shrink-0">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
         </svg>

@@ -173,12 +173,14 @@ export async function getMerchantCreditLogs(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateCreditLogStatus(
   logId: string,
-  status: "approved" | "disputed" | "rejected"
+  status: "approved" | "disputed" | "rejected" | "pending",
+  actorType?: "merchant" | "customer"
 ): Promise<any> {
-  const updates: Record<string, unknown> = { status };
+  const updates: Record<string, unknown> = {};
   if (status === "approved") {
     updates.approved_at = new Date().toISOString();
   }
+  updates.status = status;
 
   const { data, error } = await getClient()
     .from("credit_logs")
@@ -195,11 +197,37 @@ export async function updateCreditLogStatus(
   await getClient().from("audit_logs").insert({
     credit_log_id: logId,
     action: status,
-    actor_type: "merchant",
+    actor_type: actorType || "merchant",
     actor_id: actorId,
   });
 
   return data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function updateCreditLog(
+  logId: string,
+  updates: { amount?: number; description?: string }
+): Promise<any> {
+  const payload: Record<string, unknown> = {};
+  if (updates.amount !== undefined) payload.amount = updates.amount;
+  if (updates.description !== undefined) payload.description = updates.description;
+
+  const { data, error } = await getClient()
+    .from("credit_logs")
+    .update(payload)
+    .eq("id", logId)
+    .eq("status", "pending")
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function cancelCreditLog(logId: string): Promise<any> {
+  return updateCreditLogStatus(logId, "rejected", "customer");
 }
 
 // ============================================================

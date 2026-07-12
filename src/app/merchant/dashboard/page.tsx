@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
-import NetworkStatus from "@/components/NetworkStatus";
 import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
 import { QRDisplay } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import { playSuccessSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
 import {
   getMerchantStats,
@@ -203,6 +203,9 @@ export default function MerchantDashboard() {
           const oldStatus = payload.old?.status;
           const newStatus = payload.new?.status;
           if (oldStatus !== newStatus && newStatus) {
+            if (newStatus === "approved") {
+              playSuccessSound();
+            }
             addToast(
               `📝 Entry ${newStatus}: NPR ${Number(payload.new?.amount || 0).toLocaleString()}`,
               newStatus === "approved" ? "success" : "warning"
@@ -249,8 +252,6 @@ export default function MerchantDashboard() {
 
   return (
     <div className="pb-20">
-      <NetworkStatus />
-
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3">

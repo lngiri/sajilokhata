@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import SyncStatus from "@/components/SyncStatus";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import { playSuccessSound } from "@/lib/sound";
+import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import { createClient } from "@/lib/supabase/client";
@@ -125,6 +127,9 @@ export default function CustomerDashboard() {
             const oldStatus = payload.old?.status;
             const newStatus = payload.new?.status;
             if (oldStatus && newStatus && oldStatus !== newStatus) {
+              if (newStatus === "approved") {
+                playSuccessSound();
+              }
               const verb =
                 newStatus === "approved"
                   ? "Approved!"
@@ -465,6 +470,7 @@ export default function CustomerDashboard() {
                     className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                     autoFocus
                   />
+                  <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text)]">Description</label>

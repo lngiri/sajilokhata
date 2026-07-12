@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
-import { getCustomerCreditLogs } from "@/lib/actions";
+import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog } from "@/lib/actions";
 import { useSearchParams } from "next/navigation";
 
 /** Key used to persist customer session in localStorage */
@@ -54,6 +54,7 @@ export default function CustomerHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [editModal, setEditModal] = useState<{ id: string; amount: number; description: string } | null>(null);
 
   // On mount, restore customer session
   useEffect(() => {
@@ -339,6 +340,33 @@ export default function CustomerHistoryPage() {
                         </p>
                       </div>
                     </div>
+
+                    {log.status === "pending" && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                        <button
+                          onClick={() =>
+                            setEditModal({
+                              id: log.id,
+                              amount: log.amount,
+                              description: log.description || "",
+                            })
+                          }
+                          className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await cancelCreditLog(log.id);
+                            addToast("Entry cancelled.", "info");
+                            loadLogs();
+                          }}
+                          className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               );
@@ -349,6 +377,57 @@ export default function CustomerHistoryPage() {
       </PullToRefresh>
 
       <CustomerBottomNav />
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setEditModal(null)}>
+          <div
+            className="bg-white rounded-t-2xl w-full max-w-md p-6 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-lg font-bold text-[var(--color-text)] mb-4">Edit Entry</h2>
+            <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
+            <input
+              type="number"
+              min="1"
+              step="1"
+              value={editModal.amount}
+              onChange={(e) => setEditModal({ ...editModal, amount: Number(e.target.value) })}
+              className="w-full mt-1 mb-3 px-4 py-3 bg-white rounded-xl text-lg font-bold border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+            />
+            <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
+            <input
+              type="text"
+              value={editModal.description}
+              onChange={(e) => setEditModal({ ...editModal, description: e.target.value })}
+              placeholder="e.g. Rice 10kg, Milk 2L"
+              className="w-full mt-1 mb-4 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setEditModal(null)}
+                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await updateCreditLog(editModal.id, {
+                    amount: editModal.amount,
+                    description: editModal.description,
+                  });
+                  setEditModal(null);
+                  addToast("Entry updated.", "success");
+                  loadLogs();
+                }}
+                className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

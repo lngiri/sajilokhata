@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import { QRDisplay } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import {
   getCurrentMerchantId,
@@ -433,6 +434,25 @@ export default function SettingsPage() {
             </p>
           </div>
         </section>
+
+        {/* QR Code Section */}
+        {merchantId && merchantName && (
+          <section>
+            <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+              Your Shop QR
+            </h2>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+              <QRDisplay
+                merchantId={merchantId}
+                merchantName={merchantName}
+                businessType={businessType}
+              />
+              <p className="text-xs text-[var(--color-text-muted)] text-center mt-3">
+                Customers scan this QR to submit credit requests
+              </p>
+            </div>
+          </section>
+        )}
       </div>
 
       <BottomNav />

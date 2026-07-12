@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import NetworkStatus from "@/components/NetworkStatus";
+
 import { useToast } from "@/components/Toast";
 import {
   isOnline,
@@ -372,7 +372,6 @@ export default function DeliveryPage() {
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)] pb-8">
-      <NetworkStatus />
 
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">

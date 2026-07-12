@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import AmountSuggestions from "@/components/AmountSuggestions";
 import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
 import {
@@ -259,6 +260,7 @@ export default function MerchantScanPage() {
                   className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                   autoFocus
                 />
+                <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
               </div>
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">
