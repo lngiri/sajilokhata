@@ -328,7 +328,7 @@ export default function CustomerHistoryPage() {
                       <div className="text-right flex-shrink-0">
                         <p className={`font-bold text-sm ${
                           log.status === "approved"
-                            ? "text-[var(--color-danger)]"
+                            ? "text-green-600"
                             : log.status === "rejected"
                               ? "text-gray-400"
                               : "text-[var(--color-text)]"

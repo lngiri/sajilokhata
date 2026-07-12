@@ -124,7 +124,7 @@ export default function LedgerPage() {
   const statusColor = (status: string) => {
     switch (status) {
       case "approved":
-        return "text-[var(--color-primary)] bg-[var(--color-primary)]/10";
+        return "text-green-600 bg-green-50";
       case "pending":
         return "text-[var(--color-accent)] bg-[var(--color-accent)]/10";
       case "disputed":
@@ -242,7 +242,7 @@ export default function LedgerPage() {
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`font-bold text-sm ${log.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
+                      <p className={`font-bold text-sm ${log.status === "approved" ? "text-green-600" : log.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
                         {log.type === "debit" ? "+" : "-"}NPR {log.amount.toLocaleString()}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import PullToRefresh from "@/components/PullToRefresh";
 import { getMerchantCustomers } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useToast } from "@/components/Toast";
@@ -93,6 +94,7 @@ export default function CustomersPage() {
         </div>
       </div>
 
+      <PullToRefresh onRefresh={loadCustomers}>
       <div className="px-4 py-4">
         {loading ? (
           <div className="flex items-center justify-center py-20">
@@ -167,6 +169,7 @@ export default function CustomersPage() {
           </div>
         )}
       </div>
+      </PullToRefresh>
 
       <BottomNav />
     </div>

@@ -420,7 +420,7 @@ export default function MerchantDashboard() {
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className={`font-bold text-xs ${log.status === "approved" ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"}`}>
+                          <p className={`font-bold text-xs ${log.status === "approved" ? "text-green-600" : "text-[var(--color-text)]"}`}>
                             NPR {log.amount.toLocaleString()}
                           </p>
                           <p className="text-[9px] text-[var(--color-text-muted)]">

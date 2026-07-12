@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import SyncStatus from "@/components/SyncStatus";
+import PullToRefresh from "@/components/PullToRefresh";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
@@ -284,6 +285,7 @@ export default function CustomerDashboard() {
       </div>
 
       {/* ===== ALWAYS-VISIBLE DASHBOARD CONTENT ===== */}
+      <PullToRefresh onRefresh={loadStats}>
       <div className="px-4 py-4 space-y-4">
         {/* Customer identity badge */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">
@@ -380,6 +382,7 @@ export default function CustomerDashboard() {
           <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
         </a>
       </div>
+      </PullToRefresh>
 
       {/* ===== FLOATING QR SCAN FAB ===== */}
       <button
