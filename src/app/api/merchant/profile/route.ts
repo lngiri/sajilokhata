@@ -16,11 +16,9 @@ export async function POST(request: Request) {
 
     // Try admin client first (bypasses RLS), fall back to server client (user auth)
     let client: any = getAdminClient();
-    let isAdmin = true;
 
     if (!client) {
       client = await createClient();
-      isAdmin = false;
     }
 
     // Cross-table check: if phone is being changed, ensure it's not a customer
@@ -43,24 +41,32 @@ export async function POST(request: Request) {
       }
 
       // Phone ownership check: verify phone isn't already used by another merchant
-      // Uses .neq() to exclude self — works with both admin and server client
-      if (isAdmin) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: phoneOwner } = await (client.from("merchants") as any)
-          .select("id")
-          .eq("phone", phone)
-          .neq("id", merchant_id)
-          .maybeSingle();
+      // Uses the real authenticated user ID for self-exclusion (more reliable
+      // than merchant_id from request body, which could be stale).
+      let selfId = merchant_id;
+      try {
+        const serverClient = await createClient();
+        const { data: { user } } = await serverClient.auth.getUser();
+        if (user?.id) selfId = user.id;
+      } catch {
+        // Fall back to merchant_id from request body
+      }
 
-        if (phoneOwner) {
-          return NextResponse.json(
-            {
-              error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
-              code: "PHONE_TAKEN",
-            },
-            { status: 409 }
-          );
-        }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: phoneOwner } = await (client.from("merchants") as any)
+        .select("id")
+        .eq("phone", phone)
+        .neq("id", selfId)
+        .maybeSingle();
+
+      if (phoneOwner) {
+        return NextResponse.json(
+          {
+            error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
+            code: "PHONE_TAKEN",
+          },
+          { status: 409 }
+        );
       }
     }
 
