@@ -71,7 +71,7 @@ export default function SettingsPage() {
         address: address.trim() || undefined,
         phone: phone || undefined,
       });
-      addToast("Profile updated successfully!", "success");
+      addToast("तपाईंको प्रोफाइल विवरण सफलतापूर्वक अपडेट भयो।", "success");
     } catch (err: any) {
       console.error("Failed to save merchant profile:", err);
       addToast(err.message || "Failed to save. Please try again.", "error");

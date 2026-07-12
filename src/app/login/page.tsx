@@ -143,6 +143,7 @@ export default function LoginPage() {
           });
           const setupData = await setupRes.json();
           if (setupRes.ok && setupData.merchant_id) {
+            localStorage.setItem("merchant_id", setupData.merchant_id);
             status = setupData.existed ? "existing" : "new";
           }
         } catch {
@@ -226,6 +227,7 @@ export default function LoginPage() {
                 });
                 const setupData = await setupRes.json();
                 if (setupRes.ok && setupData.merchant_id) {
+                  localStorage.setItem("merchant_id", setupData.merchant_id);
                   status = setupData.existed ? "existing" : "new";
                 }
               } catch {

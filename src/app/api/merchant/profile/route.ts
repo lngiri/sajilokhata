@@ -43,15 +43,16 @@ export async function POST(request: Request) {
       }
 
       // Phone ownership check: verify phone isn't already used by another merchant
-      // Only possible with admin client (merchants RLS blocks SELECT by phone)
+      // Uses .neq() to exclude self — works with both admin and server client
       if (isAdmin) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data: phoneOwner } = await (client.from("merchants") as any)
           .select("id")
           .eq("phone", phone)
+          .neq("id", merchant_id)
           .maybeSingle();
 
-        if (phoneOwner && phoneOwner.id !== merchant_id) {
+        if (phoneOwner) {
           return NextResponse.json(
             {
               error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
