@@ -85,7 +85,7 @@ export async function linkCustomerToMerchant(
 ): Promise<any> {
   const { data: existing } = await getClient()
     .from("merchant_customers")
-    .select("*")
+    .select("id, merchant_id, customer_id, credit_limit, created_at, updated_at")
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
     .maybeSingle();
@@ -98,9 +98,8 @@ export async function linkCustomerToMerchant(
       merchant_id: merchantId,
       customer_id: customerId,
       credit_limit: creditLimit,
-      current_balance: 0,
     })
-    .select()
+    .select("id, merchant_id, customer_id, credit_limit, created_at, updated_at")
     .single();
 
   if (error) throw error;
@@ -204,12 +203,15 @@ export async function getMerchantCustomers(merchantId: string): Promise<any[]> {
   const customerIds = rows.map((r: any) => r.customer_id);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: approvedLogs } = await getClient()
+  const approvedLogsResult: any = await getClient()
     .from("credit_logs")
     .select("customer_id, amount, type")
     .eq("merchant_id", merchantId)
     .eq("status", "approved")
-    .in("customer_id", customerIds) as { data: any[] | null };
+    .in("customer_id", customerIds);
+
+  if (approvedLogsResult.error) throw approvedLogsResult.error;
+  const approvedLogs = approvedLogsResult.data as any[] | null;
 
   const balanceMap: Record<string, number> = {};
   for (const log of approvedLogs || []) {
@@ -233,7 +235,7 @@ export async function updateCustomerCreditLimit(
     .update({ credit_limit: creditLimit })
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
-    .select()
+    .select("id, merchant_id, customer_id, credit_limit")
     .single();
 
   if (error) throw error;
