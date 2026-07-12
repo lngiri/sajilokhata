@@ -47,11 +47,11 @@ export default function SettingsPage() {
         setBusinessName(profile.business_name || "");
         setBusinessType(profile.business_type || "kirana");
         setAddress(profile.address || "");
-        // Fallback to profile phone if session phone not available
-        setPhone(profile.phone || "");
+        // Auth session phone is most authoritative; fall back to db phone
+        setPhone(sessionPhone || profile.phone || "");
       }
-    } catch {
-      // Use defaults
+    } catch (err) {
+      console.error("Failed to load merchant profile:", err);
     }
   };
 
@@ -68,9 +68,11 @@ export default function SettingsPage() {
         business_name: businessName.trim() || undefined,
         business_type: businessType,
         address: address.trim() || undefined,
+        phone: phone || undefined,
       });
       addToast("Profile updated successfully!", "success");
-    } catch {
+    } catch (err) {
+      console.error("Failed to save merchant profile:", err);
       addToast("Failed to save. Please try again.", "error");
     } finally {
       setSaving(false);
@@ -138,7 +140,8 @@ export default function SettingsPage() {
 
         addToast("JSON exported successfully!", "success");
       }
-    } catch {
+    } catch (err) {
+      console.error("Failed to export data:", err);
       addToast("Failed to export. Please try again.", "error");
     } finally {
       setExporting(false);

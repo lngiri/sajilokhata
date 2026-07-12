@@ -11,6 +11,8 @@ import {
   getCustomerStats,
   getCustomerCreditLogs,
   getMerchantStats,
+  getMerchantProfile,
+  updateMerchantProfile,
 } from "./actions";
 
 const { mockFrom, mockCreateClient } = vi.hoisted(() => {
@@ -238,6 +240,62 @@ describe("updateCustomerCreditLimit", () => {
 
     const result = await updateCustomerCreditLimit("m1", "c1", 10000);
     expect(result.credit_limit).toBe(10000);
+  });
+});
+
+describe("getMerchantProfile", () => {
+  it("returns merchant profile by id", async () => {
+    const profile = {
+      id: "m1",
+      name: "Shop",
+      phone: "+9779841234567",
+      business_type: "kirana",
+      business_name: "Shop ABC",
+      address: "Kathmandu",
+    };
+    mockQueryResult({ data: profile, error: null });
+
+    const result = await getMerchantProfile("m1");
+    expect(result).toEqual(profile);
+  });
+
+  it("throws when merchant not found", async () => {
+    mockQueryResult({ data: null, error: new Error("Not found") });
+
+    await expect(getMerchantProfile("m1")).rejects.toThrow();
+  });
+});
+
+describe("updateMerchantProfile", () => {
+  it("upserts merchant profile with phone", async () => {
+    const updated = {
+      id: "m1",
+      name: "Shop",
+      phone: "+9779841234567",
+      business_type: "kirana",
+    };
+    mockQueryResult({ data: updated, error: null });
+
+    const result = await updateMerchantProfile("m1", {
+      name: "Shop",
+      phone: "+9779841234567",
+    });
+    expect(result.phone).toBe("+9779841234567");
+  });
+
+  it("upserts merchant profile without phone uses existing value", async () => {
+    const updated = {
+      id: "m1",
+      name: "Shop",
+      phone: "+9779841234567",
+      business_type: "kirana",
+    };
+    mockQueryResult({ data: updated, error: null });
+
+    const result = await updateMerchantProfile("m1", {
+      name: "Shop",
+    });
+    expect(result.phone).toBe("+9779841234567");
   });
 });
 

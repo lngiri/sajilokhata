@@ -35,6 +35,7 @@ export async function updateMerchantProfile(
     business_name?: string;
     business_type?: string;
     address?: string;
+    phone?: string;
   }
 ): Promise<any> {
   const { data, error } = await getClient()

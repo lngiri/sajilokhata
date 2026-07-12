@@ -60,6 +60,14 @@ export async function getCurrentUserPhone(): Promise<string | null> {
     // Supabase not available
   }
 
+  // Fallback: read from auth_bypass_phone cookie (set by bypass login)
+  if (typeof document !== "undefined") {
+    const match = document.cookie.match(/(?:^|;\s*)auth_bypass_phone=([^;]*)/);
+    if (match) {
+      return decodeURIComponent(match[1]);
+    }
+  }
+
   return null;
 }
 
