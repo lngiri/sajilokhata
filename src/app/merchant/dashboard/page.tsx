@@ -257,7 +257,9 @@ export default function MerchantDashboard() {
       case "pending":
         return "text-amber-600 bg-amber-50";
       case "rejected":
-        return "text-red-500 bg-red-50";
+        return "text-slate-500 bg-slate-100";
+      case "disputed":
+        return "text-[var(--color-danger)] bg-[var(--color-danger)]/10";
       default:
         return "text-gray-500 bg-gray-100";
     }
@@ -424,7 +426,7 @@ export default function MerchantDashboard() {
                       <a
                         key={log.id}
                         href={href}
-                        className="block bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform"
+                        className={`block bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}
                       >
                         <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
                           <span className="text-sm font-bold">
@@ -445,7 +447,7 @@ export default function MerchantDashboard() {
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className={`font-bold text-xs ${log.status === "approved" ? "text-green-600" : "text-[var(--color-text)]"}`}>
+                          <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
                             NPR {log.amount.toLocaleString()}
                           </p>
                           <p className="text-[9px] text-[var(--color-text-muted)]">

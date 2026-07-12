@@ -126,7 +126,9 @@ export default function LedgerPage() {
       case "approved":
         return "text-green-600 bg-green-50";
       case "pending":
-        return "text-[var(--color-accent)] bg-[var(--color-accent)]/10";
+        return "text-amber-600 bg-amber-50";
+      case "rejected":
+        return "text-slate-500 bg-slate-100";
       case "disputed":
         return "text-[var(--color-danger)] bg-[var(--color-danger)]/10";
       default:
@@ -222,7 +224,7 @@ export default function LedgerPage() {
           ) : (
             <div className="space-y-2">
               {logs.map((log) => (
-                <div key={log.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
+                <div key={log.id} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 ${log.status === "rejected" ? "opacity-60" : ""}`}>
                   <div className="flex items-start gap-3">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
                       <span className="text-lg font-bold">{log.type === "debit" ? "+" : "-"}</span>
@@ -242,7 +244,7 @@ export default function LedgerPage() {
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`font-bold text-sm ${log.status === "approved" ? "text-green-600" : log.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
+                      <p className={`font-bold text-sm ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
                         {log.type === "debit" ? "+" : "-"}NPR {log.amount.toLocaleString()}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">

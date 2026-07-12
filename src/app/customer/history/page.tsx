@@ -32,7 +32,7 @@ interface HistoryEntry {
 const statusConfig = {
   pending: { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
   approved: { bg: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
-  rejected: { bg: "bg-red-50 text-red-600 border-red-200", dot: "bg-red-500" },
+  rejected: { bg: "bg-slate-50 text-slate-500 border-slate-200", dot: "bg-slate-400" },
   disputed: { bg: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
 } as const;
 
@@ -276,7 +276,7 @@ export default function CustomerHistoryPage() {
                   )}
 
                   {/* Transaction card */}
-                  <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform">
+                  <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}>
                     <div className="flex items-start gap-3">
                       {/* Status indicator */}
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.bg}`}>
@@ -289,7 +289,7 @@ export default function CustomerHistoryPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         ) : (
-                          <svg className="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         )}
@@ -327,11 +327,11 @@ export default function CustomerHistoryPage() {
                       {/* Amount */}
                       <div className="text-right flex-shrink-0">
                         <p className={`font-bold text-sm ${
-                          log.status === "approved"
-                            ? "text-green-600"
-                            : log.status === "rejected"
-                              ? "text-gray-400"
-                              : "text-[var(--color-text)]"
+                          log.status === "rejected"
+                            ? "text-slate-400 line-through"
+                            : log.type === "debit"
+                              ? "text-red-600"
+                              : "text-green-600"
                         }`}>
                           NPR {log.amount.toLocaleString()}
                         </p>
