@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import SyncStatus from "@/components/SyncStatus";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import PendingApprovalModal from "@/components/PendingApprovalModal";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import { createClient } from "@/lib/supabase/client";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
@@ -46,6 +47,7 @@ export default function CustomerDashboard() {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   // On mount, restore customer session from localStorage
   useEffect(() => {
@@ -209,6 +211,7 @@ export default function CustomerDashboard() {
         });
       }
       setScanStep("success");
+      setShowPendingModal(true);
       loadStats();
       addToast("Credit request sent! Awaiting merchant approval.", "success");
     } catch (err) {
@@ -469,6 +472,17 @@ export default function CustomerDashboard() {
       )}
 
       <CustomerBottomNav />
+
+      <PendingApprovalModal
+        show={showPendingModal}
+        mode="customer"
+        amount={Number(amount)}
+        shopName={merchantName}
+        onViewHistory={() => {
+          window.location.href = "/customer/history";
+        }}
+        onClose={() => setShowPendingModal(false)}
+      />
     </div>
   );
 }

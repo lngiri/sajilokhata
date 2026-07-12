@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { QRScanner, CustomerQR } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
+import PendingApprovalModal from "@/components/PendingApprovalModal";
 import {
   findOrCreateCustomer,
   linkCustomerToMerchant,
@@ -70,6 +71,7 @@ export default function ScanPage() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [showPendingModal, setShowPendingModal] = useState(false);
 
   // On mount, restore customer session from localStorage
   useEffect(() => {
@@ -142,6 +144,7 @@ export default function ScanPage() {
         });
         addToast("Credit request sent! Awaiting merchant approval.", "success");
         setStep("done");
+        setShowPendingModal(true);
       } else {
         await savePendingLog({
           id: crypto.randomUUID(),
@@ -405,6 +408,17 @@ export default function ScanPage() {
           </div>
         </div>
       )}
+
+      <PendingApprovalModal
+        show={showPendingModal}
+        mode="customer"
+        amount={Number(amount)}
+        shopName={merchantName}
+        onViewHistory={() => {
+          window.location.href = "/customer/history";
+        }}
+        onClose={() => setShowPendingModal(false)}
+      />
     </div>
   );
 }

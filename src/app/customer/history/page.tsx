@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
+import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs } from "@/lib/actions";
 
@@ -178,9 +179,24 @@ export default function CustomerHistoryPage() {
         </div>
       </div>
 
+      {/* Pending banner */}
+      {!loading && stats.pending > 0 && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100">
+          <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <span className="text-sm font-medium text-amber-800">
+            {stats.pending} {stats.pending === 1 ? "entry" : "entries"} pending merchant approval
+          </span>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="px-4 py-4">
-        {loading ? (
+      <PullToRefresh onRefresh={loadLogs}>
+        <div className="px-4 py-4">
+          {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
@@ -303,6 +319,7 @@ export default function CustomerHistoryPage() {
           </div>
         )}
       </div>
+      </PullToRefresh>
 
       <CustomerBottomNav />
     </div>
