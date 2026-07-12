@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { normalizePhone } from "@/lib/phone";
 
 export async function POST(request: Request) {
   try {
-    const { phone } = await request.json();
+    let { phone } = await request.json();
+    phone = normalizePhone(phone);
 
     if (!phone) {
       return NextResponse.json(

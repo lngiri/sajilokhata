@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -13,7 +14,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { merchant_id, phone } = await request.json();
+    let { merchant_id, phone } = await request.json();
+    phone = normalizePhone(phone);
 
     if (!merchant_id || !phone) {
       return NextResponse.json(

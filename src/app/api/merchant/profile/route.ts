@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { normalizePhone } from "@/lib/phone";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { merchant_id, name, business_name, business_type, address, phone } = body;
+    let { merchant_id, name, business_name, business_type, address, phone } = body;
+    if (phone) phone = normalizePhone(phone);
 
     if (!merchant_id) {
       return NextResponse.json(

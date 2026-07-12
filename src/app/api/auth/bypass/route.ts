@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { normalizePhone } from "@/lib/phone";
 
 interface UserMatch {
   id: string;
@@ -26,7 +27,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { phone } = await request.json();
+    let { phone } = await request.json();
+    phone = normalizePhone(phone);
 
     if (!phone || typeof phone !== "string" || phone.length < 10) {
       return NextResponse.json(
