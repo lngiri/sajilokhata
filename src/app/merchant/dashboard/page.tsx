@@ -315,41 +315,25 @@ export default function MerchantDashboard() {
             {/* Stats Cards */}
             {stats && (
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                    Outstanding
-                  </p>
-                  <p className="text-xl font-bold text-[var(--color-danger)]">
-                    NPR {stats.totalOutstanding.toLocaleString()}
-                  </p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                    Today
-                  </p>
-                  <p className="text-xl font-bold text-[var(--color-primary)]">
-                    NPR {stats.todayTotal.toLocaleString()}
-                  </p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                    Customers
-                  </p>
-                  <p className="text-xl font-bold text-[var(--color-text)]">
-                    {stats.customerCount}
-                  </p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">
-                    Pending
-                  </p>
-                  <p className="text-xl font-bold text-[var(--color-accent)]">
-                    {stats.pendingCount}
-                  </p>
+                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Outstanding</p>
+                  <p className="text-xl font-bold text-[var(--color-danger)]">NPR {stats.totalOutstanding.toLocaleString()}</p>
+                </a>
+                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Today</p>
+                  <p className="text-xl font-bold text-[var(--color-primary)]">NPR {stats.todayTotal.toLocaleString()}</p>
+                </a>
+                <a href="/merchant/customers" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
+                  <p className="text-xl font-bold text-[var(--color-text)]">{stats.customerCount}</p>
+                </a>
+                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Pending</p>
+                  <p className="text-xl font-bold text-[var(--color-accent)]">{stats.pendingCount}</p>
                   {stats.pendingCount > 0 && (
                     <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
                   )}
-                </div>
+                </a>
               </div>
             )}
 
@@ -407,39 +391,44 @@ export default function MerchantDashboard() {
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  {recentActivity.slice(0, 10).map((log) => (
-                    <div
-                      key={log.id}
-                      className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3"
-                    >
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
-                        <span className="text-sm font-bold">
-                          {log.type === "debit" ? "+" : "-"}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                            {log.customers?.name || log.customers?.phone || "Unknown"}
-                          </p>
-                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium capitalize ${statusColor(log.status)}`}>
-                            {log.status}
+                  {recentActivity.slice(0, 10).map((log) => {
+                    const customerId = (log as any).customer_id;
+                    const href = customerId ? `/merchant/customers/${customerId}` : "#";
+                    return (
+                      <a
+                        key={log.id}
+                        href={href}
+                        className="block bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform"
+                      >
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${statusColor(log.status)}`}>
+                          <span className="text-sm font-bold">
+                            {log.type === "debit" ? "+" : "-"}
                           </span>
                         </div>
-                        <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-                          {log.description || timeAgo(log.created_at)}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className={`font-bold text-xs ${log.status === "approved" ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"}`}>
-                          NPR {log.amount.toLocaleString()}
-                        </p>
-                        <p className="text-[9px] text-[var(--color-text-muted)]">
-                          {timeAgo(log.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                              {log.customers?.name || log.customers?.phone || "Unknown"}
+                            </p>
+                            <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium capitalize ${statusColor(log.status)}`}>
+                              {log.status}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-[var(--color-text-muted)] truncate">
+                            {log.description || timeAgo(log.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className={`font-bold text-xs ${log.status === "approved" ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"}`}>
+                            NPR {log.amount.toLocaleString()}
+                          </p>
+                          <p className="text-[9px] text-[var(--color-text-muted)]">
+                            {timeAgo(log.created_at)}
+                          </p>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -483,34 +472,39 @@ export default function MerchantDashboard() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {pendingLogs.map((log) => (
-                    <div
-                      key={log.id}
-                      className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
-                        <span className="text-lg font-bold text-[var(--color-accent)]">
-                          {log.type === "debit" ? "+" : "-"}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                          {log.customers?.name || log.customers?.phone || "Unknown"}
-                        </p>
-                        <p className="text-xs text-[var(--color-text-muted)] truncate">
-                          {log.description || "No description"}
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-[var(--color-text)]">
-                          NPR {log.amount.toLocaleString()}
-                        </p>
-                        <p className="text-[10px] text-[var(--color-text-muted)]">
-                          {timeAgo(log.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  {pendingLogs.map((log) => {
+                    const customerId = (log as any).customer_id;
+                    const href = customerId ? `/merchant/customers/${customerId}` : "#";
+                    return (
+                      <a
+                        key={log.id}
+                        href={href}
+                        className="block bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-[var(--color-accent)]/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-lg font-bold text-[var(--color-accent)]">
+                            {log.type === "debit" ? "+" : "-"}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                            {log.customers?.name || log.customers?.phone || "Unknown"}
+                          </p>
+                          <p className="text-xs text-[var(--color-text-muted)] truncate">
+                            {log.description || "No description"}
+                          </p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="font-bold text-[var(--color-text)]">
+                            NPR {log.amount.toLocaleString()}
+                          </p>
+                          <p className="text-[10px] text-[var(--color-text-muted)]">
+                            {timeAgo(log.created_at)}
+                          </p>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               )}
             </div>

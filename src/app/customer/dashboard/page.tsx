@@ -305,7 +305,10 @@ export default function CustomerDashboard() {
             <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : stats ? (
-          <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-5 shadow-sm text-white">
+          <a
+            href="/customer/history"
+            className="block bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-5 shadow-sm text-white active:opacity-90 transition-opacity"
+          >
             <p className="text-sm opacity-80 mb-1">Total Outstanding Balance</p>
             <p className="text-3xl font-bold mb-1">
               NPR {stats.totalOutstanding.toLocaleString()}
@@ -331,7 +334,7 @@ export default function CustomerDashboard() {
                 ))}
               </div>
             )}
-          </div>
+          </a>
         ) : (
           <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-50 text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--color-primary)]/5 flex items-center justify-center">
