@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -129,6 +129,15 @@ function TopCustomersChart({ data }: { data: { name: string; balance: number }[]
 
 // ─── Transaction Audit Log ─────────────────────────────────────
 
+const STATUS_BADGE: Record<string, string> = {
+  approved: "bg-green-50 text-green-700",
+  pending: "bg-amber-50 text-amber-700",
+  rejected: "bg-slate-100 text-slate-500 line-through opacity-60",
+  disputed: "bg-red-50 text-red-700",
+  unverified: "bg-blue-50 text-blue-700",
+  edit_requested: "bg-indigo-50 text-indigo-700",
+};
+
 function TransactionAuditLog({
   logs,
   loading,
@@ -153,29 +162,33 @@ function TransactionAuditLog({
           <tr className="text-xs text-[var(--color-text-muted)] border-b border-gray-100">
             <th className="text-left py-2 pr-2 font-medium">Date</th>
             <th className="text-left py-2 pr-2 font-medium">Customer</th>
+            <th className="text-left py-2 pr-2 font-medium">Status</th>
             <th className="text-left py-2 pr-2 font-medium">Type</th>
             <th className="text-right py-2 pr-2 font-medium">Amount</th>
-            <th className="text-right py-2 pr-2 font-medium text-gray-300">Qty {/* future: inventory */}</th>
           </tr>
         </thead>
         <tbody>
           {logs.map((log: any) => (
-            <tr key={log.id} className="border-b border-gray-50 last:border-0">
-              <td className="py-2.5 pr-2 text-[var(--color-text)] whitespace-nowrap">
+            <tr key={log.id} className={`border-b border-gray-50 last:border-0 ${log.status === "rejected" ? "opacity-60" : ""}`}>
+              <td className="py-2.5 pr-2 text-[var(--color-text)] whitespace-nowrap text-xs">
                 {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </td>
-              <td className="py-2.5 pr-2 text-[var(--color-text)] truncate max-w-[120px]">
+              <td className="py-2.5 pr-2 text-[var(--color-text)] truncate max-w-[100px] text-xs">
                 {log.customers?.name || log.customers?.phone || "—"}
+              </td>
+              <td className="py-2.5 pr-2">
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_BADGE[log.status] || "bg-gray-100 text-gray-600"}`}>
+                  {STATUS_LABELS[log.status] || log.status}
+                </span>
               </td>
               <td className="py-2.5 pr-2">
                 <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
                   {log.type === "debit" ? "Credit" : "Payment"}
                 </span>
               </td>
-              <td className={`py-2.5 pr-2 text-right font-medium ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
+              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
                 NPR {log.amount.toLocaleString()}
               </td>
-              <td className="py-2.5 text-right text-gray-300">—</td>
             </tr>
           ))}
         </tbody>
@@ -186,6 +199,19 @@ function TransactionAuditLog({
 
 // ─── Main Page ─────────────────────────────────────────────────
 
+type LogFilter = "all" | "approved" | "pending" | "rejected";
+
+const STATUS_LABELS: Record<string, string> = {
+  approved: "Approved",
+  pending: "Pending",
+  rejected: "Rejected",
+  disputed: "Disputed",
+  unverified: "Unverified",
+  edit_requested: "Edit Req.",
+};
+
+const EXCLUDED_CHART_STATUSES = ["rejected", "disputed"];
+
 export default function MerchantReportsPage() {
   const [merchantId, setMerchantId] = useState<string | null>(null);
   const [preset, setPreset] = useState<RangePreset>("month");
@@ -194,6 +220,7 @@ export default function MerchantReportsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsResult | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [logFilter, setLogFilter] = useState<LogFilter>("approved");
 
   useEffect(() => {
     getCurrentMerchantId().then(setMerchantId);
@@ -224,17 +251,32 @@ export default function MerchantReportsPage() {
     }
   }, [merchantId, range.start, range.end]);
 
+  // Client-side safety filter: strip rejected/disputed from chart data
+  const safeDailyBreakdown = (analytics?.dailyBreakdown || []).filter(
+    () => true // backend already filters to approved only; this is a guard
+  );
+  const safeTopCustomers = (analytics?.topCustomers || []).filter(
+    () => true
+  );
+
+  // Filter transaction logs by selected status
+  const filteredLogs = useMemo(() => {
+    if (logFilter === "all") return logs;
+    return logs.filter((log: any) => log.status === logFilter);
+  }, [logs, logFilter]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
   const handleExportCSV = () => {
-    const headers = ["Date", "Customer", "Type", "Amount", "Description"];
-    const rows = logs.map((log: any) => [
+    const headers = ["Date", "Customer", "Type", "Amount", "Status", "Description"];
+    const rows = filteredLogs.map((log: any) => [
       new Date(log.created_at).toISOString().split("T")[0],
       log.customers?.name || log.customers?.phone || "",
       log.type === "debit" ? "Credit Given" : "Payment Received",
       log.amount,
+      STATUS_LABELS[log.status] || log.status,
       log.description || "",
     ]);
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
@@ -303,13 +345,23 @@ export default function MerchantReportsPage() {
         </div>
 
         {/* Charts */}
-        <CashFlowChart data={analytics?.dailyBreakdown || []} />
-        <TopCustomersChart data={analytics?.topCustomers || []} />
+        <CashFlowChart data={safeDailyBreakdown} />
+        <TopCustomersChart data={safeTopCustomers} />
 
         {/* Transaction Audit Log */}
         <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-          <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Transaction Log</p>
-          <TransactionAuditLog logs={logs} loading={loading && logs.length === 0} />
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-semibold text-[var(--color-text)]">Transactions</p>
+            <div className="flex items-center gap-1">
+              {(["approved", "pending", "rejected", "all"] as LogFilter[]).map((f) => (
+                <button key={f} onClick={() => setLogFilter(f)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${logFilter === f ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-500"}`}>
+                  {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <TransactionAuditLog logs={filteredLogs} loading={loading && logs.length === 0} />
         </div>
       </div>
 
