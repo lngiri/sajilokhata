@@ -6,6 +6,7 @@ import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import { createClient } from "@/lib/supabase/client";
+import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
   linkCustomerToMerchant,
@@ -181,17 +182,32 @@ export default function CustomerDashboard() {
     if (!merchantId || !amount || Number(amount) <= 0) return;
     setSaving(true);
     try {
-      const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
-      await linkCustomerToMerchant(merchantId, customer.id);
-      await createCreditLog({
-        merchant_id: merchantId,
-        customer_id: customer.id,
-        amount: Number(amount),
-        description: description || null,
-        type: "debit",
-        status: "pending",
-        sync_status: "online",
-      });
+      if (isOnline()) {
+        const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
+        await linkCustomerToMerchant(merchantId, customer.id);
+        await createCreditLog({
+          merchant_id: merchantId,
+          customer_id: customer.id,
+          amount: Number(amount),
+          description: description || null,
+          type: "debit",
+          status: "pending",
+          sync_status: "online",
+        });
+      } else {
+        await savePendingLog({
+          id: crypto.randomUUID(),
+          merchant_id: merchantId,
+          customer_id: "",
+          customerPhone: customerPhone,
+          amount: Number(amount),
+          description: description || null,
+          type: "debit",
+          status: "pending",
+          sync_status: "offline_pending",
+          created_at: new Date().toISOString(),
+        });
+      }
       setScanStep("success");
       loadStats();
       addToast("Credit request sent! Awaiting merchant approval.", "success");
