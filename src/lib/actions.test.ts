@@ -19,6 +19,9 @@ const { mockFrom, mockCreateClient } = vi.hoisted(() => {
   const mockFrom = vi.fn<() => unknown>();
   const mockCreateClient = vi.fn(() => ({
     from: mockFrom,
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: null }),
+    },
     channel: vi.fn(() => ({
       on: vi.fn().mockReturnThis(),
       subscribe: vi.fn(),

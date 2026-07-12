@@ -15,10 +15,10 @@ export default function MerchantError({
         </svg>
       </div>
       <h2 className="text-lg font-bold text-[var(--color-text)] mb-2">
-        Dashboard Error
+        Something went wrong
       </h2>
       <p className="text-sm text-[var(--color-text-muted)] text-center mb-6">
-        {error.message || "Something went wrong loading your dashboard."}
+        {error.message || "An unexpected error occurred. Please try again."}
       </p>
       <div className="flex gap-3">
         <a
