@@ -333,13 +333,25 @@ export default function CustomerDashboard() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 text-center">
-            <p className="text-sm text-[var(--color-text-muted)]">
-              No outstanding credit yet
+          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-50 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--color-primary)]/5 flex items-center justify-center">
+              <svg className="w-8 h-8 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+              </svg>
+            </div>
+            <p className="font-semibold text-[var(--color-text)]">No outstanding credit yet</p>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">
+              Submit your first credit request by scanning a shop QR
             </p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">
-              Tap the QR button below to submit your first credit request
-            </p>
+            <button
+              onClick={() => { setShowScanner(true); setScanStep("scan"); }}
+              className="mt-4 px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM6.75 6.75h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+              </svg>
+              Scan Shop QR
+            </button>
           </div>
         )}
 
@@ -493,9 +505,14 @@ export default function CustomerDashboard() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Request Sent!</h2>
+                  <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">
+                    {entryType === "credit" ? "Payment Sent!" : "Request Sent!"}
+                  </h2>
                   <p className="text-sm text-[var(--color-text-muted)]">
-                    Credit request of NPR {Number(amount).toLocaleString()} sent to {merchantName}.<br />
+                    {entryType === "credit"
+                      ? `Payment of NPR ${Number(amount).toLocaleString()} sent to ${merchantName}.`
+                      : `Credit request of NPR ${Number(amount).toLocaleString()} sent to ${merchantName}.`
+                    }<br />
                     Awaiting merchant approval.
                   </p>
                 </div>

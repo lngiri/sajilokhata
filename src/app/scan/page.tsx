@@ -412,9 +412,11 @@ export default function ScanPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">Entry Submitted!</h2>
+          <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">Entry Saved!</h2>
           <p className="text-sm text-[var(--color-text-muted)] mb-8">
-            The shopkeeper will review and approve your entry.
+            {isOnline()
+              ? "The shopkeeper will review and approve your entry."
+              : "You are offline. Show your QR to the shopkeeper to complete the entry."}
           </p>
           <div className="flex gap-3">
             <button
