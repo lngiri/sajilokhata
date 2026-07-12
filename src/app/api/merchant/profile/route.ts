@@ -23,25 +23,6 @@ export async function POST(request: Request) {
       client = await createClient();
     }
 
-    // Cross-table check: if phone is being changed, ensure it's not a customer
-    if (phone) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingCustomer } = await (client.from("customers") as any)
-        .select("id")
-        .eq("phone", phone)
-        .maybeSingle();
-
-      if (existingCustomer) {
-        return NextResponse.json(
-          {
-            error: "यो नम्बर ग्राहक (Customer) को रूपमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
-            code: "PHONE_IS_CUSTOMER",
-          },
-          { status: 409 }
-        );
-      }
-    }
-
     // If phone is provided, look up existing merchant by phone to resolve ID.
     // This handles stale localStorage merchant_id and duplicate records.
     let resolvedId = merchant_id;

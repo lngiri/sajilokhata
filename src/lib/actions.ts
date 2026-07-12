@@ -81,23 +81,6 @@ export async function findOrCreateCustomer(
     .maybeSingle();
 
   if (!customer) {
-    // Cross-table check: ensure this phone is not already a merchant
-    try {
-      const checkRes = await fetch("/api/customer/check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
-      });
-      const checkData = await checkRes.json();
-      if (checkData.exists) {
-        throw new Error("यो नम्बर व्यापारी (Merchant) को रूपमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।");
-      }
-    } catch (e: any) {
-      if (e.message?.includes("व्यापारी")) throw e;
-      // If check fails (network/API), proceed anyway — DB trigger will catch conflicts
-      console.warn("Customer cross-table check failed, proceeding:", e);
-    }
-
     const { data: newCustomer, error } = await getClient()
       .from("customers")
       .insert({ phone, name: name || null })

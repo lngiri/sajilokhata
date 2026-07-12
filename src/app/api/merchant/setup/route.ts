@@ -37,22 +37,6 @@ export async function POST(request: Request) {
       });
     }
 
-    // Cross-table check: ensure phone is not already registered as a customer
-    const { data: existingCustomer } = await (client.from("customers") as any)
-      .select("id")
-      .eq("phone", phone)
-      .maybeSingle();
-
-    if (existingCustomer) {
-      return NextResponse.json(
-        {
-          error: "यो नम्बर ग्राहक (Customer) को रूपमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस् वा खाता परिवर्तन गर्नुहोस्।",
-          code: "PHONE_IS_CUSTOMER",
-        },
-        { status: 409 }
-      );
-    }
-
     // Pre-check: see if a merchant with this phone already exists
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existingMerchant } = await (client.from("merchants") as any)
