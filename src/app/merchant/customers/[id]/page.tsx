@@ -8,6 +8,24 @@ import { getCurrentMerchantId } from "@/lib/auth";
 import { getMerchantCreditLogs, updateCustomerCreditLimit } from "@/lib/actions";
 import TransactionIcon from "@/components/TransactionIcon";
 
+const STATUS_BADGE: Record<string, string> = {
+  approved: "bg-green-50 text-green-700",
+  pending: "bg-amber-50 text-amber-700",
+  rejected: "bg-slate-100 text-slate-500",
+  disputed: "bg-red-50 text-red-700",
+  unverified: "bg-blue-50 text-blue-700",
+  edit_requested: "bg-indigo-50 text-indigo-700",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  approved: "Approved",
+  pending: "Pending",
+  rejected: "रद्द गरिएको",
+  disputed: "Disputed",
+  unverified: "Unverified",
+  edit_requested: "Edit Req.",
+};
+
 interface Transaction {
   id: string;
   amount: number;
@@ -239,17 +257,24 @@ export default function CustomerDetailPage() {
               </div>
             ) : (
               customer.transactions.map((tx) => (
-                <div key={tx.id} className="bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">
+                <div key={tx.id} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 ${tx.status === "rejected" ? "opacity-60" : ""}`}>
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
                     <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600" : "text-green-600"} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-[var(--color-text)] truncate">{tx.description || "No description"}</p>
+                    <div className="flex items-center gap-2">
+                      <p className={`font-medium text-sm truncate ${tx.status === "rejected" ? "text-slate-500 line-through" : "text-[var(--color-text)]"}`}>
+                        {tx.description || "No description"}
+                      </p>
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${STATUS_BADGE[tx.status] || "bg-gray-100 text-gray-600"}`}>
+                        {STATUS_LABELS[tx.status] || tx.status}
+                      </span>
+                    </div>
                     <p className="text-xs text-[var(--color-text-muted)]">
                       {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </p>
                   </div>
-                  <p className={`font-bold text-sm ${tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
+                  <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
                     {tx.type === "debit" ? "+" : "-"}NPR {tx.amount.toLocaleString()}
                   </p>
                 </div>
