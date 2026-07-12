@@ -22,7 +22,6 @@ export async function POST(request: Request) {
     }
 
     // Cross-table check: if phone is being changed, ensure it's not a customer
-    // This query works with any client (customers RLS allows anyone to SELECT)
     if (phone) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existingCustomer } = await (client.from("customers") as any)
@@ -39,37 +38,9 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
-
-      // Phone ownership check: verify phone isn't already used by another merchant
-      // Uses the real authenticated user ID for self-exclusion (more reliable
-      // than merchant_id from request body, which could be stale).
-      let selfId = merchant_id;
-      try {
-        const serverClient = await createClient();
-        const { data: { user } } = await serverClient.auth.getUser();
-        if (user?.id) selfId = user.id;
-      } catch {
-        // Fall back to merchant_id from request body
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: phoneOwner } = await (client.from("merchants") as any)
-        .select("id")
-        .eq("phone", phone)
-        .neq("id", selfId)
-        .maybeSingle();
-
-      if (phoneOwner) {
-        return NextResponse.json(
-          {
-            error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
-            code: "PHONE_TAKEN",
-          },
-          { status: 409 }
-        );
-      }
     }
 
+    // Upsert merchant profile — DB UNIQUE constraint on phone prevents duplicates
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client.from("merchants") as any)
       .upsert(
@@ -88,6 +59,16 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error("Failed to update merchant profile:", error);
+      // Handle unique violation on phone (PostgreSQL error code 23505)
+      if (error.code === "23505") {
+        return NextResponse.json(
+          {
+            error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
+            code: "PHONE_TAKEN",
+          },
+          { status: 409 }
+        );
+      }
       return NextResponse.json(
         { error: "प्रोफाइल सेभ गर्न सकिएन। कृपया पुनः प्रयास गर्नुहोस्।" },
         { status: 500 }
