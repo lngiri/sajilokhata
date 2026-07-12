@@ -80,9 +80,10 @@ export function CustomerQR({ customerId }: CustomerQRProps) {
 interface QRScannerProps {
   onScan: (data: string) => void;
   onError?: (error: string) => void;
+  enabled?: boolean;
 }
 
-export function QRScanner({ onScan, onError }: QRScannerProps) {
+export function QRScanner({ onScan, onError, enabled = true }: QRScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -98,6 +99,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     let scanning = true;
 
     const startScanning = async () => {
@@ -161,7 +163,7 @@ export function QRScanner({ onScan, onError }: QRScannerProps) {
       scanning = false;
       stopScanning();
     };
-  }, [onScan, onError, stopScanning]);
+  }, [enabled, onScan, onError, stopScanning]);
 
   return (
     <div className="relative w-full aspect-square max-w-sm mx-auto overflow-hidden rounded-2xl bg-black">
