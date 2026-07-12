@@ -422,7 +422,11 @@ export default function MerchantScanPage() {
                 {verificationToken && customerPhone && (
                   <a
                     href={`https://wa.me/977${customerPhone}?text=${encodeURIComponent(
-                      `नमस्ते, तपाईंको खातामा NPR ${Number(amount).toLocaleString()} को कारोबार थपिएको छ। कृपया यो लिंकमा गई स्वीकृत गर्नुहोला: https://sajilokhata.app/verify?token=${verificationToken}`
+                      (() => {
+                        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sajilokhata.vercel.app';
+                        const shareLink = `${baseUrl}/verify?token=${verificationToken}`;
+                        return `नमस्ते, तपाईंको खातामा NPR ${Number(amount).toLocaleString()} को कारोबार थपिएको छ। कृपया यो लिंकमा गई स्वीकृत गर्नुहोला: ${shareLink}`;
+                      })()
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
