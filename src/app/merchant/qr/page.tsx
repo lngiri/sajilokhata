@@ -24,11 +24,11 @@ export default function MerchantQRPage() {
     try {
       const id = await getCurrentMerchantId();
       if (id) {
-        const profile = await getMerchantProfile(id);
-        setMerchant(profile);
+        const profile = await getMerchantProfile(id).catch(() => null);
+        setMerchant(profile || { id, name: "My Shop", business_type: "kirana" });
       }
     } catch {
-      // Fallback
+      // No auth available
     } finally {
       setLoading(false);
     }

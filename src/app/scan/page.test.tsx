@@ -182,6 +182,139 @@ describe("ScanPage", () => {
     });
   });
 
+  it("submits credit entry with description and correct data", async () => {
+    vi.mocked(mockActions.findOrCreateCustomer).mockResolvedValue({
+      id: "c1",
+      phone: "9841234567",
+    });
+    vi.mocked(mockActions.linkCustomerToMerchant).mockResolvedValue({
+      id: "mc1",
+    });
+    vi.mocked(mockActions.createCreditLog).mockResolvedValue({
+      id: "cl1",
+      status: "pending",
+    });
+
+    localStorage.setItem(
+      "sajilo_customer_session",
+      JSON.stringify({ phone: "9841234567", name: "Hari" })
+    );
+
+    render(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-scanner")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("mock-scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Log Entry")).toBeInTheDocument();
+    });
+
+    const amountInput = screen.getByPlaceholderText("0");
+    await userEvent.type(amountInput, "750");
+
+    const descInput = screen.getByPlaceholderText("e.g. Rice 10kg, Milk 2L");
+    await userEvent.type(descInput, "Rice 5kg, Oil 1L");
+
+    const submitBtn = screen.getByText("Submit Entry");
+    await userEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Entry Submitted!")).toBeInTheDocument();
+    });
+
+    expect(mockActions.createCreditLog).toHaveBeenCalledWith({
+      merchant_id: "m1",
+      customer_id: "c1",
+      amount: 750,
+      description: "Rice 5kg, Oil 1L",
+      type: "debit",
+      status: "pending",
+      sync_status: "online",
+    });
+  });
+
+  it("stays on enter step when submission fails", async () => {
+    vi.mocked(mockActions.findOrCreateCustomer).mockRejectedValue(
+      new Error("Network error")
+    );
+
+    localStorage.setItem(
+      "sajilo_customer_session",
+      JSON.stringify({ phone: "9841234567", name: "Hari" })
+    );
+
+    render(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-scanner")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("mock-scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Log Entry")).toBeInTheDocument();
+    });
+
+    const amountInput = screen.getByPlaceholderText("0");
+    await userEvent.type(amountInput, "500");
+
+    const submitBtn = screen.getByText("Submit Entry");
+    await userEvent.click(submitBtn);
+
+    // Should remain on enter step (not advance to done)
+    expect(screen.getByText("Log Entry")).toBeInTheDocument();
+    expect(screen.queryByText("Entry Submitted!")).not.toBeInTheDocument();
+  });
+
+  it("resets to scan step on New Entry button from done screen", async () => {
+    vi.mocked(mockActions.findOrCreateCustomer).mockResolvedValue({
+      id: "c1",
+      phone: "9841234567",
+    });
+    vi.mocked(mockActions.linkCustomerToMerchant).mockResolvedValue({
+      id: "mc1",
+    });
+    vi.mocked(mockActions.createCreditLog).mockResolvedValue({
+      id: "cl1",
+      status: "pending",
+    });
+
+    localStorage.setItem(
+      "sajilo_customer_session",
+      JSON.stringify({ phone: "9841234567", name: "Hari" })
+    );
+
+    render(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-scanner")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("mock-scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Log Entry")).toBeInTheDocument();
+    });
+
+    const amountInput = screen.getByPlaceholderText("0");
+    await userEvent.type(amountInput, "500");
+
+    await userEvent.click(screen.getByText("Submit Entry"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Entry Submitted!")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("New Entry"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Scan QR")).toBeInTheDocument();
+    });
+  });
+
   it("shows reverse QR when offline", async () => {
     vi.mocked(mockOffline.isOnline).mockReturnValue(false);
 

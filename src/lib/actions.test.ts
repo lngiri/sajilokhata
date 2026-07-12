@@ -404,6 +404,135 @@ describe("getCustomerCreditLogs", () => {
   });
 });
 
+describe("complete customer submission data flow", () => {
+  it("chains findOrCreateCustomer → linkCustomerToMerchant → createCreditLog with correct FK references", async () => {
+    const customerPhone = "9841234567";
+    const customerName = "Hari";
+    const merchantId = "m1";
+    const createdCustomer = { id: "c1", phone: customerPhone, name: customerName };
+
+    // Step 1: findOrCreateCustomer — new customer
+    mockFrom.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    });
+    mockFrom.mockReturnValueOnce({
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: createdCustomer, error: null }),
+    });
+
+    const customer = await findOrCreateCustomer(customerPhone, customerName);
+    expect(customer).toEqual(createdCustomer);
+
+    // Step 2: linkCustomerToMerchant — new link
+    const createdLink = {
+      id: "mc1",
+      merchant_id: merchantId,
+      customer_id: customer.id,
+      credit_limit: 5000,
+      current_balance: 0,
+    };
+    mockFrom.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+    });
+    mockFrom.mockReturnValueOnce({
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: createdLink, error: null }),
+    });
+
+    const link = await linkCustomerToMerchant(merchantId, customer.id);
+    expect(link.merchant_id).toBe(merchantId);
+    expect(link.customer_id).toBe(customer.id);
+
+    // Step 3: createCreditLog
+    const logEntry = {
+      merchant_id: merchantId,
+      customer_id: customer.id,
+      amount: 500,
+      description: "Rice 10kg",
+      type: "debit" as const,
+      status: "pending" as const,
+      sync_status: "online" as const,
+    };
+    const createdLog = { id: "cl1", ...logEntry };
+    mockFrom.mockReturnValueOnce({
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: createdLog, error: null }),
+    });
+
+    const log = await createCreditLog(logEntry);
+    expect(log.merchant_id).toBe(merchantId);
+    expect(log.customer_id).toBe(customer.id);
+    expect(log.amount).toBe(500);
+    expect(log.type).toBe("debit");
+    expect(log.status).toBe("pending");
+
+    // Verify all three operations reference the same merchant and customer
+    expect(log.merchant_id).toBe(link.merchant_id);
+    expect(log.customer_id).toBe(link.customer_id);
+  });
+
+  it("reuses existing customer and link when they already exist", async () => {
+    const phone = "9841234567";
+    const merchantId = "m1";
+    const existingCustomer = { id: "c1", phone, name: "Hari" };
+
+    // Step 1: findOrCreateCustomer — already exists
+    mockFrom.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: existingCustomer, error: null }),
+    });
+
+    const customer = await findOrCreateCustomer(phone);
+    expect(customer).toEqual(existingCustomer);
+
+    // Step 2: linkCustomerToMerchant — already linked
+    const existingLink = {
+      id: "mc1",
+      merchant_id: merchantId,
+      customer_id: customer.id,
+      credit_limit: 5000,
+      current_balance: 0,
+    };
+    mockFrom.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: existingLink, error: null }),
+    });
+
+    const link = await linkCustomerToMerchant(merchantId, customer.id);
+    expect(link).toEqual(existingLink);
+
+    // Step 3: createCreditLog
+    const logEntry = {
+      merchant_id: merchantId,
+      customer_id: customer.id,
+      amount: 200,
+      description: null,
+      type: "debit" as const,
+      status: "pending" as const,
+      sync_status: "online" as const,
+    };
+    const createdLog = { id: "cl2", ...logEntry };
+    mockFrom.mockReturnValueOnce({
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: createdLog, error: null }),
+    });
+
+    const log = await createCreditLog(logEntry);
+    expect(log.merchant_id).toBe(merchantId);
+    expect(log.customer_id).toBe(customer.id);
+  });
+});
+
 describe("getMerchantStats", () => {
   it("returns aggregated merchant statistics", async () => {
     const customers = [
