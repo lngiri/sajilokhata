@@ -79,7 +79,6 @@ export interface Database {
           merchant_id: string;
           customer_id: string;
           credit_limit: number;
-          current_balance: number;
           created_at: string;
           updated_at: string;
         };
@@ -88,7 +87,6 @@ export interface Database {
           merchant_id: string;
           customer_id: string;
           credit_limit?: number;
-          current_balance?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -97,7 +95,6 @@ export interface Database {
           merchant_id?: string;
           customer_id?: string;
           credit_limit?: number;
-          current_balance?: number;
           created_at?: string;
           updated_at?: string;
         };
