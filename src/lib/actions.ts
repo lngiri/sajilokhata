@@ -173,7 +173,7 @@ export async function getMerchantCreditLogs(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateCreditLogStatus(
   logId: string,
-  status: "approved" | "disputed" | "rejected" | "pending",
+  status: "approved" | "disputed" | "rejected" | "pending" | "unverified",
   actorType?: "merchant" | "customer"
 ): Promise<any> {
   const updates: Record<string, unknown> = {};
@@ -228,6 +228,60 @@ export async function updateCreditLog(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function cancelCreditLog(logId: string): Promise<any> {
   return updateCreditLogStatus(logId, "rejected", "customer");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function createManualCreditLog(params: {
+  merchant_id: string;
+  customer_id: string;
+  amount: number;
+  type: "debit" | "credit";
+  description?: string | null;
+}): Promise<any> {
+  return createCreditLog({
+    ...params,
+    status: "unverified",
+    sync_status: "online",
+  });
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function confirmCustomerEntry(logId: string): Promise<any> {
+  return updateCreditLogStatus(logId, "approved", "customer");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function disputeEntry(logId: string): Promise<any> {
+  return updateCreditLogStatus(logId, "disputed", "customer");
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getMerchantCustomerBalance(
+  merchantId: string,
+  customerId: string
+): Promise<{ balance: number; creditLimit: number }> {
+  const { data: mc } = await getClient()
+    .from("merchant_customers")
+    .select("credit_limit")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  const creditLimit = (mc as any)?.credit_limit || 0;
+
+  const { data: logs } = await getClient()
+    .from("credit_logs")
+    .select("amount, type")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .eq("status", "approved");
+
+  const balance =
+    (logs as any[])?.reduce((sum: number, l: any) => {
+      return sum + (l.type === "debit" ? l.amount : -l.amount);
+    }, 0) || 0;
+
+  return { balance, creditLimit };
 }
 
 // ============================================================

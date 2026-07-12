@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
-import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog } from "@/lib/actions";
+import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/lib/actions";
 import { useSearchParams } from "next/navigation";
 
 /** Key used to persist customer session in localStorage */
@@ -31,6 +31,7 @@ interface HistoryEntry {
 
 const statusConfig = {
   pending: { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  unverified: { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
   approved: { bg: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
   rejected: { bg: "bg-slate-50 text-slate-500 border-slate-200", dot: "bg-slate-400" },
   disputed: { bg: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
@@ -52,8 +53,8 @@ export default function CustomerHistoryPage() {
   const [initialized, setInitialized] = useState(false);
   const [logs, setLogs] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
-  const [stats, setStats] = useState({ total: 0, pending: 0, approved: 0, rejected: 0 });
+  const [filter, setFilter] = useState<"all" | "unverified" | "pending" | "approved" | "rejected">("all");
+  const [stats, setStats] = useState({ total: 0, pending: 0, unverified: 0, approved: 0, rejected: 0 });
   const [editModal, setEditModal] = useState<{ id: string; amount: number; description: string } | null>(null);
 
   // On mount, restore customer session
@@ -99,9 +100,10 @@ export default function CustomerHistoryPage() {
       setLogs(data as HistoryEntry[]);
 
       // Calculate status counts
-      const counts = { total: data.length, pending: 0, approved: 0, rejected: 0 };
+      const counts = { total: data.length, pending: 0, unverified: 0, approved: 0, rejected: 0 };
       data.forEach((l: HistoryEntry) => {
         if (l.status === "pending") counts.pending++;
+        else if (l.status === "unverified") counts.unverified++;
         else if (l.status === "approved") counts.approved++;
         else if (l.status === "rejected") counts.rejected++;
       });
@@ -161,6 +163,7 @@ export default function CustomerHistoryPage() {
         <div className="flex gap-1.5 px-4 pb-3 overflow-x-auto">
           {([
             { key: "all", label: "All", count: stats.total },
+            { key: "unverified", label: "Unverified", count: stats.unverified },
             { key: "pending", label: "Pending", count: stats.pending },
             { key: "approved", label: "Approved", count: stats.approved },
             { key: "rejected", label: "Rejected", count: stats.rejected },
@@ -187,8 +190,8 @@ export default function CustomerHistoryPage() {
         </div>
       </div>
 
-      {/* Pending banner */}
-      {!loading && stats.pending > 0 && (
+      {/* Pending / Unverified banner */}
+      {!loading && (stats.pending > 0 || stats.unverified > 0) && (
         <a
           href="/customer/dashboard"
           className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100 active:bg-amber-100 transition-colors"
@@ -199,7 +202,10 @@ export default function CustomerHistoryPage() {
             </svg>
           </div>
           <span className="text-sm font-medium text-amber-800 flex-1 text-left">
-            {stats.pending} {stats.pending === 1 ? "entry" : "entries"} pending merchant approval
+            {stats.pending > 0 && `${stats.pending} pending`}
+            {stats.pending > 0 && stats.unverified > 0 && " · "}
+            {stats.unverified > 0 && `${stats.unverified} unverified`}
+            {' — review needed'}
           </span>
           <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -280,11 +286,11 @@ export default function CustomerHistoryPage() {
                     <div className="flex items-start gap-3">
                       {/* Status indicator */}
                       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${config.bg}`}>
-                        {log.status === "approved" ? (
+                        {(log.status === "approved") ? (
                           <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                           </svg>
-                        ) : log.status === "pending" ? (
+                        ) : (log.status === "pending" || log.status === "unverified") ? (
                           <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
@@ -364,6 +370,31 @@ export default function CustomerHistoryPage() {
                           className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium active:scale-[0.98]"
                         >
                           Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    {log.status === "unverified" && (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                        <button
+                          onClick={async () => {
+                            await disputeEntry(log.id);
+                            addToast("Entry disputed. Merchant notified.", "warning");
+                            loadLogs();
+                          }}
+                          className="flex-1 py-2 bg-orange-50 text-orange-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                        >
+                          Dispute
+                        </button>
+                        <button
+                          onClick={async () => {
+                            await confirmCustomerEntry(log.id);
+                            addToast("Entry confirmed! Balance updated.", "success");
+                            loadLogs();
+                          }}
+                          className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.98]"
+                        >
+                          Confirm Balance
                         </button>
                       </div>
                     )}

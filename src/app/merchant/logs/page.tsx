@@ -126,6 +126,7 @@ export default function LedgerPage() {
       case "approved":
         return "text-green-600 bg-green-50";
       case "pending":
+      case "unverified":
         return "text-amber-600 bg-amber-50";
       case "rejected":
         return "text-slate-500 bg-slate-100";

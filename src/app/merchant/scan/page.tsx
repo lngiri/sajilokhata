@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import AmountSuggestions from "@/components/AmountSuggestions";
@@ -10,6 +10,9 @@ import {
   findOrCreateCustomer,
   linkCustomerToMerchant,
   createCreditLog,
+  createManualCreditLog,
+  getMerchantCustomers,
+  getMerchantCustomerBalance,
 } from "@/lib/actions";
 import { useSearchParams } from "next/navigation";
 
@@ -18,26 +21,96 @@ type Step = "scan" | "enter" | "confirm" | "success";
 /** Prefix that identifies a customer identity QR */
 const CUSTOMER_QR_PREFIX = "sajilokhata:customer:";
 
+interface CustomerOption {
+  id: string;
+  name: string | null;
+  phone: string;
+  current_balance: number;
+}
+
 export default function MerchantScanPage() {
   const { addToast } = useToast();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("scan");
+  const isManual = searchParams?.get("manual") === "true";
 
   useEffect(() => {
-    if (searchParams?.get("manual") === "true") {
+    if (isManual) {
       setStep("enter");
     }
-  }, [searchParams]);
+  }, [isManual]);
+
+  // Shared state
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState<string | null>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
+  const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
   const [saving, setSaving] = useState(false);
+  const [merchantId, setMerchantId] = useState<string | null>(null);
+
+  // Manual mode state
+  const [customerList, setCustomerList] = useState<CustomerOption[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [customerBalance, setCustomerBalance] = useState<number | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load merchant ID and customer list on mount
+  useEffect(() => {
+    getCurrentMerchantId().then(setMerchantId);
+  }, []);
+
+  useEffect(() => {
+    if (isManual && merchantId) {
+      getMerchantCustomers(merchantId).then((data) => {
+        const mapped: CustomerOption[] = (data || []).map((r: any) => ({
+          id: r.customers?.id || r.customer_id,
+          name: r.customers?.name || null,
+          phone: r.customers?.phone || "",
+          current_balance: r.current_balance || 0,
+        }));
+        setCustomerList(mapped.sort((a, b) => (a.name || a.phone).localeCompare(b.name || b.phone)));
+      });
+    }
+  }, [isManual, merchantId]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredCustomers = customerList.filter(
+    (c) =>
+      (c.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.phone.includes(searchQuery)
+  );
+
+  const handleSelectCustomer = async (c: CustomerOption) => {
+    setCustomerId(c.id);
+    setCustomerPhone(c.phone);
+    setCustomerName(c.name);
+    setSearchQuery(c.name || c.phone);
+    setShowDropdown(false);
+    if (merchantId) {
+      try {
+        const { balance } = await getMerchantCustomerBalance(merchantId, c.id);
+        setCustomerBalance(balance);
+      } catch {
+        setCustomerBalance(null);
+      }
+    }
+  };
 
   const handleScan = useCallback(
     (data: string) => {
       try {
-        // Accept both the new simple format and old JSON format for backward compat
         if (data.startsWith(CUSTOMER_QR_PREFIX)) {
           const phone = data.slice(CUSTOMER_QR_PREFIX.length);
           if (phone.length < 6) {
@@ -49,15 +122,12 @@ export default function MerchantScanPage() {
           return;
         }
 
-        // Fallback: try parsing as JSON (backward compat with old ReverseQR)
         try {
           const parsed = JSON.parse(data);
           if (parsed.type === "reverse_scan") {
-            // Old format — ignore merchantId validation, just extract customer
             const phone = parsed.customerId;
             if (phone && phone.length >= 6) {
               setCustomerPhone(phone);
-              // If amount/description were embedded, pre-fill them
               if (parsed.amount) setAmount(String(parsed.amount));
               if (parsed.description) setDescription(parsed.description);
               setStep("enter");
@@ -65,7 +135,7 @@ export default function MerchantScanPage() {
             }
           }
         } catch {
-          // Not JSON either — invalid
+          // Not JSON
         }
 
         addToast("Please scan a valid customer QR code.", "error");
@@ -77,8 +147,8 @@ export default function MerchantScanPage() {
   );
 
   const handleEnterNext = () => {
-    if (!customerPhone || customerPhone.length < 6) {
-      addToast("Please enter a valid customer phone number.", "error");
+    if (!customerId || !customerPhone) {
+      addToast("Please select or enter a valid customer.", "error");
       return;
     }
     if (!amount || Number(amount) <= 0) {
@@ -92,35 +162,52 @@ export default function MerchantScanPage() {
     setSaving(true);
 
     try {
-      const merchantId = await getCurrentMerchantId();
-      if (!merchantId) {
+      const mId = await getCurrentMerchantId();
+      if (!mId) {
         addToast("Not logged in", "error");
         setSaving(false);
         return;
       }
 
-      // 1. Find or create the customer by phone
-      const customer = await findOrCreateCustomer(customerPhone);
-      setCustomerName(customer.name || null);
+      let cId = customerId;
+      let cName = customerName;
 
-      // 2. Link customer to merchant
-      await linkCustomerToMerchant(merchantId, customer.id);
+      // For manual mode, customer is already selected by ID
+      if (isManual && cId) {
+        // Use existing customer ID from selection
+      } else {
+        // QR scan mode — find or create by phone
+        const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
+        cId = customer.id;
+        cName = customer.name || null;
+        setCustomerName(cName);
+        await linkCustomerToMerchant(mId, customer.id);
+      }
 
-      // 3. Create the credit log
-      await createCreditLog({
-        merchant_id: merchantId,
-        customer_id: customer.id,
-        amount: Number(amount),
-        description: description || null,
-        type: "debit",
-        status: "pending",
-        sync_status: "online",
-      });
+      if (isManual) {
+        await createManualCreditLog({
+          merchant_id: mId,
+          customer_id: cId!,
+          amount: Number(amount),
+          type: entryType,
+          description: description || null,
+        });
+      } else {
+        await createCreditLog({
+          merchant_id: mId,
+          customer_id: cId!,
+          amount: Number(amount),
+          description: description || null,
+          type: entryType,
+          status: "pending",
+          sync_status: "online",
+        });
+      }
 
       setStep("success");
-      addToast("Credit entry saved! Review it in the Ledger.", "success");
+      addToast("Entry saved! Customer notified.", "success");
     } catch (err) {
-      console.error("Failed to save credit entry:", err);
+      console.error("Failed to save entry:", err);
       addToast("Failed to save. Please try again.", "error");
     } finally {
       setSaving(false);
@@ -131,8 +218,13 @@ export default function MerchantScanPage() {
     setStep("scan");
     setCustomerPhone("");
     setCustomerName(null);
+    setCustomerId(null);
+    setCustomerBalance(null);
     setAmount("");
     setDescription("");
+    setEntryType("debit");
+    setSearchQuery("");
+    setShowDropdown(false);
   };
 
   return (
@@ -162,7 +254,7 @@ export default function MerchantScanPage() {
             {step === "scan"
               ? "Scan Customer QR"
               : step === "enter"
-              ? "Enter Details"
+              ? isManual ? "Manual Entry" : "Enter Details"
               : step === "confirm"
               ? "Confirm Entry"
               : "Entry Saved!"}
@@ -201,93 +293,124 @@ export default function MerchantScanPage() {
             </div>
 
             <QRScanner onScan={handleScan} />
-
-            <div className="bg-[var(--color-primary)]/5 rounded-2xl p-4 space-y-2">
-              <div className="flex items-start gap-3">
-                <svg
-                  className="w-5 h-5 text-[var(--color-primary)] mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
-                  />
-                </svg>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Ask the customer to show their QR. The entry will be saved as
-                  pending — you can approve it from the Ledger.
-                </p>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Step 2: Enter Amount & Description */}
+        {/* Step 2: Enter Details */}
         {step === "enter" && (
           <div className="space-y-4 animate-fade-in">
-            {searchParams?.get("manual") === "true" ? (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Customer Phone</label>
-                  <input
-                    type="tel"
-                    placeholder="e.g. 9841234567"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-                    maxLength={10}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Customer Name (optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ram Sharma"
-                    value={customerName || ""}
-                    onChange={(e) => setCustomerName(e.target.value || null)}
-                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-                  />
-                </div>
-              </div>
-            ) : (
+            {/* QR scan mode — read-only customer phone */}
+            {!isManual && (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
                 <div className="flex items-center gap-2.5">
                   <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-green-600"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
+                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      Customer Phone
-                    </p>
-                    <p className="font-mono font-medium text-[var(--color-text)]">
-                      {customerPhone}
-                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Customer Phone</p>
+                    <p className="font-mono font-medium text-[var(--color-text)]">{customerPhone}</p>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* Manual mode — hybrid search + dropdown */}
+            {isManual && (
+              <div ref={dropdownRef} className="relative">
+                <label className="text-sm font-medium text-[var(--color-text)]">Search Customer (Name or Phone)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Ram Sharma or 9841..."
+                  value={searchQuery}
+                  onFocus={() => setShowDropdown(true)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowDropdown(true);
+                    // Clear selection when query changes
+                    if (!customerList.find((c) => (c.name || c.phone) === e.target.value)) {
+                      setCustomerId(null);
+                      setCustomerPhone("");
+                      setCustomerName(null);
+                      setCustomerBalance(null);
+                    }
+                  }}
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                />
+                {showDropdown && filteredCustomers.length > 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 max-h-48 overflow-y-auto">
+                    {filteredCustomers.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => handleSelectCustomer(c)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-[var(--color-primary)]/5 active:bg-[var(--color-primary)]/10 transition-colors flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-[var(--color-text)]">{c.name || "Unknown"}</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">{c.phone}</p>
+                        </div>
+                        {c.current_balance > 0 && (
+                          <span className="text-xs font-medium text-red-600">Due: NPR {c.current_balance.toLocaleString()}</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {showDropdown && searchQuery && filteredCustomers.length === 0 && (
+                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 p-4 text-center">
+                    <p className="text-sm text-[var(--color-text-muted)]">No customers found</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                      The customer will be created automatically on save
+                    </p>
+                  </div>
+                )}
+
+                {/* Balance display */}
+                {customerBalance !== null && (
+                  <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                    {customerBalance > 0
+                      ? `Current Due: NPR ${customerBalance.toLocaleString()}`
+                      : "No outstanding balance"}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Type Toggle */}
+            {isManual && (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                <p className="text-sm font-medium text-[var(--color-text)] mb-3">Transaction Type</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEntryType("debit")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      entryType === "debit"
+                        ? "bg-red-600 text-white shadow-sm"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    Credit Given (उधारो)
+                  </button>
+                  <button
+                    onClick={() => setEntryType("credit")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                      entryType === "credit"
+                        ? "bg-green-600 text-white shadow-sm"
+                        : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    Amount Received (पैसा)
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Amount + Description */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div>
-                <label className="text-sm font-medium text-[var(--color-text)]">
-                  Amount (NPR)
-                </label>
+                <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
                 <input
                   type="number"
                   min="1"
@@ -296,18 +419,16 @@ export default function MerchantScanPage() {
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-                  autoFocus
+                  autoFocus={!isManual}
                 />
                 <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
               </div>
               <div>
-                <label className="text-sm font-medium text-[var(--color-text)]">
-                  Description
-                </label>
+                <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
                 <input
                   type="text"
                   maxLength={200}
-                  placeholder="e.g. Rice 10kg, Milk 2L"
+                  placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
@@ -339,59 +460,49 @@ export default function MerchantScanPage() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div className="text-center pb-2 border-b border-gray-50">
                 <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
+                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <p className="text-xs text-[var(--color-text-muted)]">
-                  Review Entry Details
-                </p>
+                <p className="text-xs text-[var(--color-text-muted)]">Review Entry Details</p>
               </div>
 
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs text-[var(--color-text-muted)] mb-0.5">
-                    Customer Phone
-                  </p>
-                  <p className="font-mono font-medium text-[var(--color-text)]">
-                    {customerPhone}
-                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Customer</p>
+                  <p className="font-medium text-[var(--color-text)]">{customerName || customerPhone}</p>
                 </div>
                 <div className="flex gap-4">
                   <div className="flex-1">
-                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">
-                      Amount
-                    </p>
-                    <p className="text-2xl font-bold text-[var(--color-danger)]">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
+                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>
                       NPR {Number(amount).toLocaleString()}
                     </p>
                   </div>
                   <div className="flex-1">
-                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">
-                      Type
-                    </p>
-                    <span className="inline-block px-2.5 py-1 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-xs font-medium rounded-full">
-                      Debit (Credit Taken)
+                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
+                    <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${
+                      entryType === "debit"
+                        ? "bg-red-50 text-red-700"
+                        : "bg-green-50 text-green-700"
+                    }`}>
+                      {entryType === "debit" ? "Credit Given (उधारो)" : "Amount Received (पैसा)"}
                     </span>
                   </div>
                 </div>
                 {description && (
                   <div>
-                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">
-                      Description
-                    </p>
-                    <p className="text-sm text-[var(--color-text)]">
-                      {description}
+                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Description</p>
+                    <p className="text-sm text-[var(--color-text)]">{description}</p>
+                  </div>
+                )}
+                {isManual && (
+                  <div className="bg-amber-50 rounded-xl p-3 flex items-start gap-2">
+                    <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <p className="text-xs text-amber-800">
+                      This entry will appear as &quot;Unverified&quot; on the customer&apos;s side. They must confirm it to mark it approved.
                     </p>
                   </div>
                 )}
@@ -415,18 +526,8 @@ export default function MerchantScanPage() {
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4.5 12.75l6 6 9-13.5"
-                      />
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                     </svg>
                     Save Entry
                   </>
@@ -440,29 +541,22 @@ export default function MerchantScanPage() {
         {step === "success" && (
           <div className="text-center py-8 space-y-6 animate-fade-in">
             <div className="w-20 h-20 mx-auto rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-[var(--color-primary)]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M4.5 12.75l6 6 9-13.5"
-                />
+              <svg className="w-10 h-10 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">
-                Entry Saved!
-              </h2>
+              <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved!</h2>
               <p className="text-sm text-[var(--color-text-muted)]">
                 {customerName
-                  ? `Credit of NPR ${Number(amount).toLocaleString()} added for ${customerName}`
-                  : `Credit of NPR ${Number(amount).toLocaleString()} saved as pending`}
+                  ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}`
+                  : `NPR ${Number(amount).toLocaleString()} saved`}
               </p>
+              {isManual && (
+                <p className="text-xs text-amber-600 mt-2">
+                  Waiting for customer confirmation
+                </p>
+              )}
             </div>
 
             <div className="flex gap-3">
@@ -470,7 +564,7 @@ export default function MerchantScanPage() {
                 onClick={handleReset}
                 className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
               >
-                Scan Another
+                {isManual ? "New Entry" : "Scan Another"}
               </button>
               <a
                 href="/merchant/logs"
