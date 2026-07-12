@@ -101,7 +101,7 @@ export default function CustomersPage() {
             {filtered.map((mc) => (
               <a
                 key={mc.id}
-                href={`/merchant/customers/${mc.customers?.id}`}
+                href={mc.customers?.id ? `/merchant/customers/${mc.customers.id}` : "#"}
                 className="block bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform"
               >
                 <div className="flex items-center gap-3">
@@ -130,16 +130,18 @@ export default function CustomersPage() {
 
                 {/* Balance bar */}
                 <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      mc.current_balance / mc.credit_limit > 0.8
-                        ? "bg-[var(--color-danger)]"
-                        : mc.current_balance / mc.credit_limit > 0.5
-                        ? "bg-[var(--color-accent)]"
-                        : "bg-[var(--color-primary)]"
-                    }`}
-                    style={{ width: `${Math.min(100, (mc.current_balance / mc.credit_limit) * 100)}%` }}
-                  />
+                  {mc.credit_limit > 0 && (
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        mc.current_balance / mc.credit_limit > 0.8
+                          ? "bg-[var(--color-danger)]"
+                          : mc.current_balance / mc.credit_limit > 0.5
+                          ? "bg-[var(--color-accent)]"
+                          : "bg-[var(--color-primary)]"
+                      }`}
+                      style={{ width: `${Math.min(100, (mc.current_balance / mc.credit_limit) * 100)}%` }}
+                    />
+                  )}
                 </div>
               </a>
             ))}

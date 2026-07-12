@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
+import { useToast } from "@/components/Toast";
 import { getMerchantCreditLogs, updateCreditLogStatus } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
 
@@ -18,6 +19,7 @@ interface LogEntry {
 }
 
 export default function LedgerPage() {
+  const { addToast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "disputed">("all");
@@ -49,9 +51,7 @@ export default function LedgerPage() {
       await updateCreditLogStatus(logId, "approved");
       loadLogs();
     } catch {
-      setLogs((prev) =>
-        prev.map((l) => (l.id === logId ? { ...l, status: "approved" } : l))
-      );
+      addToast("Failed to approve entry. Please try again.", "error");
     }
   };
 
@@ -60,9 +60,7 @@ export default function LedgerPage() {
       await updateCreditLogStatus(logId, "rejected");
       loadLogs();
     } catch {
-      setLogs((prev) =>
-        prev.map((l) => (l.id === logId ? { ...l, status: "rejected" } : l))
-      );
+      addToast("Failed to reject entry. Please try again.", "error");
     }
   };
 

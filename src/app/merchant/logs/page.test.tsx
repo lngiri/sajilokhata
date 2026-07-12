@@ -7,6 +7,10 @@ vi.mock("@/components/BottomNav", () => ({
   default: () => <div data-testid="bottom-nav">Nav</div>,
 }));
 
+vi.mock("@/components/Toast", () => ({
+  useToast: () => ({ addToast: vi.fn() }),
+}));
+
 vi.mock("@/lib/actions", () => ({
   getMerchantCreditLogs: vi.fn(),
   updateCreditLogStatus: vi.fn(),
