@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 interface UserMatch {
   id: string;
@@ -15,6 +16,15 @@ interface UserMatch {
  * supabase.auth.signInWithOtp().
  */
 export async function POST(request: Request) {
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  const { allowed, retryAfter } = checkRateLimit(`bypass:${ip}`);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: `Too many requests. Try again in ${retryAfter}s.` },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } }
+    );
+  }
+
   try {
     const { phone } = await request.json();
 

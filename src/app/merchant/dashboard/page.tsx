@@ -80,6 +80,15 @@ export default function MerchantDashboard() {
   // QR Modal state (Issue 3: pull-to-refresh)
   const [showQRModal, setShowQRModal] = useState(false);
 
+  useEffect(() => {
+    if (!showQRModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowQRModal(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showQRModal]);
+
   const supabase = useRef(createClient()).current;
 
   const loadData = useCallback(async () => {
@@ -104,7 +113,7 @@ export default function MerchantDashboard() {
         setMerchantProfile(profileData);
         setLastRefreshed(new Date());
       } catch {
-        // Empty state - no data yet
+        addToast("Failed to load dashboard data.", "error");
       }
     }
   }, []);

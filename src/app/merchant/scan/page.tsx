@@ -251,6 +251,8 @@ export default function MerchantScanPage() {
                 </label>
                 <input
                   type="number"
+                  min="1"
+                  step="1"
                   placeholder="0"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -264,6 +266,7 @@ export default function MerchantScanPage() {
                 </label>
                 <input
                   type="text"
+                  maxLength={200}
                   placeholder="e.g. Rice 10kg, Milk 2L"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

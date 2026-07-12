@@ -11,6 +11,10 @@ function getClient() {
   return supabaseClient;
 }
 
+export function clearCachedClient() {
+  supabaseClient = null;
+}
+
 // ============================================================
 // Merchant Actions
 // ============================================================
@@ -112,6 +116,16 @@ export async function linkCustomerToMerchant(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createCreditLog(log: Record<string, any>): Promise<any> {
+  if (!log.merchant_id || !log.customer_id) {
+    throw new Error("merchant_id and customer_id are required");
+  }
+  if (!log.amount || typeof log.amount !== "number" || log.amount <= 0) {
+    throw new Error("amount must be a positive number");
+  }
+  if (!log.type || !["debit", "credit"].includes(log.type)) {
+    throw new Error("type must be 'debit' or 'credit'");
+  }
+
   const { data, error } = await getClient()
     .from("credit_logs")
     .insert(log)
@@ -204,7 +218,14 @@ export async function getMerchantCustomers(merchantId: string): Promise<any[]> {
   const rows = data || [];
   if (rows.length === 0) return [];
 
-  const customerIds = rows.map((r: any) => r.customer_id);
+  const seen = new Set<string>();
+  const deduped = rows.filter((r: any) => {
+    if (seen.has(r.customer_id)) return false;
+    seen.add(r.customer_id);
+    return true;
+  });
+
+  const customerIds = deduped.map((r: any) => r.customer_id);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const approvedLogsResult: any = await getClient()
@@ -223,7 +244,7 @@ export async function getMerchantCustomers(merchantId: string): Promise<any[]> {
     balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
   }
 
-  return rows
+  return deduped
     .map((r: any) => ({ ...r, current_balance: balanceMap[r.customer_id] || 0 }))
     .sort((a: any, b: any) => b.current_balance - a.current_balance);
 }

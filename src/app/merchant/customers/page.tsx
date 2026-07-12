@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import { getMerchantCustomers } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { useToast } from "@/components/Toast";
 
 interface CustomerRow {
   id: string;
@@ -17,9 +18,16 @@ interface CustomerRow {
 }
 
 export default function CustomersPage() {
+  const { addToast } = useToast();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
     loadCustomers();
@@ -33,15 +41,15 @@ export default function CustomersPage() {
         setCustomers(data as CustomerRow[]);
       }
     } catch {
-      // Empty state
+      addToast("Failed to load customers.", "error");
     } finally {
       setLoading(false);
     }
   };
 
   const filtered = customers.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+    if (!debouncedQuery) return true;
+    const q = debouncedQuery.toLowerCase();
     return (
       c.customers?.name?.toLowerCase().includes(q) ||
       c.customers?.phone.includes(q)
@@ -72,7 +80,9 @@ export default function CustomersPage() {
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
+            <label htmlFor="customer-search" className="sr-only">Search customers</label>
             <input
+              id="customer-search"
               type="text"
               placeholder="Search by name or phone..."
               value={searchQuery}

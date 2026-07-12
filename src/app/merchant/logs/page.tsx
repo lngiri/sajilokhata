@@ -40,7 +40,7 @@ export default function LedgerPage() {
         setLogs(data as LogEntry[]);
       }
     } catch {
-      // Empty state
+      addToast("Failed to load ledger entries.", "error");
     } finally {
       setLoading(false);
     }

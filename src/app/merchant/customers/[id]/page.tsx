@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
@@ -28,10 +28,11 @@ interface CustomerDetail {
 }
 
 export default function CustomerDetailPage() {
-  const params = useParams();
   const router = useRouter();
   const { addToast } = useToast();
-  const customerId = params?.id as string;
+  const addToastRef = useRef(addToast);
+  addToastRef.current = addToast;
+  const customerId = useParams<{ id: string }>().id;
 
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -39,67 +40,76 @@ export default function CustomerDetailPage() {
   const [newLimit, setNewLimit] = useState("");
   const [savingLimit, setSavingLimit] = useState(false);
 
-  const supabase = createClient();
+  useEffect(() => {
+    if (!showCreditLimitModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowCreditLimitModal(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showCreditLimitModal]);
 
   useEffect(() => {
+    const supabase = createClient();
+    let cancelled = false;
+
+    async function loadCustomer() {
+      setLoading(true);
+      try {
+        const merchantId = await getCurrentMerchantId();
+        if (!merchantId || !customerId || cancelled) {
+          setLoading(false);
+          return;
+        }
+
+        const { data: mc } = await supabase
+          .from("merchant_customers")
+          .select("*, customers(id, name, phone)")
+          .eq("merchant_id", merchantId)
+          .eq("customer_id", customerId)
+          .single();
+
+        if (!mc || cancelled) {
+          setLoading(false);
+          return;
+        }
+
+        const logs = await getMerchantCreditLogs(merchantId, {
+          customerId,
+          limit: 50,
+        });
+
+        if (cancelled) return;
+
+        const approvedLogs = logs.filter((l: any) => l.status === "approved");
+        const totalDebit = approvedLogs
+          .filter((l: any) => l.type === "debit")
+          .reduce((sum: number, l: any) => sum + l.amount, 0);
+        const totalCredit = approvedLogs
+          .filter((l: any) => l.type === "credit")
+          .reduce((sum: number, l: any) => sum + l.amount, 0);
+
+        const computedBalance = totalDebit - totalCredit;
+
+        setCustomer({
+          id: customerId,
+          name: mc.customers?.name || null,
+          phone: mc.customers?.phone || "",
+          credit_limit: mc.credit_limit,
+          current_balance: computedBalance,
+          total_debit_amount: totalDebit,
+          total_credit_amount: totalCredit,
+          transactions: (logs as Transaction[]) || [],
+        });
+      } catch {
+        if (!cancelled) addToastRef.current("Failed to load customer details.", "error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
     loadCustomer();
   }, [customerId]);
-
-  const loadCustomer = async () => {
-    setLoading(true);
-    try {
-      const merchantId = await getCurrentMerchantId();
-      if (!merchantId || !customerId) {
-        setLoading(false);
-        return;
-      }
-
-      // Get the merchant_customer link (balance + limit)
-      const { data: mc } = await supabase
-        .from("merchant_customers")
-        .select("*, customers(id, name, phone)")
-        .eq("merchant_id", merchantId)
-        .eq("customer_id", customerId)
-        .single();
-
-      if (!mc) {
-        setLoading(false);
-        return;
-      }
-
-      // Get transaction history for this customer
-      const logs = await getMerchantCreditLogs(merchantId, {
-        customerId,
-        limit: 50,
-      });
-
-      // Calculate stats
-      const approvedLogs = logs.filter((l: any) => l.status === "approved");
-      const totalDebit = approvedLogs
-        .filter((l: any) => l.type === "debit")
-        .reduce((sum: number, l: any) => sum + l.amount, 0);
-      const totalCredit = approvedLogs
-        .filter((l: any) => l.type === "credit")
-        .reduce((sum: number, l: any) => sum + l.amount, 0);
-
-      const computedBalance = totalDebit - totalCredit;
-
-      setCustomer({
-        id: customerId,
-        name: mc.customers?.name || null,
-        phone: mc.customers?.phone || "",
-        credit_limit: mc.credit_limit,
-        current_balance: computedBalance,
-        total_debit_amount: totalDebit,
-        total_credit_amount: totalCredit,
-        transactions: (logs as Transaction[]) || [],
-      });
-    } catch {
-      addToast("Failed to load customer details.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSaveLimit = async () => {
     if (!newLimit || Number(newLimit) < 0) {
@@ -266,6 +276,8 @@ export default function CustomerDetailPage() {
               <label className="text-sm font-medium text-[var(--color-text)]">Credit Limit (NPR)</label>
               <input
                 type="number"
+                min="0"
+                step="1"
                 value={newLimit}
                 onChange={(e) => setNewLimit(e.target.value)}
                 className="w-full mt-1 px-4 py-3 bg-gray-50 rounded-xl text-lg font-bold border-0 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"

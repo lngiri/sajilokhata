@@ -5,6 +5,7 @@ import { QRDisplay } from "@/components/QRCode";
 import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { getMerchantProfile } from "@/lib/actions";
+import { useToast } from "@/components/Toast";
 
 interface MerchantData {
   id: string;
@@ -13,6 +14,7 @@ interface MerchantData {
 }
 
 export default function MerchantQRPage() {
+  const { addToast } = useToast();
   const [merchant, setMerchant] = useState<MerchantData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +30,7 @@ export default function MerchantQRPage() {
         setMerchant(profile || { id, name: "My Shop", business_type: "kirana" });
       }
     } catch {
-      // No auth available
+      addToast("Failed to load QR code data.", "error");
     } finally {
       setLoading(false);
     }

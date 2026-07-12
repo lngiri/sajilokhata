@@ -3,6 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import CustomersPage from "./page";
 
+vi.mock("@/components/Toast", () => ({
+  useToast: () => ({ addToast: vi.fn() }),
+}));
+
 vi.mock("@/components/BottomNav", () => ({
   default: () => <div data-testid="bottom-nav">Nav</div>,
 }));
@@ -92,8 +96,10 @@ describe("CustomersPage", () => {
     );
     await userEvent.type(searchInput, "Shyam");
 
-    expect(screen.getByText("Shyam")).toBeInTheDocument();
-    expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Shyam")).toBeInTheDocument();
+      expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    });
   });
 
   it("filters customers by phone search", async () => {
@@ -113,8 +119,10 @@ describe("CustomersPage", () => {
     );
     await userEvent.type(searchInput, "9847654321");
 
-    expect(screen.getByText("Shyam")).toBeInTheDocument();
-    expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Shyam")).toBeInTheDocument();
+      expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    });
   });
 
   it("shows empty state when search matches no customers", async () => {
@@ -134,8 +142,10 @@ describe("CustomersPage", () => {
     );
     await userEvent.type(searchInput, "zzzzz");
 
-    expect(screen.getByText("No customers found")).toBeInTheDocument();
-    expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("No customers found")).toBeInTheDocument();
+      expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    });
   });
 
   it("shows empty state when no customers exist", async () => {

@@ -399,6 +399,8 @@ export default function CustomerDashboard() {
                   <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
                   <input
                     type="number"
+                    min="1"
+                    step="1"
                     placeholder="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}

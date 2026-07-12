@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { clearCachedClient } from "@/lib/actions";
 
 let cachedMerchantId: string | null = null;
 let cacheTimestamp = 0;
@@ -81,6 +82,7 @@ export async function signOut() {
   } catch {
     // Ignore errors
   }
+  clearCachedClient();
   localStorage.removeItem("merchant_id");
   cachedMerchantId = null;
   cacheTimestamp = 0;

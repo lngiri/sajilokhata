@@ -13,6 +13,10 @@ vi.mock("@/components/QRCode", () => ({
   ),
 }));
 
+vi.mock("@/components/Toast", () => ({
+  useToast: () => ({ addToast: vi.fn() }),
+}));
+
 vi.mock("@/components/BottomNav", () => ({
   default: () => <div data-testid="bottom-nav">Nav</div>,
 }));

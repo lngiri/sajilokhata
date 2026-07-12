@@ -206,7 +206,9 @@ export default function ScanPage() {
           </div>
 
           <div className="space-y-3">
+            <label className="sr-only" htmlFor="scan-phone">Phone Number</label>
             <input
+              id="scan-phone"
               type="tel"
               placeholder="e.g. 9841234567"
               value={phone}
@@ -214,7 +216,9 @@ export default function ScanPage() {
               className="w-full px-4 py-4 bg-white rounded-2xl text-lg font-mono border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none text-center"
               maxLength={10}
             />
+            <label className="sr-only" htmlFor="scan-name">Your Name</label>
             <input
+              id="scan-name"
               type="text"
               placeholder="Your name (optional)"
               value={name}
@@ -284,6 +288,8 @@ export default function ScanPage() {
               <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
               <input
                 type="number"
+                min="1"
+                step="1"
                 placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
@@ -294,6 +300,7 @@ export default function ScanPage() {
               <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
               <input
                 type="text"
+                maxLength={200}
                 placeholder="e.g. Rice 10kg, Milk 2L"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
