@@ -272,7 +272,12 @@ export default function CustomerDashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </a>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">My Dashboard</h1>
+          <div>
+            <h1 className="text-lg font-bold text-[var(--color-text)]">My Dashboard</h1>
+            <p className="text-[10px] text-[var(--color-text-muted)]">
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </p>
+          </div>
           <div className="ml-auto flex items-center gap-2">
             <SyncStatus />
             {customerPhone && (

@@ -14,6 +14,7 @@ import {
   getMerchantProfile,
 } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { useRouter } from "next/navigation";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
 const POLL_INTERVAL = 30_000;
@@ -75,6 +76,8 @@ export default function MerchantDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
 
@@ -237,6 +240,16 @@ export default function MerchantDashboard() {
     setShowQRModal(false);
   };
 
+  const handleBrandingRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await loadData();
+      router.refresh();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 2000);
+    }
+  };
+
   const statusColor = (status: string) => {
     switch (status) {
       case "approved":
@@ -255,15 +268,28 @@ export default function MerchantDashboard() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3">
-          <div>
+          <button
+            onClick={handleBrandingRefresh}
+            className="text-left active:scale-95 transition-transform"
+          >
             <h1 className="text-lg font-bold text-[var(--color-text)]">
               Sajilo Khata
             </h1>
             <p className="text-xs text-[var(--color-text-muted)]">
               Digital Diary
             </p>
-          </div>
-          <SyncStatus />
+            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+            </p>
+          </button>
+          {isRefreshing ? (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[10px] font-medium text-blue-600">Syncing...</span>
+            </div>
+          ) : (
+            <SyncStatus />
+          )}
         </div>
       </div>
 
@@ -341,14 +367,13 @@ export default function MerchantDashboard() {
             {/* Quick Actions */}
             <div className="flex gap-3">
               <a
-                href="/merchant/scan"
+                href="/merchant/scan?manual=true"
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Scan QR
+                Manual Entry
               </a>
               <a
                 href="/merchant/qr"

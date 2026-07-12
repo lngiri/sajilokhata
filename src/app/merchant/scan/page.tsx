@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import AmountSuggestions from "@/components/AmountSuggestions";
@@ -11,6 +11,7 @@ import {
   linkCustomerToMerchant,
   createCreditLog,
 } from "@/lib/actions";
+import { useSearchParams } from "next/navigation";
 
 type Step = "scan" | "enter" | "confirm" | "success";
 
@@ -19,7 +20,14 @@ const CUSTOMER_QR_PREFIX = "sajilokhata:customer:";
 
 export default function MerchantScanPage() {
   const { addToast } = useToast();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("scan");
+
+  useEffect(() => {
+    if (searchParams?.get("manual") === "true") {
+      setStep("enter");
+    }
+  }, [searchParams]);
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
@@ -69,6 +77,10 @@ export default function MerchantScanPage() {
   );
 
   const handleEnterNext = () => {
+    if (!customerPhone || customerPhone.length < 6) {
+      addToast("Please enter a valid customer phone number.", "error");
+      return;
+    }
     if (!amount || Number(amount) <= 0) {
       addToast("Please enter a valid amount.", "error");
       return;
@@ -217,33 +229,59 @@ export default function MerchantScanPage() {
         {/* Step 2: Enter Amount & Description */}
         {step === "enter" && (
           <div className="space-y-4 animate-fade-in">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                  <svg
-                    className="w-5 h-5 text-green-600"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
+            {searchParams?.get("manual") === "true" ? (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Customer Phone</label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 9841234567"
+                    value={customerPhone}
+                    onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                    maxLength={10}
+                  />
                 </div>
                 <div>
-                  <p className="text-xs text-[var(--color-text-muted)]">
-                    Customer Phone
-                  </p>
-                  <p className="font-mono font-medium text-[var(--color-text)]">
-                    {customerPhone}
-                  </p>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Customer Name (optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Ram Sharma"
+                    value={customerName || ""}
+                    onChange={(e) => setCustomerName(e.target.value || null)}
+                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  />
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg
+                      className="w-5 h-5 text-green-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      Customer Phone
+                    </p>
+                    <p className="font-mono font-medium text-[var(--color-text)]">
+                      {customerPhone}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div>
