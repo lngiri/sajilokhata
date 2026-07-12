@@ -144,6 +144,8 @@ export async function getMerchantCreditLogs(
     customerId?: string;
     limit?: number;
     offset?: number;
+    dateFrom?: string;
+    dateTo?: string;
   }
 ): Promise<any[]> {
   let query = getClient()
@@ -157,6 +159,12 @@ export async function getMerchantCreditLogs(
   }
   if (options?.customerId) {
     query = query.eq("customer_id", options.customerId);
+  }
+  if (options?.dateFrom) {
+    query = query.gte("created_at", options.dateFrom);
+  }
+  if (options?.dateTo) {
+    query = query.lte("created_at", options.dateTo + "T23:59:59.999Z");
   }
   if (options?.limit) {
     query = query.range(
@@ -578,4 +586,141 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
   }, 0) || 0;
 
   return { totalOutstanding, totalCreditLimit, customerCount: customers?.length || 0, pendingCount, todayTotal };
+}
+
+// ============================================================
+// Analytics & Reports
+// ============================================================
+
+export interface AnalyticsResult {
+  totalOutstanding: number;
+  totalReceived: number;
+  netCashFlow: number;
+  topCustomers: { name: string; phone: string; balance: number }[];
+  dailyBreakdown: { date: string; debit: number; credit: number }[];
+}
+
+export async function getMerchantAnalytics(
+  merchantId: string,
+  dateFrom?: string,
+  dateTo?: string
+): Promise<AnalyticsResult> {
+  let query = getClient()
+    .from("credit_logs")
+    .select("amount, type, created_at, customers!inner(name, phone)")
+    .eq("merchant_id", merchantId)
+    .eq("status", "approved")
+    .order("created_at", { ascending: true });
+
+  if (dateFrom) query = query.gte("created_at", dateFrom);
+  if (dateTo) query = query.lte("created_at", dateTo + "T23:59:59.999Z");
+
+  const { data: logs, error } = await query;
+  if (error) throw error;
+
+  const rows = logs as any[] || [];
+
+  // Aggregate metrics
+  let totalOutstanding = 0;
+  let totalReceived = 0;
+  const customerBal: Record<string, { name: string; phone: string; balance: number }> = {};
+  const dailyMap: Record<string, { debit: number; credit: number }> = {};
+
+  for (const l of rows) {
+    if (l.type === "debit") {
+      totalOutstanding += l.amount;
+    } else {
+      totalReceived += l.amount;
+    }
+
+    const cusKey = l.customers?.phone || "unknown";
+    if (!customerBal[cusKey]) {
+      customerBal[cusKey] = {
+        name: l.customers?.name || cusKey,
+        phone: cusKey,
+        balance: 0,
+      };
+    }
+    customerBal[cusKey].balance += l.type === "debit" ? l.amount : -l.amount;
+
+    const day = l.created_at?.split("T")[0] || "unknown";
+    if (!dailyMap[day]) dailyMap[day] = { debit: 0, credit: 0 };
+    if (l.type === "debit") dailyMap[day].debit += l.amount;
+    else dailyMap[day].credit += l.amount;
+  }
+
+  const topCustomers = Object.values(customerBal)
+    .sort((a, b) => b.balance - a.balance)
+    .slice(0, 5);
+
+  const dailyBreakdown = Object.entries(dailyMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, vals]) => ({ date, ...vals }));
+
+  return {
+    totalOutstanding,
+    totalReceived,
+    netCashFlow: totalReceived - totalOutstanding,
+    topCustomers,
+    dailyBreakdown,
+  };
+}
+
+// ============================================================
+// Verification Token (WhatsApp Remote Approve)
+// ============================================================
+
+export async function getCreditLogByToken(
+  token: string
+): Promise<{
+  id: string;
+  amount: number;
+  type: string;
+  status: string;
+  description: string | null;
+  customer_id: string;
+  customers: { name: string | null; phone: string } | null;
+} | null> {
+  const { data, error } = await getClient()
+    .from("credit_logs")
+    .select("id, amount, type, status, description, customer_id, customers(name, phone)")
+    .eq("verification_token", token)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as any;
+}
+
+export async function approveByToken(
+  token: string
+): Promise<any> {
+  const { data: log } = await getClient()
+    .from("credit_logs")
+    .select("id")
+    .eq("verification_token", token)
+    .maybeSingle();
+
+  if (!log) throw new Error("Invalid verification token");
+
+  return updateCreditLogStatus(log.id, "approved", "customer");
+}
+
+export async function disputeByToken(
+  token: string,
+  reason: string
+): Promise<any> {
+  const { data: log } = await getClient()
+    .from("credit_logs")
+    .select("id")
+    .eq("verification_token", token)
+    .maybeSingle();
+
+  if (!log) throw new Error("Invalid verification token");
+
+  await getClient()
+    .from("credit_logs")
+    .update({ disputed_reason: reason })
+    .eq("id", log.id);
+
+  return updateCreditLogStatus(log.id, "disputed", "customer");
 }

@@ -113,6 +113,8 @@ export interface Database {
           sync_status: SyncStatus;
           ip_address: string | null;
           device_info: string | null;
+          verification_token: string | null;
+          disputed_reason: string | null;
           created_at: string;
           approved_at: string | null;
           updated_at: string;
@@ -130,6 +132,8 @@ export interface Database {
           sync_status?: SyncStatus;
           ip_address?: string | null;
           device_info?: string | null;
+          verification_token?: string | null;
+          disputed_reason?: string | null;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
@@ -147,6 +151,8 @@ export interface Database {
           sync_status?: SyncStatus;
           ip_address?: string | null;
           device_info?: string | null;
+          verification_token?: string | null;
+          disputed_reason?: string | null;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
