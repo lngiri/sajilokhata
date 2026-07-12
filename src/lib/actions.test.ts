@@ -323,7 +323,7 @@ describe("getMerchantByPhone", () => {
 });
 
 describe("getCustomerStats", () => {
-  it("returns aggregated stats for a customer", async () => {
+  it("returns aggregated stats for a customer from credit_logs", async () => {
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
@@ -334,7 +334,6 @@ describe("getCustomerStats", () => {
 
     const relationships = [
       {
-        current_balance: 500,
         credit_limit: 5000,
         merchants: { id: "m1", name: "Shop", business_name: "Shop ABC" },
       },
@@ -347,12 +346,27 @@ describe("getCustomerStats", () => {
       ),
     });
 
+    const approvedLogs = [
+      { merchant_id: "m1", amount: 800, type: "debit" },
+      { merchant_id: "m1", amount: 300, type: "credit" },
+    ];
+    mockFrom.mockReturnValueOnce({
+      select: vi.fn().mockReturnThis(),
+      in: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      then: vi.fn((resolve: any) =>
+        resolve({ data: approvedLogs, error: null })
+      ),
+    });
+
     const result = await getCustomerStats("9841234567");
     expect(result).toEqual({
-      totalOutstanding: 500,
+      totalOutstanding: 500,  // 800 (debit) - 300 (credit)
       shopsCount: 1,
       totalCreditLimit: 5000,
-      relationships,
+      relationships: [
+        { credit_limit: 5000, merchants: { id: "m1", name: "Shop", business_name: "Shop ABC" }, current_balance: 500 },
+      ],
     });
   });
 
@@ -534,12 +548,16 @@ describe("complete customer submission data flow", () => {
 });
 
 describe("getMerchantStats", () => {
-  it("returns aggregated merchant statistics", async () => {
+  it("returns aggregated merchant statistics from credit_logs", async () => {
     const customers = [
-      { current_balance: 1000, credit_limit: 5000 },
-      { current_balance: 500, credit_limit: 3000 },
+      { credit_limit: 5000 },
+      { credit_limit: 3000 },
     ];
     const pendingLogs = [{ id: "cl1", amount: 200 }];
+    const approvedLogs = [
+      { amount: 1500, type: "debit" },
+      { amount: 500, type: "credit" },
+    ];
     const todayLogs = [
       { id: "cl2", amount: 500, type: "debit" },
       { id: "cl3", amount: 100, type: "credit" },
@@ -555,15 +573,16 @@ describe("getMerchantStats", () => {
     mockFrom
       .mockReturnValueOnce(builder(customers))
       .mockReturnValueOnce(builder(pendingLogs))
+      .mockReturnValueOnce(builder(approvedLogs))
       .mockReturnValueOnce(builder(todayLogs));
 
     const result = await getMerchantStats("m1");
     expect(result).toEqual({
-      totalOutstanding: 1500,
-      totalCreditLimit: 8000,
+      totalOutstanding: 1000,   // 1500 (debit) - 500 (credit)
+      totalCreditLimit: 8000,   // 5000 + 3000
       customerCount: 2,
       pendingCount: 1,
-      todayTotal: 400,
+      todayTotal: 400,          // 500 (debit) - 100 (credit)
     });
   });
 });

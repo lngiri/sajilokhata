@@ -265,27 +265,43 @@ export async function getCustomerStats(
 
   const customerIds = customers.map((c: any) => c.id);
 
-  // Get all merchant relationships with balance info
-  // Using a left join (no !inner) so orphaned merchant_customers records
-  // still show their balance even if merchant metadata is missing.
+  // Get all merchant relationships with credit limit and merchant info
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: relationships, error } = (await getClient()
     .from("merchant_customers")
-    .select("current_balance, credit_limit, merchants(id, name, business_name)")
+    .select("credit_limit, merchants(id, name, business_name)")
     .in("customer_id", customerIds)) as any;
 
   if (error) throw error;
 
-  const totalOutstanding =
-    relationships?.reduce((sum: number, r: any) => sum + (r.current_balance || 0), 0) || 0;
+  // Compute actual balance from approved credit_logs (source of truth)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: approvedLogs } = await getClient()
+    .from("credit_logs")
+    .select("merchant_id, amount, type")
+    .in("customer_id", customerIds)
+    .eq("status", "approved") as unknown as { data: any[] | null };
+
+  const balanceByMerchant: Record<string, number> = {};
+  for (const log of approvedLogs || []) {
+    const sign = log.type === "debit" ? 1 : -1;
+    balanceByMerchant[log.merchant_id] = (balanceByMerchant[log.merchant_id] || 0) + sign * log.amount;
+  }
+
+  const totalOutstanding = Object.values(balanceByMerchant).reduce((sum, b) => sum + b, 0);
   const totalCreditLimit =
     relationships?.reduce((sum: number, r: any) => sum + (r.credit_limit || 0), 0) || 0;
+
+  const relationshipsWithBalance = (relationships || []).map((r: any) => ({
+    ...r,
+    current_balance: balanceByMerchant[r.merchants?.id] || 0,
+  }));
 
   return {
     totalOutstanding,
     shopsCount: relationships?.length || 0,
     totalCreditLimit,
-    relationships: relationships || [],
+    relationships: relationshipsWithBalance,
   };
 }
 
@@ -400,7 +416,7 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: customers } = await getClient()
     .from("merchant_customers")
-    .select("current_balance, credit_limit")
+    .select("credit_limit")
     .eq("merchant_id", merchantId) as { data: any[] | null };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -411,6 +427,13 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
     .eq("status", "pending") as { data: any[] | null };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: approvedLogs } = await getClient()
+    .from("credit_logs")
+    .select("amount, type")
+    .eq("merchant_id", merchantId)
+    .eq("status", "approved") as { data: any[] | null };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: todayLogs } = await getClient()
     .from("credit_logs")
     .select("id, amount, type")
@@ -419,7 +442,9 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
     .gte("created_at", new Date().toISOString().split("T")[0]) as { data: any[] | null };
 
   const totalOutstanding =
-    customers?.reduce((sum, c) => sum + (c.current_balance || 0), 0) || 0;
+    approvedLogs?.reduce((sum, l) => {
+      return sum + (l.type === "debit" ? l.amount : -l.amount);
+    }, 0) || 0;
   const totalCreditLimit =
     customers?.reduce((sum, c) => sum + (c.credit_limit || 0), 0) || 0;
   const pendingCount = pendingLogs?.length || 0;
