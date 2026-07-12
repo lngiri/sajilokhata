@@ -379,15 +379,15 @@ export default function MerchantDashboard() {
                 </svg>
                 Manual Entry
               </a>
-              <a
-                href="/merchant/qr"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              <button
+                onClick={() => setShowQRModal(true)}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform cursor-pointer"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
                 </svg>
                 Show QR
-              </a>
+              </button>
               <a
                 href="/merchant/reports"
                 className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
@@ -539,18 +539,29 @@ export default function MerchantDashboard() {
       )}
 
       {/* ================================================================ */}
-      {/* Issue 3: QR Modal — appears on pull-to-refresh tap/release */}
+      {/* QR Modal — instant popup for showing the shop QR code */}
       {/* ================================================================ */}
       {showQRModal && merchantProfile && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={handleCloseQR}
         >
           <div
-            className="bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-2xl animate-scale-up"
+            className="relative bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-2xl animate-scale-up"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="text-center mb-4">
+            {/* Close X button */}
+            <button
+              onClick={handleCloseQR}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center active:scale-90 transition-transform text-gray-400 hover:text-gray-600"
+              aria-label="Close QR"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center mb-2">
               <h2 className="text-lg font-bold text-[var(--color-text)]">
                 {merchantProfile.name}
               </h2>
@@ -565,21 +576,11 @@ export default function MerchantDashboard() {
               businessType={merchantProfile.business_type}
             />
 
-            <div className="bg-[var(--color-primary)]/5 rounded-xl p-3 mt-4">
-              <div className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
-                <svg className="w-4 h-4 text-[var(--color-primary)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p>Data refreshed. Tap outside this card to close.</p>
-              </div>
+            <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
+              <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
+                ग्राहकलाई यो क्युआर स्क्यान गर्न लगाउनुहोस्
+              </p>
             </div>
-
-            <button
-              onClick={handleCloseQR}
-              className="w-full mt-4 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-            >
-              Close
-            </button>
           </div>
         </div>
       )}

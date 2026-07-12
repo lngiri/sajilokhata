@@ -130,7 +130,7 @@ describe("MerchantDashboard", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
   });
 
-  it("renders quick action buttons with correct hrefs", async () => {
+  it("renders quick action buttons", async () => {
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
@@ -140,8 +140,7 @@ describe("MerchantDashboard", () => {
     const scanLink = screen.getByText("Scan QR").closest("a");
     expect(scanLink).toHaveAttribute("href", "/merchant/scan");
 
-    const showQrLink = screen.getByText("Show QR").closest("a");
-    expect(showQrLink).toHaveAttribute("href", "/merchant/qr");
+    expect(screen.getByText("Show QR")).toBeInTheDocument();
 
     const ledgerLink = screen.getByText("Ledger").closest("a");
     expect(ledgerLink).toHaveAttribute("href", "/merchant/logs");
