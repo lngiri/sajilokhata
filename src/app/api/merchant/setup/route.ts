@@ -31,6 +31,40 @@ export async function POST(request: Request) {
       );
     }
 
+    // Cross-table check: ensure phone is not already registered as a customer
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingCustomer } = await (adminClient.from("customers") as any)
+      .select("id")
+      .eq("phone", phone)
+      .maybeSingle();
+
+    if (existingCustomer) {
+      return NextResponse.json(
+        {
+          error: "यो नम्बर ग्राहक (Customer) को रूपमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस् वा खाता परिवर्तन गर्नुहोस्।",
+          code: "PHONE_IS_CUSTOMER",
+        },
+        { status: 409 }
+      );
+    }
+
+    // Pre-check: see if a merchant with this phone already exists
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingMerchant } = await (adminClient.from("merchants") as any)
+      .select("id")
+      .eq("phone", phone)
+      .maybeSingle();
+
+    if (existingMerchant) {
+      // Merchant already exists — return existing ID so login reuses it
+      return NextResponse.json({
+        success: true,
+        merchant_id: existingMerchant.id,
+        existed: true,
+      });
+    }
+
+    // Create new merchant row
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error: upsertError } = await (adminClient.from("merchants") as any)
       .upsert(
@@ -46,12 +80,16 @@ export async function POST(request: Request) {
     if (upsertError) {
       console.error("Failed to create merchants row:", upsertError);
       return NextResponse.json(
-        { error: "Failed to create merchant profile" },
+        { error: "प्रोफाइल बनाउन सकिएन। कृपया पुनः प्रयास गर्नुहोस्।" },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, merchant_id });
+    return NextResponse.json({
+      success: true,
+      merchant_id,
+      existed: false,
+    });
   } catch (err) {
     console.error("Merchant setup error:", err);
     return NextResponse.json(

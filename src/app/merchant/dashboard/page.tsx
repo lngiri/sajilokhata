@@ -99,6 +99,20 @@ export default function MerchantDashboard() {
     return () => window.removeEventListener("keydown", handler);
   }, [showQRModal]);
 
+  // Show welcome toast based on account status from login redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("status");
+    if (status === "new") {
+      addToast("बधाई छ! सजिलो खातामा तपाईंको नयाँ पसल दर्ता भयो।", "success");
+    } else if (status === "existing") {
+      addToast("स्वागत छ! तपाईंको पुरानो खाता लोड भयो।", "success");
+    }
+    if (status) {
+      window.history.replaceState({}, "", "/merchant/dashboard");
+    }
+  }, [addToast]);
+
   const supabase = useRef(createClient()).current;
 
   const loadData = useCallback(async () => {

@@ -42,14 +42,19 @@ export async function updateMerchantProfile(
     phone?: string;
   }
 ): Promise<any> {
-  const { data, error } = await getClient()
-    .from("merchants")
-    .upsert({ id: merchantId, ...updates }, { onConflict: "id" })
-    .select()
-    .single();
+  const res = await fetch("/api/merchant/profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ merchant_id: merchantId, ...updates }),
+  });
 
-  if (error) throw error;
-  return data;
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to save profile");
+  }
+
+  return data.profile;
 }
 
 // ============================================================
@@ -68,6 +73,23 @@ export async function findOrCreateCustomer(
     .maybeSingle();
 
   if (!customer) {
+    // Cross-table check: ensure this phone is not already a merchant
+    try {
+      const checkRes = await fetch("/api/customer/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      const checkData = await checkRes.json();
+      if (checkData.exists) {
+        throw new Error("यो नम्बर व्यापारी (Merchant) को रूपमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।");
+      }
+    } catch (e: any) {
+      if (e.message?.includes("व्यापारी")) throw e;
+      // If check fails (network/API), proceed anyway — DB trigger will catch conflicts
+      console.warn("Customer cross-table check failed, proceeding:", e);
+    }
+
     const { data: newCustomer, error } = await getClient()
       .from("customers")
       .insert({ phone, name: name || null })

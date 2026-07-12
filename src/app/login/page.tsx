@@ -90,15 +90,28 @@ export default function LoginPage() {
           bypassResult.bypass_id || `bypass-${phone}-${Date.now()}`;
         localStorage.setItem("merchant_id", fallbackId);
         // Create a minimal merchants row so FK constraints work
+        let status = "new";
         try {
-          await supabase.from("merchants").upsert(
-            { id: fallbackId, phone: `+977${phone}`, name: "Shop", business_type: "kirana" },
-            { onConflict: "id" }
-          );
+          const setupRes = await fetch("/api/merchant/setup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              merchant_id: fallbackId,
+              phone: `+977${phone}`,
+            }),
+          });
+          const setupData = await setupRes.json();
+          if (setupRes.ok && setupData.merchant_id) {
+            localStorage.setItem("merchant_id", setupData.merchant_id);
+            status = setupData.existed ? "existing" : "new";
+          } else {
+            // Show API error as alert for now
+            console.warn("Merchant setup failed:", setupData.error);
+          }
         } catch {
-          // Supabase not available — merchant can set up profile later
+          // API not available — merchant can set up profile later
         }
-        window.location.href = "/merchant/dashboard";
+        window.location.href = `/merchant/dashboard?status=${status}`;
         return;
       }
 
@@ -118,8 +131,9 @@ export default function LoginPage() {
       if (data.session) {
         localStorage.setItem("merchant_id", data.session.user.id);
         // Create a minimal merchants row so FK constraints work
+        let status = "new";
         try {
-          await fetch("/api/merchant/setup", {
+          const setupRes = await fetch("/api/merchant/setup", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -127,10 +141,14 @@ export default function LoginPage() {
               phone: `+977${phone}`,
             }),
           });
+          const setupData = await setupRes.json();
+          if (setupRes.ok && setupData.merchant_id) {
+            status = setupData.existed ? "existing" : "new";
+          }
         } catch {
           // Non-critical — merchant can set up profile later
         }
-        window.location.href = "/merchant/dashboard";
+        window.location.href = `/merchant/dashboard?status=${status}`;
       }
     } catch {
       const fallbackId = crypto.randomUUID();
@@ -195,16 +213,25 @@ export default function LoginPage() {
             onClick={async () => {
               const id = crypto.randomUUID();
               localStorage.setItem("merchant_id", id);
-              // Try to create a minimal merchants row so FK constraints work
+              // Create a minimal merchants row so FK constraints work
+              let status = "new";
               try {
-                await supabase.from("merchants").upsert(
-                  { id, phone: `+977${phone}` || null, name: "Shop", business_type: "kirana" },
-                  { onConflict: "id" }
-                );
+                const setupRes = await fetch("/api/merchant/setup", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    merchant_id: id,
+                    phone: `+977${phone}` || "",
+                  }),
+                });
+                const setupData = await setupRes.json();
+                if (setupRes.ok && setupData.merchant_id) {
+                  status = setupData.existed ? "existing" : "new";
+                }
               } catch {
-                // Supabase not available — merchant can set up profile later
+                // API not available — merchant can set up profile later
               }
-              window.location.href = "/merchant/dashboard";
+              window.location.href = `/merchant/dashboard?status=${status}`;
             }}
             className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
           >

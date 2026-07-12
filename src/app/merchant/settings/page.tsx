@@ -72,9 +72,9 @@ export default function SettingsPage() {
         phone: phone || undefined,
       });
       addToast("Profile updated successfully!", "success");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to save merchant profile:", err);
-      addToast("Failed to save. Please try again.", "error");
+      addToast(err.message || "Failed to save. Please try again.", "error");
     } finally {
       setSaving(false);
     }

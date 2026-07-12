@@ -67,6 +67,11 @@ function mockQueryResult(result: unknown) {
 
 beforeEach(() => {
   __resetMocks();
+  // Mock global fetch for API route calls
+  global.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ exists: false }),
+  });
 });
 
 describe("findOrCreateCustomer", () => {
@@ -287,7 +292,10 @@ describe("updateMerchantProfile", () => {
       phone: "+9779841234567",
       business_type: "kirana",
     };
-    mockQueryResult({ data: updated, error: null });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ profile: updated }),
+    });
 
     const result = await updateMerchantProfile("m1", {
       name: "Shop",
@@ -303,7 +311,10 @@ describe("updateMerchantProfile", () => {
       phone: "+9779841234567",
       business_type: "kirana",
     };
-    mockQueryResult({ data: updated, error: null });
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ profile: updated }),
+    });
 
     const result = await updateMerchantProfile("m1", {
       name: "Shop",
