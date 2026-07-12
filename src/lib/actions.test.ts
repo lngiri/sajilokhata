@@ -79,7 +79,7 @@ describe("findOrCreateCustomer", () => {
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     });
 
     const created = { id: "c2", phone: "9841234567", name: "Hari" };
@@ -97,7 +97,7 @@ describe("findOrCreateCustomer", () => {
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockRejectedValue(new Error("DB down")),
+      maybeSingle: vi.fn().mockRejectedValue(new Error("DB down")),
     });
 
     await expect(findOrCreateCustomer("9841234567")).rejects.toThrow("DB down");
@@ -123,7 +123,7 @@ describe("linkCustomerToMerchant", () => {
     mockFrom.mockReturnValueOnce({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
     });
 
     const created = {

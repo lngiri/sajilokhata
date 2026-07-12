@@ -90,6 +90,15 @@ export default function LoginPage() {
         const fallbackId =
           bypassResult.bypass_id || `bypass-${phone}-${Date.now()}`;
         localStorage.setItem("merchant_id", fallbackId);
+        // Create a minimal merchants row so FK constraints work
+        try {
+          await supabase.from("merchants").upsert(
+            { id: fallbackId, phone: `+977${phone}`, name: "Shop", business_type: "kirana" },
+            { onConflict: "id" }
+          );
+        } catch {
+          // Supabase not available — merchant can set up profile later
+        }
         window.location.href = "/merchant/dashboard";
         return;
       }

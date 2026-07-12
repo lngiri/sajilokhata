@@ -61,7 +61,7 @@ export async function findOrCreateCustomer(
     .from("customers")
     .select("*")
     .eq("phone", phone)
-    .single();
+    .maybeSingle();
 
   if (!customer) {
     const { data: newCustomer, error } = await getClient()
@@ -88,7 +88,7 @@ export async function linkCustomerToMerchant(
     .select("*")
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
-    .single();
+    .maybeSingle();
 
   if (existing) return existing;
 
