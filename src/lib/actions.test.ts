@@ -207,18 +207,28 @@ describe("updateCreditLogStatus", () => {
 });
 
 describe("getMerchantCustomers", () => {
-  it("returns merchant customers with balance", async () => {
+  it("returns merchant customers with balance computed from credit_logs", async () => {
     const customers = [
       {
         id: "mc1",
+        customer_id: "c1",
+        credit_limit: 5000,
         current_balance: 1000,
         customers: { id: "c1", name: "Hari", phone: "9841234567" },
       },
     ];
-    mockQueryResult({ data: customers, error: null });
+    const approvedLogs = [
+      { customer_id: "c1", amount: 800, type: "debit" },
+      { customer_id: "c1", amount: 300, type: "credit" },
+    ];
+
+    mockFrom
+      .mockReturnValueOnce(makeBuilder({ data: customers, error: null }))
+      .mockReturnValueOnce(makeBuilder({ data: approvedLogs, error: null }));
 
     const result = await getMerchantCustomers("m1");
-    expect(result).toEqual(customers);
+    expect(result).toHaveLength(1);
+    expect(result[0].current_balance).toBe(500); // 800 debit - 300 credit
   });
 });
 

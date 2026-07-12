@@ -194,11 +194,32 @@ export async function getMerchantCustomers(merchantId: string): Promise<any[]> {
   const { data, error } = await getClient()
     .from("merchant_customers")
     .select("*, customers(id, name, phone)")
-    .eq("merchant_id", merchantId)
-    .order("current_balance", { ascending: false });
+    .eq("merchant_id", merchantId);
 
   if (error) throw error;
-  return data || [];
+
+  const rows = data || [];
+  if (rows.length === 0) return [];
+
+  const customerIds = rows.map((r: any) => r.customer_id);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: approvedLogs } = await getClient()
+    .from("credit_logs")
+    .select("customer_id, amount, type")
+    .eq("merchant_id", merchantId)
+    .eq("status", "approved")
+    .in("customer_id", customerIds) as { data: any[] | null };
+
+  const balanceMap: Record<string, number> = {};
+  for (const log of approvedLogs || []) {
+    const sign = log.type === "debit" ? 1 : -1;
+    balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
+  }
+
+  return rows
+    .map((r: any) => ({ ...r, current_balance: balanceMap[r.customer_id] || 0 }))
+    .sort((a: any, b: any) => b.current_balance - a.current_balance);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

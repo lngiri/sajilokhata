@@ -82,12 +82,14 @@ export default function CustomerDetailPage() {
         .filter((l: any) => l.type === "credit")
         .reduce((sum: number, l: any) => sum + l.amount, 0);
 
+      const computedBalance = totalDebit - totalCredit;
+
       setCustomer({
         id: customerId,
         name: mc.customers?.name || null,
         phone: mc.customers?.phone || "",
         credit_limit: mc.credit_limit,
-        current_balance: mc.current_balance,
+        current_balance: computedBalance,
         total_debit_amount: totalDebit,
         total_credit_amount: totalCredit,
         transactions: (logs as Transaction[]) || [],
