@@ -14,7 +14,7 @@ import {
   getMerchantCustomers,
   getMerchantCustomerBalance,
 } from "@/lib/actions";
-import { useSearchParams } from "next/navigation";
+
 
 type Step = "scan" | "enter" | "confirm" | "success";
 
@@ -30,15 +30,11 @@ interface CustomerOption {
 
 export default function MerchantScanPage() {
   const { addToast } = useToast();
-  const searchParams = useSearchParams();
-  const [step, setStep] = useState<Step>("scan");
-  const isManual = searchParams?.get("manual") === "true";
-
-  useEffect(() => {
-    if (isManual) {
-      setStep("enter");
-    }
-  }, [isManual]);
+  const isManual =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("manual") === "true"
+      : false;
+  const [step, setStep] = useState<Step>(isManual ? "enter" : "scan");
 
   // Shared state
   const [customerPhone, setCustomerPhone] = useState("");
