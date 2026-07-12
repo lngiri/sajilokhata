@@ -211,7 +211,7 @@ export default function MerchantScanPage() {
   };
 
   const handleReset = () => {
-    setStep("scan");
+    setStep(isManual ? "enter" : "scan");
     setCustomerPhone("");
     setCustomerName(null);
     setCustomerId(null);
@@ -223,97 +223,28 @@ export default function MerchantScanPage() {
     setShowDropdown(false);
   };
 
-  return (
-    <div className="pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="flex items-center px-4 py-3">
-          <a
-            href="/merchant/dashboard"
-            className="mr-3 p-1 active:scale-95 transition-transform"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15.75 19.5L8.25 12l7.5-7.5"
-              />
-            </svg>
-          </a>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">
-            {step === "scan"
-              ? "Scan Customer QR"
-              : step === "enter"
-              ? isManual ? "Manual Entry" : "Enter Details"
-              : step === "confirm"
-              ? "Confirm Entry"
-              : "Entry Saved!"}
-          </h1>
-        </div>
-      </div>
-
-      <div className="px-4 py-4 space-y-4">
-        {/* Step 1: Scan QR */}
-        {step === "scan" && (
-          <div className="space-y-4 animate-fade-in">
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-[var(--color-primary)]"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z"
-                  />
-                </svg>
-              </div>
-              <p className="text-sm text-[var(--color-text-muted)]">
-                Point your camera at the customer&apos;s QR code
-              </p>
-            </div>
-
-            <QRScanner onScan={handleScan} />
+  // ─── Manual mode: short-circuit, no camera ──────────────────────
+  if (isManual) {
+    return (
+      <div className="pb-20">
+        {/* Header */}
+        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+          <div className="flex items-center px-4 py-3">
+            <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+              </svg>
+            </a>
+            <h1 className="text-lg font-bold text-[var(--color-text)]">
+              {step === "enter" ? "Manual Entry" : step === "confirm" ? "Confirm Entry" : "Entry Saved!"}
+            </h1>
           </div>
-        )}
+        </div>
 
-        {/* Step 2: Enter Details */}
-        {step === "enter" && (
-          <div className="space-y-4 animate-fade-in">
-            {/* QR scan mode — read-only customer phone */}
-            {!isManual && (
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-xs text-[var(--color-text-muted)]">Customer Phone</p>
-                    <p className="font-mono font-medium text-[var(--color-text)]">{customerPhone}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Manual mode — hybrid search + dropdown */}
-            {isManual && (
+        <div className="px-4 py-4 space-y-4">
+          {/* Manual: Enter Details */}
+          {step === "enter" && (
+            <div className="space-y-4 animate-fade-in">
               <div ref={dropdownRef} className="relative">
                 <label className="text-sm font-medium text-[var(--color-text)]">Search Customer (Name or Phone)</label>
                 <input
@@ -324,7 +255,6 @@ export default function MerchantScanPage() {
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
                     setShowDropdown(true);
-                    // Clear selection when query changes
                     if (!customerList.find((c) => (c.name || c.phone) === e.target.value)) {
                       setCustomerId(null);
                       setCustomerPhone("");
@@ -357,100 +287,206 @@ export default function MerchantScanPage() {
                 {showDropdown && searchQuery && filteredCustomers.length === 0 && (
                   <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 p-4 text-center">
                     <p className="text-sm text-[var(--color-text-muted)]">No customers found</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                      The customer will be created automatically on save
-                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">The customer will be created automatically on save</p>
                   </div>
                 )}
-
-                {/* Balance display */}
                 {customerBalance !== null && (
                   <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                    {customerBalance > 0
-                      ? `Current Due: NPR ${customerBalance.toLocaleString()}`
-                      : "No outstanding balance"}
+                    {customerBalance > 0 ? `Current Due: NPR ${customerBalance.toLocaleString()}` : "No outstanding balance"}
                   </div>
                 )}
               </div>
-            )}
 
-            {/* Type Toggle */}
-            {isManual && (
               <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
                 <p className="text-sm font-medium text-[var(--color-text)] mb-3">Transaction Type</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setEntryType("debit")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                      entryType === "debit"
-                        ? "bg-red-600 text-white shadow-sm"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
+                  <button onClick={() => setEntryType("debit")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
                     Credit Given (उधारो)
                   </button>
-                  <button
-                    onClick={() => setEntryType("credit")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                      entryType === "credit"
-                        ? "bg-green-600 text-white shadow-sm"
-                        : "bg-gray-100 text-gray-500"
-                    }`}
-                  >
+                  <button onClick={() => setEntryType("credit")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
                     Amount Received (पैसा)
                   </button>
                 </div>
               </div>
-            )}
 
-            {/* Amount + Description */}
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
+                  <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
+                    className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                  <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
+                  <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
+                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={handleReset} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">Cancel</button>
+                <button onClick={handleEnterNext} disabled={!amount || Number(amount) <= 0}
+                  className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50">Continue</button>
+              </div>
+            </div>
+          )}
+
+          {/* Manual: Confirm */}
+          {step === "confirm" && (
+            <div className="space-y-4 animate-fade-in">
+              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+                <div className="text-center pb-2 border-b border-gray-50">
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <p className="text-xs text-[var(--color-text-muted)]">Review Entry Details</p>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Customer</p>
+                    <p className="font-medium text-[var(--color-text)]">{customerName || customerPhone}</p>
+                  </div>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
+                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>NPR {Number(amount).toLocaleString()}</p>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
+                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                        {entryType === "debit" ? "Credit Given (उधारो)" : "Amount Received (पैसा)"}
+                      </span>
+                    </div>
+                  </div>
+                  {description && (
+                    <div>
+                      <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Description</p>
+                      <p className="text-sm text-[var(--color-text)]">{description}</p>
+                    </div>
+                  )}
+                  <div className="bg-amber-50 rounded-xl p-3 flex items-start gap-2">
+                    <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    <p className="text-xs text-amber-800">This entry will appear as "Unverified" on the customer's side. They must confirm it to mark it approved.</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setStep("enter")} disabled={saving} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50">Edit</button>
+                <button onClick={handleConfirm} disabled={saving} className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+                  {saving ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Save Entry</>}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Manual: Success */}
+          {step === "success" && (
+            <div className="text-center py-8 space-y-6 animate-fade-in">
+              <div className="w-20 h-20 mx-auto rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
+                <svg className="w-10 h-10 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved!</h2>
+                <p className="text-sm text-[var(--color-text-muted)]">
+                  {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}` : `NPR ${Number(amount).toLocaleString()} saved`}
+                </p>
+                <p className="text-xs text-amber-600 mt-2">Waiting for customer confirmation</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleReset} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">New Entry</button>
+                <a href="/merchant/logs" className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform flex items-center justify-center">View Ledger</a>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <BottomNav />
+      </div>
+    );
+  }
+
+  // ─── QR scan mode ──────────────────────────────────────────────
+  return (
+    <div className="pb-20">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="flex items-center px-4 py-3">
+          <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </a>
+          <h1 className="text-lg font-bold text-[var(--color-text)]">
+            {step === "scan" ? "Scan Customer QR" : step === "enter" ? "Enter Details" : step === "confirm" ? "Confirm Entry" : "Entry Saved!"}
+          </h1>
+        </div>
+      </div>
+
+      <div className="px-4 py-4 space-y-4">
+        {/* QR: Scan */}
+        {step === "scan" && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center">
+                <svg className="w-8 h-8 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
+                </svg>
+              </div>
+              <p className="text-sm text-[var(--color-text-muted)]">Point your camera at the customer&apos;s QR code</p>
+            </div>
+            <QRScanner onScan={handleScan} />
+          </div>
+        )}
+
+        {/* QR: Enter Details */}
+        {step === "enter" && (
+          <div className="space-y-4 animate-fade-in">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-[var(--color-text-muted)]">Customer Phone</p>
+                  <p className="font-mono font-medium text-[var(--color-text)]">{customerPhone}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="0"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-                  autoFocus={!isManual}
-                />
+                <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
+                  className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
                 <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
               </div>
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
-                <input
-                  type="text"
-                  maxLength={200}
-                  placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-                />
+                <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
               </div>
             </div>
 
             <div className="flex gap-3">
-              <button
-                onClick={handleReset}
-                className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleEnterNext}
-                disabled={!amount || Number(amount) <= 0}
-                className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
-              >
-                Continue
-              </button>
+              <button onClick={handleReset} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">Cancel</button>
+              <button onClick={handleEnterNext} disabled={!amount || Number(amount) <= 0}
+                className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50">Continue</button>
             </div>
           </div>
         )}
 
-        {/* Step 3: Confirm */}
+        {/* QR: Confirm */}
         {step === "confirm" && (
           <div className="space-y-4 animate-fade-in">
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
@@ -462,7 +498,6 @@ export default function MerchantScanPage() {
                 </div>
                 <p className="text-xs text-[var(--color-text-muted)]">Review Entry Details</p>
               </div>
-
               <div className="space-y-3">
                 <div>
                   <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Customer</p>
@@ -471,17 +506,11 @@ export default function MerchantScanPage() {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>
-                      NPR {Number(amount).toLocaleString()}
-                    </p>
+                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>NPR {Number(amount).toLocaleString()}</p>
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
-                    <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${
-                      entryType === "debit"
-                        ? "bg-red-50 text-red-700"
-                        : "bg-green-50 text-green-700"
-                    }`}>
+                    <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
                       {entryType === "debit" ? "Credit Given (उधारो)" : "Amount Received (पैसा)"}
                     </span>
                   </div>
@@ -492,48 +521,18 @@ export default function MerchantScanPage() {
                     <p className="text-sm text-[var(--color-text)]">{description}</p>
                   </div>
                 )}
-                {isManual && (
-                  <div className="bg-amber-50 rounded-xl p-3 flex items-start gap-2">
-                    <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                    <p className="text-xs text-amber-800">
-                      This entry will appear as &quot;Unverified&quot; on the customer&apos;s side. They must confirm it to mark it approved.
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
-
             <div className="flex gap-3">
-              <button
-                onClick={() => setStep("enter")}
-                disabled={saving}
-                className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
-              >
-                Edit
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={saving}
-                className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {saving ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    Save Entry
-                  </>
-                )}
+              <button onClick={() => setStep("enter")} disabled={saving} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50">Edit</button>
+              <button onClick={handleConfirm} disabled={saving} className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
+                {saving ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Save Entry</>}
               </button>
             </div>
           </div>
         )}
 
-        {/* Step 4: Success */}
+        {/* QR: Success */}
         {step === "success" && (
           <div className="text-center py-8 space-y-6 animate-fade-in">
             <div className="w-20 h-20 mx-auto rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
@@ -544,30 +543,12 @@ export default function MerchantScanPage() {
             <div>
               <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved!</h2>
               <p className="text-sm text-[var(--color-text-muted)]">
-                {customerName
-                  ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}`
-                  : `NPR ${Number(amount).toLocaleString()} saved`}
+                {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}` : `NPR ${Number(amount).toLocaleString()} saved`}
               </p>
-              {isManual && (
-                <p className="text-xs text-amber-600 mt-2">
-                  Waiting for customer confirmation
-                </p>
-              )}
             </div>
-
             <div className="flex gap-3">
-              <button
-                onClick={handleReset}
-                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
-              >
-                {isManual ? "New Entry" : "Scan Another"}
-              </button>
-              <a
-                href="/merchant/logs"
-                className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform flex items-center justify-center"
-              >
-                View Ledger
-              </a>
+              <button onClick={handleReset} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">Scan Another</button>
+              <a href="/merchant/logs" className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform flex items-center justify-center">View Ledger</a>
             </div>
           </div>
         )}
