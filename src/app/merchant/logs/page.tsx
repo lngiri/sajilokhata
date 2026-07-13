@@ -105,8 +105,8 @@ export default function LedgerPage() {
           loadLogs();
         },
       });
-    } catch {
-      addToast("Failed to approve entry. Please try again.", "error");
+    } catch (e: any) {
+      addToast(e?.message || "Failed to approve entry. Please try again.", "error");
       loadLogs();
     }
   };
@@ -298,7 +298,7 @@ export default function LedgerPage() {
                 },
               });
             },
-            () => { addToast("Failed to approve entry. Please try again.", "error"); loadLogs(); }
+            (e: any) => { addToast(e?.message || "Failed to approve entry. Please try again.", "error"); loadLogs(); }
           );
         }}
         onReject={async (id) => {
