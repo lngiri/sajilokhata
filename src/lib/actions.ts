@@ -576,6 +576,9 @@ interface StatsResult {
   customerCount: number;
   pendingCount: number;
   todayTotal: number;
+  totalCashSales: number;
+  totalSales: number;
+  cashInHand: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -594,24 +597,56 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
     .eq("status", "pending") as any;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: approvedLogs } = await getClient()
+  const { data: allApprovedLogs } = await getClient()
     .from("credit_logs")
     .select("amount, type, created_at")
     .eq("merchant_id", merchantId)
-    .eq("status", "approved")
-    .neq("type", "cash") as any;
+    .eq("status", "approved") as any;
 
   const today = new Date().toISOString().split("T")[0];
 
-  const totalOutstanding = approvedLogs?.reduce((sum: number, l: any) => sum + (l.type === "debit" ? l.amount : -l.amount), 0) || 0;
-  const totalCreditLimit = customers?.reduce((sum: number, c: any) => sum + (c.credit_limit || 0), 0) || 0;
-  const pendingCount = pendingLogs?.length || 0;
-  const todayTotal = approvedLogs?.reduce((sum: number, l: any) => {
+  const rows = (allApprovedLogs || []) as any[];
+  const balanceLogs = rows.filter((l: any) => l.type !== "cash");
+  const cashLogs = rows.filter((l: any) => l.type === "cash");
+  const paymentLogs = rows.filter((l: any) => l.type === "credit");
+
+  // Outstanding: debits - credits (excluding cash)
+  const totalOutstanding = balanceLogs.reduce((sum: number, l: any) => {
+    return sum + (l.type === "debit" ? l.amount : -l.amount);
+  }, 0);
+
+  // Today's net outstanding change (excluding cash)
+  const todayTotal = balanceLogs.reduce((sum: number, l: any) => {
     if (!l.created_at?.startsWith(today)) return sum;
     return sum + (l.type === "debit" ? l.amount : -l.amount);
-  }, 0) || 0;
+  }, 0);
 
-  return { totalOutstanding, totalCreditLimit, customerCount: customers?.length || 0, pendingCount, todayTotal };
+  // Cash Sales: sum of all approved cash entries (today)
+  const totalCashSales = cashLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return sum + l.amount;
+  }, 0);
+
+  // Today's debits (new credit given) for Total Sales
+  const todayDebits = balanceLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return l.type === "debit" ? sum + l.amount : sum;
+  }, 0);
+
+  // Total Sales = Credit Sales (today's debits) + Cash Sales (today)
+  const totalSales = todayDebits + totalCashSales;
+
+  // Cash In Hand = Cash Sales + Amount Received (payments), today only
+  const todayPayments = paymentLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return sum + l.amount;
+  }, 0);
+  const cashInHand = totalCashSales + todayPayments;
+
+  const totalCreditLimit = customers?.reduce((sum: number, c: any) => sum + (c.credit_limit || 0), 0) || 0;
+  const pendingCount = pendingLogs?.length || 0;
+
+  return { totalOutstanding, totalCreditLimit, customerCount: customers?.length || 0, pendingCount, todayTotal, totalCashSales, totalSales, cashInHand };
 }
 
 // ============================================================
@@ -621,9 +656,12 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
 export interface AnalyticsResult {
   totalOutstanding: number;
   totalReceived: number;
+  totalCashSales: number;
+  totalSales: number;
+  cashInHand: number;
   netCashFlow: number;
   topCustomers: { name: string; phone: string; balance: number }[];
-  dailyBreakdown: { date: string; debit: number; credit: number }[];
+  dailyBreakdown: { date: string; debit: number; credit: number; cash: number }[];
 }
 
 export async function getMerchantAnalytics(
@@ -633,10 +671,9 @@ export async function getMerchantAnalytics(
 ): Promise<AnalyticsResult> {
   let query = getClient()
     .from("credit_logs")
-    .select("amount, type, created_at, customers!inner(name, phone)")
+    .select("amount, type, created_at, customers(name, phone)")
     .eq("merchant_id", merchantId)
     .eq("status", "approved")
-    .neq("type", "cash")
     .order("created_at", { ascending: true });
 
   if (dateFrom) query = query.gte("created_at", dateFrom);
@@ -650,35 +687,44 @@ export async function getMerchantAnalytics(
   // Aggregate metrics
   let totalOutstanding = 0;
   let totalReceived = 0;
+  let totalCashSales = 0;
   const customerBal: Record<string, { name: string; phone: string; balance: number }> = {};
-  const dailyMap: Record<string, { debit: number; credit: number }> = {};
+  const dailyMap: Record<string, { debit: number; credit: number; cash: number }> = {};
 
   for (const l of rows) {
-    if (l.type === "debit") {
+    if (l.type === "cash") {
+      totalCashSales += l.amount;
+    } else if (l.type === "debit") {
       totalOutstanding += l.amount;
     } else {
       totalReceived += l.amount;
     }
 
-    const cusKey = l.customers?.phone || "unknown";
-    if (!customerBal[cusKey]) {
-      customerBal[cusKey] = {
-        name: l.customers?.name || cusKey,
-        phone: cusKey,
-        balance: 0,
-      };
+    if (l.type !== "cash" && l.customers) {
+      const cusKey = l.customers.phone || "unknown";
+      if (!customerBal[cusKey]) {
+        customerBal[cusKey] = {
+          name: l.customers.name || cusKey,
+          phone: cusKey,
+          balance: 0,
+        };
+      }
+      customerBal[cusKey].balance += l.type === "debit" ? l.amount : -l.amount;
     }
-    customerBal[cusKey].balance += l.type === "debit" ? l.amount : -l.amount;
 
     const day = l.created_at?.split("T")[0] || "unknown";
-    if (!dailyMap[day]) dailyMap[day] = { debit: 0, credit: 0 };
+    if (!dailyMap[day]) dailyMap[day] = { debit: 0, credit: 0, cash: 0 };
     if (l.type === "debit") dailyMap[day].debit += l.amount;
+    else if (l.type === "cash") dailyMap[day].cash += l.amount;
     else dailyMap[day].credit += l.amount;
   }
 
   const topCustomers = Object.values(customerBal)
     .sort((a, b) => b.balance - a.balance)
     .slice(0, 5);
+
+  const totalSales = totalOutstanding + totalCashSales;
+  const cashInHand = totalCashSales + totalReceived;
 
   const dailyBreakdown = Object.entries(dailyMap)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -687,6 +733,9 @@ export async function getMerchantAnalytics(
   return {
     totalOutstanding,
     totalReceived,
+    totalCashSales,
+    totalSales,
+    cashInHand,
     netCashFlow: totalReceived - totalOutstanding,
     topCustomers,
     dailyBreakdown,

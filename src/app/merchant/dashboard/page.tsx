@@ -54,6 +54,9 @@ export default function MerchantDashboard() {
     customerCount: number;
     pendingCount: number;
     todayTotal: number;
+    totalCashSales: number;
+    totalSales: number;
+    cashInHand: number;
   } | null>(null);
   const [pendingLogs, setPendingLogs] = useState<
     {
@@ -414,6 +417,18 @@ export default function MerchantDashboard() {
                   {stats.pendingCount > 0 && (
                     <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
                   )}
+                </a>
+              </div>
+            )}
+            {stats && (
+              <div className="grid grid-cols-2 gap-3">
+                <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales (कुल बिक्री)</p>
+                  <p className="text-xl font-bold text-blue-600">NPR {stats.totalSales.toLocaleString()}</p>
+                </a>
+                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand (नगद मौज्दात)</p>
+                  <p className="text-xl font-bold text-green-600">NPR {stats.cashInHand.toLocaleString()}</p>
                 </a>
               </div>
             )}

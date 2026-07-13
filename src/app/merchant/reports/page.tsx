@@ -76,13 +76,13 @@ function MetricCard({
 
 // ─── Analytics Charts ──────────────────────────────────────────
 
-function CashFlowChart({ data }: { data: { date: string; debit: number; credit: number }[] }) {
+function CashFlowChart({ data }: { data: { date: string; debit: number; credit: number; cash: number }[] }) {
   if (data.length === 0) {
     return <div className="text-center py-8 text-sm text-[var(--color-text-muted)]">No data for selected period</div>;
   }
   return (
     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
-      <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Cash Flow Trend (Credit Given vs Received)</p>
+      <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Cash Flow Trend (Credit, Cash & Received)</p>
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data}>
           <defs>
@@ -94,12 +94,17 @@ function CashFlowChart({ data }: { data: { date: string; debit: number; credit: 
               <stop offset="5%" stopColor="#16a34a" stopOpacity={0.15} />
               <stop offset="95%" stopColor="#16a34a" stopOpacity={0} />
             </linearGradient>
+            <linearGradient id="cashGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+            </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
           <YAxis tick={{ fontSize: 10 }} />
           <Tooltip />
           <Area type="monotone" dataKey="debit" stroke="#dc2626" fill="url(#debitGrad)" strokeWidth={2} name="Credit Given" />
+          <Area type="monotone" dataKey="cash" stroke="#2563eb" fill="url(#cashGrad)" strokeWidth={2} name="Cash Sale" />
           <Area type="monotone" dataKey="credit" stroke="#16a34a" fill="url(#creditGrad)" strokeWidth={2} name="Amount Received" />
         </AreaChart>
       </ResponsiveContainer>
@@ -273,7 +278,7 @@ export default function MerchantReportsPage() {
     const headers = ["Date", "Customer", "Type", "Amount", "Status", "Description"];
     const rows = filteredLogs.map((log: any) => [
       new Date(log.created_at).toISOString().split("T")[0],
-      log.customers?.name || log.customers?.phone || "",
+      log.type === "cash" ? "Walk-in" : (log.customers?.name || log.customers?.phone || ""),
       log.type === "debit" ? "Credit Given" : log.type === "cash" ? "Cash Sale" : "Payment Received",
       log.amount,
       STATUS_LABELS[log.status] || log.status,
@@ -331,6 +336,8 @@ export default function MerchantReportsPage() {
       <div className="px-4 py-4 space-y-4">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
+          <MetricCard label="कुल बिक्री (Total Sales)" value={analytics?.totalSales ?? "—"} color="text-blue-600" />
+          <MetricCard label="नगद मौज्दात (Cash In Hand)" value={analytics?.cashInHand ?? "—"} color="text-green-600" />
           <MetricCard label="कुल बाँकी उधारो (Outstanding Credit)" value={analytics?.totalOutstanding ?? "—"} color="text-red-600" />
           <MetricCard label="कुल उठेको नगद (Cash Received)" value={analytics?.totalReceived ?? "—"} color="text-green-600" />
           <MetricCard
@@ -339,9 +346,6 @@ export default function MerchantReportsPage() {
             color={(analytics?.netCashFlow ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
           />
           <MetricCard label="ग्राहकहरू (Customers)" value={analytics?.topCustomers.length ?? "—"} prefix="#" color="text-[var(--color-primary)]" />
-          {/* Future placeholders */}
-          <MetricCard label="सकल नाफा (Gross Profit)" value={0} disabled />
-          <MetricCard label="लागत (COGS)" value={0} disabled />
         </div>
 
         {/* Charts */}

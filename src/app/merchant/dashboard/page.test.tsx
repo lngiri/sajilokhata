@@ -62,6 +62,9 @@ const mockStats = {
   customerCount: 3,
   pendingCount: 2,
   todayTotal: 800,
+  totalCashSales: 500,
+  totalSales: 1300,
+  cashInHand: 700,
 };
 
 const pendingLogs = [
