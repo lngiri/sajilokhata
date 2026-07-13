@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Transaction already processed" }, { status: 400 });
     }
 
-    if (log.type === "debit") {
+    if (log.type === "debit" && log.customer_id) {
       const { data: mc } = await (admin.from("merchant_customers") as any)
         .select("credit_limit")
         .eq("merchant_id", log.merchant_id)

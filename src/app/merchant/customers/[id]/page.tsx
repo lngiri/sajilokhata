@@ -29,7 +29,7 @@ const STATUS_LABELS: Record<string, string> = {
 interface Transaction {
   id: string;
   amount: number;
-  type: "debit" | "credit";
+  type: "debit" | "credit" | "cash";
   status: string;
   description: string | null;
   created_at: string;
@@ -258,13 +258,13 @@ export default function CustomerDetailPage() {
             ) : (
               customer.transactions.map((tx) => (
                 <div key={tx.id} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 ${tx.status === "rejected" ? "opacity-60" : ""}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
-                    <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600" : "text-green-600"} />
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-50" : tx.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
+                    <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600" : tx.type === "cash" ? "text-blue-600" : "text-green-600"} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className={`font-medium text-sm truncate ${tx.status === "rejected" ? "text-slate-500 line-through" : "text-[var(--color-text)]"}`}>
-                        {tx.description || "No description"}
+                        {tx.type === "cash" ? `Cash Sale${tx.description ? ` - ${tx.description}` : ""}` : (tx.description || "No description")}
                       </p>
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${STATUS_BADGE[tx.status] || "bg-gray-100 text-gray-600"}`}>
                         {STATUS_LABELS[tx.status] || tx.status}
@@ -274,8 +274,8 @@ export default function CustomerDetailPage() {
                       {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                     </p>
                   </div>
-                  <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                    {tx.type === "debit" ? "+" : "-"}NPR {tx.amount.toLocaleString()}
+                  <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600" : "text-[var(--color-primary)]"}`}>
+                    {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}NPR {tx.amount.toLocaleString()}
                   </p>
                 </div>
               ))

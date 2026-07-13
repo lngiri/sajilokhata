@@ -48,7 +48,7 @@ export default function MerchantScanPage() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
+  const [entryType, setEntryType] = useState<"debit" | "credit" | "cash">("debit");
   const [saving, setSaving] = useState(false);
   const [merchantId, setMerchantId] = useState<string | null>(null);
 
@@ -156,7 +156,7 @@ export default function MerchantScanPage() {
   );
 
   const handleEnterNext = () => {
-    if (!customerId || !customerPhone) {
+    if (entryType !== "cash" && (!customerId || !customerPhone)) {
       addToast("Please select or enter a valid customer.", "error");
       return;
     }
@@ -178,30 +178,44 @@ export default function MerchantScanPage() {
         return;
       }
 
+      const isCash = entryType === "cash";
       let cId = customerId;
       let cName = customerName;
 
-      // For manual mode, customer is already selected by ID
-      if (isManual && cId) {
-        // Use existing customer ID from selection
+      if (isCash) {
+        // Cash sales: customer is optional (walk-in anonymous)
+        if (!cId && customerPhone) {
+          const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
+          cId = customer.id;
+          cName = customer.name || null;
+          setCustomerName(cName);
+          await linkCustomerToMerchant(mId, customer.id);
+        }
       } else {
-        // QR scan mode — find or create by phone
-        const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
-        cId = customer.id;
-        cName = customer.name || null;
-        setCustomerName(cName);
-        await linkCustomerToMerchant(mId, customer.id);
+        // For manual mode, customer is already selected by ID
+        if (isManual && cId) {
+          // Use existing customer ID from selection
+        } else {
+          // QR scan mode — find or create by phone
+          const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
+          cId = customer.id;
+          cName = customer.name || null;
+          setCustomerName(cName);
+          await linkCustomerToMerchant(mId, customer.id);
+        }
       }
 
       if (isManual) {
         const entry = await createManualCreditLog({
           merchant_id: mId,
-          customer_id: cId!,
+          customer_id: cId ?? undefined,
           amount: Number(amount),
           type: entryType,
           description: description || null,
         });
-        setVerificationToken(entry?.verification_token || null);
+        if (entry?.verification_token) {
+          setVerificationToken(entry.verification_token);
+        }
       } else {
         await createCreditLog({
           merchant_id: mId,
@@ -215,7 +229,7 @@ export default function MerchantScanPage() {
       }
 
       setStep("success");
-      addToast("Entry saved! Customer notified.", "success");
+      addToast(isCash ? "Cash sale recorded!" : "Entry saved! Customer notified.", "success");
     } catch (err) {
       console.error("Failed to save entry:", err);
       addToast("Failed to save. Please try again.", "error");
@@ -266,10 +280,12 @@ export default function MerchantScanPage() {
           {step === "enter" && (
             <div className="space-y-4 animate-fade-in">
               <div ref={dropdownRef} className="relative">
-                <label className="text-sm font-medium text-[var(--color-text)]">Search Customer (Name or Phone)</label>
+                <label className="text-sm font-medium text-[var(--color-text)]">
+                  {entryType === "cash" ? "Customer (Optional)" : "Search Customer (Name or Phone)"}
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. Ram Sharma or 9841..."
+                  placeholder={entryType === "cash" ? "e.g. Ram Sharma or leave blank for walk-in" : "e.g. Ram Sharma or 9841..."}
                   value={searchQuery}
                   onFocus={() => setShowDropdown(true)}
                   onChange={(e) => {
@@ -277,7 +293,7 @@ export default function MerchantScanPage() {
                     setShowDropdown(true);
                     if (!customerList.find((c) => (c.name || c.phone) === e.target.value)) {
                       setCustomerId(null);
-                      setCustomerPhone("");
+                      setCustomerPhone(e.target.value);
                       setCustomerName(null);
                       setCustomerBalance(null);
                     }
@@ -307,10 +323,12 @@ export default function MerchantScanPage() {
                 {showDropdown && searchQuery && filteredCustomers.length === 0 && (
                   <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 p-4 text-center">
                     <p className="text-sm text-[var(--color-text-muted)]">No customers found</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">The customer will be created automatically on save</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                      {entryType === "cash" ? "Leave blank for walk-in cash sale" : "The customer will be created automatically on save"}
+                    </p>
                   </div>
                 )}
-                {customerBalance !== null && (
+                {customerBalance !== null && entryType !== "cash" && (
                   <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
                     {customerBalance > 0 ? `Current Due: NPR ${customerBalance.toLocaleString()}` : "No outstanding balance"}
                   </div>
@@ -328,6 +346,10 @@ export default function MerchantScanPage() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
                     Amount Received (पैसा)
                   </button>
+                  <button onClick={() => setEntryType("cash")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
+                    Cash Sale (नगद बिक्री)
+                  </button>
                 </div>
               </div>
 
@@ -340,7 +362,7 @@ export default function MerchantScanPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
-                  <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
+                  <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grossery items" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
                     className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
                 </div>
               </div>
@@ -368,17 +390,21 @@ export default function MerchantScanPage() {
                 <div className="space-y-3">
                   <div>
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Customer</p>
-                    <p className="font-medium text-[var(--color-text)]">{customerName || customerPhone}</p>
+                    <p className="font-medium text-[var(--color-text)]">
+                      {entryType === "cash" && !customerName && !customerPhone
+                        ? "Walk-in Customer"
+                        : (customerName || customerPhone || "—")}
+                    </p>
                   </div>
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>NPR {Number(amount).toLocaleString()}</p>
+                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : entryType === "cash" ? "text-blue-600" : "text-green-600"}`}>NPR {Number(amount).toLocaleString()}</p>
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
-                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                        {entryType === "debit" ? "Credit Given (उधारो)" : "Amount Received (पैसा)"}
+                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : entryType === "cash" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
+                        {entryType === "debit" ? "Credit Given (उधारो)" : entryType === "cash" ? "Cash Sale (नगद बिक्री)" : "Amount Received (पैसा)"}
                       </span>
                     </div>
                   </div>
@@ -388,12 +414,21 @@ export default function MerchantScanPage() {
                       <p className="text-sm text-[var(--color-text)]">{description}</p>
                     </div>
                   )}
-                  <div className="bg-amber-50 rounded-xl p-3 flex items-start gap-2">
-                    <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                    <p className="text-xs text-amber-800">This entry will appear as "Unverified" on the customer's side. They must confirm it to mark it approved.</p>
-                  </div>
+                  {entryType === "cash" ? (
+                    <div className="bg-blue-50 rounded-xl p-3 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                      </svg>
+                      <p className="text-xs text-blue-800">Cash sale will be recorded immediately. No customer confirmation needed.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 rounded-xl p-3 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                      </svg>
+                      <p className="text-xs text-amber-800">This entry will appear as "Unverified" on the customer's side. They must confirm it to mark it approved.</p>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-3">
@@ -416,10 +451,16 @@ export default function MerchantScanPage() {
               <div>
                 <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved!</h2>
                 <p className="text-sm text-[var(--color-text-muted)]">
-                  {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}` : `NPR ${Number(amount).toLocaleString()} saved`}
+                  {entryType === "cash"
+                    ? `Cash Sale of NPR ${Number(amount).toLocaleString()}${customerName ? ` from ${customerName}` : ""}`
+                    : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}` : `NPR ${Number(amount).toLocaleString()} saved`}`}
                 </p>
-                <p className="text-xs text-amber-600 mt-2">Waiting for customer confirmation</p>
-                {verificationToken && customerPhone && (
+                {entryType === "cash" ? (
+                  <p className="text-xs text-blue-600 mt-2">Cash sale recorded and approved</p>
+                ) : (
+                  <p className="text-xs text-amber-600 mt-2">Waiting for customer confirmation</p>
+                )}
+                {verificationToken && customerPhone && entryType !== "cash" && (
                   <a
                     href={`https://wa.me/977${customerPhone}?text=${encodeURIComponent(
                       (() => {

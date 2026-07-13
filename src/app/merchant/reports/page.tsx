@@ -182,11 +182,11 @@ function TransactionAuditLog({
                 </span>
               </td>
               <td className="py-2.5 pr-2">
-                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                  {log.type === "debit" ? "Credit" : "Payment"}
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-50 text-red-700" : log.type === "cash" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
+                  {log.type === "debit" ? "Credit" : log.type === "cash" ? "Cash" : "Payment"}
                 </span>
               </td>
-              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
+              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
                 NPR {log.amount.toLocaleString()}
               </td>
             </tr>
@@ -274,7 +274,7 @@ export default function MerchantReportsPage() {
     const rows = filteredLogs.map((log: any) => [
       new Date(log.created_at).toISOString().split("T")[0],
       log.customers?.name || log.customers?.phone || "",
-      log.type === "debit" ? "Credit Given" : "Payment Received",
+      log.type === "debit" ? "Credit Given" : log.type === "cash" ? "Cash Sale" : "Payment Received",
       log.amount,
       STATUS_LABELS[log.status] || log.status,
       log.description || "",

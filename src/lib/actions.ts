@@ -129,14 +129,17 @@ export async function linkCustomerToMerchant(
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createCreditLog(log: Record<string, any>): Promise<any> {
-  if (!log.merchant_id || !log.customer_id) {
-    throw new Error("merchant_id and customer_id are required");
+  if (!log.merchant_id) {
+    throw new Error("merchant_id is required");
+  }
+  if (log.type !== "cash" && !log.customer_id) {
+    throw new Error("customer_id is required for debit/credit transactions");
   }
   if (!log.amount || typeof log.amount !== "number" || log.amount <= 0) {
     throw new Error("amount must be a positive number");
   }
-  if (!log.type || !["debit", "credit"].includes(log.type)) {
-    throw new Error("type must be 'debit' or 'credit'");
+  if (!log.type || !["debit", "credit", "cash"].includes(log.type)) {
+    throw new Error("type must be 'debit', 'credit', or 'cash'");
   }
 
   const { data, error } = await getClient()
@@ -254,14 +257,20 @@ export async function cancelCreditLog(logId: string): Promise<any> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createManualCreditLog(params: {
   merchant_id: string;
-  customer_id: string;
+  customer_id?: string | null;
   amount: number;
-  type: "debit" | "credit";
+  type: "debit" | "credit" | "cash";
   description?: string | null;
 }): Promise<any> {
+  const isCash = params.type === "cash";
   return createCreditLog({
-    ...params,
-    status: "unverified",
+    merchant_id: params.merchant_id,
+    customer_id: isCash ? null : params.customer_id,
+    amount: params.amount,
+    type: params.type,
+    description: params.description || null,
+    status: isCash ? "approved" : "unverified",
+    approved_at: isCash ? new Date().toISOString() : null,
     sync_status: "online",
   });
 }
@@ -295,7 +304,8 @@ export async function getMerchantCustomerBalance(
     .select("amount, type")
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
-    .eq("status", "approved");
+    .eq("status", "approved")
+    .neq("type", "cash");
 
   const balance =
     (logs as any[])?.reduce((sum: number, l: any) => {
@@ -336,6 +346,7 @@ export async function getMerchantCustomers(merchantId: string): Promise<any[]> {
     .select("customer_id, amount, type")
     .eq("merchant_id", merchantId)
     .eq("status", "approved")
+    .neq("type", "cash")
     .in("customer_id", customerIds);
 
   if (approvedLogsResult.error) throw approvedLogsResult.error;
@@ -431,7 +442,8 @@ export async function getCustomerStats(
     .from("credit_logs")
     .select("merchant_id, amount, type")
     .in("customer_id", customerIds)
-    .eq("status", "approved") as unknown as { data: any[] | null };
+    .eq("status", "approved")
+    .neq("type", "cash") as unknown as { data: any[] | null };
 
   const balanceByMerchant: Record<string, number> = {};
   for (const log of approvedLogs || []) {
@@ -586,7 +598,8 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
     .from("credit_logs")
     .select("amount, type, created_at")
     .eq("merchant_id", merchantId)
-    .eq("status", "approved") as any;
+    .eq("status", "approved")
+    .neq("type", "cash") as any;
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -623,6 +636,7 @@ export async function getMerchantAnalytics(
     .select("amount, type, created_at, customers!inner(name, phone)")
     .eq("merchant_id", merchantId)
     .eq("status", "approved")
+    .neq("type", "cash")
     .order("created_at", { ascending: true });
 
   if (dateFrom) query = query.gte("created_at", dateFrom);

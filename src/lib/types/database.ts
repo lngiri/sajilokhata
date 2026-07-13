@@ -12,7 +12,7 @@ export type Json =
 
 export type BusinessType = "kirana" | "dairy" | "meat";
 export type CreditUnit = "liter" | "jar" | "kg" | "piece" | "npr";
-export type TransactionType = "debit" | "credit";
+export type TransactionType = "debit" | "credit" | "cash";
 export type TransactionStatus = "pending" | "unverified" | "approved" | "disputed" | "rejected" | "edit_requested";
 export type SyncStatus = "online" | "offline_pending";
 export type ActorType = "merchant" | "customer" | "admin";
@@ -103,7 +103,7 @@ export interface Database {
         Row: {
           id: string;
           merchant_id: string;
-          customer_id: string;
+          customer_id: string | null;
           amount: number;
           quantity: number | null;
           unit: CreditUnit | null;
@@ -123,7 +123,7 @@ export interface Database {
         Insert: {
           id?: string;
           merchant_id: string;
-          customer_id: string;
+          customer_id?: string | null;
           amount: number;
           quantity?: number | null;
           unit?: CreditUnit | null;
@@ -143,7 +143,7 @@ export interface Database {
         Update: {
           id?: string;
           merchant_id?: string;
-          customer_id?: string;
+          customer_id?: string | null;
           amount?: number;
           quantity?: number | null;
           unit?: CreditUnit | null;

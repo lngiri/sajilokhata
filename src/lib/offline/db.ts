@@ -15,7 +15,7 @@ interface SajiloKhataDB extends DBSchema {
     value: {
       id: string;
       merchantId: string;
-      customerId: string;
+      customerId: string | null;
       customerPhone: string;
       amount: number;
       quantity?: number;
@@ -91,7 +91,7 @@ export async function savePendingLog(log: CreditLogInsert & { id: string; custom
   const entry = {
     id: log.id,
     merchantId: log.merchant_id,
-    customerId: log.customer_id,
+    customerId: log.customer_id ?? null,
     customerPhone: log.customerPhone ?? "",
     amount: log.amount,
     quantity: log.quantity ?? undefined,
@@ -112,7 +112,7 @@ export async function getPendingLogs(): Promise<
   {
     id: string;
     merchantId: string;
-    customerId: string;
+    customerId: string | null;
     customerPhone: string;
     amount: number;
     quantity?: number;
@@ -136,7 +136,7 @@ export async function getPendingLogsByMerchant(
   {
     id: string;
     merchantId: string;
-    customerId: string;
+    customerId: string | null;
     customerPhone: string;
     amount: number;
     quantity?: number;

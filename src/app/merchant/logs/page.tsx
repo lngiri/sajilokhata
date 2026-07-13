@@ -13,7 +13,7 @@ import { getCurrentMerchantId } from "@/lib/auth";
 interface LogEntry {
   id: string;
   amount: number;
-  type: "debit" | "credit";
+  type: "debit" | "credit" | "cash";
   status: string;
   description: string | null;
   quantity: number | null;
@@ -228,13 +228,13 @@ export default function LedgerPage() {
               {logs.map((log) => (
                 <div key={log.id} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 ${log.status === "rejected" ? "opacity-60" : ""}`}>
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
-                      <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : log.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
+                      <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                          {log.customers?.name || log.customers?.phone || "Unknown"}
+                          {log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
                         </p>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${statusColor(log.status)}`}>
                           {log.status}
@@ -246,8 +246,8 @@ export default function LedgerPage() {
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <p className={`font-bold text-sm ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
-                        {log.type === "debit" ? "+" : "-"}NPR {log.amount.toLocaleString()}
+                      <p className={`font-bold text-sm ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
+                        {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}NPR {log.amount.toLocaleString()}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">
                         {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
