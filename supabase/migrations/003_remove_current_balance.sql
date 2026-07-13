@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 003: Remove stale current_balance
+-- QR Hisab - Migration 003: Remove stale current_balance
 -- ============================================================
 -- The current_balance column on merchant_customers is no longer
 -- the source of truth. Balance is computed dynamically from

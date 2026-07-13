@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 008: Cross-Table Role Validation
+-- QR Hisab - Migration 008: Cross-Table Role Validation
 -- ============================================================
 -- Prevents the same phone number from being registered as both
 -- a merchant and a customer, avoiding session hijacking and

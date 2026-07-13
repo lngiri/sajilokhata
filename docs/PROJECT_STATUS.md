@@ -1,7 +1,7 @@
-# 🟢 Sajilo Khata — Core Phase Status Report
+# 🟢 QR Hisab — Core Phase Status Report
 
 **Date:** July 11, 2026
-**Project:** Sajilo Khata (Digital Credit Ledger & Delivery Diary)
+**Project:** QR Hisab (Digital Credit Ledger & Delivery Diary)
 **Stack:** Next.js (App Router) + Supabase + Tailwind CSS + PWA
 **Status:** ✅ 100% Production Ready
 
@@ -148,7 +148,7 @@
 ## 3. 📁 PROJECT STRUCTURE
 
 ```
-SajiloKhata/
+QRHisab/
 ├── docs/                          # Product specs + status
 │   ├── product_overview.md
 │   ├── technical_specifications.md

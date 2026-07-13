@@ -13,14 +13,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Sajilo Khata - Digital Credit Ledger",
+  title: "QR Hisab - Digital Credit Ledger",
   description:
     "A mobile-first credit ledger and delivery diary for small retail shops in Nepal",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Sajilo Khata",
+    title: "QR Hisab",
   },
   formatDetection: {
     telephone: false,

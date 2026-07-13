@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 004: Production RLS Policies
+-- QR Hisab - Migration 004: Production RLS Policies
 -- ============================================================
 -- Replaces permissive testing policies with proper auth.uid()
 -- checks for merchant-owned tables.

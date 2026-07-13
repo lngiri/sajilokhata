@@ -1,5 +1,5 @@
 // ============================================================
-// Sajilo Khata - Auto-generated Database Types
+// QR Hisab - Auto-generated Database Types
 // ============================================================
 
 export type Json =

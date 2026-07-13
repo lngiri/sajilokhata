@@ -319,7 +319,7 @@ export default function MerchantDashboard() {
             </div>
             <div>
               <h1 className="text-lg font-extrabold text-[var(--color-primary)]">
-                Sajilo Khata
+                QR Hisab
               </h1>
               <p className="text-xs text-[var(--color-text-muted)]">
                 Digital Diary

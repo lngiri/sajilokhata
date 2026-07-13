@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 005: Add 'unverified' status
+-- QR Hisab - Migration 005: Add 'unverified' status
 -- ============================================================
 -- Required by the manual merchant entry flow so that entries
 -- created by merchants appear as "Unverified" on the customer

@@ -122,7 +122,7 @@ export default function SettingsPage() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `sajilo-khata-ledger-${
+        link.download = `qr-hisab-ledger-${
           new Date().toISOString().split("T")[0]
         }.csv`;
         link.click();
@@ -135,7 +135,7 @@ export default function SettingsPage() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `sajilo-khata-ledger-${
+        link.download = `qr-hisab-ledger-${
           new Date().toISOString().split("T")[0]
         }.json`;
         link.click();
@@ -420,7 +420,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="font-extrabold text-[var(--color-primary)]">
-                  Sajilo Khata
+                  QR Hisab
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Version 1.0.0

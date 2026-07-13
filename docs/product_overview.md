@@ -1,7 +1,7 @@
-# Product Overview: Sajilo Khata (Digital Credit Ledger & Delivery Diary)
+# Product Overview: QR Hisab (Digital Credit Ledger & Delivery Diary)
 
 ## 1. Core Philosophy
-Sajilo Khata is a mobile-first web application designed to digitize credit (Udharo) management for small retail/grocery shops (Kirana) and automate daily milk/water delivery tracking. Unlike traditional accounting apps that burden the shopkeeper with data entry, this app shifts the data input responsibility to the customer, reducing merchant friction by 80%.
+QR Hisab is a mobile-first web application designed to digitize credit (Udharo) management for small retail/grocery shops (Kirana) and automate daily milk/water delivery tracking. Unlike traditional accounting apps that burden the shopkeeper with data entry, this app shifts the data input responsibility to the customer, reducing merchant friction by 80%.
 
 ## 2. Core Features & System Logic
 - **Hybrid Online/Offline Architecture:**
@@ -13,5 +13,5 @@ Sajilo Khata is a mobile-first web application designed to digitize credit (Udha
 - **Multi-Device Merchant Login:** Merchant accounts support concurrent active sessions, allowing family members or employees to view and approve entries simultaneously from different devices.
 
 ## 3. Branding & UX Strategy
-- **Positive Terminology:** Avoid socially discouraging terms like "Udharo" or "Debt" in the UI. Use affirmative language such as "Sajilo Khata", "Digital Diary", or "Account Statement".
+- **Positive Terminology:** Avoid socially discouraging terms like "Udharo" or "Debt" in the UI. Use affirmative language such as "QR Hisab", "Digital Diary", or "Account Statement".
 - **Physical QR Deployment:** For the pilot phase, the platform will generate high-quality print-ready PDFs of static QRs to be physically laminated and installed at the initial 5–10 test shops.

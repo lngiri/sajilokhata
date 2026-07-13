@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 007: Edit Request Workflow
+-- QR Hisab - Migration 007: Edit Request Workflow
 -- ============================================================
 -- Adds infrastructure for customer edit-request workflow:
 --   1. proposed_amount column on credit_logs

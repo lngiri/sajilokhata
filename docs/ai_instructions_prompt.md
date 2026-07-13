@@ -12,7 +12,7 @@ I have structured my entire product specification inside the `docs/` directory a
 3. `business_logic.md` (Edge cases & validation logic)
 4. `database_schema.md` (PostgreSQL structure)
 
-Read all four files completely to understand the context of 'Sajilo Khata'. 
+Read all four files completely to understand the context of 'QR Hisab'. 
 
 Your first task is to process `database_schema.md` and generate the complete, production-ready PostgreSQL SQL script for Supabase. This must include table definitions, constraints, indices for fast queries, and strict Row Level Security (RLS) policies ensuring merchants can only read/write data associated with their own `merchant_id`.
 

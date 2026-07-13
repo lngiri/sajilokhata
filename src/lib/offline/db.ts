@@ -9,7 +9,7 @@ import type {
 } from "@/lib/types/database";
 
 // IndexedDB Schema
-interface SajiloKhataDB extends DBSchema {
+interface QRHisabDB extends DBSchema {
   pendingLogs: {
     key: string;
     value: {
@@ -55,11 +55,11 @@ interface SajiloKhataDB extends DBSchema {
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<SajiloKhataDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<QRHisabDB>> | null = null;
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<SajiloKhataDB>("sajilokhata", 1, {
+    dbPromise = openDB<QRHisabDB>("qrhisab", 1, {
       upgrade(db) {
         // Pending credit logs
         const logStore = db.createObjectStore("pendingLogs", {

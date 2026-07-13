@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 002: Fix trigger logic & constraints
+-- QR Hisab - Migration 002: Fix trigger logic & constraints
 -- ============================================================
 -- 1. Fix update_merchant_customer_balance: reverse balance when
 --    status changes FROM 'approved' to 'disputed'/'rejected'

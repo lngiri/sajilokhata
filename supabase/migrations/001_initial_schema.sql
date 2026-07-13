@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Complete PostgreSQL Schema for Supabase
+-- QR Hisab - Complete PostgreSQL Schema for Supabase
 -- ============================================================
 -- Applies to: Production Supabase database (fresh, zero tables)
 -- Phase: Testing / Pre-revenue (RLS is permissive for pilot shops)

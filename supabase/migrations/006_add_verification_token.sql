@@ -1,5 +1,5 @@
 -- ============================================================
--- Sajilo Khata - Migration 006: Add verification token & dispute reason
+-- QR Hisab - Migration 006: Add verification token & dispute reason
 -- ============================================================
 -- Required by the WhatsApp remote-approve flow so that
 -- unverified manual entries can be shared and verified by
