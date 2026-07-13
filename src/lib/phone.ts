@@ -7,3 +7,11 @@ export function normalizePhone(phone: string): string {
   if (digits.startsWith("977")) return `+${digits}`;
   return `+977${digits}`;
 }
+
+/**
+ * Strip all non-digit characters from a phone number for use in URLs.
+ * Ensures no +, spaces, dashes, or parentheses remain.
+ */
+export function sanitizePhoneForUrl(phone: string): string {
+  return phone.replace(/\D/g, "");
+}
