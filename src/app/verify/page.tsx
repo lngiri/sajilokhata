@@ -145,13 +145,13 @@ export default function VerifyPage() {
           setCreditCheck({
             overLimit: true,
             remainingLimit,
-            message: `Credit limit exceeded. Remaining: NPR ${remainingLimit.toLocaleString()}`,
+            message: `Credit limit exceeded. Remaining: Rs. ${remainingLimit.toLocaleString()}`,
           });
         } else {
           setCreditCheck({
             overLimit: false,
             remainingLimit,
-            message: `Remaining credit limit: NPR ${remainingLimit.toLocaleString()}`,
+            message: `Remaining credit limit: Rs. ${remainingLimit.toLocaleString()}`,
           });
         }
       } catch {
@@ -320,7 +320,7 @@ export default function VerifyPage() {
               <div className="flex justify-between">
                 <span className="text-xs text-[var(--color-text-muted)]">Amount</span>
                 <span className={`font-bold ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
-                  NPR {log.amount.toLocaleString()}
+                  Rs. {log.amount.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">

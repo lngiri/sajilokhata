@@ -329,7 +329,7 @@ export default function CustomerHistoryPage() {
                               ? "text-red-600"
                               : "text-green-600"
                         }`}>
-                          NPR {log.amount.toLocaleString()}
+                          Rs. {log.amount.toLocaleString()}
                         </p>
                         <p className="text-[10px] text-[var(--color-text-muted)] capitalize">
                           {log.type === "debit" ? "Debit" : "Credit"}
@@ -407,7 +407,7 @@ export default function CustomerHistoryPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-[var(--color-text)] mb-4">Edit Entry</h2>
-            <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
+            <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
             <input
               type="number"
               min="1"

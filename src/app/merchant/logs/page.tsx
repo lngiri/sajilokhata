@@ -247,7 +247,7 @@ export default function LedgerPage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className={`font-bold text-sm ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
-                        {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}NPR {log.amount.toLocaleString()}
+                        {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">
                         {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kathmandu" })}

@@ -52,7 +52,7 @@ function getPresetRange(preset: RangePreset): { start: string; end: string; labe
 function MetricCard({
   label,
   value,
-  prefix = "NPR",
+  prefix = "Rs.",
   color = "text-[var(--color-text)]",
   disabled = false,
 }: {
@@ -125,7 +125,7 @@ function TopCustomersChart({ data }: { data: { name: string; balance: number }[]
           <XAxis type="number" tick={{ fontSize: 10 }} />
           <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={80} />
           <Tooltip />
-          <Bar dataKey="balance" fill="#dc2626" radius={[0, 4, 4, 0]} name="Outstanding (NPR)" />
+          <Bar dataKey="balance" fill="#dc2626" radius={[0, 4, 4, 0]} name="Outstanding (Rs.)" />
         </BarChart>
       </ResponsiveContainer>
     </div>
@@ -192,7 +192,7 @@ function TransactionAuditLog({
                 </span>
               </td>
               <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
-                NPR {log.amount.toLocaleString()}
+                Rs. {log.amount.toLocaleString()}
               </td>
             </tr>
           ))}

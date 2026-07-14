@@ -138,7 +138,7 @@ export default function CustomerDashboard() {
                     ? "Rejected"
                     : newStatus;
               addToast(
-                `${verb} NPR ${Number(payload.new?.amount || 0).toLocaleString()} request`,
+                `${verb} Rs. ${Number(payload.new?.amount || 0).toLocaleString()} request`,
                 newStatus === "approved" ? "success" : "warning"
               );
               loadStatsRef();
@@ -323,12 +323,12 @@ export default function CustomerDashboard() {
           >
             <p className="text-sm opacity-80 mb-1">Total Outstanding Balance</p>
             <p className="text-3xl font-bold mb-1">
-              NPR {stats.totalOutstanding.toLocaleString()}
+              Rs. {stats.totalOutstanding.toLocaleString()}
             </p>
             <p className="text-xs opacity-60">
               Across {stats.shopsCount} shop{stats.shopsCount !== 1 ? "s" : ""}
               {stats.totalCreditLimit > 0 && (
-                <> &middot; Limit NPR {stats.totalCreditLimit.toLocaleString()}</>
+                <> &middot; Limit Rs. {stats.totalCreditLimit.toLocaleString()}</>
               )}
             </p>
 
@@ -341,7 +341,7 @@ export default function CustomerDashboard() {
                     className="flex items-center justify-between text-sm py-1.5 -mx-1 px-2 rounded-lg active:bg-white/10 transition-colors"
                   >
                     <span className="opacity-80">{rel.merchants?.name || "Unknown Shop"}</span>
-                    <span className="font-semibold">NPR {rel.current_balance.toLocaleString()}</span>
+                    <span className="font-semibold">Rs. {rel.current_balance.toLocaleString()}</span>
                   </a>
                 ))}
               </div>
@@ -467,7 +467,7 @@ export default function CustomerDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
                   <input
                     type="number"
                     min="1"
@@ -527,8 +527,8 @@ export default function CustomerDashboard() {
                   </h2>
                   <p className="text-sm text-[var(--color-text-muted)]">
                     {entryType === "credit"
-                      ? `Payment of NPR ${Number(amount).toLocaleString()} sent to ${merchantName}.`
-                      : `Credit request of NPR ${Number(amount).toLocaleString()} sent to ${merchantName}.`
+                      ? `Payment of Rs. ${Number(amount).toLocaleString()} sent to ${merchantName}.`
+                      : `Credit request of Rs. ${Number(amount).toLocaleString()} sent to ${merchantName}.`
                     }<br />
                     Awaiting merchant approval.
                   </p>

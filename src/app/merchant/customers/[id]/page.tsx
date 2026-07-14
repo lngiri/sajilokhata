@@ -203,7 +203,7 @@ export default function CustomerDetailPage() {
             <div>
               <p className="text-xs text-[var(--color-text-muted)]">Current Balance</p>
               <p className="text-2xl font-bold text-[var(--color-danger)]">
-                NPR {customer.current_balance.toLocaleString()}
+                Rs. {customer.current_balance.toLocaleString()}
               </p>
             </div>
             <button
@@ -229,8 +229,8 @@ export default function CustomerDetailPage() {
               />
             </div>
             <div className="flex justify-between text-xs text-[var(--color-text-muted)] mt-1">
-              <span>NPR 0</span>
-              <span>NPR {customer.credit_limit.toLocaleString()}</span>
+              <span>Rs. 0</span>
+              <span>Rs. {customer.credit_limit.toLocaleString()}</span>
             </div>
           </div>
 
@@ -238,11 +238,11 @@ export default function CustomerDetailPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 rounded-xl p-3 text-center">
               <p className="text-xs text-[var(--color-text-muted)]">Total Credit Taken</p>
-              <p className="font-bold text-[var(--color-danger)]">NPR {customer.total_debit_amount.toLocaleString()}</p>
+              <p className="font-bold text-[var(--color-danger)]">Rs. {customer.total_debit_amount.toLocaleString()}</p>
             </div>
             <div className="bg-gray-50 rounded-xl p-3 text-center">
               <p className="text-xs text-[var(--color-text-muted)]">Total Paid</p>
-              <p className="font-bold text-[var(--color-primary)]">NPR {customer.total_credit_amount.toLocaleString()}</p>
+              <p className="font-bold text-[var(--color-primary)]">Rs. {customer.total_credit_amount.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -275,7 +275,7 @@ export default function CustomerDetailPage() {
                     </p>
                   </div>
                   <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600" : "text-[var(--color-primary)]"}`}>
-                    {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}NPR {tx.amount.toLocaleString()}
+                    {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}Rs. {tx.amount.toLocaleString()}
                   </p>
                 </div>
               ))
@@ -297,7 +297,7 @@ export default function CustomerDetailPage() {
               </button>
             </div>
             <div className="mb-4">
-              <label className="text-sm font-medium text-[var(--color-text)]">Credit Limit (NPR)</label>
+              <label className="text-sm font-medium text-[var(--color-text)]">Credit Limit (Rs.)</label>
               <input
                 type="number"
                 min="0"

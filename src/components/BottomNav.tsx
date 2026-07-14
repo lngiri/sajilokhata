@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import { QRDisplay } from "@/components/QRCode";
+import { createClient } from "@/lib/supabase/client";
 
 interface NavItem {
   href: string;
@@ -30,8 +33,8 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    href: "/merchant/scan",
-    label: "Scan QR",
+    href: "#",
+    label: "My QR",
     isFab: true,
     icon: () => (
       <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -61,41 +64,125 @@ const navItems: NavItem[] = [
   },
 ];
 
+interface MerchantProfile {
+  id: string;
+  name: string;
+  business_type: string;
+  business_name: string | null;
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
+
+  useEffect(() => {
+    if (!showQRModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowQRModal(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showQRModal]);
+
+  useEffect(() => {
+    if (!showQRModal) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase
+          .from("merchants")
+          .select("id, name, business_type, business_name")
+          .eq("id", user.id)
+          .single()
+          .then(({ data }) => {
+            if (data) setMerchantProfile(data);
+          });
+      }
+    });
+  }, [showQRModal]);
+
+  const fabItem = navItems.find((i) => i.isFab)!;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-area-bottom z-50">
-      <div className="flex items-center justify-around max-w-md mx-auto h-16">
-        {navItems.map((item) => {
-          const isActive = pathname.startsWith(item.href);
-          return item.isFab ? (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
+    <>
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 safe-area-bottom z-50">
+        <div className="flex items-center justify-around max-w-md mx-auto h-16">
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href) && item.href !== "#";
+            return item.isFab ? (
+              <button
+                key={item.label}
+                onClick={() => setShowQRModal(true)}
+                className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
+              >
+                <div className="w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] shadow-lg flex items-center justify-center ring-4 ring-white">
+                  {item.icon(true)}
+                </div>
+                <span className="text-[10px] font-medium text-[var(--color-primary)] -mt-0.5">
+                  {item.label}
+                </span>
+              </button>
+            ) : (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
+              >
+                {item.icon(isActive)}
+                <span className={`text-[10px] font-medium ${isActive ? "text-[var(--color-primary)]" : "text-gray-400"}`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* QR Modal */}
+      {showQRModal && merchantProfile && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowQRModal(false)}
+        >
+          <div
+            className="relative bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-2xl animate-scale-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close X button */}
+            <button
+              onClick={() => setShowQRModal(false)}
+              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center active:scale-90 transition-transform text-gray-400 hover:text-gray-600"
+              aria-label="Close QR"
             >
-              <div className="w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] shadow-lg flex items-center justify-center ring-4 ring-white">
-                {item.icon(true)}
-              </div>
-              <span className="text-[10px] font-medium text-[var(--color-primary)] -mt-0.5">
-                {item.label}
-              </span>
-            </Link>
-          ) : (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
-            >
-              {item.icon(isActive)}
-              <span className={`text-[10px] font-medium ${isActive ? "text-[var(--color-primary)]" : "text-gray-400"}`}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
-    </nav>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="text-center mb-2">
+              <h2 className="text-lg font-bold text-[var(--color-text)]">
+                {merchantProfile.name}
+              </h2>
+              <p className="text-sm text-[var(--color-text-muted)] capitalize">
+                {merchantProfile.business_type} Shop
+              </p>
+            </div>
+
+            <QRDisplay
+              merchantId={merchantProfile.id}
+              merchantName={merchantProfile.name}
+              businessType={merchantProfile.business_type}
+            />
+
+            <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
+              <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
+                Ask your customer to scan this QR code
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

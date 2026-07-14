@@ -141,10 +141,10 @@ export default function CustomersPage() {
                   </div>
                   <div className="text-right">
                     <p className={`font-bold text-sm ${mc.current_balance > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                      NPR {mc.current_balance.toLocaleString()}
+                      Rs. {mc.current_balance.toLocaleString()}
                     </p>
                     <p className="text-[10px] text-[var(--color-text-muted)]">
-                      / NPR {mc.credit_limit.toLocaleString()}
+                      / Rs. {mc.credit_limit.toLocaleString()}
                     </p>
                   </div>
                 </div>

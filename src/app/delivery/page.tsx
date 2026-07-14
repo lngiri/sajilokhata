@@ -291,7 +291,7 @@ export default function DeliveryPage() {
       }
 
       const logId = crypto.randomUUID();
-      const amount = Number(quantity) * 60; // base rate NPR 60/unit
+      const amount = Number(quantity) * 60; // base rate Rs. 60/unit
       const now = new Date().toISOString();
 
       if (isOnline()) {
@@ -686,10 +686,10 @@ export default function DeliveryPage() {
                       Delivery Total
                     </p>
                     <p className="text-3xl font-bold text-blue-700">
-                      NPR {(Number(quantity) * 60).toLocaleString()}
+                      Rs. {(Number(quantity) * 60).toLocaleString()}
                     </p>
                     <p className="text-xs text-blue-500 mt-1">
-                      {quantity} unit{Number(quantity) !== 1 ? "s" : ""} × NPR 60
+                      {quantity} unit{Number(quantity) !== 1 ? "s" : ""} × Rs. 60
                     </p>
                   </div>
                 )}

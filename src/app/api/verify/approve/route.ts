@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
       if (log.amount > remainingLimit) {
         return NextResponse.json({
-          error: `Credit limit exceeded. Available: NPR ${remainingLimit.toLocaleString()}, Requested: NPR ${log.amount.toLocaleString()}`,
+          error: `Credit limit exceeded. Available: Rs. ${remainingLimit.toLocaleString()}, Requested: Rs. ${log.amount.toLocaleString()}`,
           code: "CREDIT_LIMIT_EXCEEDED",
         }, { status: 400 });
       }

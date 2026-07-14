@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
-import { QRDisplay } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
@@ -90,17 +89,7 @@ export default function MerchantDashboard() {
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
 
-  // QR Modal state (Issue 3: pull-to-refresh)
-  const [showQRModal, setShowQRModal] = useState(false);
 
-  useEffect(() => {
-    if (!showQRModal) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowQRModal(false);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [showQRModal]);
 
   // Show welcome toast based on account status from login redirect
   useEffect(() => {
@@ -209,7 +198,7 @@ export default function MerchantDashboard() {
           if (!mountedRef.current) return;
           const customerName = payload.new?.description || "a customer";
           addToast(
-            `📥 New credit request: NPR ${Number(payload.new?.amount || 0).toLocaleString()} — ${customerName}`,
+            `📥 New credit request: Rs. ${Number(payload.new?.amount || 0).toLocaleString()} — ${customerName}`,
             "info"
           );
           loadData();
@@ -247,7 +236,7 @@ export default function MerchantDashboard() {
               playSuccessSound();
             }
             addToast(
-              `📝 Entry ${newStatus}: NPR ${Number(payload.new?.amount || 0).toLocaleString()}`,
+              `📝 Entry ${newStatus}: Rs. ${Number(payload.new?.amount || 0).toLocaleString()}`,
               newStatus === "approved" ? "success" : "warning"
             );
             loadData();
@@ -270,10 +259,6 @@ export default function MerchantDashboard() {
     } catch {
       // Silent — data already refreshed
     }
-  };
-
-  const handleCloseQR = () => {
-    setShowQRModal(false);
   };
 
   const handleBrandingRefresh = async () => {
@@ -400,11 +385,11 @@ export default function MerchantDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Outstanding</p>
-                  <p className="text-xl font-bold text-[var(--color-danger)]">NPR {stats.totalOutstanding.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-[var(--color-danger)]">Rs. {stats.totalOutstanding.toLocaleString()}</p>
                 </a>
                 <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Today</p>
-                  <p className="text-xl font-bold text-[var(--color-primary)]">NPR {stats.todayTotal.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-[var(--color-primary)]">Rs. {stats.todayTotal.toLocaleString()}</p>
                 </a>
                 <a href="/merchant/customers" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
@@ -423,38 +408,29 @@ export default function MerchantDashboard() {
               <div className="grid grid-cols-2 gap-3">
                 <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales</p>
-                  <p className="text-xl font-bold text-blue-600">NPR {stats.totalSales.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-blue-600">Rs. {stats.totalSales.toLocaleString()}</p>
                 </a>
                 <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand</p>
-                  <p className="text-xl font-bold text-green-600">NPR {stats.cashInHand.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-green-600">Rs. {stats.cashInHand.toLocaleString()}</p>
                 </a>
               </div>
             )}
 
             {/* Quick Actions */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <a
                 href="/merchant/scan?manual=true"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+                className="flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Manual Entry
               </a>
-              <button
-                onClick={() => setShowQRModal(true)}
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform cursor-pointer"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
-                </svg>
-                Show QR
-              </button>
               <a
                 href="/merchant/reports"
-                className="flex-1 flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+                className="flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -533,7 +509,7 @@ export default function MerchantDashboard() {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
-                            {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}NPR {log.amount.toLocaleString()}
+                            {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
                           </p>
                           <p className="text-[9px] text-[var(--color-text-muted)]">
                             {timeAgo(log.created_at)}
@@ -608,7 +584,7 @@ export default function MerchantDashboard() {
                           </p>
                           {isEditRequest && log.proposed_amount && (
                             <p className="text-xs text-blue-700 font-medium mt-1">
-                              Customer requested amount change from NPR {log.amount.toLocaleString()} to NPR {log.proposed_amount.toLocaleString()}
+                              Customer requested amount change from Rs. {log.amount.toLocaleString()} to Rs. {log.proposed_amount.toLocaleString()}
                             </p>
                           )}
                         </div>
@@ -647,7 +623,7 @@ export default function MerchantDashboard() {
                           ) : (
                             <a href={href} className="block text-right">
                               <p className="font-bold text-[var(--color-text)]">
-                                NPR {log.amount.toLocaleString()}
+                                Rs. {log.amount.toLocaleString()}
                               </p>
                               <p className="text-[10px] text-[var(--color-text-muted)]">
                                 {timeAgo(log.created_at)}
@@ -663,53 +639,6 @@ export default function MerchantDashboard() {
             </div>
           </div>
         </PullToRefresh>
-      )}
-
-      {/* ================================================================ */}
-      {/* QR Modal — instant popup for showing the shop QR code */}
-      {/* ================================================================ */}
-      {showQRModal && merchantProfile && (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-          onClick={handleCloseQR}
-        >
-          <div
-            className="relative bg-white rounded-3xl p-6 mx-4 max-w-sm w-full shadow-2xl animate-scale-up"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close X button */}
-            <button
-              onClick={handleCloseQR}
-              className="absolute -top-3 -right-3 w-8 h-8 bg-white rounded-full shadow-lg border border-gray-100 flex items-center justify-center active:scale-90 transition-transform text-gray-400 hover:text-gray-600"
-              aria-label="Close QR"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            <div className="text-center mb-2">
-              <h2 className="text-lg font-bold text-[var(--color-text)]">
-                {merchantProfile.name}
-              </h2>
-              <p className="text-sm text-[var(--color-text-muted)] capitalize">
-                {merchantProfile.business_type} Shop
-              </p>
-            </div>
-
-            <QRDisplay
-              merchantId={merchantProfile.id}
-              merchantName={merchantProfile.name}
-              businessType={merchantProfile.business_type}
-            />
-
-            <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
-              <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
-                Ask your customer to scan this QR code
-              </p>
-            </div>
-          </div>
-        </div>
       )}
 
       <BottomNav />

@@ -367,7 +367,7 @@ export default function MerchantScanPage() {
                           <p className="text-xs text-[var(--color-text-muted)]">{c.phone}</p>
                         </div>
                         {c.current_balance > 0 && (
-                          <span className="text-xs font-medium text-red-600">Due: NPR {c.current_balance.toLocaleString()}</span>
+                          <span className="text-xs font-medium text-red-600">Due: Rs. {c.current_balance.toLocaleString()}</span>
                         )}
                       </button>
                     ))}
@@ -383,7 +383,7 @@ export default function MerchantScanPage() {
                 )}
                 {customerBalance !== null && entryType !== "cash" && (
                   <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                    {customerBalance > 0 ? `Current Due: NPR ${customerBalance.toLocaleString()}` : "No outstanding balance"}
+                    {customerBalance > 0 ? `Current Due: Rs. ${customerBalance.toLocaleString()}` : "No outstanding balance"}
                   </div>
                 )}
               </div>
@@ -408,7 +408,7 @@ export default function MerchantScanPage() {
 
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
                   <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
                     className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
                   <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
@@ -511,7 +511,7 @@ export default function MerchantScanPage() {
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : entryType === "cash" ? "text-blue-600" : "text-green-600"}`}>NPR {Number(amount).toLocaleString()}</p>
+                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : entryType === "cash" ? "text-blue-600" : "text-green-600"}`}>Rs. {Number(amount).toLocaleString()}</p>
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
@@ -564,8 +564,8 @@ export default function MerchantScanPage() {
                 <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved!</h2>
                 <p className="text-sm text-[var(--color-text-muted)]">
                   {entryType === "cash"
-                    ? `Cash Sale of NPR ${Number(amount).toLocaleString()}${customerName ? ` from ${customerName}` : ""}`
-                    : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}` : `NPR ${Number(amount).toLocaleString()} saved`}`}
+                    ? `Cash Sale of Rs. ${Number(amount).toLocaleString()}${customerName ? ` from ${customerName}` : ""}`
+                    : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${Number(amount).toLocaleString()} for ${customerName}` : `Rs. ${Number(amount).toLocaleString()} saved`}`}
                 </p>
                 {entryType === "cash" ? (
                   <p className="text-xs text-blue-600 mt-2">Cash sale recorded and approved</p>
@@ -580,7 +580,7 @@ export default function MerchantScanPage() {
                           (() => {
                             const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://qrhisab.vercel.app';
                             const shareLink = `${baseUrl}/verify?token=${verificationToken}`;
-                            return `Dear customer, NPR ${Number(amount).toLocaleString()} has been added to your account. Please verify using this link: ${shareLink}`;
+                            return `Dear customer, Rs. ${Number(amount).toLocaleString()} has been added to your account. Please verify using this link: ${shareLink}`;
                           })()
                         )}`}
                         target="_blank"
@@ -693,7 +693,7 @@ export default function MerchantScanPage() {
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div>
-                <label className="text-sm font-medium text-[var(--color-text)]">Amount (NPR)</label>
+                <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
                 <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
                   className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
                 <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
@@ -733,7 +733,7 @@ export default function MerchantScanPage() {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>NPR {Number(amount).toLocaleString()}</p>
+                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>Rs. {Number(amount).toLocaleString()}</p>
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
@@ -770,7 +770,7 @@ export default function MerchantScanPage() {
             <div>
               <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved!</h2>
               <p className="text-sm text-[var(--color-text-muted)]">
-                {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of NPR ${Number(amount).toLocaleString()} for ${customerName}` : `NPR ${Number(amount).toLocaleString()} saved`}
+                {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${Number(amount).toLocaleString()} for ${customerName}` : `Rs. ${Number(amount).toLocaleString()} saved`}
               </p>
             </div>
             <div className="flex gap-3">

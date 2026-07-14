@@ -263,7 +263,7 @@ describe("MerchantScanPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText((c) => c.includes("Credit of NPR") && c.includes("added for Hari"))
+        screen.getByText((c) => c.includes("Credit of Rs.") && c.includes("added for Hari"))
       ).toBeInTheDocument();
     });
   });

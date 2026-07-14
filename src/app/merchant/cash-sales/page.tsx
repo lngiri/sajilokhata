@@ -99,7 +99,7 @@ export default function CashSalesPage() {
           <div>
             <h1 className="text-lg font-bold text-[var(--color-text)]">Cash Sales</h1>
             <p className="text-[10px] text-[var(--color-text-muted)]">
-              {logs.length} {logs.length === 1 ? "transaction" : "transactions"} &middot; Total NPR {totalCash.toLocaleString()}
+              {logs.length} {logs.length === 1 ? "transaction" : "transactions"} &middot; Total Rs. {totalCash.toLocaleString()}
             </p>
           </div>
         </div>
@@ -151,7 +151,7 @@ export default function CashSalesPage() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="font-bold text-sm text-blue-600">
-                    NPR {log.amount.toLocaleString()}
+                    Rs. {log.amount.toLocaleString()}
                   </p>
                   {log.quantity && (
                     <p className="text-[10px] text-[var(--color-text-muted)]">
@@ -215,7 +215,7 @@ export default function CashSalesPage() {
                         )}
                       </div>
                       <p className="font-bold text-sm text-blue-600 flex-shrink-0 ml-3">
-                        NPR {selectedLog.amount.toLocaleString()}
+                        Rs. {selectedLog.amount.toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -226,11 +226,11 @@ export default function CashSalesPage() {
               <div className="bg-white rounded-xl p-3 border border-gray-100 space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[var(--color-text-muted)]">Subtotal</span>
-                  <span className="font-medium text-[var(--color-text)]">NPR {selectedLog.amount.toLocaleString()}</span>
+                  <span className="font-medium text-[var(--color-text)]">Rs. {selectedLog.amount.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-gray-100 pt-1.5 flex items-center justify-between">
                   <span className="font-semibold text-[var(--color-text)]">Total</span>
-                  <span className="font-bold text-lg text-blue-600">NPR {selectedLog.amount.toLocaleString()}</span>
+                  <span className="font-bold text-lg text-blue-600">Rs. {selectedLog.amount.toLocaleString()}</span>
                 </div>
               </div>
 
