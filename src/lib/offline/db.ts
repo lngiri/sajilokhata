@@ -59,7 +59,7 @@ let dbPromise: Promise<IDBPDatabase<QRHisabDB>> | null = null;
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<QRHisabDB>("qrhisab", 1, {
+    dbPromise = openDB<QRHisabDB>("sajilokhata", 1, {
       upgrade(db) {
         // Pending credit logs
         const logStore = db.createObjectStore("pendingLogs", {
