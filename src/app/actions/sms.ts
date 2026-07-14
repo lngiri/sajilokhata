@@ -1,5 +1,7 @@
 "use server";
 
+import { getAdminClient } from "@/lib/supabase/admin";
+
 export async function sendTransactionSMS(
   to: string,
   message: string
@@ -66,15 +68,21 @@ export async function sendTransactionNotification(params: {
 
   console.log("[SMS-NOTIFICATION] Starting for merchant:", merchantId);
 
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const { data: merchant } = await supabase
-    .from("merchants")
-    .select("name, business_name")
-    .eq("id", merchantId)
-    .single();
+  const client = getAdminClient();
+  if (!client) {
+    console.warn("[SMS-NOTIFICATION] Admin client unavailable, skipping merchant lookup");
+  }
 
-  const shopName = merchant?.business_name || merchant?.name || "Shop";
+  let shopName = "Shop";
+  if (client) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: merchant } = await (client.from("merchants") as any)
+      .select("name, business_name")
+      .eq("id", merchantId)
+      .single();
+    shopName = merchant?.business_name || merchant?.name || "Shop";
+  }
+
   const formattedAmount = `Rs. ${Number(amount).toLocaleString()}`;
 
   let message: string;
