@@ -17,6 +17,7 @@ import {
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import TransactionIcon from "@/components/TransactionIcon";
+import RoleSwitcher from "@/components/RoleSwitcher";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
 const POLL_INTERVAL = 30_000;
@@ -330,6 +331,7 @@ export default function MerchantDashboard() {
             ) : (
               <SyncStatus />
             )}
+            <RoleSwitcher />
           </div>
         </div>
       </div>
@@ -354,12 +356,8 @@ export default function MerchantDashboard() {
         </a>
       )}
 
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-        </div>
-      ) : loadError ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
+      {loadError && !loading && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-50 flex items-center justify-center">
             <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
@@ -377,45 +375,64 @@ export default function MerchantDashboard() {
             Retry
           </button>
         </div>
-      ) : (
-        <PullToRefresh onRefresh={handlePullRefresh}>
-          <div className="px-4 py-4 space-y-4">
-            {/* Stats Cards */}
-            {stats && (
-              <div className="grid grid-cols-2 gap-3">
-                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Outstanding</p>
-                  <p className="text-xl font-bold text-[var(--color-danger)]">Rs. {stats.totalOutstanding.toLocaleString()}</p>
-                </a>
-                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Today</p>
-                  <p className="text-xl font-bold text-[var(--color-primary)]">Rs. {stats.todayTotal.toLocaleString()}</p>
-                </a>
-                <a href="/merchant/customers" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
-                  <p className="text-xl font-bold text-[var(--color-text)]">{stats.customerCount}</p>
-                </a>
-                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Pending</p>
-                  <p className="text-xl font-bold text-[var(--color-accent)]">{stats.pendingCount}</p>
-                  {stats.pendingCount > 0 && (
-                    <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
-                  )}
-                </a>
-              </div>
-            )}
-            {stats && (
-              <div className="grid grid-cols-2 gap-3">
-                <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales</p>
-                  <p className="text-xl font-bold text-blue-600">Rs. {stats.totalSales.toLocaleString()}</p>
-                </a>
-                <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand</p>
-                  <p className="text-xl font-bold text-green-600">Rs. {stats.cashInHand.toLocaleString()}</p>
-                </a>
-              </div>
-            )}
+      )}
+
+      <PullToRefresh onRefresh={handlePullRefresh}>
+        <div className="px-4 py-4 space-y-4">
+          {/* Stats Cards */}
+          {loading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                  <div className="h-3 w-16 bg-gray-100 rounded animate-pulse mb-2" />
+                  <div className="h-6 w-24 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : stats && (
+            <div className="grid grid-cols-2 gap-3">
+              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Outstanding</p>
+                <p className="text-xl font-bold text-[var(--color-danger)]">Rs. {stats.totalOutstanding.toLocaleString()}</p>
+              </a>
+              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today</p>
+                <p className="text-xl font-bold text-[var(--color-primary)]">Rs. {stats.todayTotal.toLocaleString()}</p>
+              </a>
+              <a href="/merchant/customers" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
+                <p className="text-xl font-bold text-[var(--color-text)]">{stats.customerCount}</p>
+              </a>
+              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden active:scale-[0.98] transition-transform">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Pending</p>
+                <p className="text-xl font-bold text-[var(--color-accent)]">{stats.pendingCount}</p>
+                {stats.pendingCount > 0 && (
+                  <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
+                )}
+              </a>
+            </div>
+          )}
+          {loading ? (
+            <div className="grid grid-cols-2 gap-3">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+                  <div className="h-3 w-16 bg-gray-100 rounded animate-pulse mb-2" />
+                  <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : stats && (
+            <div className="grid grid-cols-2 gap-3">
+              <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales</p>
+                <p className="text-xl font-bold text-blue-600">Rs. {stats.totalSales.toLocaleString()}</p>
+              </a>
+              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand</p>
+                <p className="text-xl font-bold text-green-600">Rs. {stats.cashInHand.toLocaleString()}</p>
+              </a>
+            </div>
+          )}
 
             {/* Quick Actions */}
             <div className="grid grid-cols-2 gap-3">
@@ -639,7 +656,6 @@ export default function MerchantDashboard() {
             </div>
           </div>
         </PullToRefresh>
-      )}
 
       <BottomNav />
     </div>

@@ -9,6 +9,7 @@ import { playSuccessSound } from "@/lib/sound";
 import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
+import RoleSwitcher from "@/components/RoleSwitcher";
 import { createClient } from "@/lib/supabase/client";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
@@ -280,6 +281,7 @@ export default function CustomerDashboard() {
           </div>
           <div className="ml-auto flex items-center gap-2">
             <SyncStatus />
+            <RoleSwitcher />
             {customerPhone && (
               <span className="text-[10px] text-[var(--color-text-muted)]">
                 ID: {customerPhone.slice(-4)}

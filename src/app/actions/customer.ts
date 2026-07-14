@@ -38,3 +38,56 @@ export async function sendOnboardingSMS(
 
   return sendTransactionSMS(cleanPhone, message);
 }
+
+export async function addCustomerForMerchant(
+  merchantId: string,
+  phone: string,
+  name?: string
+): Promise<{ success: boolean; error?: string; customer?: { id: string; name: string | null; phone: string } }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Admin client unavailable" };
+
+  try {
+    const normalized = normalizePhone(phone);
+
+    // Find or create customer
+    let { data: customer } = await (admin.from("customers") as any)
+      .select("id, name, phone")
+      .eq("phone", normalized)
+      .maybeSingle();
+
+    if (!customer) {
+      const { data: inserted, error } = await (admin.from("customers") as any)
+        .insert({ phone: normalized, name: name || null })
+        .select("id, name, phone")
+        .single();
+      if (error) {
+        console.error("[Customer] addCustomerForMerchant insert error:", error);
+        return { success: false, error: `DB error: ${error.message}` };
+      }
+      customer = inserted;
+    }
+
+    // Link to merchant
+    const { data: existing } = await (admin.from("merchant_customers") as any)
+      .select("id")
+      .eq("merchant_id", merchantId)
+      .eq("customer_id", customer.id)
+      .maybeSingle();
+
+    if (!existing) {
+      const { error } = await (admin.from("merchant_customers") as any)
+        .insert({ merchant_id: merchantId, customer_id: customer.id, credit_limit: 5000 });
+      if (error) {
+        console.error("[Customer] addCustomerForMerchant link error:", error);
+        return { success: false, error: `Link error: ${error.message}` };
+      }
+    }
+
+    return { success: true, customer: { id: customer.id, name: customer.name, phone: normalized } };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[Customer] addCustomerForMerchant error:", msg);
+    return { success: false, error: msg };
+  }
+}

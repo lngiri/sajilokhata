@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useToast } from "@/components/Toast";
-import { findOrCreateCustomer, linkCustomerToMerchant } from "@/lib/actions";
 import {
+  addCustomerForMerchant,
   checkCustomerOnboarded,
   sendOnboardingSMS,
 } from "@/app/actions/customer";
@@ -34,10 +34,15 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
     }
     setSaving(true);
     try {
-      const customer = await findOrCreateCustomer(trimmedPhone, trimmedName);
-      await linkCustomerToMerchant(merchantId, customer.id);
+      const result = await addCustomerForMerchant(merchantId, trimmedPhone, trimmedName);
+      if (!result.success) {
+        addToast(result.error || "Failed to add customer", "error");
+        return;
+      }
 
-      // Fire-and-forget: check if customer is onboarded; if not, send onboarding SMS
+      const customer = result.customer!;
+
+      // Fire-and-forget SMS — only send onboarding if not already registered
       if (!sentRef.current) {
         sentRef.current = true;
         checkCustomerOnboarded(trimmedPhone).then(({ onboarded }) => {
@@ -50,7 +55,7 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
               }
             });
           } else {
-            console.log("[QuickAdd] Customer already onboarded:", trimmedPhone);
+            console.log("[QuickAdd] Customer already onboarded, SMS skipped:", trimmedPhone);
           }
         });
       }
