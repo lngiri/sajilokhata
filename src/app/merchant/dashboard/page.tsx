@@ -11,6 +11,8 @@ import {
   getMerchantStats,
   getMerchantCreditLogs,
   getMerchantProfile,
+} from "@/app/actions/merchant";
+import {
   acceptEditRequest,
   rejectEditRequest,
 } from "@/lib/actions";

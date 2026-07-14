@@ -9,11 +9,11 @@ import {
   getCurrentUserPhone,
   signOut,
 } from "@/lib/auth";
+import { updateMerchantProfile } from "@/lib/actions";
 import {
   getMerchantProfile,
-  updateMerchantProfile,
   getMerchantCreditLogs,
-} from "@/lib/actions";
+} from "@/app/actions/merchant";
 
 export default function SettingsPage() {
   const { addToast } = useToast();

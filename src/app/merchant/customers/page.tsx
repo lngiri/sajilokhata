@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import BottomNav from "@/components/BottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
-import { getMerchantCustomers } from "@/lib/actions";
+import { getMerchantCustomers } from "@/app/actions/merchant";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useToast } from "@/components/Toast";
 

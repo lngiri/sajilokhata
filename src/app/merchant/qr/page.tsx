@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { QRDisplay } from "@/components/QRCode";
 import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantProfile } from "@/lib/actions";
+import { getMerchantProfile } from "@/app/actions/merchant";
 import { useToast } from "@/components/Toast";
 
 interface MerchantData {

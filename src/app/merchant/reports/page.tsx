@@ -10,7 +10,7 @@ import {
   getMerchantAnalytics,
   getMerchantCreditLogs,
   type AnalyticsResult,
-} from "@/lib/actions";
+} from "@/app/actions/merchant";
 
 // ─── Date Filter ───────────────────────────────────────────────
 

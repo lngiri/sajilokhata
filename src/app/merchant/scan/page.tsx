@@ -8,13 +8,12 @@ import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { saveEntry } from "@/app/actions/entry";
 import {
-  createManualCreditLog,
   getMerchantCustomers,
   getMerchantCustomerBalance,
   getMerchantRecentDescriptions,
-} from "@/lib/actions";
+} from "@/app/actions/merchant";
 import { compressImage, blobToBase64 } from "@/lib/image";
-import { uploadAttachment } from "@/lib/actions";
+import { createManualCreditLog, uploadAttachment } from "@/lib/actions";
 import { savePendingAttachment, isOnline } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl } from "@/lib/phone";

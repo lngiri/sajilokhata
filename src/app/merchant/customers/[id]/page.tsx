@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCreditLogs, updateCustomerCreditLimit } from "@/lib/actions";
+import { getMerchantCreditLogs, updateCustomerCreditLimit } from "@/app/actions/merchant";
 import TransactionIcon from "@/components/TransactionIcon";
 
 const STATUS_BADGE: Record<string, string> = {

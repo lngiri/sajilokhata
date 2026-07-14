@@ -7,7 +7,7 @@ import PendingApprovalModal from "@/components/PendingApprovalModal";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
 import TransactionIcon from "@/components/TransactionIcon";
-import { getMerchantCreditLogs, updateCreditLogStatus } from "@/lib/actions";
+import { getMerchantCreditLogs, updateCreditLogStatus } from "@/app/actions/merchant";
 import { getCurrentMerchantId } from "@/lib/auth";
 
 interface LogEntry {
