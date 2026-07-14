@@ -11,8 +11,10 @@ import {
   syncDeliveryLogs,
   recordSyncComplete,
   getLastSyncTime,
+  getPendingAttachments,
+  deletePendingAttachment,
 } from "@/lib/offline/db";
-import { createCreditLog, findOrCreateCustomer, linkCustomerToMerchant } from "@/lib/actions";
+import { createCreditLog, findOrCreateCustomer, linkCustomerToMerchant, uploadAttachment } from "@/lib/actions";
 
 /** Format a timestamp as a relative string (e.g. "2 min ago") */
 function timeAgo(date: Date): string {
@@ -41,17 +43,20 @@ export default function SyncStatus() {
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [pendingAttachmentCount, setPendingAttachmentCount] = useState(0);
 
-  const totalPending = pendingCreditCount + pendingDeliveryCount;
+  const totalPending = pendingCreditCount + pendingDeliveryCount + pendingAttachmentCount;
 
   const updateCounts = useCallback(async () => {
-    const [creditLogs, deliveryLogs, lastSyncTime] = await Promise.all([
+    const [creditLogs, deliveryLogs, lastSyncTime, attachments] = await Promise.all([
       getPendingLogs(),
       getDeliveryLogs(),
       getLastSyncTime(),
+      getPendingAttachments(),
     ]);
     setPendingCreditCount(creditLogs.length);
     setPendingDeliveryCount(deliveryLogs.length);
+    setPendingAttachmentCount(attachments.length);
     setLastSync(lastSyncTime);
   }, []);
 
@@ -82,8 +87,24 @@ export default function SyncStatus() {
       // Sync credit logs first, then delivery logs
       const creditResult = await syncPendingLogs(createCreditLog, resolveOfflineCustomer);
       const deliveryResult = await syncDeliveryLogs(createCreditLog);
-      const total = creditResult.synced + deliveryResult.synced;
-      const failed = creditResult.failed + deliveryResult.failed;
+      let attachmentSynced = 0;
+      let attachmentFailed = 0;
+
+      // Sync pending photo attachments
+      const pendingAttachments = await getPendingAttachments();
+      for (const att of pendingAttachments) {
+        try {
+          const blob = await (await fetch(att.data)).blob();
+          await uploadAttachment(att.merchantId, att.logId, blob);
+          await deletePendingAttachment(att.id);
+          attachmentSynced++;
+        } catch {
+          attachmentFailed++;
+        }
+      }
+
+      const total = creditResult.synced + deliveryResult.synced + attachmentSynced;
+      const failed = creditResult.failed + deliveryResult.failed + attachmentFailed;
 
       await recordSyncComplete();
       await updateCounts();
@@ -110,7 +131,19 @@ export default function SyncStatus() {
       try {
         const creditResult = await syncPendingLogs(createCreditLog, resolveOfflineCustomer);
         const deliveryResult = await syncDeliveryLogs(createCreditLog);
-        const total = creditResult.synced + deliveryResult.synced;
+        let attachmentSynced = 0;
+        const pendingAttachments = await getPendingAttachments();
+        for (const att of pendingAttachments) {
+          try {
+            const blob = await (await fetch(att.data)).blob();
+            await uploadAttachment(att.merchantId, att.logId, blob);
+            await deletePendingAttachment(att.id);
+            attachmentSynced++;
+          } catch {
+            // skip
+          }
+        }
+        const total = creditResult.synced + deliveryResult.synced + attachmentSynced;
         await recordSyncComplete();
         await updateCounts();
         if (total > 0) {

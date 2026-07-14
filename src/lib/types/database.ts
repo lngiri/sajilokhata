@@ -116,6 +116,7 @@ export interface Database {
           verification_token: string | null;
           disputed_reason: string | null;
           proposed_amount: number | null;
+          attachment_url: string | null;
           created_at: string;
           approved_at: string | null;
           updated_at: string;
@@ -136,6 +137,7 @@ export interface Database {
           verification_token?: string | null;
           disputed_reason?: string | null;
           proposed_amount?: number | null;
+          attachment_url?: string | null;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
@@ -156,6 +158,7 @@ export interface Database {
           verification_token?: string | null;
           disputed_reason?: string | null;
           proposed_amount?: number | null;
+          attachment_url?: string | null;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;

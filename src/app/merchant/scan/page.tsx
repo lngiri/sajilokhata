@@ -17,6 +17,9 @@ import {
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl } from "@/lib/phone";
 import { getMerchantRecentDescriptions } from "@/lib/actions";
+import { compressImage, blobToBase64 } from "@/lib/image";
+import { uploadAttachment } from "@/lib/actions";
+import { savePendingAttachment, isOnline } from "@/lib/offline/db";
 import QuickAddCustomer from "@/components/QuickAddCustomer";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 
@@ -64,6 +67,10 @@ export default function MerchantScanPage() {
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [recentDescriptions, setRecentDescriptions] = useState<string[]>([]);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
+  const [attachmentUploading, setAttachmentUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load merchant ID and customer list on mount
@@ -214,12 +221,38 @@ export default function MerchantScanPage() {
       }
 
       if (isManual) {
+        let attachmentUrl: string | null = null;
+
+        if (attachmentFile) {
+          setAttachmentUploading(true);
+          try {
+            if (navigator.onLine) {
+              const compressed = await compressImage(attachmentFile, 200);
+              attachmentUrl = await uploadAttachment(mId, crypto.randomUUID(), compressed);
+            } else {
+              const compressed = await compressImage(attachmentFile, 200);
+              const base64 = await blobToBase64(compressed);
+              await savePendingAttachment({
+                id: crypto.randomUUID(),
+                logId: crypto.randomUUID(),
+                merchantId: mId,
+                data: base64,
+              });
+            }
+          } catch {
+            addToast("Failed to process photo attachment.", "error");
+          } finally {
+            setAttachmentUploading(false);
+          }
+        }
+
         const entry = await createManualCreditLog({
           merchant_id: mId,
           customer_id: cId ?? undefined,
           amount: Number(amount),
           type: entryType,
           description: description || null,
+          attachment_url: attachmentUrl,
         });
         if (entry?.verification_token) {
           setVerificationToken(entry.verification_token);
@@ -388,6 +421,61 @@ export default function MerchantScanPage() {
                     descriptions={recentDescriptions}
                     onSelect={(desc) => setDescription(desc)}
                   />
+                </div>
+
+                {/* Attach Bill / Photo */}
+                <div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setAttachmentFile(file);
+                      setAttachmentPreview(URL.createObjectURL(file));
+                    }}
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] active:scale-[0.98] transition-all"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                      </svg>
+                      {attachmentFile ? "Change Photo" : "Attach Bill / Photo"}
+                    </button>
+                    {attachmentPreview && (
+                      <div className="relative">
+                        <img
+                          src={attachmentPreview}
+                          alt="Receipt preview"
+                          className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttachmentFile(null);
+                            setAttachmentPreview(null);
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                          }}
+                          className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center"
+                        >
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    )}
+                    {attachmentUploading && (
+                      <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                    )}
+                  </div>
                 </div>
               </div>
 

@@ -290,12 +290,37 @@ export async function cancelCreditLog(logId: string): Promise<any> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function uploadAttachment(
+  merchantId: string,
+  logId: string,
+  file: Blob
+): Promise<string> {
+  const fileName = `${merchantId}/${logId}/${Date.now()}.webp`;
+  const { error } = await getClient()
+    .storage
+    .from("transaction_attachments")
+    .upload(fileName, file, {
+      contentType: "image/webp",
+      upsert: true,
+    });
+  if (error) throw error;
+
+  const { data: urlData } = getClient()
+    .storage
+    .from("transaction_attachments")
+    .getPublicUrl(fileName);
+
+  return urlData.publicUrl;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function createManualCreditLog(params: {
   merchant_id: string;
   customer_id?: string | null;
   amount: number;
   type: "debit" | "credit" | "cash";
   description?: string | null;
+  attachment_url?: string | null;
 }): Promise<any> {
   const isCash = params.type === "cash";
   return createCreditLog({
@@ -307,6 +332,7 @@ export async function createManualCreditLog(params: {
     status: isCash ? "approved" : "unverified",
     approved_at: isCash ? new Date().toISOString() : null,
     sync_status: "online",
+    attachment_url: params.attachment_url || null,
   });
 }
 

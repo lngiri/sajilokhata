@@ -33,6 +33,20 @@ interface SajiloKhataDB extends DBSchema {
       "by-status": string;
     };
   };
+  pendingAttachments: {
+    key: string;
+    value: {
+      id: string;
+      logId: string;
+      merchantId: string;
+      data: string;
+      createdAt: string;
+    };
+    indexes: {
+      "by-merchant": string;
+      "by-log": string;
+    };
+  };
   offlineCustomers: {
     key: string;
     value: {
@@ -59,23 +73,33 @@ let dbPromise: Promise<IDBPDatabase<SajiloKhataDB>> | null = null;
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<SajiloKhataDB>("sajilokhata", 1, {
-      upgrade(db) {
-        // Pending credit logs
-        const logStore = db.createObjectStore("pendingLogs", {
-          keyPath: "id",
-        });
-        logStore.createIndex("by-merchant", "merchantId");
-        logStore.createIndex("by-status", "syncStatus");
+    dbPromise = openDB<SajiloKhataDB>("sajilokhata", 2, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          // Pending credit logs
+          const logStore = db.createObjectStore("pendingLogs", {
+            keyPath: "id",
+          });
+          logStore.createIndex("by-merchant", "merchantId");
+          logStore.createIndex("by-status", "syncStatus");
 
-        // Cached customers for offline lookup
-        const customerStore = db.createObjectStore("offlineCustomers", {
-          keyPath: "id",
-        });
-        customerStore.createIndex("by-phone", "phone");
+          // Cached customers for offline lookup
+          const customerStore = db.createObjectStore("offlineCustomers", {
+            keyPath: "id",
+          });
+          customerStore.createIndex("by-phone", "phone");
 
-        // App settings
-        db.createObjectStore("settings", { keyPath: "key" });
+          // App settings
+          db.createObjectStore("settings", { keyPath: "key" });
+        }
+        if (oldVersion < 2) {
+          // Pending photo attachments for offline capture
+          const attachStore = db.createObjectStore("pendingAttachments", {
+            keyPath: "id",
+          });
+          attachStore.createIndex("by-merchant", "merchantId");
+          attachStore.createIndex("by-log", "logId");
+        }
       },
     });
   }
@@ -169,6 +193,60 @@ export async function updatePendingLogSyncStatus(
     log.syncStatus = syncStatus;
     await db.put("pendingLogs", log);
   }
+}
+
+// ============================================================
+// Pending Attachments (offline photo capture)
+// ============================================================
+
+export async function savePendingAttachment(attachment: {
+  id: string;
+  logId: string;
+  merchantId: string;
+  data: string;
+}) {
+  const db = await getDB();
+  const entry = {
+    ...attachment,
+    createdAt: new Date().toISOString(),
+  };
+  await db.put("pendingAttachments", entry);
+  return entry;
+}
+
+export async function getPendingAttachments(): Promise<{
+  id: string;
+  logId: string;
+  merchantId: string;
+  data: string;
+  createdAt: string;
+}[]> {
+  const db = await getDB();
+  return db.getAll("pendingAttachments");
+}
+
+export async function getPendingAttachmentsByMerchant(
+  merchantId: string
+): Promise<{
+  id: string;
+  logId: string;
+  merchantId: string;
+  data: string;
+  createdAt: string;
+}[]> {
+  const db = await getDB();
+  return db.getAllFromIndex("pendingAttachments", "by-merchant", merchantId);
+}
+
+export async function getPendingAttachmentByLogId(logId: string) {
+  const db = await getDB();
+  const all = await db.getAllFromIndex("pendingAttachments", "by-log", logId);
+  return all[0] || null;
+}
+
+export async function deletePendingAttachment(id: string) {
+  const db = await getDB();
+  await db.delete("pendingAttachments", id);
 }
 
 // ============================================================
