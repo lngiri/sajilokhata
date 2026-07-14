@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { sendLoginOtp, verifyLoginOtp } from "@/app/actions/otp";
 
 type Step = "phone" | "otp";
 
@@ -13,27 +13,21 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const otpRef = useRef<HTMLInputElement>(null);
 
-  const supabase = createClient();
-
   const handlePhoneSubmit = async () => {
     if (!phone || phone.length < 10) return;
     setLoading(true);
     setError("");
 
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: `+977${phone}`,
-      });
+    const result = await sendLoginOtp(phone);
 
-      if (error) {
-        console.warn("OTP send failed (demo mode):", error.message);
-      }
-      setStep("otp");
-    } catch {
-      setStep("otp");
-    } finally {
+    if (!result.success) {
+      setError(result.error || "Failed to send OTP. Please try again.");
       setLoading(false);
+      return;
     }
+
+    setStep("otp");
+    setLoading(false);
   };
 
   const handleOtpSubmit = async () => {
@@ -41,46 +35,19 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: `+977${phone}`,
-        token: otp,
-        type: "sms",
-      });
+    const result = await verifyLoginOtp(phone, otp);
 
-      if (error) {
-        setError("Invalid OTP. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      if (data.session) {
-        localStorage.setItem("merchant_id", data.session.user.id);
-        let status = "new";
-        try {
-          const setupRes = await fetch("/api/merchant/setup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              merchant_id: data.session.user.id,
-              phone: `+977${phone}`,
-            }),
-          });
-          const setupData = await setupRes.json();
-          if (setupRes.ok && setupData.merchant_id) {
-            localStorage.setItem("merchant_id", setupData.merchant_id);
-            status = setupData.existed ? "existing" : "new";
-          }
-        } catch {
-          // Non-critical — merchant can set up profile later
-        }
-        window.location.href = `/merchant/dashboard?status=${status}`;
-      }
-    } catch {
-      setError("Verification failed. Please try again.");
-    } finally {
+    if (!result.success) {
+      setError(result.error || "Invalid OTP. Please try again.");
       setLoading(false);
+      return;
     }
+
+    if (result.userId) {
+      localStorage.setItem("merchant_id", result.userId);
+    }
+
+    window.location.href = `/merchant/dashboard?status=${result.userId ? "existing" : "new"}`;
   };
 
   return (

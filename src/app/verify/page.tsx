@@ -84,7 +84,7 @@ export default function VerifyPage() {
     setGeneratedOtp(code);
 
     const shopName = log?.merchants?.name || "Shop";
-    const smsText = `Your OTP for transaction verification at ${shopName} is: ${code}. Do not share this code.`;
+    const smsText = `Your OTP code for QRHisab is: ${code}. Do not share this code.`;
 
     const result = await sendTransactionSMS(phone, smsText);
 
