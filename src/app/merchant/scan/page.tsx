@@ -15,7 +15,7 @@ import {
 } from "@/app/actions/merchant";
 import { compressImage, blobToBase64 } from "@/lib/image";
 
-import { savePendingLog, savePendingAttachment, isOnline } from "@/lib/offline/db";
+import { savePendingLog, savePendingAttachment } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl } from "@/lib/phone";
 import QuickAddCustomer from "@/components/QuickAddCustomer";
