@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/lib/actions";
 import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
+import { signOut } from "@/lib/auth";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -116,16 +117,9 @@ export default function CustomerHistoryPage() {
     }
   };
 
-  // Handle clear session — removes both localStorage and cookie
+  // Handle clear session — removes localStorage, cookies, SW caches
   const handleSignOut = () => {
-    try {
-      localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-      // Expire the cookie so middleware stops protecting /customer/*
-      document.cookie = "customer_session=; path=/; max-age=0";
-    } catch {
-      // Ignore
-    }
-    window.location.href = "/";
+    signOut();
   };
 
   // Prevent flash while checking localStorage

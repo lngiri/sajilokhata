@@ -67,7 +67,31 @@ export async function signOut() {
     // Ignore errors
   }
   clearCachedClient();
-  localStorage.removeItem("merchant_id");
-  localStorage.removeItem("sajilo_customer_session");
-  window.location.href = "/login";
+
+  // Wipe all client-side storage
+  localStorage.clear();
+
+  // Clear client-accessible cookies
+  document.cookie.split(";").forEach((c) => {
+    const name = c.trim().split("=")[0];
+    document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+  });
+
+  // Attempt to clear Service Worker caches
+  if ("caches" in window) {
+    try {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Notify SW to skip waiting (if it's waiting for activation)
+  if (navigator.serviceWorker?.controller) {
+    navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+  }
+
+  // Force hard navigation to sign-out endpoint which clears server-side cookies
+  window.location.replace("/api/auth/signout");
 }
