@@ -56,7 +56,7 @@ export default function RootLayout({
         <ServiceWorkerRegistrar />
         <ToastProvider>
           <NetworkStatus />
-          <main className="mx-auto max-w-md min-h-dvh">{children}</main>
+          <main className="min-h-dvh">{children}</main>
           <PWAInstallBanner />
         </ToastProvider>
       </body>
