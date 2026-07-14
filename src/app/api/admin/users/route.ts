@@ -68,8 +68,14 @@ export async function PATCH(req: Request) {
     if (!admin) return NextResponse.json({ error: "Server config" }, { status: 500 });
 
     const newStatus = status === "suspended" ? "active" : "suspended";
+    const updates: any = { status: newStatus };
+    if (newStatus === "suspended") {
+      updates.suspended_at = new Date().toISOString();
+    } else {
+      updates.suspended_at = null;
+    }
     await (admin.from("merchants") as any)
-      .update({ status: newStatus })
+      .update(updates)
       .eq("id", merchantId);
 
     return NextResponse.json({ success: true, newStatus });
