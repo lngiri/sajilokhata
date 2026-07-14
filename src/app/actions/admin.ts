@@ -8,6 +8,28 @@ import {
   ADMIN_SESSION_COOKIE,
 } from "@/lib/admin-session";
 
+// ── Helper: verify admin session before any DB operation ──
+async function requireAdmin(): Promise<string> {
+  const cookieStore = await cookies();
+  const raw = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
+  if (!raw) throw new Error("Unauthorized");
+
+  const adminId = await verifyAdminSessionToken(raw);
+  if (!adminId) throw new Error("Session expired");
+
+  // DB-level check
+  const admin = getAdminClient();
+  if (admin) {
+    const { data } = await (admin.from("admins") as any)
+      .select("id")
+      .eq("id", adminId)
+      .maybeSingle();
+    if (!data) throw new Error("Admin not found");
+  }
+
+  return adminId;
+}
+
 // ──────────────────────────────────────────────
 // Auth
 // ──────────────────────────────────────────────
@@ -64,7 +86,6 @@ export async function getAdminSession(): Promise<{
     const adminId = await verifyAdminSessionToken(raw);
     if (!adminId) return { id: null };
 
-    // DB-level check: admin still exists
     const admin = getAdminClient();
     if (admin) {
       const { data } = await (admin.from("admins") as any)
@@ -90,6 +111,7 @@ export async function getAdminStats(): Promise<{
   activeTransactions: number;
 }> {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
     if (!admin) return { totalMerchants: 0, totalCustomers: 0, activeTransactions: 0 };
 
@@ -119,48 +141,44 @@ export async function getAdminAlerts(): Promise<
   { id: string; merchantName: string; type: string; message: string; severity: "high" | "medium" | "low"; createdAt: string }[]
 > {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
     if (!admin) return [];
 
-    // Flag merchants with > 20 transactions today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data: highVolume } = await (admin.from("credit_logs") as any)
-      .select("merchant_id, count:merchant_id")
+    const { data: recent } = await (admin.from("credit_logs") as any)
+      .select("merchant_id")
       .gte("created_at", today.toISOString())
-      .limit(1000);
+      .limit(2000);
 
-    // Group by merchant_id and count
-    const merchantCounts: Record<string, number> = {};
-    if (highVolume) {
-      for (const row of highVolume) {
-        merchantCounts[row.merchant_id] = (merchantCounts[row.merchant_id] || 0) + 1;
+    const counts: Record<string, number> = {};
+    if (recent) {
+      for (const row of recent) {
+        counts[row.merchant_id] = (counts[row.merchant_id] || 0) + 1;
       }
     }
 
     const alerts: any[] = [];
-    const highTrafficMerchants = Object.entries(merchantCounts)
-      .filter(([, count]) => count >= 20)
-      .slice(0, 10);
 
-    for (const [mId, count] of highTrafficMerchants) {
-      const { data: merchant } = await (admin.from("merchants") as any)
+    for (const [mId, count] of Object.entries(counts)) {
+      if (count < 20) continue;
+      const { data: m } = await (admin.from("merchants") as any)
         .select("name, business_name")
         .eq("id", mId)
         .maybeSingle();
 
       alerts.push({
-        id: `alert_${mId}`,
-        merchantName: merchant?.business_name || merchant?.name || mId,
+        id: `vol_${mId}`,
+        merchantName: m?.business_name || m?.name || mId,
         type: "high_volume",
         message: `${count} transactions today — unusually high activity`,
-        severity: count >= 50 ? "high" : "medium" as "high" | "medium",
+        severity: count >= 50 ? "high" : ("medium" as "high" | "medium"),
         createdAt: today.toISOString(),
       });
     }
 
-    // Flag disputed logs
     const { data: disputes } = await (admin.from("credit_logs") as any)
       .select("id, merchant_id, disputed_reason, created_at")
       .eq("status", "disputed")
@@ -169,14 +187,14 @@ export async function getAdminAlerts(): Promise<
 
     if (disputes) {
       for (const d of disputes) {
-        const { data: merchant } = await (admin.from("merchants") as any)
+        const { data: m } = await (admin.from("merchants") as any)
           .select("name, business_name")
           .eq("id", d.merchant_id)
           .maybeSingle();
 
         alerts.push({
-          id: `dispute_${d.id}`,
-          merchantName: merchant?.business_name || merchant?.name || d.merchant_id,
+          id: `dis_${d.id}`,
+          merchantName: m?.business_name || m?.name || d.merchant_id,
           type: "dispute",
           message: d.disputed_reason || "Transaction disputed",
           severity: "high",
@@ -185,7 +203,7 @@ export async function getAdminAlerts(): Promise<
       }
     }
 
-    return alerts;
+    return alerts.slice(0, 50);
   } catch {
     return [];
   }
@@ -196,39 +214,40 @@ export async function getAdminAlerts(): Promise<
 // ──────────────────────────────────────────────
 
 export async function getAdminDisputes(): Promise<
-  { id: string; merchantName: string; customerName: string; amount: number; reason: string; status: string; createdAt: string }[]
+  { id: string; merchantName: string; merchantPhone: string; customerName: string; amount: number; description: string; reason: string; status: string; createdAt: string }[]
 > {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
     if (!admin) return [];
 
     const { data: logs } = await (admin.from("credit_logs") as any)
-      .select("id, merchant_id, customer_id, amount, disputed_reason, status, created_at")
+      .select("id, merchant_id, customer_id, amount, description, disputed_reason, status, created_at")
       .in("status", ["disputed", "edit_requested"])
       .order("created_at", { ascending: false })
       .limit(50);
 
     if (!logs) return [];
 
-    const disputes = [];
-    for (const log of logs) {
-      const [mRes, cRes] = await Promise.all([
-        (admin.from("merchants") as any).select("name, business_name").eq("id", log.merchant_id).maybeSingle(),
-        (admin.from("customers") as any).select("name, phone").eq("id", log.customer_id).maybeSingle(),
-      ]);
-
-      disputes.push({
-        id: log.id,
-        merchantName: mRes?.business_name || mRes?.name || log.merchant_id,
-        customerName: cRes?.name || cRes?.phone || log.customer_id,
-        amount: log.amount,
-        reason: log.disputed_reason || "Edit requested",
-        status: log.status,
-        createdAt: log.created_at,
-      });
-    }
-
-    return disputes;
+    return await Promise.all(
+      logs.map(async (log: any) => {
+        const [mRes, cRes] = await Promise.all([
+          (admin.from("merchants") as any).select("name, business_name, phone").eq("id", log.merchant_id).maybeSingle(),
+          (admin.from("customers") as any).select("name, phone").eq("id", log.customer_id).maybeSingle(),
+        ]);
+        return {
+          id: log.id,
+          merchantName: mRes?.business_name || mRes?.name || log.merchant_id,
+          merchantPhone: mRes?.phone || "",
+          customerName: cRes?.name || cRes?.phone || log.customer_id || "Walk-in",
+          amount: log.amount,
+          description: log.description || "",
+          reason: log.disputed_reason || "Edit requested",
+          status: log.status,
+          createdAt: log.created_at,
+        };
+      })
+    );
   } catch {
     return [];
   }
@@ -236,6 +255,7 @@ export async function getAdminDisputes(): Promise<
 
 export async function resolveDispute(logId: string): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server config error" };
 
@@ -259,37 +279,39 @@ export async function getAdminMerchants(search?: string): Promise<
   { id: string; name: string; businessName: string; phone: string; status: string; transactionCount: number; createdAt: string }[]
 > {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
     if (!admin) return [];
 
-    let query = (admin.from("merchants") as any).select("id, name, business_name, phone, created_at, status").limit(100);
+    let query = (admin.from("merchants") as any)
+      .select("id, name, business_name, phone, created_at, status")
+      .limit(200)
+      .order("created_at", { ascending: false });
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,business_name.ilike.%${search}%,phone.ilike.%${search}%`);
     }
 
-    const { data } = await query.order("created_at", { ascending: false });
-
+    const { data } = await query;
     if (!data) return [];
 
-    const result = [];
-    for (const m of data) {
-      const { count } = await (admin.from("credit_logs") as any)
-        .select("id", { count: "exact", head: true })
-        .eq("merchant_id", m.id);
+    return await Promise.all(
+      data.map(async (m: any) => {
+        const { count } = await (admin.from("credit_logs") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", m.id);
 
-      result.push({
-        id: m.id,
-        name: m.name || "",
-        businessName: m.business_name || "",
-        phone: m.phone || "",
-        status: m.status || "active",
-        transactionCount: count ?? 0,
-        createdAt: m.created_at,
-      });
-    }
-
-    return result;
+        return {
+          id: m.id,
+          name: m.name || "",
+          businessName: m.business_name || "",
+          phone: m.phone || "",
+          status: m.status || "active",
+          transactionCount: count ?? 0,
+          createdAt: m.created_at,
+        };
+      })
+    );
   } catch {
     return [];
   }
@@ -298,19 +320,25 @@ export async function getAdminMerchants(search?: string): Promise<
 export async function toggleMerchantStatus(
   merchantId: string,
   currentStatus: string
-): Promise<{ success: boolean }> {
+): Promise<{ success: boolean; newStatus?: string; error?: string }> {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
-    if (!admin) return { success: false };
+    if (!admin) return { success: false, error: "Server config" };
 
     const newStatus = currentStatus === "suspended" ? "active" : "suspended";
-    await (admin.from("merchants") as any)
-      .update({ status: newStatus })
-      .eq("id", merchantId);
+    const updates: any = { status: newStatus };
+    if (newStatus === "suspended") {
+      updates.suspended_at = new Date().toISOString();
+    } else {
+      updates.suspended_at = null;
+    }
 
-    return { success: true };
-  } catch {
-    return { success: false };
+    await (admin.from("merchants") as any).update(updates).eq("id", merchantId);
+    return { success: true, newStatus };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
   }
 }
 
@@ -326,21 +354,25 @@ export async function getSystemHealth(): Promise<{
 }> {
   const checks: { label: string; ok: boolean; detail?: string }[] = [];
 
-  // Check Supabase connection
+  try {
+    await requireAdmin();
+  } catch {
+    checks.push({ label: "Admin Session", ok: false, detail: "Unauthorized" });
+    return { status: "red", message: "Admin session invalid", lastCheck: new Date().toISOString(), checks };
+  }
+
   try {
     const admin = getAdminClient();
     if (!admin) {
-      checks.push({ label: "Supabase Admin Client", ok: false, detail: "Missing credentials" });
-      return { status: "red", message: "Supabase admin client unavailable", lastCheck: new Date().toISOString(), checks };
+      checks.push({ label: "Supabase Admin Client", ok: false, detail: "Missing SUPABASE_SERVICE_ROLE_KEY" });
+    } else {
+      await (admin.from("merchants") as any).select("id").limit(1);
+      checks.push({ label: "Database Connection", ok: true });
     }
-
-    const { data } = await (admin.from("merchants") as any).select("id").limit(1);
-    checks.push({ label: "Database Connection", ok: true });
   } catch (err) {
     checks.push({ label: "Database Connection", ok: false, detail: String(err) });
   }
 
-  // Check env vars
   const required = ["NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"];
   for (const key of required) {
     if (!process.env[key]) {
@@ -350,9 +382,7 @@ export async function getSystemHealth(): Promise<{
 
   const failures = checks.filter((c) => !c.ok).length;
   const status = failures === 0 ? "green" : failures <= 2 ? "yellow" : "red";
-  const message = status === "green" ? "All systems operational" : `${failures} check(s) failed`;
-
-  return { status, message, lastCheck: new Date().toISOString(), checks };
+  return { status, message: status === "green" ? "All systems operational" : `${failures} issue(s) detected`, lastCheck: new Date().toISOString(), checks };
 }
 
 // ──────────────────────────────────────────────
@@ -361,6 +391,7 @@ export async function getSystemHealth(): Promise<{
 
 export async function getAppSetting(key: string): Promise<any> {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
     if (!admin) return null;
 
@@ -375,10 +406,11 @@ export async function getAppSetting(key: string): Promise<any> {
   }
 }
 
-export async function setAppSetting(key: string, value: any): Promise<{ success: boolean }> {
+export async function setAppSetting(key: string, value: any): Promise<{ success: boolean; error?: string }> {
   try {
+    await requireAdmin();
     const admin = getAdminClient();
-    if (!admin) return { success: false };
+    if (!admin) return { success: false, error: "Server config" };
 
     await (admin.from("app_settings") as any).upsert(
       { key, value, updated_at: new Date().toISOString() },
@@ -386,7 +418,8 @@ export async function setAppSetting(key: string, value: any): Promise<{ success:
     );
 
     return { success: true };
-  } catch {
-    return { success: false };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
   }
 }

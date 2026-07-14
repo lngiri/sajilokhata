@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAppSetting, setAppSetting } from "@/app/actions/admin";
 
 export default function AnnouncementsPage() {
   const [message, setMessage] = useState("");
@@ -9,51 +10,34 @@ export default function AnnouncementsPage() {
   const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/settings?key=announcement", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.value?.text) {
-          setActive(data.value.text);
-          setMessage(data.value.text);
-        }
-      })
-      .catch(() => {});
+    getAppSetting("announcement").then((val) => {
+      if (val?.text) {
+        setActive(val.text);
+        setMessage(val.text);
+      }
+    }).catch(() => {});
   }, []);
 
   const save = async () => {
     setSaving(true);
     setFeedback("");
-    try {
-      const res = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "announcement",
-          value: { text: message, active: true, updatedAt: new Date().toISOString() },
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActive(message);
-        setFeedback("Announcement published");
-      } else {
-        setFeedback("Failed to save");
-      }
-    } catch {
-      setFeedback("Network error");
+    const result = await setAppSetting("announcement", {
+      text: message, active: true, updatedAt: new Date().toISOString(),
+    });
+    if (result.success) {
+      setActive(message);
+      setFeedback("Announcement published");
+    } else {
+      setFeedback(result.error || "Failed to save");
     }
     setSaving(false);
   };
 
   const dismiss = async () => {
+    setSaving(true);
+    await setAppSetting("announcement", { text: "", active: false });
     setMessage("");
     setActive("");
-    setSaving(true);
-    await fetch("/api/admin/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: "announcement", value: { text: "", active: false } }),
-    });
     setSaving(false);
     setFeedback("Announcement removed");
   };
@@ -82,9 +66,7 @@ export default function AnnouncementsPage() {
           </div>
         )}
 
-        {feedback && (
-          <p className="text-sm text-emerald-400">{feedback}</p>
-        )}
+        {feedback && <p className={`text-sm ${feedback.includes("published") || feedback.includes("removed") ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
 
         <div className="flex gap-2">
           <button
@@ -97,11 +79,7 @@ export default function AnnouncementsPage() {
             ) : "Publish Announcement"}
           </button>
           {active && (
-            <button
-              onClick={dismiss}
-              disabled={saving}
-              className="px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-sm transition-colors"
-            >
+            <button onClick={dismiss} disabled={saving} className="px-4 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-sm transition-colors">
               Dismiss
             </button>
           )}

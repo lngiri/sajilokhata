@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import {
   addCustomerForMerchant,
+  checkCustomerByPhone,
   checkCustomerOnboarded,
   sendOnboardingSMS,
 } from "@/app/actions/customer";
@@ -19,22 +20,65 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [exists, setExists] = useState(false);
+  const [nameDisabled, setNameDisabled] = useState(true);
+  const [lookupMsg, setLookupMsg] = useState("");
   const sentRef = useRef(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+
+  // Trigger lookup when phone reaches 10 digits or on blur
+  const doLookup = async (value: string) => {
+    const clean = value.replace(/\D/g, "");
+    if (clean.length !== 10) return;
+    setLookingUp(true);
+    setLookupMsg("");
+
+    try {
+      const result = await checkCustomerByPhone(clean);
+      if (result.exists && result.customer) {
+        setName(result.customer.name || "");
+        setExists(true);
+        setNameDisabled(true);
+        setLookupMsg("Customer already registered");
+      } else {
+        setName("");
+        setExists(false);
+        setNameDisabled(false);
+        setLookupMsg("");
+        // Auto-focus name field after lookup completes
+        requestAnimationFrame(() => nameRef.current?.focus());
+      }
+    } catch {
+      setNameDisabled(false);
+      setLookupMsg("Lookup failed — you can enter details manually");
+    }
+
+    setLookingUp(false);
+  };
+
+  // Watch for 10-digit completion
+  useEffect(() => {
+    if (phone.replace(/\D/g, "").length === 10) {
+      doLookup(phone);
+    }
+  }, [phone]);
 
   const handleSubmit = async () => {
     const trimmedName = name.trim();
     const trimmedPhone = phone.trim();
-    if (!trimmedName) {
-      addToast("Customer name is required", "error");
-      return;
-    }
-    if (!trimmedPhone || trimmedPhone.length < 6) {
+    if (!trimmedPhone || trimmedPhone.replace(/\D/g, "").length < 6) {
       addToast("Enter a valid phone number (at least 6 digits)", "error");
       return;
     }
+    if (!trimmedName && !exists) {
+      addToast("Customer name is required", "error");
+      return;
+    }
     setSaving(true);
+
     try {
-      const result = await addCustomerForMerchant(merchantId, trimmedPhone, trimmedName);
+      const result = await addCustomerForMerchant(merchantId, trimmedPhone, trimmedName || undefined);
       if (!result.success) {
         addToast(result.error || "Failed to add customer", "error");
         return;
@@ -42,28 +86,19 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
 
       const customer = result.customer!;
 
-      // Fire-and-forget SMS — only send onboarding if not already registered
       if (!sentRef.current) {
         sentRef.current = true;
         checkCustomerOnboarded(trimmedPhone).then(({ onboarded }) => {
           if (!onboarded) {
-            sendOnboardingSMS(trimmedPhone, trimmedName).then((res) => {
-              if (res.success) {
-                console.log("[QuickAdd] Onboarding SMS sent to", trimmedPhone);
-              } else {
-                console.warn("[QuickAdd] Onboarding SMS failed:", res.error);
-              }
-            });
-          } else {
-            console.log("[QuickAdd] Customer already onboarded, SMS skipped:", trimmedPhone);
+            sendOnboardingSMS(trimmedPhone, customer.name || trimmedName).catch(() => {});
           }
         });
       }
 
-      addToast(`${trimmedName} added as a customer!`, "success");
+      addToast(exists ? `${customer.name || trimmedName} is already a customer` : `${customer.name || trimmedName} added as a customer!`, "success");
       onCustomerAdded({ id: customer.id, name: customer.name || trimmedName, phone: trimmedPhone });
       onClose();
-    } catch (err) {
+    } catch {
       addToast("Failed to add customer. Please try again.", "error");
     } finally {
       setSaving(false);
@@ -87,18 +122,6 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
 
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-[var(--color-text)]">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Ram Sharma"
-              maxLength={100}
-              autoFocus
-              className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-            />
-          </div>
-          <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-sm font-medium text-gray-500">+977</span>
@@ -106,10 +129,44 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onBlur={() => doLookup(phone)}
                 placeholder="98XXXXXXXX"
                 className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
+                autoFocus
               />
+              {lookingUp && (
+                <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              )}
             </div>
+            {lookupMsg && (
+              <p className={`text-xs mt-1.5 ${exists ? "text-amber-600" : "text-gray-500"}`}>
+                {lookupMsg}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text)]">Name</label>
+            <input
+              ref={nameRef}
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={exists ? "Registered name (auto-filled)" : "e.g. Ram Sharma"}
+              maxLength={100}
+              disabled={nameDisabled}
+              className={`w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all ${
+                nameDisabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""
+              }`}
+            />
+            {exists && (
+              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                Name is pre-filled — this customer is already in the system
+              </p>
+            )}
           </div>
         </div>
 
@@ -119,13 +176,13 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
           </button>
           <button
             onClick={handleSubmit}
-            disabled={saving || !name.trim() || phone.trim().length < 6}
+            disabled={saving || lookingUp || phone.replace(/\D/g, "").length < 6 || (!name.trim() && !exists)}
             className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
-              "Add Customer"
+              exists ? "Link Customer" : "Add Customer"
             )}
           </button>
         </div>

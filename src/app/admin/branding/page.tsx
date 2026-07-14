@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAppSetting, setAppSetting } from "@/app/actions/admin";
 
 export default function BrandingPage() {
   const [logo, setLogo] = useState("");
@@ -9,34 +10,21 @@ export default function BrandingPage() {
   const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/settings?key=branding", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data?.value) {
-          if (data.value.logo) setLogo(data.value.logo);
-          if (data.value.primaryColor) setPrimaryColor(data.value.primaryColor);
-        }
-      })
-      .catch(() => {});
+    getAppSetting("branding").then((val) => {
+      if (val) {
+        if (val.logo) setLogo(val.logo);
+        if (val.primaryColor) setPrimaryColor(val.primaryColor);
+      }
+    }).catch(() => {});
   }, []);
 
   const save = async () => {
     setSaving(true);
     setFeedback("");
-    try {
-      const res = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: "branding",
-          value: { logo, primaryColor, updatedAt: new Date().toISOString() },
-        }),
-      });
-      const data = await res.json();
-      setFeedback(data.success ? "Branding saved" : "Failed to save");
-    } catch {
-      setFeedback("Network error");
-    }
+    const result = await setAppSetting("branding", {
+      logo, primaryColor, updatedAt: new Date().toISOString(),
+    });
+    setFeedback(result.success ? "Branding saved" : result.error || "Failed to save");
     setSaving(false);
   };
 
@@ -66,25 +54,13 @@ export default function BrandingPage() {
         <div>
           <label className="text-sm font-medium text-gray-300">Primary Color</label>
           <div className="flex items-center gap-3 mt-1.5">
-            <input
-              type="color"
-              value={primaryColor}
-              onChange={(e) => setPrimaryColor(e.target.value)}
-              className="w-12 h-12 rounded-xl cursor-pointer bg-transparent border border-gray-700"
-            />
-            <input
-              type="text"
-              value={primaryColor}
-              onChange={(e) => setPrimaryColor(e.target.value)}
-              className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl border border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm font-mono"
-            />
+            <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-12 h-12 rounded-xl cursor-pointer bg-transparent border border-gray-700" />
+            <input type="text" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl border border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm font-mono" />
             <div className="w-12 h-12 rounded-xl border border-gray-700" style={{ backgroundColor: primaryColor }} />
           </div>
         </div>
 
-        {feedback && (
-          <p className={`text-sm ${feedback.includes("saved") ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>
-        )}
+        {feedback && <p className={`text-sm ${feedback === "Branding saved" ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
 
         <button
           onClick={save}

@@ -1,13 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAppSetting, setAppSetting } from "@/app/actions/admin";
 
 const SECTIONS = ["faq", "terms", "welcome"] as const;
-const LABELS: Record<string, string> = {
-  faq: "Frequently Asked Questions",
-  terms: "Terms & Conditions",
-  welcome: "Welcome Message",
-};
+const LABELS: Record<string, string> = { faq: "Frequently Asked Questions", terms: "Terms & Conditions", welcome: "Welcome Message" };
 
 export default function CMSPage() {
   const [section, setSection] = useState<string>("faq");
@@ -16,31 +13,16 @@ export default function CMSPage() {
   const [feedback, setFeedback] = useState("");
 
   useEffect(() => {
-    fetch(`/api/admin/settings?key=cms_${section}`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((data) => {
-        setContent(data?.value?.content ?? "");
-      })
-      .catch(() => {});
+    getAppSetting(`cms_${section}`).then((val) => {
+      setContent(val?.content ?? "");
+    }).catch(() => {});
   }, [section]);
 
   const save = async () => {
     setSaving(true);
     setFeedback("");
-    try {
-      const res = await fetch("/api/admin/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: `cms_${section}`,
-          value: { content, updatedAt: new Date().toISOString() },
-        }),
-      });
-      const data = await res.json();
-      setFeedback(data.success ? "Saved" : "Failed to save");
-    } catch {
-      setFeedback("Network error");
-    }
+    const result = await setAppSetting(`cms_${section}`, { content, updatedAt: new Date().toISOString() });
+    setFeedback(result.success ? "Saved" : result.error || "Failed to save");
     setSaving(false);
   };
 
@@ -56,9 +38,7 @@ export default function CMSPage() {
               key={s}
               onClick={() => setSection(s)}
               className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-colors whitespace-nowrap ${
-                section === s
-                  ? "bg-emerald-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-white"
+                section === s ? "bg-emerald-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
               }`}
             >
               {LABELS[s]}
@@ -77,9 +57,7 @@ export default function CMSPage() {
           />
         </div>
 
-        {feedback && (
-          <p className={`text-sm ${feedback === "Saved" ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>
-        )}
+        {feedback && <p className={`text-sm ${feedback === "Saved" ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
 
         <button
           onClick={save}

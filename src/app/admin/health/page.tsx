@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getSystemHealth } from "@/app/actions/admin";
 
 interface HealthCheck {
   label: string;
@@ -21,20 +22,15 @@ export default function HealthPage() {
 
   const check = () => {
     setLoading(true);
-    fetch("/api/admin/health", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setHealth)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    getSystemHealth().then(setHealth).catch(() => {}).finally(() => setLoading(false));
   };
 
   useEffect(() => { check(); }, []);
 
-  const statusColor = (s: string) =>
-    s === "green" ? "text-emerald-400" : s === "yellow" ? "text-amber-400" : "text-red-400";
-
   const statusBg = (s: string) =>
-    s === "green" ? "bg-emerald-500/10 border-emerald-800/30" : s === "yellow" ? "bg-amber-500/10 border-amber-800/30" : "bg-red-500/10 border-red-800/30";
+    s === "green" ? "bg-emerald-500/10 border-emerald-800/30"
+    : s === "yellow" ? "bg-amber-500/10 border-amber-800/30"
+    : "bg-red-500/10 border-red-800/30";
 
   return (
     <div>
@@ -57,7 +53,7 @@ export default function HealthPage() {
           <div className={`rounded-2xl p-6 border ${statusBg(health.status)}`}>
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-3 h-3 rounded-full ${health.status === "green" ? "bg-emerald-400" : health.status === "yellow" ? "bg-amber-400" : "bg-red-400"}`} />
-              <span className={`text-lg font-bold ${statusColor(health.status)}`}>
+              <span className={`text-lg font-bold ${health.status === "green" ? "text-emerald-400" : health.status === "yellow" ? "text-amber-400" : "text-red-400"}`}>
                 {health.status.toUpperCase()}
               </span>
             </div>

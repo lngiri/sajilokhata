@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAdminStats } from "@/app/actions/admin";
 
 interface Stats {
   totalMerchants: number;
@@ -14,11 +15,7 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     setName(localStorage.getItem("admin_name") || "Admin");
-
-    fetch("/api/admin/stats", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setStats)
-      .catch(() => {});
+    getAdminStats().then(setStats).catch(() => {});
   }, []);
 
   const cards = [

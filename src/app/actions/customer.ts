@@ -4,6 +4,34 @@ import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 
+/**
+ * Lookup a customer by phone number.
+ * Returns the existing record if found, or null if the number is available.
+ * Used by the Smart Customer Onboarding flow.
+ */
+export async function checkCustomerByPhone(
+  phone: string
+): Promise<{ exists: boolean; customer?: { id: string; name: string | null; phone: string } }> {
+  try {
+    const admin = getAdminClient();
+    if (!admin) return { exists: false };
+
+    const normalized = normalizePhone(phone);
+    const { data } = await (admin.from("customers") as any)
+      .select("id, name, phone")
+      .eq("phone", normalized)
+      .maybeSingle();
+
+    if (data) {
+      return { exists: true, customer: { id: data.id, name: data.name, phone: data.phone } };
+    }
+    return { exists: false };
+  } catch (err) {
+    console.warn("[Customer] checkCustomerByPhone error:", err);
+    return { exists: false };
+  }
+}
+
 export async function checkCustomerOnboarded(
   phone: string
 ): Promise<{ onboarded: boolean }> {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { getAdminMerchants, toggleMerchantStatus } from "@/app/actions/admin";
 
 interface Merchant {
   id: string;
@@ -18,38 +19,25 @@ export default function UsersPage() {
   const [search, setSearch] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
 
-  const fetchMerchants = useCallback(async (q: string) => {
+  const load = useCallback(async (q: string) => {
     setLoading(true);
-    try {
-      const params = q ? `?search=${encodeURIComponent(q)}` : "";
-      const res = await fetch(`/api/admin/users${params}`, { cache: "no-store" });
-      const data = await res.json();
-      setMerchants(data);
-    } catch {}
+    const data = await getAdminMerchants(q || undefined);
+    setMerchants(data);
     setLoading(false);
   }, []);
 
-  useEffect(() => { fetchMerchants(""); }, [fetchMerchants]);
+  useEffect(() => { load(""); }, [load]);
 
-  const toggleStatus = async (merchant: Merchant) => {
+  const handleToggle = async (merchant: Merchant) => {
     setToggling(merchant.id);
-    try {
-      const res = await fetch("/api/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ merchantId: merchant.id, status: merchant.status }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMerchants((prev) =>
-          prev.map((m) => (m.id === merchant.id ? { ...m, status: data.newStatus } : m))
-        );
-      }
-    } catch {}
+    const result = await toggleMerchantStatus(merchant.id, merchant.status);
+    if (result.success && result.newStatus) {
+      setMerchants((prev) =>
+        prev.map((m) => (m.id === merchant.id ? { ...m, status: result.newStatus! } : m))
+      );
+    }
     setToggling(null);
   };
-
-  const handleSearch = () => fetchMerchants(search);
 
   return (
     <div>
@@ -62,13 +50,10 @@ export default function UsersPage() {
           placeholder="Search by name, shop, or phone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+          onKeyDown={(e) => e.key === "Enter" && load(search)}
           className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-xl border border-gray-800 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
         />
-        <button
-          onClick={handleSearch}
-          className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm transition-colors"
-        >
+        <button onClick={() => load(search)} className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm transition-colors">
           Search
         </button>
       </div>
@@ -97,7 +82,7 @@ export default function UsersPage() {
                 <p className="text-xs text-gray-400 mt-0.5">{m.phone} &middot; {m.transactionCount} txns</p>
               </div>
               <button
-                onClick={() => toggleStatus(m)}
+                onClick={() => handleToggle(m)}
                 disabled={toggling === m.id}
                 className={`shrink-0 px-3 py-1.5 text-xs rounded-lg font-medium transition-colors disabled:opacity-50 ${
                   m.status === "suspended"

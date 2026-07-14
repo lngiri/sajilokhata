@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAdminDisputes, resolveDispute } from "@/app/actions/admin";
 
 interface Dispute {
   id: string;
@@ -19,26 +20,18 @@ export default function DisputesPage() {
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
 
-  const fetchDisputes = () => {
-    fetch("/api/admin/disputes", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setDisputes)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+  const load = () => {
+    getAdminDisputes().then(setDisputes).catch(() => {}).finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchDisputes(); }, []);
+  useEffect(() => { load(); }, []);
 
-  const resolve = async (logId: string) => {
+  const handleResolve = async (logId: string) => {
     setResolving(logId);
-    try {
-      await fetch("/api/admin/disputes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ logId }),
-      });
+    const result = await resolveDispute(logId);
+    if (result.success) {
       setDisputes((prev) => prev.filter((d) => d.id !== logId));
-    } catch {}
+    }
     setResolving(null);
   };
 
@@ -49,7 +42,7 @@ export default function DisputesPage() {
           <h1 className="text-xl font-bold text-white mb-1">Dispute Resolution</h1>
           <p className="text-sm text-gray-400">Review and resolve transaction disputes</p>
         </div>
-        <button onClick={fetchDisputes} className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={load} className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">
           Refresh
         </button>
       </div>
@@ -80,14 +73,12 @@ export default function DisputesPage() {
                   <p className="text-xs text-gray-400 mb-2">
                     vs {d.customerName} &middot; NPR {d.amount.toLocaleString()}
                   </p>
-                  {d.description && (
-                    <p className="text-xs text-gray-500 mb-1">{d.description}</p>
-                  )}
+                  {d.description && <p className="text-xs text-gray-500 mb-1">{d.description}</p>}
                   <p className="text-xs text-red-400/80"><strong>Reason:</strong> {d.reason}</p>
                   <p className="text-[10px] text-gray-600 mt-1">{new Date(d.createdAt).toLocaleString()}</p>
                 </div>
                 <button
-                  onClick={() => resolve(d.id)}
+                  onClick={() => handleResolve(d.id)}
                   disabled={resolving === d.id}
                   className="shrink-0 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
                 >

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getAdminAlerts } from "@/app/actions/admin";
 
 interface Alert {
   id: string;
@@ -16,19 +17,13 @@ export default function AlertsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/alerts", { cache: "no-store" })
-      .then((r) => r.json())
-      .then(setAlerts)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    getAdminAlerts().then(setAlerts).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
   const severityClass = (s: string) =>
-    s === "high"
-      ? "bg-red-500/10 text-red-400 border-red-800/30"
-      : s === "medium"
-      ? "bg-amber-500/10 text-amber-400 border-amber-800/30"
-      : "bg-blue-500/10 text-blue-400 border-blue-800/30";
+    s === "high" ? "bg-red-500/10 text-red-400 border-red-800/30"
+    : s === "medium" ? "bg-amber-500/10 text-amber-400 border-amber-800/30"
+    : "bg-blue-500/10 text-blue-400 border-blue-800/30";
 
   return (
     <div>
