@@ -36,7 +36,6 @@ export default function SessionsPage() {
   const handleForceLogout = async (id: string) => {
     setActionLoading(id);
     await forceMerchantLogout(id);
-    // Refresh results
     const data = await searchMerchantSession(query);
     setResults(data);
     setActionLoading(null);
@@ -52,38 +51,38 @@ export default function SessionsPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-white mb-1">Session Monitor</h1>
-        <p className="text-sm text-gray-400">Search merchants and manage active sessions</p>
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-slate-50 tracking-tight mb-1">Session Monitor</h1>
+        <p className="text-sm text-slate-400">Search merchants and manage active sessions</p>
       </div>
 
       {/* Search */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-3 mb-6">
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") search(); }}
           placeholder="Search by phone, name, or business name..."
-          className="flex-1 px-4 py-2.5 bg-gray-800 text-white rounded-xl border border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+          className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-200 rounded-xl border border-slate-700 focus:ring-2 focus:ring-red-500/40 outline-none text-sm placeholder-slate-500"
         />
         <button
           onClick={search}
           disabled={loading || !query.trim()}
-          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+          className="px-5 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition-colors"
         >
           {loading ? (
-            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
           ) : "Search"}
         </button>
       </div>
 
       {/* Results */}
       {searched && (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {results.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p className="text-sm">No merchants found matching &quot;{query}&quot;</p>
+            <div className="text-center py-12 text-slate-500">
+              <p className="text-sm font-medium">No merchants found matching &quot;{query}&quot;</p>
             </div>
           ) : (
             results.map((m) => {
@@ -91,36 +90,36 @@ export default function SessionsPage() {
               return (
                 <div
                   key={m.id}
-                  className={`rounded-xl border p-4 ${
+                  className={`rounded-xl border shadow-lg p-5 ${
                     isForceLoggedOut
                       ? "border-red-800/30 bg-red-900/10"
-                      : "border-gray-800 bg-gray-900/50"
+                      : "border-slate-700 bg-slate-800/50"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-white truncate">
+                        <h3 className="text-sm font-semibold text-slate-200 truncate">
                           {m.businessName || m.name || "Unnamed"}
                         </h3>
                         {isForceLoggedOut && (
-                          <span className="text-[10px] font-medium text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">
+                          <span className="text-[10px] font-semibold text-red-400 bg-red-500/10 px-1.5 py-0.5 rounded">
                             FORCE LOGOUT
                           </span>
                         )}
                       </div>
                       {m.name && m.businessName && (
-                        <p className="text-xs text-gray-500">{m.name}</p>
+                        <p className="text-xs text-slate-500">{m.name}</p>
                       )}
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
                         <span className="font-mono">{m.phone}</span>
-                        <span>•</span>
+                        <span>&bull;</span>
                         <span className={m.status === "suspended" ? "text-red-400" : "text-emerald-400"}>
                           {m.status}
                         </span>
                         {m.lastActive && (
                           <>
-                            <span>•</span>
+                            <span>&bull;</span>
                             <span>Last active: {new Date(m.lastActive).toLocaleDateString()}</span>
                           </>
                         )}
@@ -137,7 +136,7 @@ export default function SessionsPage() {
                         <button
                           onClick={() => handleClear(m.id)}
                           disabled={actionLoading === m.id}
-                          className="px-3 py-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                          className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg transition-colors"
                         >
                           {actionLoading === m.id ? (
                             <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -147,7 +146,7 @@ export default function SessionsPage() {
                         <button
                           onClick={() => handleForceLogout(m.id)}
                           disabled={actionLoading === m.id}
-                          className="px-3 py-1.5 text-xs font-medium bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                          className="px-4 py-2 text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-lg transition-colors"
                         >
                           {actionLoading === m.id ? (
                             <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />

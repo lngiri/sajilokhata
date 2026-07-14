@@ -34,41 +34,41 @@ export default function HealthPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-xl font-bold text-white mb-1">System Health</h1>
-          <p className="text-sm text-gray-400">Monitor application status</p>
+          <h1 className="text-2xl font-bold text-slate-50 tracking-tight mb-1">System Health</h1>
+          <p className="text-sm text-slate-400">Monitor application status</p>
         </div>
-        <button onClick={check} className="text-xs text-gray-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors">
+        <button onClick={check} className="text-xs text-slate-400 hover:text-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors">
           Re-check
         </button>
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-6 h-6 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : health ? (
-        <div className="space-y-4">
-          <div className={`rounded-2xl p-6 border ${statusBg(health.status)}`}>
+        <div className="space-y-6">
+          <div className={`rounded-xl shadow-lg p-6 border ${statusBg(health.status)}`}>
             <div className="flex items-center gap-3 mb-2">
               <div className={`w-3 h-3 rounded-full ${health.status === "green" ? "bg-emerald-400" : health.status === "yellow" ? "bg-amber-400" : "bg-red-400"}`} />
               <span className={`text-lg font-bold ${health.status === "green" ? "text-emerald-400" : health.status === "yellow" ? "text-amber-400" : "text-red-400"}`}>
                 {health.status.toUpperCase()}
               </span>
             </div>
-            <p className="text-sm text-gray-300">{health.message}</p>
-            <p className="text-[10px] text-gray-600 mt-1">Last check: {new Date(health.lastCheck).toLocaleString()}</p>
+            <p className="text-sm text-slate-300">{health.message}</p>
+            <p className="text-[10px] text-slate-600 mt-2">Last check: {new Date(health.lastCheck).toLocaleString()}</p>
           </div>
 
           <div className="space-y-2">
             {health.checks.map((c, i) => (
-              <div key={i} className="flex items-center justify-between rounded-xl border border-gray-800 bg-gray-900/50 p-3">
+              <div key={i} className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg p-4">
                 <div>
-                  <span className="text-sm text-gray-300">{c.label}</span>
-                  {c.detail && <p className="text-xs text-gray-500 mt-0.5">{c.detail}</p>}
+                  <span className="text-sm font-medium text-slate-200">{c.label}</span>
+                  {c.detail && <p className="text-xs text-slate-500 mt-0.5">{c.detail}</p>}
                 </div>
-                <span className={`text-xs font-medium ${c.ok ? "text-emerald-400" : "text-red-400"}`}>
+                <span className={`text-xs font-semibold ${c.ok ? "text-emerald-400" : "text-red-400"}`}>
                   {c.ok ? "PASS" : "FAIL"}
                 </span>
               </div>
@@ -76,8 +76,8 @@ export default function HealthPage() {
           </div>
         </div>
       ) : (
-        <div className="text-center py-12 text-gray-500">
-          <p className="text-sm">Could not fetch health data</p>
+        <div className="text-center py-16 text-slate-500">
+          <p className="text-sm font-medium">Could not fetch health data</p>
         </div>
       )}
     </div>

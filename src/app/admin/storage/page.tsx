@@ -58,74 +58,74 @@ export default function StoragePage() {
   };
 
   const SortIcon = ({ col }: { col: typeof sortKey }) => (
-    <span className="inline-block ml-1 text-gray-600">
-      {sortKey === col ? (sortDir === "desc" ? "▼" : "▲") : "▽"}
+    <span className="inline-block ml-1.5 text-slate-600">
+      {sortKey === col ? (sortDir === "desc" ? "\u25BC" : "\u25B2") : "\u25BD"}
     </span>
   );
 
   return (
     <div>
-      <h1 className="text-xl font-bold text-white mb-1">Storage &amp; Usage</h1>
-      <p className="text-sm text-gray-400 mb-6">
+      <h1 className="text-2xl font-bold text-slate-50 tracking-tight mb-1">Storage &amp; Usage</h1>
+      <p className="text-sm text-slate-400 mb-8">
         Database row estimates per merchant
       </p>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <p className="text-2xl font-bold text-emerald-400">{totalTx.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Total Transactions</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+        <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6">
+          <p className="text-4xl font-bold tracking-tight text-emerald-400">{totalTx.toLocaleString()}</p>
+          <p className="text-sm text-slate-400 mt-2">Total Transactions</p>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <p className="text-2xl font-bold text-blue-400">{totalCust.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Total Customers</p>
+        <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6">
+          <p className="text-4xl font-bold tracking-tight text-blue-400">{totalCust.toLocaleString()}</p>
+          <p className="text-sm text-slate-400 mt-2">Total Customers</p>
         </div>
-        <div className="rounded-xl border border-gray-800 bg-gray-900/50 p-4">
-          <p className="text-2xl font-bold text-amber-400">{totalRows.toLocaleString()}</p>
-          <p className="text-xs text-gray-400 mt-1">Estimated Total Rows</p>
+        <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6">
+          <p className="text-4xl font-bold tracking-tight text-amber-400">{totalRows.toLocaleString()}</p>
+          <p className="text-sm text-slate-400 mt-2">Estimated Total Rows</p>
         </div>
       </div>
 
       {/* Search */}
-      <div className="flex gap-2 mb-4">
+      <div className="mb-4">
         <input
           type="text"
           placeholder="Search by name, shop, or phone..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 px-4 py-2.5 bg-gray-900 text-white rounded-xl border border-gray-800 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+          className="w-full px-4 py-2.5 bg-slate-800 text-slate-200 rounded-xl border border-slate-700 focus:ring-2 focus:ring-red-500/40 outline-none text-sm placeholder-slate-500"
         />
       </div>
 
       {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-6 h-6 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+        <div className="flex justify-center py-16">
+          <div className="w-6 h-6 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-500">
-          <p className="text-sm">No data found</p>
+        <div className="text-center py-16 text-slate-500">
+          <p className="text-sm font-medium">No data found</p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-800">
+        <div className="overflow-x-auto rounded-xl border border-slate-700 shadow-lg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 bg-gray-900">
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Business</th>
-                <th className="text-left px-4 py-3 text-gray-400 font-medium">Phone</th>
+              <tr className="border-b border-slate-700 bg-slate-800">
+                <th className="text-left px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">Business</th>
+                <th className="text-left px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider">Phone</th>
                 <th
-                  className="text-right px-4 py-3 text-gray-400 font-medium cursor-pointer hover:text-white"
+                  className="text-right px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200"
                   onClick={() => toggleSort("transactionCount")}
                 >
                   Txns <SortIcon col="transactionCount" />
                 </th>
                 <th
-                  className="text-right px-4 py-3 text-gray-400 font-medium cursor-pointer hover:text-white"
+                  className="text-right px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200"
                   onClick={() => toggleSort("customerCount")}
                 >
                   Customers <SortIcon col="customerCount" />
                 </th>
                 <th
-                  className="text-right px-4 py-3 text-gray-400 font-medium cursor-pointer hover:text-white"
+                  className="text-right px-5 py-3.5 text-xs font-medium text-slate-400 uppercase tracking-wider cursor-pointer hover:text-slate-200"
                   onClick={() => toggleSort("estimatedRows")}
                 >
                   Est. Rows <SortIcon col="estimatedRows" />
@@ -134,14 +134,14 @@ export default function StoragePage() {
             </thead>
             <tbody>
               {filtered.map((m) => (
-                <tr key={m.id} className="border-b border-gray-800/50 hover:bg-gray-900/30">
-                  <td className="px-4 py-3 text-white">
-                    <span className="font-medium">{m.businessName || m.name || "Unnamed"}</span>
+                <tr key={m.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                  <td className="px-5 py-3.5 text-sm font-medium text-slate-200">
+                    {m.businessName || m.name || "Unnamed"}
                   </td>
-                  <td className="px-4 py-3 text-gray-400 font-mono text-xs">{m.phone}</td>
-                  <td className="px-4 py-3 text-right text-gray-300">{m.transactionCount.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right text-gray-300">{m.customerCount.toLocaleString()}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-5 py-3.5 text-sm text-slate-500 font-mono">{m.phone}</td>
+                  <td className="px-5 py-3.5 text-right text-slate-300">{m.transactionCount.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-right text-slate-300">{m.customerCount.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-right">
                     <span className="font-semibold text-amber-400">{m.estimatedRows.toLocaleString()}</span>
                   </td>
                 </tr>
