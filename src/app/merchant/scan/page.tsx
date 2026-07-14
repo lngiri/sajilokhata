@@ -14,6 +14,7 @@ import {
   getMerchantCustomers,
   getMerchantCustomerBalance,
 } from "@/lib/actions";
+import { sendTransactionNotification } from "@/app/actions/sms";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl } from "@/lib/phone";
 import { getMerchantRecentDescriptions } from "@/lib/actions";
@@ -274,16 +275,12 @@ export default function MerchantScanPage() {
 
       // Fire-and-forget SMS notification
       if (customerPhone && mId) {
-        fetch("/api/sms/send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            to: customerPhone,
-            merchantId: mId,
-            amount: Number(amount),
-            type: entryType,
-            customerName,
-          }),
+        sendTransactionNotification({
+          to: customerPhone,
+          merchantId: mId,
+          amount: Number(amount),
+          type: entryType,
+          customerName,
         }).catch(() => {});
       }
     } catch (err) {

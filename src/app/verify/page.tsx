@@ -11,6 +11,7 @@ import {
   checkOtpRateLimit,
 } from "@/lib/actions";
 import { createClient } from "@/lib/supabase/client";
+import { sendTransactionSMS } from "@/app/actions/sms";
 
 type Step = "loading" | "invalid" | "phone" | "otp" | "action" | "done";
 
@@ -78,10 +79,22 @@ export default function VerifyPage() {
       return;
     }
     setMessage("");
+
     const code = String(Math.floor(100000 + Math.random() * 900000));
     setGeneratedOtp(code);
+
+    const shopName = log?.merchants?.name || "Shop";
+    const smsText = `Your OTP for transaction verification at ${shopName} is: ${code}. Do not share this code.`;
+
+    const result = await sendTransactionSMS(phone, smsText);
+
+    if (!result.success) {
+      setMessage("Failed to send OTP. Please try again.");
+      return;
+    }
+
     setStep("otp");
-    setMessage(`OTP ${code} sent to your phone`);
+    setMessage("OTP sent to your phone");
   };
 
   const handleVerifyOtp = async () => {
