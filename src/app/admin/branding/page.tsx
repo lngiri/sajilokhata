@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { useDropzone } from "react-dropzone";
 import { getAppSetting, setAppSetting } from "@/app/actions/admin";
 
 export default function BrandingPage() {
@@ -8,6 +9,7 @@ export default function BrandingPage() {
   const [primaryColor, setPrimaryColor] = useState("#DC2626");
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     getAppSetting("branding").then((val) => {
@@ -17,6 +19,38 @@ export default function BrandingPage() {
       }
     }).catch(() => {});
   }, []);
+
+  const onDrop = useCallback(async (accepted: File[]) => {
+    const file = accepted[0];
+    if (!file) return;
+
+    setUploading(true);
+    setFeedback("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.url) {
+        setLogo(data.url);
+        setFeedback("Logo uploaded successfully");
+      } else {
+        setFeedback(data.error || "Upload failed");
+      }
+    } catch {
+      setFeedback("Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp", ".svg"] },
+    maxFiles: 1,
+    maxSize: 2 * 1024 * 1024,
+  });
 
   const save = async () => {
     setSaving(true);
@@ -34,23 +68,41 @@ export default function BrandingPage() {
       <p className="text-sm text-slate-400 mb-8">Customize the app appearance</p>
 
       <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 space-y-6">
+        {/* Logo dropzone */}
         <div>
-          <label className="text-sm font-medium text-slate-300">Logo URL</label>
-          <input
-            type="text"
-            value={logo}
-            onChange={(e) => setLogo(e.target.value)}
-            placeholder="https://example.com/logo.png"
-            className="w-full mt-1.5 px-4 py-2.5 bg-slate-900 text-slate-200 rounded-xl border border-slate-700 focus:ring-2 focus:ring-red-500/40 outline-none text-sm placeholder-slate-500"
-          />
-          {logo && (
-            <div className="mt-3 flex items-center gap-3 p-3 bg-slate-900 rounded-xl">
-              <img src={logo} alt="Preview" className="w-10 h-10 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }} />
-              <span className="text-xs text-slate-500 truncate">{logo}</span>
-            </div>
-          )}
+          <label className="text-sm font-medium text-slate-300">Logo</label>
+          <div
+            {...getRootProps()}
+            className={`mt-1.5 border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              isDragActive
+                ? "border-red-500 bg-red-500/5"
+                : "border-slate-700 hover:border-slate-600 bg-slate-900"
+            }`}
+          >
+            <input {...getInputProps()} />
+            {uploading ? (
+              <div className="flex flex-col items-center gap-2">
+                <div className="w-6 h-6 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                <p className="text-xs text-slate-400">Uploading...</p>
+              </div>
+            ) : logo ? (
+              <div className="flex flex-col items-center gap-3">
+                <img src={logo} alt="Logo preview" className="h-16 object-contain rounded-lg" />
+                <p className="text-xs text-slate-500">Drag &amp; drop or click to replace</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <svg className="w-10 h-10 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                </svg>
+                <p className="text-sm text-slate-400">Drop a logo here, or click to browse</p>
+                <p className="text-xs text-slate-600">PNG, JPG, WebP or SVG &middot; max 2MB</p>
+              </div>
+            )}
+          </div>
         </div>
 
+        {/* Color picker */}
         <div>
           <label className="text-sm font-medium text-slate-300">Primary Color</label>
           <div className="flex items-center gap-3 mt-1.5">
@@ -60,7 +112,7 @@ export default function BrandingPage() {
           </div>
         </div>
 
-        {feedback && <p className={`text-sm font-medium ${feedback === "Branding saved" ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
+        {feedback && <p className={`text-sm font-medium ${feedback === "Branding saved" || feedback === "Logo uploaded successfully" || feedback === "Saved" ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
 
         <button
           onClick={save}

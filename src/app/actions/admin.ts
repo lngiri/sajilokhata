@@ -272,9 +272,126 @@ export async function resolveDispute(logId: string): Promise<{ success: boolean;
 }
 
 // ──────────────────────────────────────────────
-// User Directory
+// User Directory — unified (merchants + customers)
 // ──────────────────────────────────────────────
 
+export interface DirectoryUser {
+  id: string;
+  name: string;
+  phone: string;
+  role: "merchant" | "customer" | "both";
+  businessName: string;
+  status: string;
+  transactionCount: number;
+  createdAt: string;
+}
+
+export async function getAdminUserDirectory(search?: string): Promise<DirectoryUser[]> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return [];
+
+    const [mRes, cRes] = await Promise.all([
+      (admin.from("merchants") as any)
+        .select("id, name, business_name, phone, created_at, status")
+        .limit(500)
+        .order("created_at", { ascending: false }),
+      (admin.from("customers") as any)
+        .select("id, name, phone, created_at")
+        .limit(500)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    const merchants = mRes?.data || mRes || [];
+    const customers = cRes?.data || cRes || [];
+
+    const merchantPhones = new Set<string>();
+    const merchantMap = new Map<string, any>();
+    for (const m of merchants) {
+      merchantPhones.add(m.phone);
+      merchantMap.set(m.id, m);
+    }
+
+    const customerPhones = new Set<string>();
+    const customerMap = new Map<string, any>();
+    for (const c of customers) {
+      customerPhones.add(c.phone);
+      customerMap.set(c.id, c);
+    }
+
+    const combined = new Map<string, DirectoryUser>();
+
+    for (const m of merchants) {
+      const txCount = merchantMap.size > 0 ? 0 : 0;
+      combined.set(m.id, {
+        id: m.id,
+        name: m.name || m.business_name || "",
+        phone: m.phone || "",
+        role: customerPhones.has(m.phone) ? "both" : "merchant",
+        businessName: m.business_name || "",
+        status: m.status || "active",
+        transactionCount: 0,
+        createdAt: m.created_at,
+      });
+    }
+
+    for (const c of customers) {
+      if (!combined.has(c.id)) {
+        combined.set(c.id, {
+          id: c.id,
+          name: c.name || "",
+          phone: c.phone || "",
+          role: merchantPhones.has(c.phone) ? "both" : "customer",
+          businessName: "",
+          status: "active",
+          transactionCount: 0,
+          createdAt: c.created_at,
+        });
+      } else {
+        const existing = combined.get(c.id)!;
+        existing.role = "both";
+      }
+    }
+
+    let results = Array.from(combined.values());
+
+    // Add tx counts for merchants
+    const merchantIds = merchants.map((m: any) => m.id);
+    if (merchantIds.length > 0) {
+      const { data: txCounts } = await (admin.from("credit_logs") as any)
+        .select("merchant_id, id")
+        .in("merchant_id", merchantIds);
+
+      if (txCounts) {
+        const countMap: Record<string, number> = {};
+        for (const tx of txCounts) {
+          countMap[tx.merchant_id] = (countMap[tx.merchant_id] || 0) + 1;
+        }
+        results = results.map((u) => ({
+          ...u,
+          transactionCount: countMap[u.id] || 0,
+        }));
+      }
+    }
+
+    if (search) {
+      const q = search.toLowerCase();
+      results = results.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) ||
+          u.phone.includes(q) ||
+          u.businessName.toLowerCase().includes(q)
+      );
+    }
+
+    return results;
+  } catch {
+    return [];
+  }
+}
+
+// Legacy — merchants only (used by dashboard)
 export async function getAdminMerchants(search?: string): Promise<
   { id: string; name: string; businessName: string; phone: string; status: string; transactionCount: number; createdAt: string }[]
 > {
@@ -339,6 +456,60 @@ export async function toggleMerchantStatus(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, error: msg };
+  }
+}
+
+// ──────────────────────────────────────────────
+// Merchant Detail
+// ──────────────────────────────────────────────
+
+export async function getAdminMerchantDetail(merchantId: string): Promise<{
+  id: string;
+  name: string;
+  businessName: string;
+  phone: string;
+  status: string;
+  businessType: string;
+  address: string;
+  createdAt: string;
+  transactionCount: number;
+  customerCount: number;
+} | null> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return null;
+
+    const { data: m } = await (admin.from("merchants") as any)
+      .select("id, name, business_name, phone, status, business_type, address, created_at")
+      .eq("id", merchantId)
+      .maybeSingle();
+
+    if (!m) return null;
+
+    const [{ count: txCount }, { count: custCount }] = await Promise.all([
+      (admin.from("credit_logs") as any)
+        .select("id", { count: "exact", head: true })
+        .eq("merchant_id", m.id),
+      (admin.from("merchant_customers") as any)
+        .select("id", { count: "exact", head: true })
+        .eq("merchant_id", m.id),
+    ]);
+
+    return {
+      id: m.id,
+      name: m.name || "",
+      businessName: m.business_name || "",
+      phone: m.phone || "",
+      status: m.status || "active",
+      businessType: m.business_type || "",
+      address: m.address || "",
+      createdAt: m.created_at,
+      transactionCount: txCount ?? 0,
+      customerCount: custCount ?? 0,
+    };
+  } catch {
+    return null;
   }
 }
 

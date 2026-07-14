@@ -70,18 +70,26 @@ export default function AdminDashboard() {
 
       {/* ── Metrics row: 4 large cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cards.map((card) => (
-          <div
-            key={card.label}
-            className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 transition-all hover:border-slate-600"
-          >
-            <div className={`text-5xl font-bold tracking-tight ${card.accent}`}>
-              {card.value}
-            </div>
-            <div className="text-sm font-medium text-slate-400 mt-2">{card.label}</div>
-            <div className="text-xs text-slate-500 mt-0.5">{card.sub}</div>
-          </div>
-        ))}
+        {cards.map((card) => {
+          const href =
+            card.label === "Merchants" ? "/admin/users?role=merchant" :
+            card.label === "End Customers" ? "/admin/users?role=customer" :
+            card.label === "Transactions" ? "/admin/users" :
+            card.label === "Disputes" ? "/admin/disputes" : "/admin/users";
+          return (
+            <a
+              key={card.label}
+              href={href}
+              className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 transition-all hover:border-slate-600 hover:bg-slate-700/50 block"
+            >
+              <div className={`text-5xl font-bold tracking-tight ${card.accent}`}>
+                {card.value}
+              </div>
+              <div className="text-sm font-medium text-slate-400 mt-2">{card.label}</div>
+              <div className="text-xs text-slate-500 mt-0.5">{card.sub}</div>
+            </a>
+          );
+        })}
       </div>
 
       {/* ── 3-column grid: merchants + quick actions ── */}
