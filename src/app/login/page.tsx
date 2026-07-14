@@ -5,9 +5,6 @@ import { createClient } from "@/lib/supabase/client";
 
 type Step = "phone" | "otp";
 
-/** Bypass codes that skip real Supabase OTP verification during testing */
-const BYPASS_CODES = ["123456", "000000"];
-
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -39,83 +36,12 @@ export default function LoginPage() {
     }
   };
 
-  const signInWithPhoneAndPassword = async (password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      phone: `+977${phone}`,
-      password,
-    });
-
-    if (error) throw error;
-    return data;
-  };
-
   const handleOtpSubmit = async () => {
     if (otp.length < 4) return;
     setLoading(true);
     setError("");
 
     try {
-      // === BYPASS CODES for testing (pre-revenue phase) ===
-      if (BYPASS_CODES.includes(otp)) {
-        console.info("🔓 Bypass code entered — attempting auto-authentication");
-
-        // 1. Try to create/get a real Supabase auth user via admin API
-        const res = await fetch("/api/auth/bypass", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ phone: `+977${phone}` }),
-        });
-
-        const bypassResult = await res.json();
-
-        if (res.ok && bypassResult.password) {
-          // Admin API worked — sign in with phone + password to get a real session
-          await signInWithPhoneAndPassword(bypassResult.password);
-          const userId = bypassResult.user_id;
-          localStorage.setItem("merchant_id", userId);
-          window.location.href = "/merchant/dashboard";
-          return;
-        }
-
-        // 2. Fallback: no service_role key, use localStorage bypass
-        console.warn(
-          "⚠️ Admin API unavailable, using localStorage bypass. RLS policies will limit database access."
-        );
-
-        // Store the bypass info for the middleware (1-year expiry)
-        document.cookie = `auth_bypass=true; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
-        document.cookie = `auth_bypass_phone=${phone}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
-
-        const fallbackId =
-          bypassResult.bypass_id || `bypass-${phone}-${Date.now()}`;
-        localStorage.setItem("merchant_id", fallbackId);
-        // Create a minimal merchants row so FK constraints work
-        let status = "new";
-        try {
-          const setupRes = await fetch("/api/merchant/setup", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              merchant_id: fallbackId,
-              phone: `+977${phone}`,
-            }),
-          });
-          const setupData = await setupRes.json();
-          if (setupRes.ok && setupData.merchant_id) {
-            localStorage.setItem("merchant_id", setupData.merchant_id);
-            status = setupData.existed ? "existing" : "new";
-          } else {
-            // Show API error as alert for now
-            console.warn("Merchant setup failed:", setupData.error);
-          }
-        } catch {
-          // API not available — merchant can set up profile later
-        }
-        window.location.href = `/merchant/dashboard?status=${status}`;
-        return;
-      }
-
-      // === NORMAL OTP FLOW (real Supabase SMS) ===
       const { data, error } = await supabase.auth.verifyOtp({
         phone: `+977${phone}`,
         token: otp,
@@ -130,7 +56,6 @@ export default function LoginPage() {
 
       if (data.session) {
         localStorage.setItem("merchant_id", data.session.user.id);
-        // Create a minimal merchants row so FK constraints work
         let status = "new";
         try {
           const setupRes = await fetch("/api/merchant/setup", {
@@ -152,11 +77,7 @@ export default function LoginPage() {
         window.location.href = `/merchant/dashboard?status=${status}`;
       }
     } catch {
-      const fallbackId = crypto.randomUUID();
-      document.cookie = `auth_bypass=true; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
-      document.cookie = `auth_bypass_phone=${phone}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
-      localStorage.setItem("merchant_id", fallbackId);
-      window.location.href = "/merchant/dashboard";
+      setError("Verification failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -208,36 +129,6 @@ export default function LoginPage() {
             ) : (
               "Send OTP"
             )}
-          </button>
-
-          <button
-            onClick={async () => {
-              const id = crypto.randomUUID();
-              localStorage.setItem("merchant_id", id);
-              // Create a minimal merchants row so FK constraints work
-              let status = "new";
-              try {
-                const setupRes = await fetch("/api/merchant/setup", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({
-                    merchant_id: id,
-                    phone: `+977${phone}` || "",
-                  }),
-                });
-                const setupData = await setupRes.json();
-                if (setupRes.ok && setupData.merchant_id) {
-                  localStorage.setItem("merchant_id", setupData.merchant_id);
-                  status = setupData.existed ? "existing" : "new";
-                }
-              } catch {
-                // API not available — merchant can set up profile later
-              }
-              window.location.href = `/merchant/dashboard?status=${status}`;
-            }}
-            className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] active:text-[var(--color-primary)] transition-colors"
-          >
-            Skip for demo →
           </button>
         </div>
       ) : (

@@ -26,6 +26,7 @@ export default function VerifyPage() {
   const [disputeReason, setDisputeReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionDone, setActionDone] = useState<"approved" | "disputed" | "edit_requested" | null>(null);
+  const [generatedOtp, setGeneratedOtp] = useState("");
   const [creditCheck, setCreditCheck] = useState<{
     overLimit: boolean;
     remainingLimit: number;
@@ -77,8 +78,10 @@ export default function VerifyPage() {
       return;
     }
     setMessage("");
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setGeneratedOtp(code);
     setStep("otp");
-    setMessage("OTP 000000 sent to your phone (Dev mode)");
+    setMessage(`OTP ${code} sent to your phone`);
   };
 
   const handleVerifyOtp = async () => {
@@ -88,7 +91,7 @@ export default function VerifyPage() {
     }
     setMessage("");
 
-    if (otp !== "000000") {
+    if (otp !== generatedOtp) {
       setMessage("Invalid OTP. Please try again.");
       return;
     }
@@ -295,7 +298,7 @@ export default function VerifyPage() {
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="000000"
+                placeholder="6-digit code"
                 maxLength={6}
                 className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono tracking-widest"
               />
