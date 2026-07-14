@@ -388,6 +388,56 @@ export async function getMerchantStorageUsage(): Promise<
 }
 
 // ──────────────────────────────────────────────
+// Analytics
+// ──────────────────────────────────────────────
+
+export async function getMerchantAnalytics(): Promise<
+  { id: string; name: string; businessName: string; phone: string; transactionCount: number; customerCount: number; lastActiveDate: string | null }[]
+> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return [];
+
+    const { data: merchants } = await (admin.from("merchants") as any)
+      .select("id, name, business_name, phone")
+      .limit(200);
+
+    if (!merchants) return [];
+
+    return await Promise.all(
+      merchants.map(async (m: any) => {
+        const [{ count: txCount }, { count: custCount }, { data: lastTx }] = await Promise.all([
+          (admin.from("credit_logs") as any)
+            .select("id", { count: "exact", head: true })
+            .eq("merchant_id", m.id),
+          (admin.from("merchant_customers") as any)
+            .select("id", { count: "exact", head: true })
+            .eq("merchant_id", m.id),
+          (admin.from("credit_logs") as any)
+            .select("created_at")
+            .eq("merchant_id", m.id)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+        ]);
+        return {
+          id: m.id,
+          name: m.name || "",
+          businessName: m.business_name || "",
+          phone: m.phone || "",
+          transactionCount: txCount ?? 0,
+          customerCount: custCount ?? 0,
+          lastActiveDate: lastTx?.created_at ?? null,
+        };
+      })
+    );
+  } catch {
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────
 // System Health
 // ──────────────────────────────────────────────
 
