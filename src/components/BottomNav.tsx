@@ -103,7 +103,7 @@ export default function BottomNav() {
           .from("merchants")
           .select("id, name, business_type, business_name")
           .eq("id", id)
-          .single();
+          .maybeSingle();
         console.log("[BottomNav-QR] Lookup by ID:", id, "→ data:", data, "error:", error);
         if (data) {
           setMerchantProfile(data);
@@ -123,12 +123,19 @@ export default function BottomNav() {
           .maybeSingle();
         console.log("[BottomNav-QR] Lookup by phone:", phone, "→ data:", data, "error:", error);
         if (data) {
-          // Sync the resolved ID back to localStorage
           localStorage.setItem("merchant_id", data.id);
           setMerchantProfile(data);
           setQrLoading(false);
           return;
         }
+      }
+
+      // Try 3: If we have an ID but DB queries fail, create a minimal profile from localStorage
+      if (id) {
+        console.log("[BottomNav-QR] Using fallback profile from localStorage with id:", id);
+        setMerchantProfile({ id, name: "My Shop", business_type: "general", business_name: null });
+        setQrLoading(false);
+        return;
       }
 
       console.error("[BottomNav-QR] All lookups failed — no merchant profile found");

@@ -332,7 +332,6 @@ export async function createManualCreditLog(params: {
     description: params.description || null,
     status: isCash ? "approved" : "unverified",
     approved_at: isCash ? new Date().toISOString() : null,
-    sync_status: "online",
     attachment_url: params.attachment_url || null,
   });
 }

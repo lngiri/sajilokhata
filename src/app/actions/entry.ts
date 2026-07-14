@@ -2,26 +2,91 @@
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import { sendTransactionNotification } from "./sms";
+import { normalizePhone } from "@/lib/phone";
 
+// ──────────────────────────────────────────────
+// Helper: find or create a customer row (admin client bypasses RLS)
+// ──────────────────────────────────────────────
+async function findOrCreateCustomerAdmin(
+  phone: string,
+  name?: string | null
+): Promise<{ id: string; name: string | null }> {
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Admin client unavailable");
+
+  const normalized = normalizePhone(phone);
+
+  let { data: customer } = await (admin.from("customers") as any)
+    .select("id, name")
+    .eq("phone", normalized)
+    .maybeSingle();
+
+  if (!customer) {
+    const { data: inserted, error } = await (admin.from("customers") as any)
+      .insert({ phone: normalized, name: name || null })
+      .select("id, name")
+      .single();
+    if (error) {
+      console.error("[Entry] Customer insert error:", error);
+      throw new Error(`Failed to create customer: ${error.message}`);
+    }
+    customer = inserted;
+  }
+
+  return { id: customer.id, name: customer.name };
+}
+
+// ──────────────────────────────────────────────
+// Helper: link a customer to a merchant (admin client bypasses RLS)
+// ──────────────────────────────────────────────
+async function linkCustomerToMerchantAdmin(
+  merchantId: string,
+  customerId: string,
+  creditLimit = 5000
+): Promise<void> {
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Admin client unavailable");
+
+  const { data: existing } = await (admin.from("merchant_customers") as any)
+    .select("id")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  if (existing) return; // already linked
+
+  const { error } = await (admin.from("merchant_customers") as any)
+    .insert({ merchant_id: merchantId, customer_id: customerId, credit_limit: creditLimit });
+
+  if (error) {
+    console.error("[Entry] Link customer error:", error);
+    throw new Error(`Failed to link customer: ${error.message}`);
+  }
+}
+
+// ──────────────────────────────────────────────
+// Main entry point: save entry with optional customer creation
+// ──────────────────────────────────────────────
 export async function saveEntry(params: {
   merchant_id: string;
   customer_id?: string | null;
+  customer_phone?: string | null;
+  customer_name?: string | null;
   amount: number;
   type: "debit" | "credit" | "cash";
   description?: string | null;
   attachment_url?: string | null;
-  customerPhone?: string | null;
-  customerName?: string | null;
 }): Promise<{
   success: boolean;
   error?: string;
+  fullError?: any;
   entry?: {
     id: string;
     verification_token?: string | null;
     status: string;
   };
 }> {
-  console.log("[Entry] saveEntry called:", params);
+  console.log("[Entry] saveEntry called:", JSON.stringify(params));
 
   try {
     if (!params.merchant_id) {
@@ -35,46 +100,71 @@ export async function saveEntry(params: {
     }
 
     const isCash = params.type === "cash";
-
-    if (!isCash && !params.customer_id) {
-      return { success: false, error: "Customer is required for debit/credit transactions" };
-    }
-
     const admin = getAdminClient();
     if (!admin) {
       return { success: false, error: "Database connection unavailable" };
     }
 
+    // ── Step 1: Resolve customer ──
+    let resolvedCustomerId = params.customer_id || null;
+    let resolvedCustomerName = params.customer_name || null;
+
+    // If we have a phone but no customer_id yet, find or create
+    if (!resolvedCustomerId && params.customer_phone) {
+      try {
+        const cust = await findOrCreateCustomerAdmin(params.customer_phone, params.customer_name);
+        resolvedCustomerId = cust.id;
+        resolvedCustomerName = cust.name;
+        await linkCustomerToMerchantAdmin(params.merchant_id, cust.id);
+      } catch (custErr) {
+        const msg = custErr instanceof Error ? custErr.message : String(custErr);
+        console.error("[Entry] Customer creation/linking failed:", msg);
+        // For cash sales, proceed without customer
+        if (!isCash) {
+          return { success: false, error: `Customer error: ${msg}` };
+        }
+      }
+    }
+
+    // Non-cash must have a customer at this point
+    if (!isCash && !resolvedCustomerId) {
+      return { success: false, error: "Customer is required for debit/credit transactions" };
+    }
+
+    // ── Step 2: Insert credit_log entry ──
     const { data, error } = await (admin.from("credit_logs") as any)
       .insert({
         merchant_id: params.merchant_id,
-        customer_id: isCash ? null : params.customer_id,
+        customer_id: isCash ? null : resolvedCustomerId,
         amount: params.amount,
         type: params.type,
         description: params.description || null,
         status: isCash ? "approved" : "unverified",
         approved_at: isCash ? new Date().toISOString() : null,
-        sync_status: "online",
         attachment_url: params.attachment_url || null,
       })
       .select()
       .single();
 
     if (error) {
-      console.error("[Entry] DB insert error:", error);
-      return { success: false, error: `Database error: ${error.message}` };
+      console.error("[Entry] DB insert error — full payload:", JSON.stringify(error));
+      return {
+        success: false,
+        error: `Database error: ${error.message}`,
+        fullError: { code: error.code, message: error.message, details: error.details, hint: error.hint },
+      };
     }
 
-    console.log("[Entry] Entry saved:", data?.id, "status:", data?.status);
+    console.log("[Entry] Entry saved successfully:", data?.id, "status:", data?.status);
 
-    // Fire-and-forget SMS notification
-    if (params.customerPhone && params.merchant_id) {
+    // ── Step 3: Fire-and-forget SMS ──
+    if (params.customer_phone && params.merchant_id) {
       sendTransactionNotification({
-        to: params.customerPhone,
+        to: params.customer_phone,
         merchantId: params.merchant_id,
         amount: params.amount,
         type: params.type,
-        customerName: params.customerName,
+        customerName: resolvedCustomerName,
       }).catch((err) => console.warn("[Entry] SMS notify failed:", err));
     }
 
@@ -88,15 +178,15 @@ export async function saveEntry(params: {
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Entry] Unexpected error in saveEntry:", msg);
-    return { success: false, error: msg };
+    console.error("[Entry] Unexpected error in saveEntry:", msg, err);
+    return { success: false, error: msg, fullError: err };
   }
 }
 
 export async function updateEntryAttachment(
   entryId: string,
   attachmentUrl: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; fullError?: any }> {
   try {
     const admin = getAdminClient();
     if (!admin) {
@@ -108,14 +198,14 @@ export async function updateEntryAttachment(
       .eq("id", entryId);
 
     if (error) {
-      console.error("[Entry] Attachment update error:", error);
-      return { success: false, error: error.message };
+      console.error("[Entry] Attachment update error — full:", JSON.stringify(error));
+      return { success: false, error: error.message, fullError: error };
     }
 
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Entry] Unexpected error in updateEntryAttachment:", msg);
-    return { success: false, error: msg };
+    console.error("[Entry] Unexpected error in updateEntryAttachment:", msg, err);
+    return { success: false, error: msg, fullError: err };
   }
 }

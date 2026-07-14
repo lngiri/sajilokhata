@@ -8,8 +8,6 @@ import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { saveEntry } from "@/app/actions/entry";
 import {
-  findOrCreateCustomer,
-  linkCustomerToMerchant,
   createManualCreditLog,
   getMerchantCustomers,
   getMerchantCustomerBalance,
@@ -192,37 +190,16 @@ export default function MerchantScanPage() {
         setSaving(false);
         return;
       }
+      console.log("[Entry] handleConfirm — merchantId:", mId);
 
       const isCash = entryType === "cash";
-      let cId = customerId;
-      let cName = customerName;
-
-      if (isCash) {
-        // Cash sales: customer is optional (walk-in anonymous)
-        if (!cId && customerPhone) {
-          const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
-          cId = customer.id;
-          cName = customer.name || null;
-          setCustomerName(cName);
-          await linkCustomerToMerchant(mId, customer.id);
-        }
-      } else {
-        // For manual mode, customer is already selected by ID
-        if (isManual && cId) {
-          // Use existing customer ID from selection
-        } else {
-          // QR scan mode — find or create by phone
-          const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
-          cId = customer.id;
-          cName = customer.name || null;
-          setCustomerName(cName);
-          await linkCustomerToMerchant(mId, customer.id);
-        }
-      }
+      const cId = customerId; // may be null for cash or new customers
+      const cPhone = customerPhone || null;
+      const cName = customerName;
 
       if (isManual) {
         if (navigator.onLine) {
-          // Online: upload attachment FIRST, then save entry via server action
+          // Online: upload attachment FIRST, then save entry via unified server action
           let attachmentUrl: string | null = null;
 
           if (attachmentFile) {
@@ -243,16 +220,16 @@ export default function MerchantScanPage() {
           const result = await saveEntry({
             merchant_id: mId,
             customer_id: cId ?? null,
+            customer_phone: isCash ? cPhone : null,
+            customer_name: cName,
             amount: Number(amount),
             type: entryType,
             description: description || null,
             attachment_url: attachmentUrl,
-            customerPhone,
-            customerName,
           });
 
           if (!result.success) {
-            console.error("[Entry] saveEntry failed:", result.error);
+            console.error("[Entry] saveEntry failed:", result.error, "full:", result.fullError);
             throw new Error(result.error || "Failed to save entry");
           }
 
@@ -297,12 +274,12 @@ export default function MerchantScanPage() {
         // QR scan mode — use server action (always online)
         const result = await saveEntry({
           merchant_id: mId,
-          customer_id: cId!,
+          customer_id: null,
+          customer_phone: cPhone,
+          customer_name: cName,
           amount: Number(amount),
           description: description || null,
           type: entryType,
-          customerPhone,
-          customerName,
         });
 
         if (!result.success) {
