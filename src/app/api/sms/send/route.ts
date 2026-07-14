@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { sendTransactionSMS } from "@/lib/sms";
+import { sendTransactionNotification } from "@/app/actions/sms";
 
 export async function POST(request: Request) {
   try {
@@ -20,35 +19,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch merchant profile for shop name
-    const supabase = await createClient();
-    const { data: merchant } = await supabase
-      .from("merchants")
-      .select("name, business_name")
-      .eq("id", merchantId)
-      .single();
-
-    const shopName = merchant?.business_name || merchant?.name || "Shop";
-
-    // Build message template
-    const formattedAmount = `Rs. ${Number(amount).toLocaleString()}`;
-
-    let message: string;
-    if (type === "cash") {
-      message = `Thank you for shopping at ${shopName}! Cash payment received: ${formattedAmount}.`;
-    } else if (type === "debit") {
-      const greeting = customerName ? `Dear ${customerName}, ` : "";
-      message = `${greeting}${formattedAmount} has been added to your ledger at ${shopName}.`;
-    } else {
-      const greeting = customerName ? `Dear ${customerName}, ` : "";
-      message = `${greeting}${formattedAmount} has been credited to your account at ${shopName}.`;
-    }
-
-    const result = await sendTransactionSMS(to, message);
-
-    if (!result.success) {
-      console.warn("[SMS] Send failed:", result.error);
-    }
+    const result = await sendTransactionNotification({
+      to,
+      merchantId,
+      amount,
+      type,
+      customerName,
+    });
 
     return NextResponse.json(result);
   } catch (err) {
