@@ -8,10 +8,11 @@ export async function proxy(request: NextRequest) {
     request,
   });
 
-  // ── Auth check with timeout — fail open so the page renders even if DB is slow ──
+  // ── Auth checks — Supabase and custom-session are fully independent ──
   let user: any = null;
   let validUserId: string | null = null;
 
+  // 1. Supabase Auth (with timeout so slow startup doesn't block navigation)
   try {
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,7 +41,6 @@ export async function proxy(request: NextRequest) {
       }
     );
 
-    // Race auth against a 5-second timeout so slow Supabase doesn't block page load
     const authResult = await Promise.race([
       supabase.auth.getUser(),
       new Promise<"TIMEOUT">((_, reject) =>
@@ -51,15 +51,18 @@ export async function proxy(request: NextRequest) {
     if (authResult !== "TIMEOUT") {
       user = (authResult as any).data?.user;
     }
+  } catch (err) {
+    console.warn("[Proxy] Supabase auth check failed (continuing):", err);
+  }
 
-    // Check for custom session cookie
+  // 2. Custom session cookie — fully independent from Supabase above
+  try {
     const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
     if (rawSession) {
       validUserId = await verifySessionToken(rawSession);
     }
   } catch (err) {
-    console.warn("[Proxy] Auth check failed (continuing):", err);
-    // Fail open — page still renders, client-side auth will sort out redirects
+    console.warn("[Proxy] Session cookie verify failed (continuing):", err);
   }
 
   const bypassCookie = request.cookies.get("auth_bypass");
@@ -92,23 +95,34 @@ export async function proxy(request: NextRequest) {
     // Allow admin login page without auth
     if (path === "/admin/login") {
       // If already logged in, skip to dashboard
-      const rawAdmin = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-      if (rawAdmin) {
-        const adminId = await verifyAdminSessionToken(rawAdmin);
-        if (adminId) {
-          const url = request.nextUrl.clone();
-          url.pathname = "/admin/dashboard";
-          return NextResponse.redirect(url);
+      try {
+        const rawAdmin = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+        if (rawAdmin) {
+          const adminId = await verifyAdminSessionToken(rawAdmin);
+          if (adminId) {
+            const url = request.nextUrl.clone();
+            url.pathname = "/admin/dashboard";
+            return NextResponse.redirect(url);
+          }
         }
+      } catch {
+        console.warn("[Proxy] Admin session check on /admin/login failed");
       }
       return supabaseResponse;
     }
 
     // All other /admin/* routes require a valid admin session
-    const rawAdmin = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
-    const validAdminId = rawAdmin ? await verifyAdminSessionToken(rawAdmin) : null;
+    try {
+      const rawAdmin = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+      const validAdminId = rawAdmin ? await verifyAdminSessionToken(rawAdmin) : null;
 
-    if (!validAdminId) {
+      if (!validAdminId) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/admin/login";
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      console.warn("[Proxy] Admin session verification failed — redirecting to login");
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       return NextResponse.redirect(url);

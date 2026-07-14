@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { sendLoginOtp, verifyLoginOtp } from "@/app/actions/otp";
 
 type Step = "phone" | "otp";
@@ -11,7 +11,29 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [rememberMe, setRememberMe] = useState(true);
   const otpRef = useRef<HTMLInputElement>(null);
+
+  // Silent session check on mount — skip login if already authenticated
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/session", { cache: "no-store" });
+        const data: { userId: string | null } = await res.json();
+        if (cancelled) return;
+        if (data.userId) {
+          window.location.replace("/merchant/dashboard");
+          return;
+        }
+      } catch {
+        // Network error — show login form
+      }
+      if (!cancelled) setCheckingSession(false);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const handlePhoneSubmit = async () => {
     if (!phone || phone.length < 10) return;
@@ -35,7 +57,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    const result = await verifyLoginOtp(phone, otp);
+    const result = await verifyLoginOtp(phone, otp, rememberMe);
 
     if (!result.success) {
       setError(result.error || "Invalid OTP. Please try again.");
@@ -70,6 +92,15 @@ export default function LoginPage() {
 
     window.location.replace(`/merchant/dashboard?status=${result.userId ? "existing" : "new"}`);
   };
+
+  if (checkingSession) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
+        <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+        <p className="mt-4 text-sm text-[var(--color-text-muted)]">Checking session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
@@ -106,6 +137,19 @@ export default function LoginPage() {
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
+
+          <div className="flex items-center gap-2">
+            <input
+              id="remember-me"
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
+            />
+            <label htmlFor="remember-me" className="text-sm text-[var(--color-text-muted)] cursor-pointer select-none">
+              Remember me for 30 days
+            </label>
+          </div>
 
           <button
             onClick={handlePhoneSubmit}

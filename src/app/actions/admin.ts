@@ -386,6 +386,114 @@ export async function getSystemHealth(): Promise<{
 }
 
 // ──────────────────────────────────────────────
+// Session Monitor
+// ──────────────────────────────────────────────
+
+/**
+ * Search merchants by phone or name and return their current
+ * session state as far as the server can determine.
+ */
+export async function searchMerchantSession(
+  query: string
+): Promise<
+  {
+    id: string;
+    name: string;
+    businessName: string;
+    phone: string;
+    status: string;
+    lastActive: string | null;
+    forceLogoutAt: string | null;
+  }[]
+> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin || !query.trim()) return [];
+
+    const clean = query.trim();
+
+    // Try phone match first, then name/business_name
+    const phoneQuery = clean.replace(/\D/g, "");
+    let results: any[] = [];
+
+    if (phoneQuery.length >= 6) {
+      const { data } = await (admin.from("merchants") as any)
+        .select("id, name, business_name, phone, status, updated_at, force_logout_at")
+        .or(`phone.ilike.%${phoneQuery}%`)
+        .limit(20);
+      if (data) results = data;
+    }
+
+    if (results.length === 0) {
+      const { data } = await (admin.from("merchants") as any)
+        .select("id, name, business_name, phone, status, updated_at, force_logout_at")
+        .or(`name.ilike.%${clean}%,business_name.ilike.%${clean}%`)
+        .limit(20);
+      if (data) results = data;
+    }
+
+    return results.map((m: any) => ({
+      id: m.id,
+      name: m.name || "",
+      businessName: m.business_name || "",
+      phone: m.phone || "",
+      status: m.status || "active",
+      lastActive: m.updated_at || null,
+      forceLogoutAt: m.force_logout_at || null,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Force-logout a merchant by setting a `force_logout_at` timestamp.
+ * The middleware and SessionGuard will check this field; if it's
+ * newer than the session creation time, the user is redirected to login.
+ */
+export async function forceMerchantLogout(
+  merchantId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return { success: false, error: "Server config" };
+
+    await (admin.from("merchants") as any)
+      .update({ force_logout_at: new Date().toISOString() })
+      .eq("id", merchantId);
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Clear a merchant's force-logout flag so they can log in again.
+ */
+export async function clearForceLogout(
+  merchantId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return { success: false, error: "Server config" };
+
+    await (admin.from("merchants") as any)
+      .update({ force_logout_at: null })
+      .eq("id", merchantId);
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+// ──────────────────────────────────────────────
 // App Settings (Branding, CMS, Announcements)
 // ──────────────────────────────────────────────
 

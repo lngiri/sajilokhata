@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { createSessionToken, createSessionTokenWithTTL, SESSION_COOKIE } from "@/lib/session";
 
 export async function sendLoginOtp(
   phone: string
@@ -51,7 +51,8 @@ export async function sendLoginOtp(
 
 export async function verifyLoginOtp(
   phone: string,
-  code: string
+  code: string,
+  rememberMe: boolean = true
 ): Promise<{ success: boolean; error?: string; userId?: string; phone?: string }> {
   console.log("[OTP] verifyLoginOtp called for phone:", phone);
 
@@ -170,9 +171,11 @@ export async function verifyLoginOtp(
       console.warn("[OTP] Merchant setup call failed (non-critical):", err);
     }
 
-    // ---- 4. Set long-lived session cookie ----
+    // ---- 4. Set session cookie (short-lived or persistent) ----
     try {
-      const { token, maxAge } = await createSessionToken(userId);
+      const { token, maxAge } = rememberMe
+        ? await createSessionToken(userId)
+        : await createSessionTokenWithTTL(userId, 60 * 60); // 1 hour
       cookieStore.set(SESSION_COOKIE, token, {
         httpOnly: true,
         secure: true,
@@ -180,7 +183,7 @@ export async function verifyLoginOtp(
         maxAge,
         path: "/",
       });
-      console.log("[OTP] Session cookie set for user:", userId);
+      console.log(`[OTP] Session cookie set for user: ${userId} (${rememberMe ? "30d" : "1hr"})`);
     } catch (err) {
       console.warn("[OTP] Failed to set session cookie (non-fatal):", err);
     }

@@ -45,9 +45,13 @@ export default function SessionGuard() {
     (async () => {
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
-        const data: { userId: string | null } = await res.json();
+        const data: { userId: string | null; forceLogout?: boolean } = await res.json();
 
         if (!data.userId || data.userId !== localId) {
+          // If force-logged-out by admin, show a brief message before redirecting
+          if (data.forceLogout) {
+            localStorage.setItem("logout_reason", "Your session was terminated by an administrator.");
+          }
           // Session mismatch — stale / cross-user data detected
           localStorage.clear();
           sessionStorage.clear();

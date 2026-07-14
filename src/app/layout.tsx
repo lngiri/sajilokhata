@@ -5,6 +5,7 @@ import NetworkStatus from "@/components/NetworkStatus";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 import SessionGuard from "@/components/SessionGuard";
+import SessionHeartbeat from "@/components/SessionHeartbeat";
 import VersionGuard from "@/components/VersionGuard";
 import "./globals.css";
 
@@ -50,6 +51,7 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased bg-[var(--color-bg)] text-[var(--color-text)]">
         <VersionGuard />
+        <SessionHeartbeat />
         <SessionGuard />
         <ServiceWorkerRegistrar />
         <ToastProvider>

@@ -28,6 +28,20 @@ export async function createSessionToken(userId: string): Promise<{
   return { token: `${payload}.${signature}`, maxAge: SESSION_DURATION };
 }
 
+/**
+ * Create a session token with a custom TTL (in seconds).
+ * Used for "Remember Me" — short (1hr) or persistent (30d).
+ */
+export async function createSessionTokenWithTTL(
+  userId: string,
+  ttlSeconds: number
+): Promise<{ token: string; maxAge: number }> {
+  const expiresAt = Date.now() + ttlSeconds * 1000;
+  const payload = `${userId}.${expiresAt}`;
+  const signature = await hmacSign(payload);
+  return { token: `${payload}.${signature}`, maxAge: ttlSeconds };
+}
+
 export async function verifySessionToken(
   token: string
 ): Promise<string | null> {
