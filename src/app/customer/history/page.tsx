@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/lib/actions";
 import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
+import CustomerPinGate from "@/components/CustomerPinGate";
 import { signOut } from "@/lib/auth";
 
 /** Key used to persist customer session in localStorage */
@@ -119,7 +120,8 @@ export default function CustomerHistoryPage() {
 
   // Handle clear session — removes localStorage, cookies, SW caches
   const handleSignOut = () => {
-    signOut();
+    localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+    window.location.replace("/scan");
   };
 
   // Prevent flash while checking localStorage
@@ -132,6 +134,7 @@ export default function CustomerHistoryPage() {
   }
 
   return (
+    <CustomerPinGate phone={customerPhone || ""} onUnlocked={() => {}} onSignOut={handleSignOut}>
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
@@ -444,5 +447,6 @@ export default function CustomerHistoryPage() {
         </div>
       )}
     </div>
+    </CustomerPinGate>
   );
 }

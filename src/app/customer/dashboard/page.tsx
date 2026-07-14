@@ -10,6 +10,7 @@ import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import RoleSwitcher from "@/components/RoleSwitcher";
+import CustomerPinGate from "@/components/CustomerPinGate";
 import { createClient } from "@/lib/supabase/client";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
@@ -269,7 +270,13 @@ export default function CustomerDashboard() {
     );
   }
 
+  const handleSignOut = () => {
+    localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+    window.location.replace("/scan");
+  };
+
   return (
+    <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={handleSignOut}>
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
@@ -650,5 +657,6 @@ export default function CustomerDashboard() {
         onClose={() => setShowPendingModal(false)}
       />
     </div>
+    </CustomerPinGate>
   );
 }
