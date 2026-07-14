@@ -412,3 +412,32 @@ export async function getMerchantRecentDescriptions(merchantId: string): Promise
     })
     .slice(0, 5);
 }
+
+export async function uploadAttachment(
+  merchantId: string,
+  logId: string,
+  file: Blob
+): Promise<string> {
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    throw new Error("Not logged in");
+  }
+
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  const fileName = `${merchantId}/${logId}/${Date.now()}.webp`;
+  const { error } = await admin.storage
+    .from("transaction_attachments")
+    .upload(fileName, file, {
+      contentType: "image/webp",
+      upsert: true,
+    });
+  if (error) throw error;
+
+  const { data: urlData } = admin.storage
+    .from("transaction_attachments")
+    .getPublicUrl(fileName);
+
+  return urlData.publicUrl;
+}

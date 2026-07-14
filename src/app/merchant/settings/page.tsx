@@ -14,6 +14,7 @@ import {
   getMerchantProfile,
   getMerchantCreditLogs,
 } from "@/app/actions/merchant";
+import { changePin } from "@/app/actions/pin";
 
 export default function SettingsPage() {
   const { addToast } = useToast();
@@ -29,6 +30,13 @@ export default function SettingsPage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [authPhone, setAuthPhone] = useState<string | null>(null);
+
+  // PIN change state
+  const [currentPin, setCurrentPin] = useState(["", "", "", ""]);
+  const [newPin, setNewPin] = useState(["", "", "", ""]);
+  const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
+  const [changingPin, setChangingPin] = useState(false);
+  const [pinError, setPinError] = useState("");
 
   useEffect(() => {
     loadProfile();
@@ -156,6 +164,66 @@ export default function SettingsPage() {
       setExporting(false);
     }
   };
+
+  const handleChangePin = async () => {
+    const current = currentPin.join("");
+    const newP = newPin.join("");
+    const confirm = confirmPin.join("");
+    if (current.length < 4) { setPinError("Enter current PIN"); return; }
+    if (newP.length < 4) { setPinError("Enter new PIN"); return; }
+    if (newP !== confirm) { setPinError("New PINs do not match"); return; }
+    if (!merchantId) { setPinError("Not logged in"); return; }
+    setChangingPin(true);
+    setPinError("");
+    try {
+      const result = await changePin(merchantId, current, newP);
+      if (!result.success) {
+        setPinError(result.error || "Failed to change PIN");
+        return;
+      }
+      addToast("PIN changed successfully", "success");
+      setCurrentPin(["", "", "", ""]);
+      setNewPin(["", "", "", ""]);
+      setConfirmPin(["", "", "", ""]);
+    } catch {
+      setPinError("Failed to change PIN");
+    } finally {
+      setChangingPin(false);
+    }
+  };
+
+  const handlePinDigit = (
+    value: string,
+    idx: number,
+    arr: string[],
+    setter: (v: string[]) => void,
+  ) => {
+    if (!/^\d*$/.test(value)) return;
+    const digit = value.slice(-1);
+    const next = [...arr];
+    next[idx] = digit;
+    setter(next);
+  };
+
+  const renderPinInputs = (arr: string[], setter: (v: string[]) => void, label: string) => (
+    <div>
+      <label className="block text-xs text-[var(--color-text-muted)] mb-1.5">{label}</label>
+      <div className="flex gap-2">
+        {arr.map((d, i) => (
+          <input
+            key={i}
+            type="tel"
+            inputMode="numeric"
+            maxLength={1}
+            value={d}
+            onChange={(e) => handlePinDigit(e.target.value, i, arr, setter)}
+            onFocus={(e) => e.target.select()}
+            className="w-10 h-10 text-center text-lg font-bold bg-white rounded-lg border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+          />
+        ))}
+      </div>
+    </div>
+  );
 
   return (
     <div className="pb-20">
@@ -309,6 +377,32 @@ export default function SettingsPage() {
               </>
             )}
           </button>
+        </section>
+
+        {/* PIN Change Section */}
+        <section>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+            PIN Security
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 space-y-4">
+            {renderPinInputs(currentPin, setCurrentPin, "Current PIN")}
+            {renderPinInputs(newPin, setNewPin, "New PIN")}
+            {renderPinInputs(confirmPin, setConfirmPin, "Confirm New PIN")}
+            {pinError && (
+              <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{pinError}</div>
+            )}
+            <button
+              onClick={handleChangePin}
+              disabled={changingPin}
+              className="w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {changingPin ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Change PIN"
+              )}
+            </button>
+          </div>
         </section>
 
         {/* Export Section */}

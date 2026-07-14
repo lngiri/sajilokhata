@@ -343,6 +343,51 @@ export async function toggleMerchantStatus(
 }
 
 // ──────────────────────────────────────────────
+// Storage & Usage
+// ──────────────────────────────────────────────
+
+export async function getMerchantStorageUsage(): Promise<
+  { id: string; name: string; businessName: string; phone: string; transactionCount: number; customerCount: number; estimatedRows: number }[]
+> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return [];
+
+    const { data: merchants } = await (admin.from("merchants") as any)
+      .select("id, name, business_name, phone")
+      .limit(200)
+      .order("created_at", { ascending: false });
+
+    if (!merchants) return [];
+
+    return await Promise.all(
+      merchants.map(async (m: any) => {
+        const [{ count: txCount }, { count: custCount }] = await Promise.all([
+          (admin.from("credit_logs") as any)
+            .select("id", { count: "exact", head: true })
+            .eq("merchant_id", m.id),
+          (admin.from("merchant_customers") as any)
+            .select("id", { count: "exact", head: true })
+            .eq("merchant_id", m.id),
+        ]);
+        return {
+          id: m.id,
+          name: m.name || "",
+          businessName: m.business_name || "",
+          phone: m.phone || "",
+          transactionCount: txCount ?? 0,
+          customerCount: custCount ?? 0,
+          estimatedRows: (txCount ?? 0) + (custCount ?? 0),
+        };
+      })
+    );
+  } catch {
+    return [];
+  }
+}
+
+// ──────────────────────────────────────────────
 // System Health
 // ──────────────────────────────────────────────
 

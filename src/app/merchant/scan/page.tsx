@@ -11,10 +11,11 @@ import {
   getMerchantCustomers,
   getMerchantCustomerBalance,
   getMerchantRecentDescriptions,
+  uploadAttachment,
 } from "@/app/actions/merchant";
 import { compressImage, blobToBase64 } from "@/lib/image";
-import { createManualCreditLog, uploadAttachment } from "@/lib/actions";
-import { savePendingAttachment, isOnline } from "@/lib/offline/db";
+
+import { savePendingLog, savePendingAttachment, isOnline } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl } from "@/lib/phone";
 import QuickAddCustomer from "@/components/QuickAddCustomer";
@@ -259,14 +260,16 @@ export default function MerchantScanPage() {
             }
           }
 
-          // Use existing client-side pending log mechanism
-          await createManualCreditLog({
+          // Save to IndexedDB for later sync
+          await savePendingLog({
+            id: offlineLogId,
             merchant_id: mId,
-            customer_id: cId ?? undefined,
-            amount: Number(amount),
+            customer_id: cId ?? null,
             type: entryType,
+            amount: Number(amount),
             description: description || null,
-            attachment_url: attachmentUrl,
+            attachment_url: attachmentUrl ?? null,
+            status: entryType === "cash" ? "approved" : "unverified",
           });
         }
       } else {

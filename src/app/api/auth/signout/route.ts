@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 
 export async function GET() {
   const response = NextResponse.redirect(
-    new URL("/login", process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com")
+    new URL("/", process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com")
   );
 
   const pastDate = new Date(0);
