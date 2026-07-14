@@ -20,10 +20,10 @@ export function clearCachedClient() {
 // ============================================================
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function getMerchantProfile(merchantId: string): Promise<any> {
+export async function getMerchantProfile(merchantId: string, columns = "*"): Promise<any> {
   const { data, error } = await getClient()
     .from("merchants")
-    .select("*")
+    .select(columns)
     .eq("id", merchantId)
     .single();
 
@@ -162,11 +162,12 @@ export async function getMerchantCreditLogs(
     offset?: number;
     dateFrom?: string;
     dateTo?: string;
+    columns?: string;
   }
 ): Promise<any[]> {
   let query = getClient()
     .from("credit_logs")
-    .select("*, customers(name, phone)")
+    .select(options?.columns || "*, customers(name, phone)")
     .eq("merchant_id", merchantId)
     .order("created_at", { ascending: false });
 

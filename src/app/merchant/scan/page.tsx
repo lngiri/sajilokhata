@@ -6,22 +6,20 @@ import { useToast } from "@/components/Toast";
 import AmountSuggestions from "@/components/AmountSuggestions";
 import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { saveEntry } from "@/app/actions/entry";
 import {
   findOrCreateCustomer,
   linkCustomerToMerchant,
-  createCreditLog,
   createManualCreditLog,
   getMerchantCustomers,
   getMerchantCustomerBalance,
-  getClient,
+  getMerchantRecentDescriptions,
 } from "@/lib/actions";
-import { sendTransactionNotification } from "@/app/actions/sms";
-import { useSearchParams } from "next/navigation";
-import { sanitizePhoneForUrl } from "@/lib/phone";
-import { getMerchantRecentDescriptions } from "@/lib/actions";
 import { compressImage, blobToBase64 } from "@/lib/image";
 import { uploadAttachment } from "@/lib/actions";
 import { savePendingAttachment, isOnline } from "@/lib/offline/db";
+import { useSearchParams } from "next/navigation";
+import { sanitizePhoneForUrl } from "@/lib/phone";
 import QuickAddCustomer from "@/components/QuickAddCustomer";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 
@@ -223,75 +221,97 @@ export default function MerchantScanPage() {
       }
 
       if (isManual) {
-        // Create the log entry FIRST to get the real entry ID
-        const entry = await createManualCreditLog({
-          merchant_id: mId,
-          customer_id: cId ?? undefined,
-          amount: Number(amount),
-          type: entryType,
-          description: description || null,
-        });
-        if (entry?.verification_token) {
-          setVerificationToken(entry.verification_token);
-        }
+        if (navigator.onLine) {
+          // Online: upload attachment FIRST, then save entry via server action
+          let attachmentUrl: string | null = null;
 
-        // THEN handle attachment upload with the real entry ID
-        if (attachmentFile) {
-          setAttachmentUploading(true);
-          try {
-            if (navigator.onLine) {
+          if (attachmentFile) {
+            setAttachmentUploading(true);
+            try {
               const compressed = await compressImage(attachmentFile, 200);
               console.log("[Entry] Image compressed OK, size:", compressed.size);
-              const attachmentUrl = await uploadAttachment(mId, entry.id, compressed);
+              attachmentUrl = await uploadAttachment(mId, crypto.randomUUID(), compressed);
               console.log("[Entry] Attachment uploaded:", attachmentUrl);
-              // Attach URL to the log entry
-              await getClient()
-                .from("credit_logs")
-                .update({ attachment_url: attachmentUrl })
-                .eq("id", entry.id);
-            } else {
+            } catch (err) {
+              console.error("[Entry] Attachment upload failed:", err);
+              addToast("Photo upload failed. Entry saved without photo.", "warning");
+            } finally {
+              setAttachmentUploading(false);
+            }
+          }
+
+          const result = await saveEntry({
+            merchant_id: mId,
+            customer_id: cId ?? null,
+            amount: Number(amount),
+            type: entryType,
+            description: description || null,
+            attachment_url: attachmentUrl,
+            customerPhone,
+            customerName,
+          });
+
+          if (!result.success) {
+            console.error("[Entry] saveEntry failed:", result.error);
+            throw new Error(result.error || "Failed to save entry");
+          }
+
+          if (result.entry?.verification_token) {
+            setVerificationToken(result.entry.verification_token);
+          }
+        } else {
+          // Offline: save as pending log + pending attachment
+          const offlineLogId = crypto.randomUUID();
+          let attachmentUrl: string | null = null;
+
+          if (attachmentFile) {
+            setAttachmentUploading(true);
+            try {
               const compressed = await compressImage(attachmentFile, 200);
               const base64 = await blobToBase64(compressed);
               await savePendingAttachment({
                 id: crypto.randomUUID(),
-                logId: entry.id,
+                logId: offlineLogId,
                 merchantId: mId,
                 data: base64,
               });
-              console.log("[Entry] Attachment saved offline with real logId:", entry.id);
+              console.log("[Entry] Attachment saved offline with logId:", offlineLogId);
+            } catch (err) {
+              console.error("[Entry] Offline attachment save failed:", err);
+            } finally {
+              setAttachmentUploading(false);
             }
-          } catch (err) {
-            console.error("[Entry] Attachment processing failed:", err);
-            addToast("Failed to process photo attachment. Entry saved without photo.", "warning");
-          } finally {
-            setAttachmentUploading(false);
           }
+
+          // Use existing client-side pending log mechanism
+          await createManualCreditLog({
+            merchant_id: mId,
+            customer_id: cId ?? undefined,
+            amount: Number(amount),
+            type: entryType,
+            description: description || null,
+            attachment_url: attachmentUrl,
+          });
         }
       } else {
-        await createCreditLog({
+        // QR scan mode — use server action (always online)
+        const result = await saveEntry({
           merchant_id: mId,
           customer_id: cId!,
           amount: Number(amount),
           description: description || null,
           type: entryType,
-          status: "pending",
-          sync_status: "online",
+          customerPhone,
+          customerName,
         });
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to save entry");
+        }
       }
 
       setStep("success");
       addToast(isCash ? "Cash sale recorded!" : "Entry saved! Customer notified.", "success");
-
-      // Fire-and-forget SMS notification
-      if (customerPhone && mId) {
-        sendTransactionNotification({
-          to: customerPhone,
-          merchantId: mId,
-          amount: Number(amount),
-          type: entryType,
-          customerName,
-        }).catch(() => {});
-      }
     } catch (err) {
       console.error("Failed to save entry:", err);
       addToast("Failed to save. Please try again.", "error");

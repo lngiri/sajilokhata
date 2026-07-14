@@ -127,15 +127,15 @@ export default function MerchantDashboard() {
     setMerchantId(id);
     merchantIdRef.current = id;
 
-    if (id) {
-      try {
-        const [statsData, pendingData, editRequestedData, activityData, profileData] = await Promise.all([
-          getMerchantStats(id),
-          getMerchantCreditLogs(id, { status: "pending", limit: 10 }),
-          getMerchantCreditLogs(id, { status: "edit_requested", limit: 10 }),
-          getMerchantCreditLogs(id, { limit: 15 }),
-          getMerchantProfile(id).catch(() => null),
-        ]);
+      if (id) {
+        try {
+          const [statsData, pendingData, editRequestedData, activityData, profileData] = await Promise.all([
+            getMerchantStats(id),
+            getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
+            getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
+            getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
+            getMerchantProfile(id, "id, name, business_type, business_name, phone").catch(() => null),
+          ]);
         if (!mountedRef.current) return;
         setStats(statsData);
         setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);

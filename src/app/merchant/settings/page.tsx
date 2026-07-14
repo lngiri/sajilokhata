@@ -223,9 +223,18 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
                 Business Type
               </label>
-              <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-500 capitalize border border-gray-100">
-                {businessType || "Not set"}
-              </div>
+              <select
+                value={businessType}
+                onChange={(e) => setBusinessType(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all capitalize appearance-none"
+              >
+                <option value="kirana">Kirana</option>
+                <option value="hardware">Hardware</option>
+                <option value="clothing">Clothing</option>
+                <option value="pharmacy">Pharmacy</option>
+                <option value="restaurant">Restaurant</option>
+                <option value="other">Other</option>
+              </select>
             </div>
 
             {/* Address */}
