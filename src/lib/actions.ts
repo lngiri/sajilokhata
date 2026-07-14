@@ -194,6 +194,41 @@ export async function getMerchantCreditLogs(
   return data || [];
 }
 
+export async function getCashSales(
+  merchantId: string,
+  options?: {
+    limit?: number;
+    offset?: number;
+    dateFrom?: string;
+    dateTo?: string;
+  }
+): Promise<any[]> {
+  let query = getClient()
+    .from("credit_logs")
+    .select("id, amount, quantity, unit, description, type, status, created_at, approved_at")
+    .eq("merchant_id", merchantId)
+    .eq("type", "cash")
+    .eq("status", "approved")
+    .order("created_at", { ascending: false });
+
+  if (options?.dateFrom) {
+    query = query.gte("created_at", options.dateFrom);
+  }
+  if (options?.dateTo) {
+    query = query.lte("created_at", options.dateTo + "T23:59:59.999Z");
+  }
+  if (options?.limit) {
+    query = query.range(
+      options.offset || 0,
+      (options.offset || 0) + options.limit - 1
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateCreditLogStatus(
   logId: string,
