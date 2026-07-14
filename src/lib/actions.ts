@@ -743,6 +743,61 @@ export async function getMerchantAnalytics(
 }
 
 // ============================================================
+// Description Suggestions
+// ============================================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getMerchantRecentDescriptions(merchantId: string): Promise<string[]> {
+  const { data, error } = await getClient()
+    .from("credit_logs")
+    .select("description")
+    .eq("merchant_id", merchantId)
+    .neq("description", "")
+    .not("description", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+  if (!data) return [];
+
+  const seen = new Set<string>();
+  return data
+    .map((r: any) => r.description as string)
+    .filter((d: string) => {
+      if (seen.has(d)) return false;
+      seen.add(d);
+      return true;
+    })
+    .slice(0, 5);
+}
+
+// ============================================================
+// OTP Rate Limiting (Client-side)
+// ============================================================
+
+const otpRateLimitMap = new Map<string, { count: number; firstAttempt: number }>();
+
+export function checkOtpRateLimit(phone: string): boolean {
+  const now = Date.now();
+  const entry = otpRateLimitMap.get(phone);
+
+  if (entry && now - entry.firstAttempt > 60000) {
+    otpRateLimitMap.delete(phone);
+    return true;
+  }
+
+  if (entry && entry.count >= 3) {
+    return false;
+  }
+
+  otpRateLimitMap.set(phone, {
+    count: (entry?.count || 0) + 1,
+    firstAttempt: entry?.firstAttempt || now,
+  });
+  return true;
+}
+
+// ============================================================
 // Verification Token (WhatsApp Remote Approve)
 // ============================================================
 

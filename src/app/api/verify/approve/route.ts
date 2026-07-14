@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
 
       if (log.amount > remainingLimit) {
         return NextResponse.json({
-          error: `तपाईंको उधारो सिमा (Limit) पुगिसकेको छ। Available: NPR ${remainingLimit.toLocaleString()}, Requested: NPR ${log.amount.toLocaleString()}`,
+          error: `Credit limit exceeded. Available: NPR ${remainingLimit.toLocaleString()}, Requested: NPR ${log.amount.toLocaleString()}`,
           code: "CREDIT_LIMIT_EXCEEDED",
         }, { status: 400 });
       }

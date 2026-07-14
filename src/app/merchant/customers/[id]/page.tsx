@@ -20,7 +20,7 @@ const STATUS_BADGE: Record<string, string> = {
 const STATUS_LABELS: Record<string, string> = {
   approved: "Approved",
   pending: "Pending",
-  rejected: "रद्द गरिएको",
+  rejected: "Rejected",
   disputed: "Disputed",
   unverified: "Unverified",
   edit_requested: "Edit Req.",

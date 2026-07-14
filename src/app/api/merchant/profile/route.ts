@@ -61,14 +61,14 @@ export async function POST(request: Request) {
       if (error.code === "23505") {
         return NextResponse.json(
           {
-            error: "यो नम्बर अर्को पसलमा दर्ता भइसकेको छ। कृपया अर्को नम्बर प्रयोग गर्नुहोस्।",
+            error: "This number is already registered to another shop. Please use a different number.",
             code: "PHONE_TAKEN",
           },
           { status: 409 }
         );
       }
       return NextResponse.json(
-        { error: "प्रोफाइल सेभ गर्न सकिएन। कृपया पुनः प्रयास गर्नुहोस्।" },
+        { error: "Could not save profile. Please try again." },
         { status: 500 }
       );
     }
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
   } catch (err) {
     console.error("Merchant profile error:", err);
     return NextResponse.json(
-      { error: "प्रोफाइल सेभ गर्न सकिएन। कृपया पुनः प्रयास गर्नुहोस्।" },
+      { error: "Could not save profile. Please try again." },
       { status: 500 }
     );
   }

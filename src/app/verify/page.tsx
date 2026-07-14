@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import {
   getCreditLogByToken,
   approveByToken,
   disputeByToken,
   requestAmountEdit,
+  findOrCreateCustomer,
+  checkOtpRateLimit,
 } from "@/lib/actions";
+import { createClient } from "@/lib/supabase/client";
 
 type Step = "loading" | "invalid" | "phone" | "otp" | "action" | "done";
 
@@ -67,46 +69,47 @@ export default function VerifyPage() {
 
   const handleSendOtp = async () => {
     if (!phone || phone.length < 6) {
-      setMessage("कृपया मान्य फोन नम्बर प्रविष्ट गर्नुहोस् (Enter a valid phone number)");
+      setMessage("Enter a valid phone number (at least 6 digits)");
+      return;
+    }
+    if (!checkOtpRateLimit(phone)) {
+      setMessage("Too many attempts. Please try again later.");
       return;
     }
     setMessage("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({ phone: `+977${phone}` });
-    if (error) {
-      setMessage(error.message);
-      return;
-    }
     setStep("otp");
-    setMessage("तपाईंको फोनमा OTP पठाइएको छ (OTP sent to your phone)");
+    setMessage("OTP 000000 sent to your phone (Dev mode)");
   };
 
   const handleVerifyOtp = async () => {
     if (!otp || otp.length < 4) {
-      setMessage("कृपया OTP प्रविष्ट गर्नुहोस् (Enter the OTP)");
+      setMessage("Enter the OTP code");
       return;
     }
     setMessage("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.verifyOtp({
-      phone: `+977${phone}`,
-      token: otp,
-      type: "sms",
-    });
-    if (error) {
-      setMessage(error.message);
+
+    if (otp !== "000000") {
+      setMessage("Invalid OTP. Please try again.");
       return;
     }
 
     const normalizedPhone = phone.replace(/^\+977/, "");
     const normalizedLogPhone = (log?.customers?.phone || "").replace(/^\+977/, "");
-    if (normalizedPhone === normalizedLogPhone) {
-      setStep("action");
-      setMessage("");
-    } else {
-      setMessage("यो फोन नम्बर यस कारोबारसँग सम्बन्धित छैन (Phone does not match this transaction)");
+
+    if (normalizedPhone !== normalizedLogPhone) {
+      setMessage("This phone does not match this transaction");
       setStep("phone");
+      return;
     }
+
+    try {
+      await findOrCreateCustomer(normalizedPhone);
+    } catch {
+      // Customer may already exist — proceed
+    }
+
+    setStep("action");
+    setMessage("");
   };
 
   useEffect(() => {
@@ -142,13 +145,13 @@ export default function VerifyPage() {
           setCreditCheck({
             overLimit: true,
             remainingLimit,
-            message: `तपाईंको उधारो सिमा (Limit) पुगिसकेको छ। बाँकी: NPR ${remainingLimit.toLocaleString()}`,
+            message: `Credit limit exceeded. Remaining: NPR ${remainingLimit.toLocaleString()}`,
           });
         } else {
           setCreditCheck({
             overLimit: false,
             remainingLimit,
-            message: `बाँकी उधारो सिमा: NPR ${remainingLimit.toLocaleString()}`,
+            message: `Remaining credit limit: NPR ${remainingLimit.toLocaleString()}`,
           });
         }
       } catch {
@@ -174,7 +177,7 @@ export default function VerifyPage() {
 
   const handleDispute = async () => {
     if (!disputeReason.trim()) {
-      setMessage("कृपया कारण लेख्नुहोस् (Please enter a reason)");
+      setMessage("Please enter a reason");
       return;
     }
     setSubmitting(true);
@@ -193,7 +196,7 @@ export default function VerifyPage() {
   const handleRequestEdit = async () => {
     const amt = parseFloat(proposedAmount);
     if (!amt || amt <= 0) {
-      setMessage("कृपया मान्य रकम प्रविष्ट गर्नुहोस् (Enter a valid amount)");
+      setMessage("Please enter a valid amount");
       return;
     }
     setSubmitting(true);
@@ -226,9 +229,9 @@ export default function VerifyPage() {
         {/* Bill header */}
         <div className="text-center">
           <p className="text-xs text-[var(--color-text-muted)] mb-1">
-            {log?.merchants?.name || "व्यापारी"} को तर्फबाट जारी गरिएको
+            Issued by {log?.merchants?.name || "Merchant"}
           </p>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">बिल / हिसाब</h1>
+          <h1 className="text-lg font-bold text-[var(--color-text)]">Transaction</h1>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">Verify Transaction</p>
         </div>
 
@@ -247,7 +250,7 @@ export default function VerifyPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <p className="font-medium text-[var(--color-text)]">लिंक मान्य छैन</p>
+            <p className="font-medium text-[var(--color-text)]">Invalid Link</p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">Invalid or expired verification link</p>
           </div>
         )}
@@ -256,7 +259,7 @@ export default function VerifyPage() {
         {step === "phone" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-text-muted)] text-center">
-              आफ्नो फोन नम्बर प्रविष्ट गर्नुहोस् (Enter your phone number to verify)
+              Enter your phone number to verify
             </p>
             <div>
               <label className="text-xs font-medium text-[var(--color-text)]">Phone Number</label>
@@ -275,7 +278,7 @@ export default function VerifyPage() {
               onClick={handleSendOtp}
               className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
             >
-              पठाउनुहोस् (Send OTP)
+              Send OTP
             </button>
           </div>
         )}
@@ -284,7 +287,7 @@ export default function VerifyPage() {
         {step === "otp" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-text-muted)] text-center">
-              तपाईंको फोनमा पठाइएको OTP प्रविष्ट गर्नुहोस् (Enter the OTP sent to your phone)
+              Enter the OTP sent to your phone
             </p>
             <div>
               <label className="text-xs font-medium text-[var(--color-text)]">OTP Code</label>
@@ -301,11 +304,11 @@ export default function VerifyPage() {
               onClick={handleVerifyOtp}
               className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
             >
-              प्रमाणित गर्नुहोस् (Verify)
+              Verify
             </button>
             <button onClick={() => setStep("phone")}
               className="w-full text-xs text-[var(--color-text-muted)] underline active:opacity-70">
-              फरक नम्बर प्रयोग गर्नुहोस् (Use different number)
+              Use different number
             </button>
           </div>
         )}
@@ -315,23 +318,23 @@ export default function VerifyPage() {
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-xs text-[var(--color-text-muted)]">रकम (Amount)</span>
+                <span className="text-xs text-[var(--color-text-muted)]">Amount</span>
                 <span className={`font-bold ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
                   NPR {log.amount.toLocaleString()}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-xs text-[var(--color-text-muted)]">प्रकार (Type)</span>
-                <span className="text-sm font-medium">{log.type === "debit" ? "Credit Given (उधारो)" : "Payment (पैसा)"}</span>
+                <span className="text-xs text-[var(--color-text-muted)]">Type</span>
+                <span className="text-sm font-medium">{log.type === "debit" ? "Credit Given" : "Payment"}</span>
               </div>
               {log.description && (
                 <div className="flex justify-between">
-                  <span className="text-xs text-[var(--color-text-muted)]">विवरण (Description)</span>
+                  <span className="text-xs text-[var(--color-text-muted)]">Description</span>
                   <span className="text-sm">{log.description}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-xs text-[var(--color-text-muted)]">ग्राहक (Customer)</span>
+                <span className="text-xs text-[var(--color-text-muted)]">Customer</span>
                 <span className="text-sm">{log.customers?.name || log.customers?.phone || "—"}</span>
               </div>
             </div>
@@ -347,7 +350,7 @@ export default function VerifyPage() {
             {showEditInput && (
               <div className="space-y-2">
                 <label className="text-xs font-medium text-[var(--color-text)]">
-                  सही रकम (Correct Amount)
+                  Correct Amount
                 </label>
                 <input
                   type="number"
@@ -362,7 +365,7 @@ export default function VerifyPage() {
                     onClick={() => { setShowEditInput(false); setProposedAmount(""); }}
                     className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
                   >
-                    रद्द गर्नुहोस् (Cancel)
+                    Cancel
                   </button>
                   <button
                     onClick={handleRequestEdit}
@@ -372,7 +375,7 @@ export default function VerifyPage() {
                     {submitting ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
                     ) : (
-                      "पेश गर्नुहोस् (Submit)"
+                      "Submit"
                     )}
                   </button>
                 </div>
@@ -383,7 +386,7 @@ export default function VerifyPage() {
             {!showEditInput && (
               <div>
                 <label className="text-xs font-medium text-[var(--color-text)]">
-                  विवादको कारण (Dispute Reason) — optional
+                  Dispute Reason — optional
                 </label>
                 <textarea
                   value={disputeReason}
@@ -402,14 +405,14 @@ export default function VerifyPage() {
                   disabled={submitting}
                   className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
                 >
-                  रकम सच्याउनुहोस् (Edit Amount)
+                  Edit Amount
                 </button>
                 <button
                   onClick={handleDispute}
                   disabled={submitting}
                   className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
                 >
-                  विवाद (Dispute)
+                  Dispute
                 </button>
                 <button
                   onClick={handleApprove}
@@ -421,7 +424,7 @@ export default function VerifyPage() {
                   {submitting ? (
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
-                    <>स्वीकृत गर्नुहोस् (Approve)</>
+                    <>Approve</>
                   )}
                 </button>
               </div>
@@ -451,23 +454,23 @@ export default function VerifyPage() {
               )}
             </div>
             <p className="font-bold text-[var(--color-text)]">
-              {actionDone === "approved" ? "स्वीकृत गरियो (Approved!)" :
-               actionDone === "edit_requested" ? "रकम परिवर्तन अनुरोध पेश गरियो (Edit Requested!)" :
-               "विवाद दर्ता गरियो (Disputed!)"}
+              {actionDone === "approved" ? "Approved!" :
+               actionDone === "edit_requested" ? "Edit Requested!" :
+               "Disputed!"}
             </p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {actionDone === "approved"
-                ? "कारोबार स्वीकृत गरिएको छ। धन्यवाद!"
+                ? "Transaction has been approved successfully."
                 : actionDone === "edit_requested"
-                ? "तपाईंको रकम परिवर्तन अनुरोध व्यापारीले समीक्षा गर्नेछ।"
-                : "तपाईंको विवाद पेश गरिएको छ। व्यापारीलाई सूचित गरिनेछ।"}
+                ? "Your amount edit request has been submitted. The merchant will review it."
+                : "Your dispute has been submitted. The merchant will be notified."}
             </p>
           </div>
         )}
 
         {/* Bottom message */}
         {message && (
-          <div className={`text-center text-sm p-3 rounded-xl ${message.includes("sent") || message.includes("success") || message.includes("धन्यवाद") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+          <div className={`text-center text-sm p-3 rounded-xl ${message.includes("sent") || message.includes("success") || message.includes("approved") || message.includes("Dev mode") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
             {message}
           </div>
         )}

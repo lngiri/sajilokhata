@@ -71,7 +71,7 @@ export default function SettingsPage() {
         address: address.trim() || undefined,
         phone: phone || undefined,
       });
-      addToast("तपाईंको प्रोफाइल विवरण सफलतापूर्वक अपडेट भयो।", "success");
+      addToast("Profile updated successfully.", "success");
     } catch (err: any) {
       console.error("Failed to save merchant profile:", err);
       addToast(err.message || "Failed to save. Please try again.", "error");
@@ -204,7 +204,7 @@ export default function SettingsPage() {
             {/* Business Name */}
             <div className="p-4">
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                Business Name (पसलको नाम)
+                Business Name
               </label>
               <input
                 type="text"
@@ -228,7 +228,7 @@ export default function SettingsPage() {
             {/* Address */}
             <div className="p-4">
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                Address (ठेगाना)
+                Address
               </label>
               <input
                 type="text"
@@ -242,7 +242,7 @@ export default function SettingsPage() {
             {/* Phone Number (Read-Only) */}
             <div className="p-4">
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                Registered Business Phone (दर्ता फोन नम्बर)
+                Registered Business Phone
               </label>
               <div className="px-3.5 py-2.5 bg-emerald-50 rounded-xl text-sm font-mono text-emerald-700 border border-emerald-100 flex items-center gap-2">
                 <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

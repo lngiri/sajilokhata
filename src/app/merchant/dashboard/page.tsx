@@ -107,9 +107,9 @@ export default function MerchantDashboard() {
     const params = new URLSearchParams(window.location.search);
     const status = params.get("status");
     if (status === "new") {
-      addToast("बधाई छ! सजिलो खातामा तपाईंको नयाँ पसल दर्ता भयो।", "success");
+      addToast("Welcome! Your new shop has been registered.", "success");
     } else if (status === "existing") {
-      addToast("स्वागत छ! तपाईंको पुरानो खाता लोड भयो।", "success");
+      addToast("Welcome back! Your existing account has been loaded.", "success");
     }
     if (status) {
       window.history.replaceState({}, "", "/merchant/dashboard");
@@ -335,7 +335,7 @@ export default function MerchantDashboard() {
                 <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
                 </svg>
-                <span className="text-[11px] font-medium text-slate-700 whitespace-nowrap">पसल: {merchantProfile.name}</span>
+                <span className="text-[11px] font-medium text-slate-700 whitespace-nowrap">Shop: {merchantProfile.name}</span>
               </div>
             )}
             {isRefreshing ? (
@@ -423,11 +423,11 @@ export default function MerchantDashboard() {
             {stats && (
               <div className="grid grid-cols-2 gap-3">
                 <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales (कुल बिक्री)</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales</p>
                   <p className="text-xl font-bold text-blue-600">NPR {stats.totalSales.toLocaleString()}</p>
                 </a>
                 <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand (नगद मौज्दात)</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand</p>
                   <p className="text-xl font-bold text-green-600">NPR {stats.cashInHand.toLocaleString()}</p>
                 </a>
               </div>
@@ -588,7 +588,7 @@ export default function MerchantDashboard() {
                           </p>
                           {isEditRequest && log.proposed_amount && (
                             <p className="text-xs text-blue-700 font-medium mt-1">
-                              ग्राहकले रकम NPR {log.amount.toLocaleString()} बाट NPR {log.proposed_amount.toLocaleString()} मा परिवर्तन गर्न अनुरोध गरेको छ
+                              Customer requested amount change from NPR {log.amount.toLocaleString()} to NPR {log.proposed_amount.toLocaleString()}
                             </p>
                           )}
                         </div>
@@ -607,7 +607,7 @@ export default function MerchantDashboard() {
                                 }}
                                 className="w-full px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
-                                स्वीकार गर्नुहोस्
+                                Accept
                               </button>
                               <button
                                 onClick={async () => {
@@ -621,7 +621,7 @@ export default function MerchantDashboard() {
                                 }}
                                 className="w-full px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
-                                अस्वीकार गर्नुहोस्
+                                Reject
                               </button>
                             </>
                           ) : (
@@ -685,7 +685,7 @@ export default function MerchantDashboard() {
 
             <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
               <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
-                ग्राहकलाई यो क्युआर स्क्यान गर्न लगाउनुहोस्
+                Ask your customer to scan this QR code
               </p>
             </div>
           </div>

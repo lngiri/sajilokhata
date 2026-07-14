@@ -95,13 +95,13 @@ export default function PWAInstallBanner() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-[var(--color-text)] text-sm">
-              सजिलो खाता एप इन्स्टल गर्नुहोस्
+              Install SajiloKhata App
             </h3>
             <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">
               {isIOS ? (
-                <>Safari मा शेयर बटन थिच्नुहोस् → &quot;होम स्क्रिनमा थप्नुहोस्&quot; छान्नुहोस्</>
+                <>Tap the Share button in Safari → &quot;Add to Home Screen&quot;</>
               ) : (
-                <>अफलाइनमा पनि काम गर्ने डिजिटल खाता। तपाईंको दैनिक हिसाब सजिलैसँग व्यवस्थापन गर्नुहोस्।</>
+                <>A digital ledger that works offline too. Manage your daily accounts easily.</>
               )}
             </p>
           </div>
@@ -113,7 +113,7 @@ export default function PWAInstallBanner() {
             onClick={handleDismiss}
             className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
           >
-            हटाउनुहोस्
+            Dismiss
           </button>
           {!isIOS && (
             <button
@@ -128,7 +128,7 @@ export default function PWAInstallBanner() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                   </svg>
-                  इन्स्टल
+                  Install
                 </>
               )}
             </button>

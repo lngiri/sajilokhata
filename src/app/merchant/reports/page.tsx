@@ -25,14 +25,14 @@ function getPresetRange(preset: RangePreset): { start: string; end: string; labe
 
   switch (preset) {
     case "today":
-      return { start: today, end: today, label: "आज (Today)" };
+      return { start: today, end: today, label: "Today" };
     case "week": {
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
       const wy = weekAgo.getFullYear();
       const wm = String(weekAgo.getMonth() + 1).padStart(2, "0");
       const wd = String(weekAgo.getDate()).padStart(2, "0");
-      return { start: `${wy}-${wm}-${wd}`, end: today, label: "यो हप्ता (This Week)" };
+      return { start: `${wy}-${wm}-${wd}`, end: today, label: "This Week" };
     }
     case "month": {
       const monthAgo = new Date(now);
@@ -40,7 +40,7 @@ function getPresetRange(preset: RangePreset): { start: string; end: string; labe
       const my = monthAgo.getFullYear();
       const mm = String(monthAgo.getMonth() + 1).padStart(2, "0");
       const md = String(monthAgo.getDate()).padStart(2, "0");
-      return { start: `${my}-${mm}-${md}`, end: today, label: "यो महिना (This Month)" };
+      return { start: `${my}-${mm}-${md}`, end: today, label: "This Month" };
     }
     default:
       return { start: today, end: today, label: "Custom" };
@@ -305,7 +305,7 @@ export default function MerchantReportsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>
             </a>
-            <h1 className="text-lg font-bold text-[var(--color-text)]">व्यापारिक प्रतिवेदन (Financial Report)</h1>
+            <h1 className="text-lg font-bold text-[var(--color-text)]">Financial Report</h1>
           </div>
           <button onClick={handleExportCSV}
             className="px-3 py-1.5 text-xs font-medium bg-[var(--color-primary)] text-white rounded-lg active:scale-[0.98] transition-transform">
@@ -336,16 +336,15 @@ export default function MerchantReportsPage() {
       <div className="px-4 py-4 space-y-4">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <MetricCard label="कुल बिक्री (Total Sales)" value={analytics?.totalSales ?? "—"} color="text-blue-600" />
-          <MetricCard label="नगद मौज्दात (Cash In Hand)" value={analytics?.cashInHand ?? "—"} color="text-green-600" />
-          <MetricCard label="कुल बाँकी उधारो (Outstanding Credit)" value={analytics?.totalOutstanding ?? "—"} color="text-red-600" />
-          <MetricCard label="कुल उठेको नगद (Cash Received)" value={analytics?.totalReceived ?? "—"} color="text-green-600" />
-          <MetricCard
-            label="खुद कारोबार (Net Cash Flow)"
+          <MetricCard label="Total Sales" value={analytics?.totalSales ?? "—"} color="text-blue-600" />
+          <MetricCard label="Cash In Hand" value={analytics?.cashInHand ?? "—"} color="text-green-600" />
+          <MetricCard label="Outstanding Credit" value={analytics?.totalOutstanding ?? "—"} color="text-red-600" />
+          <MetricCard label="Cash Received" value={analytics?.totalReceived ?? "—"} color="text-green-600" />
+          <MetricCard label="Net Cash Flow"
             value={analytics ? (analytics.netCashFlow >= 0 ? analytics.netCashFlow : `-${Math.abs(analytics.netCashFlow)}`) : "—"}
             color={(analytics?.netCashFlow ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
           />
-          <MetricCard label="ग्राहकहरू (Customers)" value={analytics?.topCustomers.length ?? "—"} prefix="#" color="text-[var(--color-primary)]" />
+          <MetricCard label="Customers" value={analytics?.topCustomers.length ?? "—"} prefix="#" color="text-[var(--color-primary)]" />
         </div>
 
         {/* Charts */}

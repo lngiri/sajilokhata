@@ -16,6 +16,9 @@ import {
 } from "@/lib/actions";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl } from "@/lib/phone";
+import { getMerchantRecentDescriptions } from "@/lib/actions";
+import QuickAddCustomer from "@/components/QuickAddCustomer";
+import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 
 
 type Step = "scan" | "enter" | "confirm" | "success";
@@ -59,6 +62,8 @@ export default function MerchantScanPage() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [customerBalance, setCustomerBalance] = useState<number | null>(null);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [recentDescriptions, setRecentDescriptions] = useState<string[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load merchant ID and customer list on mount
@@ -83,6 +88,8 @@ export default function MerchantScanPage() {
         }));
         setCustomerList(mapped.sort((a, b) => (a.name || a.phone).localeCompare(b.name || b.phone)));
       });
+
+      getMerchantRecentDescriptions(merchantId).then(setRecentDescriptions).catch(() => {});
     }
   }, [isManual, merchantId]);
 
@@ -284,23 +291,35 @@ export default function MerchantScanPage() {
                 <label className="text-sm font-medium text-[var(--color-text)]">
                   {entryType === "cash" ? "Customer (Optional)" : "Search Customer (Name or Phone)"}
                 </label>
-                <input
-                  type="text"
-                  placeholder={entryType === "cash" ? "e.g. Ram Sharma or leave blank for walk-in" : "e.g. Ram Sharma or 9841..."}
-                  value={searchQuery}
-                  onFocus={() => setShowDropdown(true)}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowDropdown(true);
-                    if (!customerList.find((c) => (c.name || c.phone) === e.target.value)) {
-                      setCustomerId(null);
-                      setCustomerPhone(e.target.value);
-                      setCustomerName(null);
-                      setCustomerBalance(null);
-                    }
-                  }}
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-                />
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    placeholder="Search or click + to add customer"
+                    value={searchQuery}
+                    onFocus={() => setShowDropdown(true)}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setShowDropdown(true);
+                      if (!customerList.find((c) => (c.name || c.phone) === e.target.value)) {
+                        setCustomerId(null);
+                        setCustomerPhone(e.target.value);
+                        setCustomerName(null);
+                        setCustomerBalance(null);
+                      }
+                    }}
+                    className="w-full px-4 py-3 pr-12 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowQuickAdd(true)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[var(--color-primary)] text-white active:scale-90 transition-transform hover:bg-[var(--color-primary-dark)]"
+                    title="Add new customer"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                  </button>
+                </div>
                 {showDropdown && filteredCustomers.length > 0 && (
                   <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 max-h-48 overflow-y-auto">
                     {filteredCustomers.map((c) => (
@@ -341,15 +360,15 @@ export default function MerchantScanPage() {
                 <div className="flex gap-2">
                   <button onClick={() => setEntryType("debit")}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
-                    Credit Given (उधारो)
+                    Credit Given
                   </button>
                   <button onClick={() => setEntryType("credit")}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
-                    Amount Received (पैसा)
+                    Amount Received
                   </button>
                   <button onClick={() => setEntryType("cash")}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
-                    Cash Sale (नगद बिक्री)
+                    Cash Sale
                   </button>
                 </div>
               </div>
@@ -365,6 +384,10 @@ export default function MerchantScanPage() {
                   <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
                   <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grossery items" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
                     className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                  <DescriptionSuggestions
+                    descriptions={recentDescriptions}
+                    onSelect={(desc) => setDescription(desc)}
+                  />
                 </div>
               </div>
 
@@ -405,7 +428,7 @@ export default function MerchantScanPage() {
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
                       <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : entryType === "cash" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
-                        {entryType === "debit" ? "Credit Given (उधारो)" : entryType === "cash" ? "Cash Sale (नगद बिक्री)" : "Amount Received (पैसा)"}
+                        {entryType === "debit" ? "Credit Given" : entryType === "cash" ? "Cash Sale" : "Amount Received"}
                       </span>
                     </div>
                   </div>
@@ -469,7 +492,7 @@ export default function MerchantScanPage() {
                           (() => {
                             const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://qrhisab.vercel.app';
                             const shareLink = `${baseUrl}/verify?token=${verificationToken}`;
-                            return `नमस्ते, तपाईंको खातामा NPR ${Number(amount).toLocaleString()} को कारोबार थपिएको छ। कृपया यो लिंकमा गई स्वीकृत गर्नुहोला: ${shareLink}`;
+                            return `Dear customer, NPR ${Number(amount).toLocaleString()} has been added to your account. Please verify using this link: ${shareLink}`;
                           })()
                         )}`}
                         target="_blank"
@@ -487,9 +510,9 @@ export default function MerchantScanPage() {
                           const link = `${baseUrl}/verify?token=${verificationToken}`;
                           try {
                             await navigator.clipboard.writeText(link);
-                            addToast("लिंक कपि गरियो! (Link copied!)", "success");
+                            addToast("Link copied!", "success");
                           } catch {
-                            addToast("कपि गर्न सकिएन (Failed to copy)", "error");
+                            addToast("Failed to copy", "error");
                           }
                         }}
                         className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform hover:bg-gray-200"
@@ -497,7 +520,7 @@ export default function MerchantScanPage() {
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
                         </svg>
-                        Copy Link (लिंक कपि)
+                        Copy Link
                       </button>
                     </div>
                   </>
@@ -512,6 +535,19 @@ export default function MerchantScanPage() {
         </div>
 
         <BottomNav />
+
+        {showQuickAdd && merchantId && (
+          <QuickAddCustomer
+            merchantId={merchantId}
+            onCustomerAdded={(c) => {
+              setCustomerId(c.id);
+              setCustomerPhone(c.phone);
+              setCustomerName(c.name);
+              setSearchQuery(c.name || c.phone);
+            }}
+            onClose={() => setShowQuickAdd(false)}
+          />
+        )}
       </div>
     );
   }
@@ -614,7 +650,7 @@ export default function MerchantScanPage() {
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
                     <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                      {entryType === "debit" ? "Credit Given (उधारो)" : "Amount Received (पैसा)"}
+                      {entryType === "debit" ? "Credit Given" : "Amount Received"}
                     </span>
                   </div>
                 </div>

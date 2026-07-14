@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     if (upsertError) {
       console.error("Failed to create merchants row:", upsertError);
       return NextResponse.json(
-        { error: "प्रोफाइल बनाउन सकिएन। कृपया पुनः प्रयास गर्नुहोस्।" },
+        { error: "Could not create profile. Please try again." },
         { status: 500 }
       );
     }
