@@ -13,6 +13,7 @@ import {
   createManualCreditLog,
   getMerchantCustomers,
   getMerchantCustomerBalance,
+  getClient,
 } from "@/lib/actions";
 import { sendTransactionNotification } from "@/app/actions/sms";
 import { useSearchParams } from "next/navigation";
@@ -222,41 +223,49 @@ export default function MerchantScanPage() {
       }
 
       if (isManual) {
-        let attachmentUrl: string | null = null;
-
-        if (attachmentFile) {
-          setAttachmentUploading(true);
-          try {
-            if (navigator.onLine) {
-              const compressed = await compressImage(attachmentFile, 200);
-              attachmentUrl = await uploadAttachment(mId, crypto.randomUUID(), compressed);
-            } else {
-              const compressed = await compressImage(attachmentFile, 200);
-              const base64 = await blobToBase64(compressed);
-              await savePendingAttachment({
-                id: crypto.randomUUID(),
-                logId: crypto.randomUUID(),
-                merchantId: mId,
-                data: base64,
-              });
-            }
-          } catch {
-            addToast("Failed to process photo attachment.", "error");
-          } finally {
-            setAttachmentUploading(false);
-          }
-        }
-
+        // Create the log entry FIRST to get the real entry ID
         const entry = await createManualCreditLog({
           merchant_id: mId,
           customer_id: cId ?? undefined,
           amount: Number(amount),
           type: entryType,
           description: description || null,
-          attachment_url: attachmentUrl,
         });
         if (entry?.verification_token) {
           setVerificationToken(entry.verification_token);
+        }
+
+        // THEN handle attachment upload with the real entry ID
+        if (attachmentFile) {
+          setAttachmentUploading(true);
+          try {
+            if (navigator.onLine) {
+              const compressed = await compressImage(attachmentFile, 200);
+              console.log("[Entry] Image compressed OK, size:", compressed.size);
+              const attachmentUrl = await uploadAttachment(mId, entry.id, compressed);
+              console.log("[Entry] Attachment uploaded:", attachmentUrl);
+              // Attach URL to the log entry
+              await getClient()
+                .from("credit_logs")
+                .update({ attachment_url: attachmentUrl })
+                .eq("id", entry.id);
+            } else {
+              const compressed = await compressImage(attachmentFile, 200);
+              const base64 = await blobToBase64(compressed);
+              await savePendingAttachment({
+                id: crypto.randomUUID(),
+                logId: entry.id,
+                merchantId: mId,
+                data: base64,
+              });
+              console.log("[Entry] Attachment saved offline with real logId:", entry.id);
+            }
+          } catch (err) {
+            console.error("[Entry] Attachment processing failed:", err);
+            addToast("Failed to process photo attachment. Entry saved without photo.", "warning");
+          } finally {
+            setAttachmentUploading(false);
+          }
         }
       } else {
         await createCreditLog({

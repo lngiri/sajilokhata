@@ -1,4 +1,7 @@
-export function compressImage(file: File, maxSizeKB: number = 200): Promise<Blob> {
+export function compressImage(
+  file: File,
+  maxSizeKB: number = 200
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -21,15 +24,24 @@ export function compressImage(file: File, maxSizeKB: number = 200): Promise<Blob
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0, width, height);
 
-      const tryQuality = (q: number) => {
+      const tryQuality = (q: number, format: "webp" | "jpeg" = "webp") => {
+        const mimeType = format === "webp" ? "image/webp" : "image/jpeg";
         canvas.toBlob((blob) => {
-          if (!blob) { reject(new Error("Compression failed")); return; }
+          if (!blob) {
+            // WebP not supported — retry as JPEG
+            if (format === "webp") {
+              tryQuality(0.8, "jpeg");
+            } else {
+              reject(new Error("Canvas compression returned null"));
+            }
+            return;
+          }
           if (blob.size <= maxSizeKB * 1024 || q <= 0.1) {
             resolve(blob);
           } else {
-            tryQuality(q - 0.1);
+            tryQuality(q - 0.1, format);
           }
-        }, "image/webp", q);
+        }, mimeType, q);
       };
       tryQuality(0.8);
     };

@@ -93,14 +93,45 @@ export default function BottomNav() {
     setMerchantProfile(null);
     (async () => {
       const id = await getCurrentMerchantId();
-      if (!id) { setQrLoading(false); return; }
+      console.log("[BottomNav-QR] getCurrentMerchantId returned:", id);
+
       const supabase = createClient();
-      const { data } = await supabase
-        .from("merchants")
-        .select("id, name, business_type, business_name")
-        .eq("id", id)
-        .single();
-      if (data) setMerchantProfile(data);
+
+      // Try 1: Lookup by merchant ID (from localStorage or auth)
+      if (id) {
+        const { data, error } = await supabase
+          .from("merchants")
+          .select("id, name, business_type, business_name")
+          .eq("id", id)
+          .single();
+        console.log("[BottomNav-QR] Lookup by ID:", id, "→ data:", data, "error:", error);
+        if (data) {
+          setMerchantProfile(data);
+          setQrLoading(false);
+          return;
+        }
+      }
+
+      // Try 2: Fallback — lookup by phone (in case ID is stale or RLS blocks ID-based query)
+      const phone = localStorage.getItem("merchant_phone");
+      console.log("[BottomNav-QR] Fallback — phone from localStorage:", phone);
+      if (phone) {
+        const { data, error } = await supabase
+          .from("merchants")
+          .select("id, name, business_type, business_name")
+          .eq("phone", phone)
+          .maybeSingle();
+        console.log("[BottomNav-QR] Lookup by phone:", phone, "→ data:", data, "error:", error);
+        if (data) {
+          // Sync the resolved ID back to localStorage
+          localStorage.setItem("merchant_id", data.id);
+          setMerchantProfile(data);
+          setQrLoading(false);
+          return;
+        }
+      }
+
+      console.error("[BottomNav-QR] All lookups failed — no merchant profile found");
       setQrLoading(false);
     })();
   }, [showQRModal]);

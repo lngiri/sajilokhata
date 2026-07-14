@@ -46,6 +46,9 @@ export default function LoginPage() {
     if (result.userId) {
       localStorage.setItem("merchant_id", result.userId);
     }
+    if (result.phone) {
+      localStorage.setItem("merchant_phone", result.phone);
+    }
 
     window.location.href = `/merchant/dashboard?status=${result.userId ? "existing" : "new"}`;
   };

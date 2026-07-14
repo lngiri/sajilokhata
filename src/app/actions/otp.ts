@@ -52,7 +52,7 @@ export async function sendLoginOtp(
 export async function verifyLoginOtp(
   phone: string,
   code: string
-): Promise<{ success: boolean; error?: string; userId?: string }> {
+): Promise<{ success: boolean; error?: string; userId?: string; phone?: string }> {
   console.log("[OTP] verifyLoginOtp called for phone:", phone);
 
   try {
@@ -185,7 +185,7 @@ export async function verifyLoginOtp(
       console.warn("[OTP] Failed to set session cookie (non-fatal):", err);
     }
 
-    return { success: true, userId };
+    return { success: true, userId, phone: normalizedPhone };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[OTP] Unexpected error in verifyLoginOtp:", msg);

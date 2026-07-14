@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/Toast";
 import { findOrCreateCustomer, linkCustomerToMerchant } from "@/lib/actions";
+import {
+  checkCustomerOnboarded,
+  sendOnboardingSMS,
+} from "@/app/actions/customer";
 
 interface QuickAddCustomerProps {
   merchantId: string;
@@ -15,6 +19,7 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const sentRef = useRef(false);
 
   const handleSubmit = async () => {
     const trimmedName = name.trim();
@@ -31,6 +36,25 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
     try {
       const customer = await findOrCreateCustomer(trimmedPhone, trimmedName);
       await linkCustomerToMerchant(merchantId, customer.id);
+
+      // Fire-and-forget: check if customer is onboarded; if not, send onboarding SMS
+      if (!sentRef.current) {
+        sentRef.current = true;
+        checkCustomerOnboarded(trimmedPhone).then(({ onboarded }) => {
+          if (!onboarded) {
+            sendOnboardingSMS(trimmedPhone, trimmedName).then((res) => {
+              if (res.success) {
+                console.log("[QuickAdd] Onboarding SMS sent to", trimmedPhone);
+              } else {
+                console.warn("[QuickAdd] Onboarding SMS failed:", res.error);
+              }
+            });
+          } else {
+            console.log("[QuickAdd] Customer already onboarded:", trimmedPhone);
+          }
+        });
+      }
+
       addToast(`${trimmedName} added as a customer!`, "success");
       onCustomerAdded({ id: customer.id, name: customer.name || trimmedName, phone: trimmedPhone });
       onClose();

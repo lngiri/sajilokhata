@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/client";
 
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
-function getClient() {
+export function getClient() {
   if (!supabaseClient) {
     supabaseClient = createClient();
   }
