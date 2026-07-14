@@ -265,7 +265,6 @@ export default function MerchantDashboard() {
   // Issue 3: Handle pull-to-refresh — show QR modal + silent refetch
   // ================================================================
   const handlePullRefresh = async () => {
-    setShowQRModal(true);
     try {
       await loadData();
     } catch {
@@ -650,7 +649,7 @@ export default function MerchantDashboard() {
       {/* ================================================================ */}
       {showQRModal && merchantProfile && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={handleCloseQR}
         >
           <div

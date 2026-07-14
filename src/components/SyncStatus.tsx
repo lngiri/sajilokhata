@@ -180,7 +180,7 @@ export default function SyncStatus() {
 
   // Expanded detail card
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">
       <div
         className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-sm mx-auto p-5 shadow-2xl animate-slide-up"
         onClick={(e) => e.stopPropagation()}

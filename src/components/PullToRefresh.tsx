@@ -85,7 +85,8 @@ export default function PullToRefresh({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="relative overflow-hidden"
+      className="relative overflow-hidden touch-action-none"
+      style={{ touchAction: "none" }}
     >
       {/* Refresh indicator */}
       <div

@@ -403,7 +403,7 @@ export default function CustomerDashboard() {
       {/* ===== SCAN MODAL OVERLAY ===== */}
       {showScanner && (
         <div
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
         >
           <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 animate-slide-up max-h-[90dvh] overflow-y-auto">
@@ -548,7 +548,7 @@ export default function CustomerDashboard() {
       {/* ===== EDIT PROFILE MODAL ===== */}
       {showEditProfile && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowEditProfile(false); }}
         >
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 animate-slide-up shadow-2xl">

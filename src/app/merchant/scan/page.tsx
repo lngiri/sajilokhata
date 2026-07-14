@@ -312,7 +312,7 @@ export default function MerchantScanPage() {
                   <button
                     type="button"
                     onClick={() => setShowQuickAdd(true)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-[var(--color-primary)] text-white active:scale-90 transition-transform hover:bg-[var(--color-primary-dark)]"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-[var(--color-primary)] text-white active:scale-90 transition-transform hover:bg-[var(--color-primary-dark)]"
                     title="Add new customer"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

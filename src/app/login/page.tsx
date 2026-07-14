@@ -235,7 +235,7 @@ export default function LoginPage() {
               }
               window.location.href = `/merchant/dashboard?status=${status}`;
             }}
-            className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)]"
+            className="w-full text-center text-sm text-[var(--color-text-muted)] hover:text-[var(--color-primary)] active:text-[var(--color-primary)] transition-colors"
           >
             Skip for demo →
           </button>
@@ -288,7 +288,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => { setStep("phone"); setError(""); }}
-            className="w-full text-center text-sm text-[var(--color-text-muted)]"
+            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
           >
             Change phone number
           </button>

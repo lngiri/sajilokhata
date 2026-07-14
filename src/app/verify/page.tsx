@@ -307,7 +307,7 @@ export default function VerifyPage() {
               Verify
             </button>
             <button onClick={() => setStep("phone")}
-              className="w-full text-xs text-[var(--color-text-muted)] underline active:opacity-70">
+              className="w-full text-xs text-[var(--color-text-muted)] underline active:opacity-70 transition-opacity">
               Use different number
             </button>
           </div>
