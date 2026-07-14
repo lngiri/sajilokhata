@@ -43,6 +43,24 @@ export default function LoginPage() {
       return;
     }
 
+    // ── Secure login: wipe ALL previous state before setting new identity ──
+    localStorage.clear();
+    sessionStorage.clear();
+    try {
+      const { clearIndexedDB } = await import("@/lib/offline/db");
+      await clearIndexedDB();
+    } catch { /* ignore */ }
+    document.cookie.split(";").forEach((c) => {
+      const name = c.trim().split("=")[0];
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+    });
+    if ("caches" in window) {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch { /* ignore */ }
+    }
+
     if (result.userId) {
       localStorage.setItem("merchant_id", result.userId);
     }
@@ -50,7 +68,7 @@ export default function LoginPage() {
       localStorage.setItem("merchant_phone", result.phone);
     }
 
-    window.location.href = `/merchant/dashboard?status=${result.userId ? "existing" : "new"}`;
+    window.location.replace(`/merchant/dashboard?status=${result.userId ? "existing" : "new"}`);
   };
 
   return (

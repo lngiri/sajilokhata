@@ -71,6 +71,27 @@ interface SajiloKhataDB extends DBSchema {
 
 let dbPromise: Promise<IDBPDatabase<SajiloKhataDB>> | null = null;
 
+/**
+ * Delete the entire IndexedDB database.
+ * Called on sign-out / session-mismatch to prevent cross-user data leakage.
+ */
+export async function clearIndexedDB() {
+  dbPromise = null; // Drop cached reference so next getDB() creates a fresh DB
+  try {
+    const dbs = await indexedDB.databases();
+    for (const db of dbs) {
+      if (db.name) indexedDB.deleteDatabase(db.name);
+    }
+  } catch {
+    // indexedDB.databases() may not be available in all browsers
+    try {
+      indexedDB.deleteDatabase("sajilokhata");
+    } catch {
+      // Ignore
+    }
+  }
+}
+
 function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<SajiloKhataDB>("sajilokhata", 2, {

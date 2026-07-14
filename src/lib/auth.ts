@@ -2,45 +2,57 @@
 
 import { createClient } from "@/lib/supabase/client";
 import { clearCachedClient } from "@/lib/actions";
+import { clearIndexedDB } from "@/lib/offline/db";
 
 /**
- * Get the current merchant ID from the Supabase auth session.
- * Always fetches from the server — no stale in-memory cache.
- * Falls back to localStorage only when no auth session exists (bypass/demo mode).
+ * Get the current merchant ID.
+ *
+ * Preference order:
+ *  1. localStorage (set by the custom login flow — source of truth)
+ *  2. Supabase Auth session (legacy users before custom-auth migration)
+ *
+ * NEVER overwrites localStorage — that would create a cross-session leak
+ * if a stale Supabase session returns a different userId.
  */
 export async function getCurrentMerchantId(): Promise<string | null> {
+  // localStorage is the authoritative source for our custom auth flow
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("merchant_id");
+    if (stored) return stored;
+  }
+
+  // Fallback: legacy Supabase Auth session (pre-custom-auth users)
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-
-    if (user) {
-      localStorage.setItem("merchant_id", user.id);
-      return user.id;
-    }
+    if (user) return user.id;
   } catch {
     // Supabase not available
-  }
-
-  // Fallback: localStorage (bypass/demo mode where there's no real auth session)
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("merchant_id");
   }
 
   return null;
 }
 
 /**
- * Get the current user's phone number from the Supabase auth session.
- * Returns null if not available.
+ * Get the current user's phone number.
+ *
+ * Preference order:
+ *  1. localStorage (set by the custom login flow)
+ *  2. Supabase Auth session (legacy)
+ *  3. auth_bypass_phone cookie
  */
 export async function getCurrentUserPhone(): Promise<string | null> {
+  // localStorage is the authoritative source for our custom auth flow
+  if (typeof window !== "undefined") {
+    const stored = localStorage.getItem("merchant_phone");
+    if (stored) return stored;
+  }
+
+  // Fallback: legacy Supabase Auth session
   try {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-
-    if (user?.phone) {
-      return user.phone;
-    }
+    if (user?.phone) return user.phone;
   } catch {
     // Supabase not available
   }
@@ -70,6 +82,8 @@ export async function signOut() {
 
   // Wipe all client-side storage
   localStorage.clear();
+  sessionStorage.clear();
+  await clearIndexedDB();
 
   // Clear client-accessible cookies
   document.cookie.split(";").forEach((c) => {
