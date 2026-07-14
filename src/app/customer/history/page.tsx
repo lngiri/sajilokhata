@@ -8,7 +8,6 @@ import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustome
 import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
 import CustomerPinGate from "@/components/CustomerPinGate";
-import { signOut } from "@/lib/auth";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";

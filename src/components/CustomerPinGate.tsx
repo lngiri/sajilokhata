@@ -36,7 +36,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
     (async () => {
       const { hasPin } = await checkCustomerHasPin(phone);
       if (cancelled) return;
-      setStep(hasPin ? "pin" : "unlocked");
+      setStep(hasPin ? "pin" : "set_pin");
     })();
     return () => { cancelled = true; };
   }, [phone]);
