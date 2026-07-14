@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { normalizePhone } from "@/lib/phone";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
@@ -9,38 +9,44 @@ export async function POST(request: Request) {
     let { merchant_id, name, business_name, business_type, address, phone } = body;
     if (phone) phone = normalizePhone(phone);
 
-    if (!merchant_id) {
+    console.log("[Profile] POST called — body merchant_id:", merchant_id);
+
+    // ── Auth: verify via custom session cookie (works with our custom OTP) ──
+    const cookieHeader = request.headers.get("cookie") || "";
+    const sessionCookie = parseCookie(cookieHeader, SESSION_COOKIE);
+    let sessionUserId: string | null = null;
+    if (sessionCookie) {
+      sessionUserId = await verifySessionToken(sessionCookie);
+      console.log("[Profile] Session cookie valid — userId:", sessionUserId);
+    } else {
+      console.log("[Profile] No session cookie found");
+    }
+
+    if (!merchant_id && !sessionUserId) {
+      console.warn("[Profile] No merchant_id provided and no valid session");
       return NextResponse.json(
-        { error: "merchant_id is required" },
-        { status: 400 }
+        { error: "Not logged in" },
+        { status: 401 }
       );
     }
 
-    // Try admin client first (bypasses RLS), fall back to server client (user auth)
-    let client: any = getAdminClient();
-
-    if (!client) {
-      client = await createClient();
+    // ── Use admin client (service_role key bypasses RLS) ──
+    const admin = getAdminClient();
+    if (!admin) {
+      console.error("[Profile] Admin client unavailable — service_role key not configured");
+      return NextResponse.json(
+        { error: "Server configuration error. Please contact support." },
+        { status: 500 }
+      );
     }
 
-    // If phone is provided, look up existing merchant by phone to resolve ID.
-    // This handles stale localStorage merchant_id and duplicate records.
-    let resolvedId = merchant_id;
-    if (phone) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingByPhone } = await (client.from("merchants") as any)
-        .select("id")
-        .eq("phone", phone)
-        .maybeSingle();
-
-      if (existingByPhone && existingByPhone.id !== merchant_id) {
-        resolvedId = existingByPhone.id;
-      }
-    }
+    // Resolve the merchant ID: prefer the session userId as authoritative
+    const resolvedId = sessionUserId || merchant_id;
+    console.log("[Profile] Using resolved merchant_id:", resolvedId);
 
     // Upsert merchant profile — DB UNIQUE constraint on phone prevents duplicates
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (client.from("merchants") as any)
+    const { data, error } = await (admin.from("merchants") as any)
       .upsert(
         {
           id: resolvedId,
@@ -56,7 +62,7 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      console.error("Failed to update merchant profile:", error);
+      console.error("[Profile] Upsert error:", error);
       // Handle unique violation on phone (PostgreSQL error code 23505)
       if (error.code === "23505") {
         return NextResponse.json(
@@ -73,12 +79,19 @@ export async function POST(request: Request) {
       );
     }
 
+    console.log("[Profile] Profile saved successfully for merchant:", resolvedId);
     return NextResponse.json({ success: true, profile: data, merchant_id: resolvedId });
   } catch (err) {
-    console.error("Merchant profile error:", err);
+    console.error("[Profile] Unexpected error:", err);
     return NextResponse.json(
       { error: "Could not save profile. Please try again." },
       { status: 500 }
     );
   }
+}
+
+/** Simple cookie parser — reads a named cookie from a raw Cookie header string */
+function parseCookie(cookie: string, name: string): string | null {
+  const match = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
 }

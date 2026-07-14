@@ -61,10 +61,12 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     if (!merchantId) {
+      console.warn("[Settings] handleSave — merchantId is null/undefined");
       addToast("Not logged in", "error");
       return;
     }
 
+    console.log("[Settings] handleSave — merchantId:", merchantId);
     setSaving(true);
     try {
       await updateMerchantProfile(merchantId, {
@@ -74,9 +76,10 @@ export default function SettingsPage() {
         address: address.trim() || undefined,
         phone: phone || undefined,
       });
+      console.log("[Settings] Profile saved successfully");
       addToast("Profile updated successfully.", "success");
     } catch (err: any) {
-      console.error("Failed to save merchant profile:", err);
+      console.error("[Settings] Failed to save merchant profile:", err);
       addToast(err.message || "Failed to save. Please try again.", "error");
     } finally {
       setSaving(false);
