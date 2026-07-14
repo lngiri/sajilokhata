@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 
 export async function sendLoginOtp(
   phone: string
@@ -167,6 +168,21 @@ export async function verifyLoginOtp(
       );
     } catch (err) {
       console.warn("[OTP] Merchant setup call failed (non-critical):", err);
+    }
+
+    // ---- 4. Set long-lived session cookie ----
+    try {
+      const { token, maxAge } = await createSessionToken(userId);
+      cookieStore.set(SESSION_COOKIE, token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge,
+        path: "/",
+      });
+      console.log("[OTP] Session cookie set for user:", userId);
+    } catch (err) {
+      console.warn("[OTP] Failed to set session cookie (non-fatal):", err);
     }
 
     return { success: true, userId };

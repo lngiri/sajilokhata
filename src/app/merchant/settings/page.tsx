@@ -21,6 +21,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   // Merchant profile state
+  const [loading, setLoading] = useState(true);
   const [merchantId, setMerchantId] = useState<string | null>(null);
   const [merchantName, setMerchantName] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -38,7 +39,6 @@ export default function SettingsPage() {
       const id = await getCurrentMerchantId();
       setMerchantId(id);
 
-      // Pull phone from Supabase auth session (most authoritative)
       const sessionPhone = await getCurrentUserPhone();
       setAuthPhone(sessionPhone);
 
@@ -48,13 +48,16 @@ export default function SettingsPage() {
         setBusinessName(profile.business_name || "");
         setBusinessType(profile.business_type || "kirana");
         setAddress(profile.address || "");
-        // Auth session phone is most authoritative; fall back to db phone
-        setPhone(sessionPhone || profile.phone || "");
+        setPhone(profile.phone || "");
       }
     } catch (err) {
       console.error("Failed to load merchant profile:", err);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const displayPhone = phone || authPhone || "";
 
   const handleSave = async () => {
     if (!merchantId) {
@@ -244,18 +247,24 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
                 Registered Business Phone
               </label>
-              <div className="px-3.5 py-2.5 bg-emerald-50 rounded-xl text-sm font-mono text-emerald-700 border border-emerald-100 flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>+977 {phone ? phone.replace(/^\+977/, "") : "Not registered"}</span>
-              </div>
-              {authPhone && authPhone !== phone && (
+              {loading ? (
+                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl">
+                  <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ) : (
+                <div className="px-3.5 py-2.5 bg-emerald-50 rounded-xl text-sm font-mono text-emerald-700 border border-emerald-100 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>+977 {displayPhone.replace(/^\+977/, "")}</span>
+                </div>
+              )}
+              {!loading && authPhone && authPhone !== phone && (
                 <p className="text-xs text-[var(--color-text-muted)] mt-1.5 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                   </svg>
-                  Auth phone: {authPhone} (login phone, may differ)
+                  Auth phone: {authPhone} (differs from business phone)
                 </p>
               )}
             </div>

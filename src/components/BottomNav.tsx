@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { QRDisplay } from "@/components/QRCode";
 import { createClient } from "@/lib/supabase/client";
+import { getCurrentMerchantId } from "@/lib/auth";
 
 interface NavItem {
   href: string;
@@ -75,6 +76,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [showQRModal, setShowQRModal] = useState(false);
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
 
   useEffect(() => {
     if (!showQRModal) return;
@@ -87,19 +89,20 @@ export default function BottomNav() {
 
   useEffect(() => {
     if (!showQRModal) return;
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        supabase
-          .from("merchants")
-          .select("id, name, business_type, business_name")
-          .eq("id", user.id)
-          .single()
-          .then(({ data }) => {
-            if (data) setMerchantProfile(data);
-          });
-      }
-    });
+    setQrLoading(true);
+    setMerchantProfile(null);
+    (async () => {
+      const id = await getCurrentMerchantId();
+      if (!id) { setQrLoading(false); return; }
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("merchants")
+        .select("id, name, business_type, business_name")
+        .eq("id", id)
+        .single();
+      if (data) setMerchantProfile(data);
+      setQrLoading(false);
+    })();
   }, [showQRModal]);
 
   const fabItem = navItems.find((i) => i.isFab)!;
@@ -140,7 +143,7 @@ export default function BottomNav() {
       </nav>
 
       {/* QR Modal */}
-      {showQRModal && merchantProfile && (
+      {showQRModal && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           onClick={() => setShowQRModal(false)}
@@ -160,26 +163,39 @@ export default function BottomNav() {
               </svg>
             </button>
 
-            <div className="text-center mb-2">
-              <h2 className="text-lg font-bold text-[var(--color-text)]">
-                {merchantProfile.name}
-              </h2>
-              <p className="text-sm text-[var(--color-text-muted)] capitalize">
-                {merchantProfile.business_type} Shop
-              </p>
-            </div>
+            {qrLoading ? (
+              <div className="py-10 flex flex-col items-center gap-4">
+                <div className="w-10 h-10 border-[3px] border-gray-200 border-t-[var(--color-primary)] rounded-full animate-spin" />
+                <p className="text-sm text-[var(--color-text-muted)]">Loading your QR...</p>
+              </div>
+            ) : merchantProfile ? (
+              <>
+                <div className="text-center mb-2">
+                  <h2 className="text-lg font-bold text-[var(--color-text)]">
+                    {merchantProfile.name}
+                  </h2>
+                  <p className="text-sm text-[var(--color-text-muted)] capitalize">
+                    {merchantProfile.business_type} Shop
+                  </p>
+                </div>
 
-            <QRDisplay
-              merchantId={merchantProfile.id}
-              merchantName={merchantProfile.name}
-              businessType={merchantProfile.business_type}
-            />
+                <QRDisplay
+                  merchantId={merchantProfile.id}
+                  merchantName={merchantProfile.name}
+                  businessType={merchantProfile.business_type}
+                />
 
-            <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
-              <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
-                Ask your customer to scan this QR code
-              </p>
-            </div>
+                <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
+                  <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
+                    Ask your customer to scan this QR code
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="py-10 text-center">
+                <p className="text-sm text-[var(--color-text-muted)]">Could not load merchant profile.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
