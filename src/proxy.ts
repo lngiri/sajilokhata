@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -81,6 +82,35 @@ export async function proxy(request: NextRequest) {
     ) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // === Admin Protection (completely isolated from merchant/customer sessions) ===
+  const path = request.nextUrl.pathname;
+  if (path.startsWith("/admin")) {
+    // Allow admin login page without auth
+    if (path === "/admin/login") {
+      // If already logged in, skip to dashboard
+      const rawAdmin = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+      if (rawAdmin) {
+        const adminId = await verifyAdminSessionToken(rawAdmin);
+        if (adminId) {
+          const url = request.nextUrl.clone();
+          url.pathname = "/admin/dashboard";
+          return NextResponse.redirect(url);
+        }
+      }
+      return supabaseResponse;
+    }
+
+    // All other /admin/* routes require a valid admin session
+    const rawAdmin = request.cookies.get(ADMIN_SESSION_COOKIE)?.value;
+    const validAdminId = rawAdmin ? await verifyAdminSessionToken(rawAdmin) : null;
+
+    if (!validAdminId) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin/login";
       return NextResponse.redirect(url);
     }
   }
