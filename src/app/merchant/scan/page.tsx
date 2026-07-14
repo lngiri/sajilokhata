@@ -271,6 +271,21 @@ export default function MerchantScanPage() {
 
       setStep("success");
       addToast(isCash ? "Cash sale recorded!" : "Entry saved! Customer notified.", "success");
+
+      // Fire-and-forget SMS notification
+      if (customerPhone && mId) {
+        fetch("/api/sms/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            to: customerPhone,
+            merchantId: mId,
+            amount: Number(amount),
+            type: entryType,
+            customerName,
+          }),
+        }).catch(() => {});
+      }
     } catch (err) {
       console.error("Failed to save entry:", err);
       addToast("Failed to save. Please try again.", "error");
