@@ -9,10 +9,19 @@ export default function AdminMerchantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [merchant, setMerchant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const load = async () => {
     setLoading(true);
+    setError("");
+    console.log("[AdminMerchantDetail] Loading ID:", id);
     const data = await getAdminMerchantDetail(id);
+    console.log("[AdminMerchantDetail] Received data:", data);
+    if (!data) {
+      setError(`Server returned null for merchant ID: ${id}`);
+    } else if (!data.id) {
+      setError(`Server returned empty object: ${JSON.stringify(data)}`);
+    }
     setMerchant(data);
     setLoading(false);
   };
@@ -37,8 +46,13 @@ export default function AdminMerchantDetailPage() {
 
   if (!merchant) {
     return (
-      <div className="text-center py-16 text-slate-500">
-        <p className="text-sm font-medium">Merchant not found</p>
+      <div className="text-center py-16">
+        <p className="text-sm font-medium text-[var(--a-muted)]">Merchant not found</p>
+        {error && (
+          <div className="mt-4 max-w-md mx-auto bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-xl p-4">
+            <p className="text-xs font-mono text-red-600 dark:text-red-400 text-left whitespace-pre-wrap break-all">{error}</p>
+          </div>
+        )}
         <button onClick={() => router.back()} className="mt-4 text-sm text-red-400 hover:text-red-300">Go back</button>
       </div>
     );

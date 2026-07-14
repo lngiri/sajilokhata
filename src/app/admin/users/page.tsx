@@ -22,6 +22,10 @@ export default function UsersPage() {
   const load = useCallback(async () => {
     setLoading(true);
     const data = await getAdminUserDirectory();
+    console.log("[UsersPage] getAdminUserDirectory returned", data?.length ?? 0, "users");
+    if (data && data.length > 0) {
+      console.log("[UsersPage] Sample user:", JSON.stringify(data[0]));
+    }
     setUsers(data);
     setLoading(false);
   }, []);

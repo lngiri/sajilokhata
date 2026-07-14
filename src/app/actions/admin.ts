@@ -358,19 +358,23 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
     // Add tx counts for merchants
     const merchantIds = merchants.map((m: any) => m.id);
     if (merchantIds.length > 0) {
-      const { data: txCounts } = await (admin.from("credit_logs") as any)
-        .select("merchant_id, id")
-        .in("merchant_id", merchantIds);
+      try {
+        const { data: txCounts } = await (admin.from("credit_logs") as any)
+          .select("merchant_id, id")
+          .in("merchant_id", merchantIds);
 
-      if (txCounts) {
-        const countMap: Record<string, number> = {};
-        for (const tx of txCounts) {
-          countMap[tx.merchant_id] = (countMap[tx.merchant_id] || 0) + 1;
+        if (txCounts) {
+          const countMap: Record<string, number> = {};
+          for (const tx of txCounts) {
+            countMap[tx.merchant_id] = (countMap[tx.merchant_id] || 0) + 1;
+          }
+          results = results.map((u) => ({
+            ...u,
+            transactionCount: countMap[u.id] || 0,
+          }));
         }
-        results = results.map((u) => ({
-          ...u,
-          transactionCount: countMap[u.id] || 0,
-        }));
+      } catch (e) {
+        console.error("[getAdminUserDirectory] tx counts query failed:", e);
       }
     }
 
@@ -412,24 +416,30 @@ export async function getAdminMerchants(search?: string): Promise<
     const { data } = await query;
     if (!data) return [];
 
-    return await Promise.all(
-      data.map(async (m: any) => {
-        const { count } = await (admin.from("credit_logs") as any)
+    const results: any[] = [];
+    for (const m of data) {
+      let count = 0;
+      try {
+        const r = await (admin.from("credit_logs") as any)
           .select("id", { count: "exact", head: true })
           .eq("merchant_id", m.id);
-
-        return {
-          id: m.id,
-          name: m.name || "",
-          businessName: m.business_name || "",
-          phone: m.phone || "",
-          status: m.status || "active",
-          transactionCount: count ?? 0,
-          createdAt: m.created_at,
-        };
-      })
-    );
-  } catch {
+        count = r?.count ?? 0;
+      } catch (e) {
+        console.error("[getAdminMerchants] count failed for", m.id, e);
+      }
+      results.push({
+        id: m.id,
+        name: m.name || "",
+        businessName: m.business_name || "",
+        phone: m.phone || "",
+        status: m.status || "active",
+        transactionCount: count,
+        createdAt: m.created_at,
+      });
+    }
+    return results;
+  } catch (err) {
+    console.error("[getAdminMerchants]", err);
     return [];
   }
 }
@@ -485,16 +495,28 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
       .eq("id", merchantId)
       .maybeSingle();
 
-    if (!m) return null;
+    if (!m) {
+      console.error("[getAdminMerchantDetail] No merchant found for ID:", merchantId);
+      return null;
+    }
 
-    const [{ count: txCount }, { count: custCount }] = await Promise.all([
-      (admin.from("credit_logs") as any)
+    let txCount = 0, custCount = 0;
+    try {
+      const r = await (admin.from("credit_logs") as any)
         .select("id", { count: "exact", head: true })
-        .eq("merchant_id", m.id),
-      (admin.from("merchant_customers") as any)
+        .eq("merchant_id", m.id);
+      txCount = r?.count ?? 0;
+    } catch (e) {
+      console.error("[getAdminMerchantDetail] tx count failed for", m.id, e);
+    }
+    try {
+      const r = await (admin.from("merchant_customers") as any)
         .select("id", { count: "exact", head: true })
-        .eq("merchant_id", m.id),
-    ]);
+        .eq("merchant_id", m.id);
+      custCount = r?.count ?? 0;
+    } catch (e) {
+      console.error("[getAdminMerchantDetail] cust count failed for", m.id, e);
+    }
 
     return {
       id: m.id,
@@ -505,10 +527,11 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
       businessType: m.business_type || "",
       address: m.address || "",
       createdAt: m.created_at,
-      transactionCount: txCount ?? 0,
-      customerCount: custCount ?? 0,
+      transactionCount: txCount,
+      customerCount: custCount,
     };
-  } catch {
+  } catch (err) {
+    console.error("[getAdminMerchantDetail]", err);
     return null;
   }
 }
@@ -532,28 +555,38 @@ export async function getMerchantStorageUsage(): Promise<
 
     if (!merchants) return [];
 
-    return await Promise.all(
-      merchants.map(async (m: any) => {
-        const [{ count: txCount }, { count: custCount }] = await Promise.all([
-          (admin.from("credit_logs") as any)
-            .select("id", { count: "exact", head: true })
-            .eq("merchant_id", m.id),
-          (admin.from("merchant_customers") as any)
-            .select("id", { count: "exact", head: true })
-            .eq("merchant_id", m.id),
-        ]);
-        return {
-          id: m.id,
-          name: m.name || "",
-          businessName: m.business_name || "",
-          phone: m.phone || "",
-          transactionCount: txCount ?? 0,
-          customerCount: custCount ?? 0,
-          estimatedRows: (txCount ?? 0) + (custCount ?? 0),
-        };
-      })
-    );
-  } catch {
+    const results: any[] = [];
+    for (const m of merchants) {
+      let txCount = 0, custCount = 0;
+      try {
+        const r = await (admin.from("credit_logs") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", m.id);
+        txCount = r?.count ?? 0;
+      } catch (e) {
+        console.error("[getMerchantStorageUsage] tx count failed for", m.id, e);
+      }
+      try {
+        const r = await (admin.from("merchant_customers") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", m.id);
+        custCount = r?.count ?? 0;
+      } catch (e) {
+        console.error("[getMerchantStorageUsage] cust count failed for", m.id, e);
+      }
+      results.push({
+        id: m.id,
+        name: m.name || "",
+        businessName: m.business_name || "",
+        phone: m.phone || "",
+        transactionCount: txCount,
+        customerCount: custCount,
+        estimatedRows: txCount + custCount,
+      });
+    }
+    return results;
+  } catch (err) {
+    console.error("[getMerchantStorageUsage]", err);
     return [];
   }
 }
@@ -576,34 +609,49 @@ export async function getMerchantAnalytics(): Promise<
 
     if (!merchants) return [];
 
-    return await Promise.all(
-      merchants.map(async (m: any) => {
-        const [{ count: txCount }, { count: custCount }, { data: lastTx }] = await Promise.all([
-          (admin.from("credit_logs") as any)
-            .select("id", { count: "exact", head: true })
-            .eq("merchant_id", m.id),
-          (admin.from("merchant_customers") as any)
-            .select("id", { count: "exact", head: true })
-            .eq("merchant_id", m.id),
-          (admin.from("credit_logs") as any)
-            .select("created_at")
-            .eq("merchant_id", m.id)
-            .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle(),
-        ]);
-        return {
-          id: m.id,
-          name: m.name || "",
-          businessName: m.business_name || "",
-          phone: m.phone || "",
-          transactionCount: txCount ?? 0,
-          customerCount: custCount ?? 0,
-          lastActiveDate: lastTx?.created_at ?? null,
-        };
-      })
-    );
-  } catch {
+    const results: any[] = [];
+    for (const m of merchants) {
+      let txCount = 0, custCount = 0, lastActiveDate: string | null = null;
+      try {
+        const r = await (admin.from("credit_logs") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", m.id);
+        txCount = r?.count ?? 0;
+      } catch (e) {
+        console.error("[getMerchantAnalytics] tx count failed for", m.id, e);
+      }
+      try {
+        const r = await (admin.from("merchant_customers") as any)
+          .select("id", { count: "exact", head: true })
+          .eq("merchant_id", m.id);
+        custCount = r?.count ?? 0;
+      } catch (e) {
+        console.error("[getMerchantAnalytics] cust count failed for", m.id, e);
+      }
+      try {
+        const { data: lastTx } = await (admin.from("credit_logs") as any)
+          .select("created_at")
+          .eq("merchant_id", m.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        lastActiveDate = lastTx?.created_at ?? null;
+      } catch (e) {
+        console.error("[getMerchantAnalytics] last tx query failed for", m.id, e);
+      }
+      results.push({
+        id: m.id,
+        name: m.name || "",
+        businessName: m.business_name || "",
+        phone: m.phone || "",
+        transactionCount: txCount,
+        customerCount: custCount,
+        lastActiveDate,
+      });
+    }
+    return results;
+  } catch (err) {
+    console.error("[getMerchantAnalytics]", err);
     return [];
   }
 }
