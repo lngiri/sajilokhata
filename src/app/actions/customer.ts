@@ -34,7 +34,8 @@ export async function sendOnboardingSMS(
   }
 
   const greeting = customerName ? `Dear ${customerName}, ` : "";
-  const message = `${greeting}You have been added as a customer on QRHisab. Please onboard using this link: https://www.qrhisab.com/onboard?phone=${cleanPhone}`;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
+  const message = `${greeting}You have been added as a customer on QRHisab. Please onboard using this link: ${siteUrl}/onboard?phone=${cleanPhone}`;
 
   return sendTransactionSMS(cleanPhone, message);
 }

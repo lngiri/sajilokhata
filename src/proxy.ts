@@ -7,44 +7,60 @@ export async function proxy(request: NextRequest) {
     request,
   });
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
+  // ── Auth check with timeout — fail open so the page renders even if DB is slow ──
+  let user: any = null;
+  let validUserId: string | null = null;
+
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value)
+            );
+            supabaseResponse = NextResponse.next({
+              request,
+            });
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, {
+                ...options,
+                maxAge: 365 * 24 * 60 * 60,
+                path: "/",
+              })
+            );
+          },
         },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
-          supabaseResponse = NextResponse.next({
-            request,
-          });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, {
-              ...options,
-              // 1-year expiry for persistent sessions — users stay logged in
-              // until they manually click "Sign Out"
-              maxAge: 365 * 24 * 60 * 60,
-              path: "/",
-            })
-          );
-        },
-      },
+      }
+    );
+
+    // Race auth against a 5-second timeout so slow Supabase doesn't block page load
+    const authResult = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<"TIMEOUT">((_, reject) =>
+        setTimeout(() => reject(new Error("Auth timeout")), 5000)
+      ),
+    ]);
+
+    if (authResult !== "TIMEOUT") {
+      user = (authResult as any).data?.user;
     }
-  );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // Check for custom session cookie
+    const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
+    if (rawSession) {
+      validUserId = await verifySessionToken(rawSession);
+    }
+  } catch (err) {
+    console.warn("[Proxy] Auth check failed (continuing):", err);
+    // Fail open — page still renders, client-side auth will sort out redirects
+  }
 
-  // Check for custom session cookie (set after OTP verification)
-  const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
-  const validUserId = rawSession ? await verifySessionToken(rawSession) : null;
-
-  // Check for bypass auth cookie (used when service_role key is unavailable)
   const bypassCookie = request.cookies.get("auth_bypass");
   const isBypassed = bypassCookie?.value === "true";
 

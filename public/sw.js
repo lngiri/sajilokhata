@@ -1,4 +1,4 @@
-const CACHE_NAME = "qrhisab-v2";
+const CACHE_NAME = "qrhisab-v3";
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -11,6 +11,13 @@ const STATIC_ASSETS = [
   "/merchant/settings",
   "/manifest.json",
 ];
+
+// Handle messages from the client (e.g., SKIP_WAITING)
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
 
 // Install: cache all static assets
 self.addEventListener("install", (event) => {
@@ -67,7 +74,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // For static assets (JS, CSS, images): cache-first
+  // For static assets (JS, CSS, images): network-first with cache fallback
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.endsWith(".js") ||
@@ -76,16 +83,19 @@ self.addEventListener("fetch", (event) => {
     url.pathname.endsWith(".woff2")
   ) {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) return cachedResponse;
-        return fetch(request).then((response) => {
+      fetch(request)
+        .then((response) => {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(request, responseClone);
           });
           return response;
-        });
-      })
+        })
+        .catch(() => {
+          return caches.match(request).then((cachedResponse) => {
+            return cachedResponse || caches.match("/");
+          });
+        })
     );
     return;
   }
