@@ -101,7 +101,7 @@ export default function SettingsPage() {
           "Customer",
         ];
         const rows = (logs as Array<Record<string, unknown>>).map((log) => [
-          new Date(log.created_at as string).toLocaleDateString(),
+          new Date(log.created_at as string).toLocaleDateString("en-US", { timeZone: "Asia/Kathmandu" }),
           log.type,
           log.amount,
           log.status,

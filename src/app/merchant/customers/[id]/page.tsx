@@ -271,7 +271,7 @@ export default function CustomerDetailPage() {
                       </span>
                     </div>
                     <p className="text-xs text-[var(--color-text-muted)]">
-                      {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                      {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kathmandu" })}
                     </p>
                   </div>
                   <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600" : "text-[var(--color-primary)]"}`}>

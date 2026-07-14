@@ -176,7 +176,7 @@ function TransactionAuditLog({
           {logs.map((log: any) => (
             <tr key={log.id} className={`border-b border-gray-50 last:border-0 ${log.status === "rejected" ? "opacity-60" : ""}`}>
               <td className="py-2.5 pr-2 text-[var(--color-text)] whitespace-nowrap text-xs">
-                {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kathmandu" })}
               </td>
               <td className="py-2.5 pr-2 text-[var(--color-text)] truncate max-w-[100px] text-xs">
                 {log.customers?.name || log.customers?.phone || "—"}

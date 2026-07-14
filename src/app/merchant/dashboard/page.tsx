@@ -324,7 +324,7 @@ export default function MerchantDashboard() {
                 Digital Diary
               </p>
               <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Asia/Kathmandu" })}
               </p>
             </div>
           </button>

@@ -250,7 +250,7 @@ export default function LedgerPage() {
                         {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}NPR {log.amount.toLocaleString()}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">
-                        {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kathmandu" })}
                       </p>
                     </div>
                   </div>

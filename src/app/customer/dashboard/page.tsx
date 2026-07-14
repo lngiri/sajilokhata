@@ -275,7 +275,7 @@ export default function CustomerDashboard() {
           <div>
             <h1 className="text-lg font-bold text-[var(--color-text)]">My Dashboard</h1>
             <p className="text-[10px] text-[var(--color-text-muted)]">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Asia/Kathmandu" })}
             </p>
           </div>
           <div className="ml-auto flex items-center gap-2">

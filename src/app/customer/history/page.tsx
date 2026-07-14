@@ -276,6 +276,7 @@ export default function CustomerHistoryPage() {
                           weekday: "short",
                           month: "long",
                           day: "numeric",
+                          timeZone: "Asia/Kathmandu",
                         })}
                       </span>
                       <div className="flex-1 h-px bg-gray-100" />
@@ -310,10 +311,10 @@ export default function CustomerHistoryPage() {
                           </svg>
                           <p className="text-[10px] text-[var(--color-text-muted)]">
                             {new Date(log.created_at).toLocaleDateString("en-US", {
-                              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+                              month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kathmandu",
                             })}
                             {log.approved_at && ` · Approved ${new Date(log.approved_at).toLocaleDateString("en-US", {
-                              month: "short", day: "numeric",
+                              month: "short", day: "numeric", timeZone: "Asia/Kathmandu",
                             })}`}
                           </p>
                         </div>
