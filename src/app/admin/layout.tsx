@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
 
 const NAV = [
@@ -18,81 +19,93 @@ const NAV = [
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === "/admin/login";
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
-
   const toggleDark = () => setDarkMode((p) => !p);
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   return (
     <AdminGuard>
       <div className={darkMode ? "dark" : ""}>
-        <div className="min-h-screen bg-gray-950 text-gray-100 flex">
+        <div className="min-h-screen bg-gray-950 text-gray-100 font-sans flex">
           {/* Mobile overlay */}
           {sidebarOpen && (
             <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
           )}
 
-          {/* Sidebar */}
+          {/* Sidebar — slender */}
           <aside
-            className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 bg-gray-900 border-r border-gray-800 transform transition-transform duration-200 lg:translate-x-0 ${
+            className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-52 bg-gray-900 border-r border-gray-800 transform transition-transform duration-200 lg:translate-x-0 ${
               sidebarOpen ? "translate-x-0" : "-translate-x-full"
             }`}
           >
-            <div className="flex items-center justify-between p-4 border-b border-gray-800">
+            <div className="flex items-center justify-between px-3 h-12 border-b border-gray-800">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
-                <span className="font-semibold text-sm">Admin Panel</span>
+                <span className="text-xs font-semibold text-gray-300">Admin</span>
               </div>
-              <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 text-gray-400 hover:text-white">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 text-gray-500 hover:text-white">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
-            <nav className="p-3 space-y-1 overflow-y-auto h-[calc(100vh-64px)]">
-              {NAV.map((item) => (
-                <a
-                  key={item.href}
-                  href={item.href}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
-                  </svg>
-                  {item.label}
-                </a>
-              ))}
+            <nav className="p-2 space-y-0.5 overflow-y-auto h-[calc(100vh-48px)]">
+              {NAV.map((item) => {
+                const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs transition-colors ${
+                      isActive
+                        ? "bg-emerald-500/10 text-emerald-400"
+                        : "text-gray-500 hover:text-gray-300 hover:bg-gray-800/50"
+                    }`}
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                    </svg>
+                    {item.label}
+                  </a>
+                );
+              })}
             </nav>
           </aside>
 
           {/* Main content */}
-          <div className="flex-1 flex flex-col min-h-screen">
+          <div className="flex-1 flex flex-col min-h-screen min-w-0">
             {/* Top bar */}
             <header className="sticky top-0 z-30 bg-gray-950/80 backdrop-blur-md border-b border-gray-800">
-              <div className="flex items-center justify-between px-4 h-14">
+              <div className="flex items-center justify-between px-4 h-10">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="lg:hidden p-2 text-gray-400 hover:text-white"
+                  className="lg:hidden p-1.5 text-gray-500 hover:text-white rounded-md hover:bg-gray-800"
                 >
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                   </svg>
                 </button>
 
-                <div className="flex items-center gap-3 ml-auto">
-                  <button onClick={toggleDark} className="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors" title="Toggle theme">
+                <div className="flex items-center gap-2 ml-auto">
+                  <button onClick={toggleDark} className="p-1.5 text-gray-500 hover:text-white rounded-md hover:bg-gray-800 transition-colors" title="Toggle theme">
                     {darkMode ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
                       </svg>
                     ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
                       </svg>
                     )}
@@ -100,7 +113,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
                   <a
                     href="/api/admin/signout"
-                    className="text-xs text-gray-400 hover:text-red-400 transition-colors px-2.5 py-1.5 rounded-lg hover:bg-gray-800"
+                    className="text-[11px] text-gray-500 hover:text-red-400 transition-colors px-2 py-1 rounded-md hover:bg-gray-800"
                   >
                     Sign Out
                   </a>
@@ -109,7 +122,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </header>
 
             {/* Page content */}
-            <main className="flex-1 p-4 lg:p-6 w-full">
+            <main className="flex-1 p-4 lg:p-6 w-full max-w-full">
               {children}
             </main>
           </div>
