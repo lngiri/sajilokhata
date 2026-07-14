@@ -16,7 +16,7 @@ export type TransactionType = "debit" | "credit" | "cash";
 export type TransactionStatus = "pending" | "unverified" | "approved" | "disputed" | "rejected" | "edit_requested";
 export type SyncStatus = "online" | "offline_pending";
 export type ActorType = "merchant" | "customer" | "admin";
-export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected";
+export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected" | "pin_reset";
 
 export interface Database {
   public: {
@@ -55,6 +55,7 @@ export interface Database {
           id: string;
           name: string | null;
           phone: string;
+          pin_hash: string | null;
           home_location_gps: unknown | null;
           created_at: string;
         };
@@ -62,6 +63,7 @@ export interface Database {
           id?: string;
           name?: string | null;
           phone: string;
+          pin_hash?: string | null;
           home_location_gps?: unknown | null;
           created_at?: string;
         };
@@ -69,6 +71,7 @@ export interface Database {
           id?: string;
           name?: string | null;
           phone?: string;
+          pin_hash?: string | null;
           home_location_gps?: unknown | null;
           created_at?: string;
         };
@@ -167,7 +170,7 @@ export interface Database {
       audit_logs: {
         Row: {
           id: string;
-          credit_log_id: string;
+          credit_log_id: string | null;
           action: AuditAction;
           actor_id: string | null;
           actor_type: ActorType | null;
@@ -178,7 +181,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
-          credit_log_id: string;
+          credit_log_id?: string | null;
           action: AuditAction;
           actor_id?: string | null;
           actor_type?: ActorType | null;
@@ -189,7 +192,7 @@ export interface Database {
         };
         Update: {
           id?: string;
-          credit_log_id?: string;
+          credit_log_id?: string | null;
           action?: AuditAction;
           actor_id?: string | null;
           actor_type?: ActorType | null;
