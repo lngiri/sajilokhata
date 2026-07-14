@@ -103,7 +103,7 @@ export default function AdminDashboard() {
               View all &rarr;
             </a>
           </div>
-          <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg">
+          <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700">
@@ -138,7 +138,7 @@ export default function AdminDashboard() {
         {/* Column 2: Quick Actions — grid of cards */}
         <div>
           <h2 className="text-sm font-semibold text-slate-300 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {QUICK_ACTIONS.map((a) => (
               <a
                 key={a.href}
@@ -160,7 +160,7 @@ export default function AdminDashboard() {
       {disputes.length > 0 && (
         <div>
           <h2 className="text-sm font-semibold text-slate-300 mb-4">Open Disputes</h2>
-          <div className="overflow-hidden rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg">
+          <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-700">

@@ -128,7 +128,8 @@ export async function getAdminStats(): Promise<{
       totalCustomers: cRes.count ?? 0,
       activeTransactions: tRes.count ?? 0,
     };
-  } catch {
+  } catch (err) {
+    console.error("[getAdminStats]", err);
     return { totalMerchants: 0, totalCustomers: 0, activeTransactions: 0 };
   }
 }
@@ -204,7 +205,8 @@ export async function getAdminAlerts(): Promise<
     }
 
     return alerts.slice(0, 50);
-  } catch {
+  } catch (err) {
+    console.error("[getAdminAlerts]", err);
     return [];
   }
 }
@@ -303,32 +305,29 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
         .order("created_at", { ascending: false }),
     ]);
 
-    const merchants = mRes?.data || mRes || [];
-    const customers = cRes?.data || cRes || [];
+    const merchants: any[] = mRes?.data ?? [];
+    const customers: any[] = cRes?.data ?? [];
 
     const merchantPhones = new Set<string>();
-    const merchantMap = new Map<string, any>();
+    merchantPhones.clear();
     for (const m of merchants) {
-      merchantPhones.add(m.phone);
-      merchantMap.set(m.id, m);
+      if (m.phone) merchantPhones.add(m.phone);
     }
 
     const customerPhones = new Set<string>();
-    const customerMap = new Map<string, any>();
+    customerPhones.clear();
     for (const c of customers) {
-      customerPhones.add(c.phone);
-      customerMap.set(c.id, c);
+      if (c.phone) customerPhones.add(c.phone);
     }
 
     const combined = new Map<string, DirectoryUser>();
 
     for (const m of merchants) {
-      const txCount = merchantMap.size > 0 ? 0 : 0;
       combined.set(m.id, {
         id: m.id,
         name: m.name || m.business_name || "",
         phone: m.phone || "",
-        role: customerPhones.has(m.phone) ? "both" : "merchant",
+        role: m.phone && customerPhones.has(m.phone) ? "both" : "merchant",
         businessName: m.business_name || "",
         status: m.status || "active",
         transactionCount: 0,
@@ -342,7 +341,7 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
           id: c.id,
           name: c.name || "",
           phone: c.phone || "",
-          role: merchantPhones.has(c.phone) ? "both" : "customer",
+          role: c.phone && merchantPhones.has(c.phone) ? "both" : "customer",
           businessName: "",
           status: "active",
           transactionCount: 0,
@@ -386,7 +385,8 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
     }
 
     return results;
-  } catch {
+  } catch (err) {
+    console.error("[getAdminUserDirectory]", err);
     return [];
   }
 }
