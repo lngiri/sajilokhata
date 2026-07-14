@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 const fadeInView = {
@@ -28,7 +28,6 @@ function SectionSub({ children }: { children: React.ReactNode }) {
 export default function LandingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
-  const ctaRef = useRef<HTMLAnchorElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -36,7 +35,12 @@ export default function LandingPage() {
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
         const data: { userId: string | null } = await res.json();
-        if (!cancelled) setLoggedIn(!!data.userId);
+        if (cancelled) return;
+        if (data.userId) {
+          window.location.replace("/merchant/dashboard");
+          return;
+        }
+        setLoggedIn(false);
       } catch {
         // offline — show "Get Started"
       } finally {
@@ -46,8 +50,8 @@ export default function LandingPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const ctaText = checking ? "Loading…" : loggedIn ? "Go to My Dashboard" : "Get Started Free";
-  const ctaHref = loggedIn ? "/merchant/dashboard" : "/login";
+  const ctaText = checking ? "Loading…" : "Get Started Free";
+  const ctaHref = "/login";
 
   return (
     <div className="fixed inset-0 overflow-y-auto bg-white z-[1] overscroll-contain">
@@ -73,7 +77,7 @@ export default function LandingPage() {
               href={ctaHref}
               className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
             >
-              {loggedIn ? "Dashboard" : "Sign In"}
+              Sign In
             </a>
           </div>
         </motion.header>
@@ -115,7 +119,6 @@ export default function LandingPage() {
               className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3"
             >
               <a
-                ref={ctaRef}
                 href={ctaHref}
                 className="w-full sm:w-auto px-8 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-base shadow-lg shadow-emerald-200 hover:shadow-emerald-300 transition-all active:scale-[0.97]"
               >

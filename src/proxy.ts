@@ -70,8 +70,11 @@ export async function proxy(request: NextRequest) {
 
   const isAuthenticated = !!user || !!validUserId || isBypassed;
 
-  // On /login with a valid session → skip to dashboard
-  if (request.nextUrl.pathname === "/login" && isAuthenticated) {
+  // On / or /login with a valid session → skip to dashboard
+  if (
+    (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/") &&
+    isAuthenticated
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/merchant/dashboard";
     return NextResponse.redirect(url);
