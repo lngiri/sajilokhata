@@ -43,6 +43,21 @@ export async function sendTransactionSMS(
     const body = await res.text();
     console.log(`[SMS] HTTP ${res.status} response:`, body);
 
+    // Aakash SMS returns HTTP 200 even for errors, with {error:true} in body
+    let parsed: any;
+    try {
+      parsed = JSON.parse(body);
+    } catch {
+      // Response is not JSON — treat as error
+      console.error("[SMS] Non-JSON response:", body);
+      return { success: false, error: `Non-JSON response: ${body}` };
+    }
+
+    if (parsed?.error === true) {
+      console.error("[SMS] Aakash API error:", parsed.message);
+      return { success: false, error: parsed.message || "Aakash API returned error" };
+    }
+
     if (!res.ok) {
       console.error("[SMS] Non-OK response:", res.status, body);
       return { success: false, error: `HTTP ${res.status}: ${body}` };
