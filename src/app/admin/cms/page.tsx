@@ -28,17 +28,17 @@ export default function CMSPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-slate-50 tracking-tight mb-1">Content Management</h1>
-      <p className="text-sm text-slate-400 mb-8">Edit FAQs, Terms, and Welcome messages</p>
+      <h1 className="text-2xl font-bold text-[var(--a-text)] tracking-tight mb-1">Content Management</h1>
+      <p className="text-sm text-[var(--a-muted)] mb-8">Edit FAQs, Terms, and Welcome messages</p>
 
-      <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 space-y-5">
+      <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6 space-y-5">
         <div className="flex gap-2 overflow-x-auto pb-1">
           {SECTIONS.map((s) => (
             <button
               key={s}
               onClick={() => setSection(s)}
               className={`px-4 py-2 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                section === s ? "bg-red-600 text-white" : "bg-slate-900 text-slate-400 hover:text-slate-200"
+                section === s ? "bg-red-600 text-white" : "bg-[var(--a-input)] text-[var(--a-muted)] hover:text-[var(--a-text)]"
               }`}
             >
               {LABELS[s]}
@@ -47,12 +47,12 @@ export default function CMSPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium text-slate-300">{LABELS[section]}</label>
+          <label className="text-sm font-medium text-[var(--a-text-2)]">{LABELS[section]}</label>
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={12}
-            className="w-full mt-1.5 px-4 py-3 bg-slate-900 text-slate-200 rounded-xl border border-slate-700 focus:ring-2 focus:ring-red-500/40 outline-none text-sm resize-y font-mono placeholder-slate-500"
+            className="w-full mt-1.5 px-4 py-3 bg-[var(--a-input)] text-[var(--a-input-text)] rounded-xl border border-[var(--a-border)] focus:ring-2 focus:ring-red-500/40 outline-none text-sm resize-y font-mono placeholder-[var(--a-muted)]"
             placeholder={`Enter ${LABELS[section].toLowerCase()} content...`}
           />
         </div>

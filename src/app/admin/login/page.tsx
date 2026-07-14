@@ -36,7 +36,7 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-gray-950 px-4">
+    <div className="min-h-dvh flex items-center justify-center bg-slate-100 dark:bg-gray-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg">
@@ -44,23 +44,23 @@ export default function AdminLoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-          <p className="text-sm text-gray-400 mt-1">Authorized access only</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Admin Panel</h1>
+          <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">Authorized access only</p>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-6 border border-gray-800">
-          <label className="text-sm font-medium text-gray-300">Admin Email</label>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-slate-200 dark:border-gray-800">
+          <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Admin Email</label>
           <input
             type="email"
             placeholder="admin@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            className="w-full mt-1.5 px-4 py-3 bg-gray-800 text-white rounded-xl border border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+            className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
           />
 
           {error && (
-            <div className="mt-3 bg-red-900/40 text-red-400 text-sm px-4 py-2 rounded-xl border border-red-800/50">
+            <div className="mt-3 bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl border border-red-200 dark:border-red-800/50">
               {error}
             </div>
           )}
@@ -78,7 +78,7 @@ export default function AdminLoginPage() {
           </button>
         </div>
 
-        <p className="text-center text-xs text-gray-600 mt-6">
+        <p className="text-center text-xs text-slate-400 dark:text-gray-600 mt-6">
           QR Hisab — Self-Service Admin
         </p>
       </div>

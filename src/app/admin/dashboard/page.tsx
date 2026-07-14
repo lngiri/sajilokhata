@@ -64,8 +64,8 @@ export default function AdminDashboard() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-50 tracking-tight">Dashboard</h1>
-        <p className="text-sm text-slate-400 mt-1">Welcome back, {name}</p>
+        <h1 className="text-2xl font-bold text-[var(--a-text)] tracking-tight">Dashboard</h1>
+        <p className="text-sm text-[var(--a-muted)] mt-1">Welcome back, {name}</p>
       </div>
 
       {/* ── Metrics row: 4 large cards ── */}
@@ -80,13 +80,13 @@ export default function AdminDashboard() {
             <a
               key={card.label}
               href={href}
-              className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 transition-all hover:border-slate-600 hover:bg-slate-700/50 block"
+              className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6 transition-all hover:border-[var(--a-border-2)] hover:bg-[var(--a-hover)] block"
             >
               <div className={`text-5xl font-bold tracking-tight ${card.accent}`}>
                 {card.value}
               </div>
-              <div className="text-sm font-medium text-slate-400 mt-2">{card.label}</div>
-              <div className="text-xs text-slate-500 mt-0.5">{card.sub}</div>
+              <div className="text-sm font-medium text-[var(--a-text-2)] mt-2">{card.label}</div>
+              <div className="text-xs text-[var(--a-muted)] mt-0.5">{card.sub}</div>
             </a>
           );
         })}
@@ -98,29 +98,29 @@ export default function AdminDashboard() {
         {/* Column 1: Recent Merchants (span 2) */}
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-slate-300">Recent Merchants</h2>
+            <h2 className="text-sm font-semibold text-[var(--a-text-2)]">Recent Merchants</h2>
             <a href="/admin/users" className="text-xs font-medium text-red-400 hover:text-red-300 transition-colors">
               View all &rarr;
             </a>
           </div>
-          <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg">
+          <div className="overflow-x-auto rounded-xl border border-[var(--a-border)] bg-[var(--a-surface-2)]/50 shadow-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Business</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Phone</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Txns</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
+                <tr className="border-b border-[var(--a-border)] bg-[var(--a-surface)]">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Business</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Phone</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Txns</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {recentMerchants.length === 0 ? (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-slate-600">No merchants yet</td></tr>
-                ) : recentMerchants.map((m) => (
-                  <tr key={m.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-slate-200">{m.businessName || m.name || "Unnamed"}</td>
-                    <td className="px-4 py-3 text-sm text-slate-500 font-mono">{m.phone}</td>
-                    <td className="px-4 py-3 text-sm text-right text-slate-400">{m.transactionCount}</td>
+                  <tr><td colSpan={4} className="px-4 py-8 text-center text-sm text-[var(--a-muted)]">No merchants yet</td></tr>
+                ) : recentMerchants.map((m, idx) => (
+                  <tr key={m.id} className={`border-b border-[var(--a-border)]/50 hover:bg-[var(--a-hover)] transition-colors ${idx % 2 === 1 ? "bg-[var(--a-stripe)]" : ""}`}>
+                    <td className="px-4 py-3 text-sm font-medium text-[var(--a-text)]">{m.businessName || m.name || "Unnamed"}</td>
+                    <td className="px-4 py-3 text-sm text-[var(--a-muted)] font-mono">{m.phone}</td>
+                    <td className="px-4 py-3 text-sm text-right text-[var(--a-text-2)]">{m.transactionCount}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${
                         m.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
@@ -137,19 +137,19 @@ export default function AdminDashboard() {
 
         {/* Column 2: Quick Actions — grid of cards */}
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-4">Quick Actions</h2>
+          <h2 className="text-sm font-semibold text-[var(--a-text-2)] mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {QUICK_ACTIONS.map((a) => (
               <a
                 key={a.href}
                 href={a.href}
-                className="flex flex-col items-center justify-center gap-2 bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-4 text-center transition-all hover:scale-105 hover:border-slate-600 hover:bg-slate-700/60"
+                className="flex flex-col items-center justify-center gap-2 bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-4 text-center transition-all hover:scale-105 hover:border-[var(--a-border-2)] hover:bg-[var(--a-hover)]"
               >
                 <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={a.icon} />
                 </svg>
-                <span className="text-xs font-medium text-slate-300">{a.label}</span>
-                <span className="text-[10px] text-slate-500 leading-tight">{a.desc}</span>
+                <span className="text-xs font-medium text-[var(--a-text-2)]">{a.label}</span>
+                <span className="text-[10px] text-[var(--a-muted)] leading-tight">{a.desc}</span>
               </a>
             ))}
           </div>
@@ -159,26 +159,26 @@ export default function AdminDashboard() {
       {/* ── Disputes table ── */}
       {disputes.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-4">Open Disputes</h2>
-          <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg">
+          <h2 className="text-sm font-semibold text-[var(--a-text-2)] mb-4">Open Disputes</h2>
+          <div className="overflow-x-auto rounded-xl border border-[var(--a-border)] bg-[var(--a-surface-2)]/50 shadow-lg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Merchant</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Amount</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Status</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-slate-400 uppercase tracking-wider">Date</th>
+                <tr className="border-b border-[var(--a-border)] bg-[var(--a-surface)]">
+                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Merchant</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Amount</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Status</th>
+                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Date</th>
                 </tr>
               </thead>
               <tbody>
-                {disputes.slice(0, 5).map((d) => (
-                  <tr key={d.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-slate-200">{d.merchantName}</td>
-                    <td className="px-4 py-3 text-sm text-right text-slate-400">NPR {d.amount.toLocaleString()}</td>
+                {disputes.slice(0, 5).map((d, idx) => (
+                  <tr key={d.id} className={`border-b border-[var(--a-border)]/50 hover:bg-[var(--a-hover)] transition-colors ${idx % 2 === 1 ? "bg-[var(--a-stripe)]" : ""}`}>
+                    <td className="px-4 py-3 text-sm font-medium text-[var(--a-text)]">{d.merchantName}</td>
+                    <td className="px-4 py-3 text-sm text-right text-[var(--a-text-2)]">NPR {d.amount.toLocaleString()}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="inline-block text-xs font-medium px-2 py-0.5 rounded-full bg-red-500/10 text-red-400">{d.status}</span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-right text-slate-500">{new Date(d.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3 text-sm text-right text-[var(--a-muted)]">{new Date(d.createdAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>

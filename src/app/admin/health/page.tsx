@@ -36,10 +36,10 @@ export default function HealthPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-50 tracking-tight mb-1">System Health</h1>
-          <p className="text-sm text-slate-400">Monitor application status</p>
+          <h1 className="text-2xl font-bold text-[var(--a-text)] tracking-tight mb-1">System Health</h1>
+          <p className="text-sm text-[var(--a-muted)]">Monitor application status</p>
         </div>
-        <button onClick={check} className="text-xs text-slate-400 hover:text-slate-200 px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-colors">
+        <button onClick={check} className="text-xs text-[var(--a-muted)] hover:text-[var(--a-text)] px-3 py-1.5 rounded-lg hover:bg-[var(--a-hover)] transition-colors">
           Re-check
         </button>
       </div>
@@ -57,16 +57,16 @@ export default function HealthPage() {
                 {health.status.toUpperCase()}
               </span>
             </div>
-            <p className="text-sm text-slate-300">{health.message}</p>
-            <p className="text-[10px] text-slate-600 mt-2">Last check: {new Date(health.lastCheck).toLocaleString()}</p>
+            <p className="text-sm text-[var(--a-text-2)]">{health.message}</p>
+            <p className="text-[10px] text-[var(--a-muted)] mt-2">Last check: {new Date(health.lastCheck).toLocaleString()}</p>
           </div>
 
           <div className="space-y-2">
             {health.checks.map((c, i) => (
-              <div key={i} className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-800/50 shadow-lg p-4">
+              <div key={i} className="flex items-center justify-between rounded-xl border border-[var(--a-border)] bg-[var(--a-surface-2)]/50 shadow-lg p-4">
                 <div>
-                  <span className="text-sm font-medium text-slate-200">{c.label}</span>
-                  {c.detail && <p className="text-xs text-slate-500 mt-0.5">{c.detail}</p>}
+                  <span className="text-sm font-medium text-[var(--a-text)]">{c.label}</span>
+                  {c.detail && <p className="text-xs text-[var(--a-muted)] mt-0.5">{c.detail}</p>}
                 </div>
                 <span className={`text-xs font-semibold ${c.ok ? "text-emerald-400" : "text-red-400"}`}>
                   {c.ok ? "PASS" : "FAIL"}
@@ -76,7 +76,7 @@ export default function HealthPage() {
           </div>
         </div>
       ) : (
-        <div className="text-center py-16 text-slate-500">
+        <div className="text-center py-16 text-[var(--a-muted)]">
           <p className="text-sm font-medium">Could not fetch health data</p>
         </div>
       )}

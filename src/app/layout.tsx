@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ThemeProvider } from "next-themes";
 import { Inter } from "next/font/google";
 import { ToastProvider } from "@/components/Toast";
 import NetworkStatus from "@/components/NetworkStatus";
@@ -50,15 +51,17 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-sans antialiased bg-[var(--color-bg)] text-[var(--color-text)]">
-        <VersionGuard />
-        <SessionHeartbeat />
-        <SessionGuard />
-        <ServiceWorkerRegistrar />
-        <ToastProvider>
-          <NetworkStatus />
-          <main className="min-h-dvh">{children}</main>
-          <PWAInstallBanner />
-        </ToastProvider>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <VersionGuard />
+          <SessionHeartbeat />
+          <SessionGuard />
+          <ServiceWorkerRegistrar />
+          <ToastProvider>
+            <NetworkStatus />
+            <main className="min-h-dvh">{children}</main>
+            <PWAInstallBanner />
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

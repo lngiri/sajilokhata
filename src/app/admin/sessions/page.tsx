@@ -52,8 +52,8 @@ export default function SessionsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-slate-50 tracking-tight mb-1">Session Monitor</h1>
-        <p className="text-sm text-slate-400">Search merchants and manage active sessions</p>
+        <h1 className="text-2xl font-bold text-[var(--a-text)] tracking-tight mb-1">Session Monitor</h1>
+        <p className="text-sm text-[var(--a-muted)]">Search merchants and manage active sessions</p>
       </div>
 
       {/* Search */}
@@ -64,7 +64,7 @@ export default function SessionsPage() {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") search(); }}
           placeholder="Search by phone, name, or business name..."
-          className="flex-1 px-4 py-2.5 bg-slate-800 text-slate-200 rounded-xl border border-slate-700 focus:ring-2 focus:ring-red-500/40 outline-none text-sm placeholder-slate-500"
+          className="flex-1 px-4 py-2.5 bg-[var(--a-input)] text-[var(--a-input-text)] rounded-xl border border-[var(--a-border)] focus:ring-2 focus:ring-red-500/40 outline-none text-sm placeholder-[var(--a-muted)]"
         />
         <button
           onClick={search}
@@ -81,7 +81,7 @@ export default function SessionsPage() {
       {searched && (
         <div className="space-y-3">
           {results.length === 0 ? (
-            <div className="text-center py-12 text-slate-500">
+            <div className="text-center py-12 text-[var(--a-muted)]">
               <p className="text-sm font-medium">No merchants found matching &quot;{query}&quot;</p>
             </div>
           ) : (
@@ -93,13 +93,13 @@ export default function SessionsPage() {
                   className={`rounded-xl border shadow-lg p-5 ${
                     isForceLoggedOut
                       ? "border-red-800/30 bg-red-900/10"
-                      : "border-slate-700 bg-slate-800/50"
+                      : "border-[var(--a-border)] bg-[var(--a-surface-2)]/50"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-slate-200 truncate">
+                        <h3 className="text-sm font-semibold text-[var(--a-text)] truncate">
                           {m.businessName || m.name || "Unnamed"}
                         </h3>
                         {isForceLoggedOut && (
@@ -109,9 +109,9 @@ export default function SessionsPage() {
                         )}
                       </div>
                       {m.name && m.businessName && (
-                        <p className="text-xs text-slate-500">{m.name}</p>
+                        <p className="text-xs text-[var(--a-muted)]">{m.name}</p>
                       )}
-                      <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-500">
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-[var(--a-muted)]">
                         <span className="font-mono">{m.phone}</span>
                         <span>&bull;</span>
                         <span className={m.status === "suspended" ? "text-red-400" : "text-emerald-400"}>

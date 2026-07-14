@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import AdminGuard from "@/components/AdminGuard";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
 
 const NAV = [
   { label: "Dashboard", href: "/admin/dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
@@ -29,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <AdminGuard>
-      <div className="min-h-screen bg-slate-900 text-slate-50 font-sans flex">
+      <div className="admin-theme min-h-screen bg-[var(--a-bg)] text-[var(--a-text)] font-sans antialiased flex">
         {/* Mobile overlay */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 bg-black/60 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -37,21 +38,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Sidebar */}
         <aside
-          className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-52 bg-slate-800 border-r border-slate-700 flex flex-col transform transition-transform duration-200 lg:translate-x-0 ${
+          className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-52 bg-[var(--a-sidebar)] border-r border-[var(--a-border)] flex flex-col transform transition-transform duration-200 lg:translate-x-0 ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           {/* Logo area */}
-          <div className="flex items-center justify-between px-4 h-14 border-b border-slate-700">
+          <div className="flex items-center justify-between px-4 h-14 border-b border-[var(--a-border)]">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center shadow-sm">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <span className="text-sm font-bold text-slate-100 tracking-tight">Admin</span>
+              <span className="text-sm font-bold text-[var(--a-text)] tracking-tight">Admin</span>
             </div>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 text-slate-500 hover:text-slate-200">
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 text-[var(--a-muted)] hover:text-[var(--a-text)]">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -69,7 +70,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
                     isActive
                       ? "bg-red-600/15 text-red-400 font-medium"
-                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-700/60"
+                      : "text-[var(--a-sidebar-text)] hover:bg-[var(--a-sidebar-hover)] hover:text-[var(--a-text)]"
                   }`}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -83,10 +84,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
 
           {/* Bottom logout */}
-          <div className="p-3 border-t border-slate-700">
+          <div className="p-3 border-t border-[var(--a-border)]">
             <a
               href="/api/admin/signout"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-500 hover:text-red-400 hover:bg-slate-700/60 transition-all"
+              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[var(--a-muted)] hover:text-red-400 hover:bg-[var(--a-hover)] transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -99,11 +100,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Main content */}
         <div className="flex-1 flex flex-col min-h-screen min-w-0">
           {/* Top bar */}
-          <header className="sticky top-0 z-30 bg-slate-900/80 backdrop-blur-md border-b border-slate-700">
+          <header className="sticky top-0 z-30 bg-[var(--a-topbar)]/80 backdrop-blur-md border-b border-[var(--a-border)]">
             <div className="flex items-center justify-between px-6 h-14">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 text-slate-400 hover:text-slate-200 rounded-lg hover:bg-slate-800"
+                className="lg:hidden p-2 text-[var(--a-muted)] hover:text-[var(--a-text)] rounded-lg hover:bg-[var(--a-hover)]"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
@@ -111,7 +112,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </button>
 
               <div className="flex items-center gap-3 ml-auto">
-                <span className="text-xs text-slate-500">
+                <ThemeSwitcher />
+                <span className="text-xs text-[var(--a-muted)]">
                   {new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
                 </span>
               </div>

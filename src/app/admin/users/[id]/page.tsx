@@ -46,19 +46,19 @@ export default function AdminMerchantDetailPage() {
 
   return (
     <div className="max-w-3xl">
-      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors mb-6">
+      <button onClick={() => router.back()} className="flex items-center gap-1.5 text-sm text-[var(--a-muted)] hover:text-[var(--a-text)] transition-colors mb-6">
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
         Back to directory
       </button>
 
-      <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6">
+      <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-50 tracking-tight">{merchant.businessName || merchant.name || "Unnamed"}</h1>
-            <p className="text-sm text-slate-400 mt-1">{merchant.phone}</p>
+            <h1 className="text-2xl font-bold text-[var(--a-text)] tracking-tight">{merchant.businessName || merchant.name || "Unnamed"}</h1>
+            <p className="text-sm text-[var(--a-muted)] mt-1">{merchant.phone}</p>
           </div>
           <div className="flex items-center gap-3">
             <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${
@@ -82,33 +82,33 @@ export default function AdminMerchantDetailPage() {
         {/* Detail fields */}
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Owner Name</label>
-            <p className="text-sm text-slate-200 mt-1">{merchant.name || "\u2014"}</p>
+            <label className="text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Owner Name</label>
+            <p className="text-sm text-[var(--a-text)] mt-1">{merchant.name || "\u2014"}</p>
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Business Type</label>
-            <p className="text-sm text-slate-200 mt-1 capitalize">{merchant.businessType || "\u2014"}</p>
+            <label className="text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Business Type</label>
+            <p className="text-sm text-[var(--a-text)] mt-1 capitalize">{merchant.businessType || "\u2014"}</p>
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Address</label>
-            <p className="text-sm text-slate-200 mt-1">{merchant.address || "\u2014"}</p>
+            <label className="text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Address</label>
+            <p className="text-sm text-[var(--a-text)] mt-1">{merchant.address || "\u2014"}</p>
           </div>
           <div>
-            <label className="text-xs font-medium text-slate-500 uppercase tracking-wider">Created</label>
-            <p className="text-sm text-slate-200 mt-1">{new Date(merchant.createdAt).toLocaleDateString()}</p>
+            <label className="text-xs font-medium text-[var(--a-muted)] uppercase tracking-wider">Created</label>
+            <p className="text-sm text-[var(--a-text)] mt-1">{new Date(merchant.createdAt).toLocaleDateString()}</p>
           </div>
         </div>
       </div>
 
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-4 mt-6">
-        <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-5">
+        <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-5">
           <p className="text-3xl font-bold tracking-tight text-emerald-400">{merchant.transactionCount}</p>
-          <p className="text-xs text-slate-400 mt-1">Total Transactions</p>
+          <p className="text-xs text-[var(--a-muted)] mt-1">Total Transactions</p>
         </div>
-        <div className="bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-5">
+        <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-5">
           <p className="text-3xl font-bold tracking-tight text-blue-400">{merchant.customerCount}</p>
-          <p className="text-xs text-slate-400 mt-1">Customers</p>
+          <p className="text-xs text-[var(--a-muted)] mt-1">Customers</p>
         </div>
       </div>
     </div>

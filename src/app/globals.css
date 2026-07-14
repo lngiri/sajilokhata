@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --color-primary: #059669;
   --color-primary-light: #10b981;
@@ -22,6 +24,62 @@ body {
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Admin Panel Theme ── */
+.admin-theme {
+  --a-bg: #FFFFFF;
+  --a-surface: #F1F5F9;
+  --a-surface-2: #FFFFFF;
+  --a-border: #E2E8F0;
+  --a-border-2: #CBD5E1;
+  --a-text: #0F172A;
+  --a-text-2: #475569;
+  --a-muted: #94A3B8;
+  --a-hover: #F1F5F9;
+  --a-hover-2: #E2E8F0;
+  --a-stripe: #F8FAFC;
+  --a-input: #F1F5F9;
+  --a-input-text: #0F172A;
+  --a-sidebar: #FFFFFF;
+  --a-sidebar-text: #475569;
+  --a-sidebar-text-active: #DC2626;
+  --a-sidebar-hover: #F1F5F9;
+  --a-topbar: #FFFFFF;
+}
+.dark .admin-theme,
+.dark.admin-theme {
+  --a-bg: #0F172A;
+  --a-surface: #1E293B;
+  --a-surface-2: #1E293B;
+  --a-border: #334155;
+  --a-border-2: #475569;
+  --a-text: #F1F5F9;
+  --a-text-2: #94A3B8;
+  --a-muted: #64748B;
+  --a-hover: #1E293B;
+  --a-hover-2: #334155;
+  --a-stripe: #1E293B;
+  --a-input: #0F172A;
+  --a-input-text: #E2E8F0;
+  --a-sidebar: #0F172A;
+  --a-sidebar-text: #94A3B8;
+  --a-sidebar-text-active: #F87171;
+  --a-sidebar-hover: #1E293B;
+  --a-topbar: #0F172A;
+}
+
+/* Admin table row stripe */
+.admin-theme tbody tr.even\:bg-stripe:nth-child(even) {
+  background-color: var(--a-stripe);
+}
+.admin-theme tbody tr.hover\:bg-hover:hover {
+  background-color: var(--a-hover);
+}
+
+/* Admin scrollbar */
+.admin-theme ::-webkit-scrollbar-thumb {
+  background: var(--a-border);
 }
 
 /* Safe area for mobile notch */
