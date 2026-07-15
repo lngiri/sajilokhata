@@ -132,17 +132,22 @@ export async function saveEntry(params: {
     }
 
     // ── Step 2: Insert credit_log entry ──
+    const insertData: Record<string, unknown> = {
+      merchant_id: params.merchant_id,
+      customer_id: isCash ? null : resolvedCustomerId,
+      amount: params.amount,
+      type: params.type,
+      description: params.description || null,
+      status: isCash ? "approved" : "unverified",
+      approved_at: isCash ? new Date().toISOString() : null,
+    };
+    // Only include attachment_url if it has a value — avoids 42703 crash
+    // when the column has not been deployed yet (migration 024).
+    if (params.attachment_url) {
+      insertData.attachment_url = params.attachment_url;
+    }
     const { data, error } = await (admin.from("credit_logs") as any)
-      .insert({
-        merchant_id: params.merchant_id,
-        customer_id: isCash ? null : resolvedCustomerId,
-        amount: params.amount,
-        type: params.type,
-        description: params.description || null,
-        status: isCash ? "approved" : "unverified",
-        approved_at: isCash ? new Date().toISOString() : null,
-        attachment_url: params.attachment_url || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -193,11 +198,17 @@ export async function updateEntryAttachment(
       return { success: false, error: "Database connection unavailable" };
     }
 
+    const updateData: Record<string, unknown> = { attachment_url: attachmentUrl };
     const { error } = await (admin.from("credit_logs") as any)
-      .update({ attachment_url: attachmentUrl })
+      .update(updateData)
       .eq("id", entryId);
 
     if (error) {
+      // 42703 = missing column — skip silently so the entry still saves
+      if (error.code === "42703") {
+        console.warn("[Entry] attachment_url column missing (42703) — skip update");
+        return { success: true };
+      }
       console.error("[Entry] Attachment update error — full:", JSON.stringify(error));
       return { success: false, error: error.message, fullError: error };
     }
