@@ -4,6 +4,17 @@ import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ── PUBLIC ROUTES — always pass through, no auth processing ──
+  const PUBLIC_ROUTES = [
+    "/", "/login", "/select-role", "/scan", "/onboard", "/delivery",
+    "/verify", "/_not-found",
+  ];
+  if (PUBLIC_ROUTES.includes(pathname)) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -105,25 +116,6 @@ export async function proxy(request: NextRequest) {
     } catch {
       console.warn("[Proxy] Role lookup failed — allowing access");
     }
-  }
-
-  // On / or /login with a valid session → skip to correct dashboard
-  if (
-    (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/") &&
-    isAuthenticated
-  ) {
-    const url = request.nextUrl.clone();
-    if (userRoles.includes("merchant") && userRoles.includes("customer")) {
-      url.pathname = "/select-role";
-    } else if (userRoles.includes("merchant")) {
-      url.pathname = "/merchant/dashboard";
-    } else if (userRoles.includes("customer")) {
-      url.pathname = "/customer/dashboard";
-    } else {
-      // Fallback
-      url.pathname = "/merchant/dashboard";
-    }
-    return NextResponse.redirect(url);
   }
 
   // === Merchant / Delivery Protection ===

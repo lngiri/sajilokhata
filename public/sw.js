@@ -1,4 +1,4 @@
-const CACHE_NAME = "qrhisab-v3";
+const CACHE_NAME = "qrhisab-v4";
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -11,15 +11,14 @@ const STATIC_ASSETS = [
   "/merchant/settings",
   "/manifest.json",
 ];
+const AUTH_ROUTES = ["/login", "/api/auth/"];
 
-// Handle messages from the client (e.g., SKIP_WAITING)
 self.addEventListener("message", (event) => {
   if (event.data?.type === "SKIP_WAITING") {
     self.skipWaiting();
   }
 });
 
-// Install: cache all static assets
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -29,7 +28,6 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -43,38 +41,29 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch: Network-first for API calls, cache-first for static assets
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
   if (request.method !== "GET") return;
-
-  // Skip Supabase API calls (always go to network)
   if (url.hostname.includes("supabase")) return;
+  if (AUTH_ROUTES.some((p) => url.pathname === p || url.pathname.startsWith(p))) return;
 
-  // For navigation requests: network-first with cache fallback
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch(() => {
-          return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || caches.match("/");
-          });
-        })
+        .catch(() =>
+          caches.match(request).then((r) => r || caches.match("/"))
+        )
     );
     return;
   }
 
-  // For static assets (JS, CSS, images): network-first with cache fallback
   if (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.endsWith(".js") ||
@@ -85,38 +74,30 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseClone);
-          });
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
           return response;
         })
-        .catch(() => {
-          return caches.match(request).then((cachedResponse) => {
-            return cachedResponse || caches.match("/");
-          });
-        })
+        .catch(() =>
+          caches.match(request).then((r) => r || caches.match("/"))
+        )
     );
     return;
   }
 
-  // For everything else: network-first with cache fallback
   event.respondWith(
     fetch(request)
       .then((response) => {
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(request, responseClone);
-        });
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;
       })
-      .catch(() => {
-        return caches.match(request);
-      })
+      .catch(() =>
+        caches.match(request).then((r) => r || caches.match("/"))
+      )
   );
 });
 
-// Handle background sync for offline entries
 self.addEventListener("sync", (event) => {
   if (event.tag === "sync-pending-logs") {
     event.waitUntil(syncPendingLogs());
@@ -124,7 +105,6 @@ self.addEventListener("sync", (event) => {
 });
 
 async function syncPendingLogs() {
-  // Notify the client that sync is happening
   const clients = await self.clients.matchAll();
   clients.forEach((client) => {
     client.postMessage({ type: "SYNC_STARTED" });
