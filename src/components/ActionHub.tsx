@@ -40,8 +40,6 @@ const ITEMS = [
 
 const HELP_URL = "https://wa.me/9779763658505";
 const FAB_SIZE = 56;
-
-/** Distance from screen bottom to trigger dismiss (px) */
 const DISMISS_THRESHOLD = 80;
 
 export default function ActionHub() {
@@ -51,6 +49,7 @@ export default function ActionHub() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const dragRef = useRef({ startX: 0, startY: 0, elX: 0, elY: 0, moved: false, dismissed: false });
+  const ignoreClickRef = useRef(false);
   const fabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -96,12 +95,20 @@ export default function ActionHub() {
   const handlePointerUp = useCallback(() => {
     if (dragRef.current.dismissed) {
       setOpen(false);
-      // Keep at bottom so it's visually "closed"
+      ignoreClickRef.current = true;
+    }
+  }, []);
+
+  const handleFabClick = useCallback(() => {
+    if (ignoreClickRef.current) {
+      ignoreClickRef.current = false;
       return;
     }
-    if (!dragRef.current.moved) {
-      setOpen((v) => !v);
+    if (dragRef.current.moved) {
+      dragRef.current.moved = false;
+      return;
     }
+    setOpen((v) => !v);
   }, []);
 
   const handleAction = (action: string) => {
@@ -178,6 +185,7 @@ export default function ActionHub() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onClick={handleFabClick}
         style={{
           left: pos.x,
           top: pos.y,
