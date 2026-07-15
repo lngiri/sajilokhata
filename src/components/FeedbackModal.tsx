@@ -33,14 +33,19 @@ export default function FeedbackModal({ open, onClose }: Props) {
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to send");
+      if (!res.ok) {
+        const body = await res.text().catch(() => "(no body)");
+        console.log("[Feedback] Formspree error:", res.status, res.statusText, body);
+        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+      }
       setSent(true);
       setMessage("");
       setTimeout(() => {
         setSent(false);
         onClose();
       }, 2000);
-    } catch {
+    } catch (e: any) {
+      console.log("[Feedback] send failed:", e?.message);
       setError("Could not send feedback. Please try again.");
     }
     setSending(false);

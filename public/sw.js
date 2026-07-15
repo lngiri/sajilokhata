@@ -47,6 +47,7 @@ self.addEventListener("fetch", (event) => {
 
   if (request.method !== "GET") return;
   if (url.hostname.includes("supabase")) return;
+  if (url.hostname.includes("formspree")) return;
   if (AUTH_ROUTES.some((p) => url.pathname === p || url.pathname.startsWith(p))) return;
 
   if (request.mode === "navigate") {
