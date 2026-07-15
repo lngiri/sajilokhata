@@ -64,7 +64,7 @@ export default function LandingPage() {
           transition={{ duration: 0.5 }}
           className="sticky top-0 z-20 bg-white/70 backdrop-blur-lg border-b border-gray-100"
         >
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 xl:px-8 h-14 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-sm">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -85,7 +85,7 @@ export default function LandingPage() {
         {/* ── HERO ── */}
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-50/60 to-white pointer-events-none" />
-          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 sm:pt-28 sm:pb-32 text-center">
+          <div className="relative max-w-6xl mx-auto px-4 sm:px-6 xl:px-8 pt-20 pb-24 sm:pt-28 sm:pb-32 lg:pt-36 lg:pb-40 text-center">
             <motion.div {...fadeInView}>
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 text-xs font-semibold mb-6">
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -97,7 +97,7 @@ export default function LandingPage() {
 
             <motion.h1
               {...fadeInView}
-              className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 leading-[1.1] tracking-tight"
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 leading-[1.1] tracking-tight"
             >
               Your Shop&apos;s Digital{" "}
               <span className="text-emerald-600">Credit Ledger</span>
@@ -153,9 +153,9 @@ export default function LandingPage() {
         </section>
 
         {/* ── WHY QR HISAB ── */}
-        <section className="py-20 sm:py-28 bg-gray-50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <motion.div {...fadeInView} className="text-center mb-14">
+        <section className="py-20 sm:py-28 lg:py-32 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 xl:px-8">
+            <motion.div {...fadeInView} className="text-center mb-14 lg:mb-16">
               <SectionHeading>Why QR Hisab?</SectionHeading>
               <SectionSub>
                 Built for the way Nepali shops actually work — fast, offline-first,
@@ -218,8 +218,8 @@ export default function LandingPage() {
         </section>
 
         {/* ── HOW IT WORKS ── */}
-        <section id="how-it-works" className="py-20 sm:py-28">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <section id="how-it-works" className="py-20 sm:py-28 lg:py-32">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 xl:px-8">
             <motion.div {...fadeInView} className="text-center mb-14">
               <SectionHeading>Get started in 3 minutes</SectionHeading>
               <SectionSub>No hardware, no training, no paperwork.</SectionSub>
@@ -266,9 +266,9 @@ export default function LandingPage() {
         </section>
 
         {/* ── SECURITY / TRUST ── */}
-        <section className="py-20 sm:py-28 bg-gray-50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <motion.div {...fadeInView} className="text-center mb-14">
+        <section className="py-20 sm:py-28 lg:py-32 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 xl:px-8">
+            <motion.div {...fadeInView} className="text-center mb-14 lg:mb-16">
               <SectionHeading>Your data is safe</SectionHeading>
               <SectionSub>
                 We take security seriously so you can focus on your business.
@@ -315,8 +315,8 @@ export default function LandingPage() {
         </section>
 
         {/* ── CTA ── */}
-        <section className="py-20 sm:py-28">
-          <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+        <section className="py-20 sm:py-28 lg:py-32">
+          <div className="max-w-3xl mx-auto px-4 sm:px-6 xl:px-8 text-center">
             <motion.div {...fadeInView}>
               <SectionHeading>
                 Ready to go digital?
@@ -347,7 +347,7 @@ export default function LandingPage() {
 
         {/* ── FOOTER ── */}
         <footer className="mt-auto border-t border-gray-100 py-8">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 xl:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <div className="w-6 h-6 rounded-md bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center">
                 <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

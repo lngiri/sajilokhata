@@ -38,12 +38,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
         {/* Sidebar */}
         <aside
-          className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-52 bg-[var(--a-sidebar)] border-r border-[var(--a-border)] flex flex-col transform transition-transform duration-200 lg:translate-x-0 ${
+          className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-52 lg:w-60 bg-[var(--a-sidebar)] border-r border-[var(--a-border)] flex flex-col transform transition-transform duration-200 lg:translate-x-0 shadow-xl lg:shadow-none ${
             sidebarOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
           {/* Logo area */}
-          <div className="flex items-center justify-between px-4 h-14 border-b border-[var(--a-border)]">
+          <div className="flex items-center justify-between px-4 lg:px-5 h-14 lg:h-16 border-b border-[var(--a-border)]">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-red-600 flex items-center justify-center shadow-sm">
                 <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -60,14 +60,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           {/* Nav links */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          <nav className="flex-1 p-3 lg:p-4 space-y-1 overflow-y-auto">
             {NAV.map((item) => {
               const isActive = pathname === item.href || (item.href !== "/admin/dashboard" && pathname.startsWith(item.href));
               return (
                 <a
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                  className={`flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg text-sm lg:text-base transition-all ${
                     isActive
                       ? "bg-red-600/15 text-red-400 font-medium"
                       : "text-[var(--a-sidebar-text)] hover:bg-[var(--a-sidebar-hover)] hover:text-[var(--a-text)]"
@@ -84,10 +84,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </nav>
 
           {/* Bottom logout */}
-          <div className="p-3 border-t border-[var(--a-border)]">
+          <div className="p-3 lg:p-4 border-t border-[var(--a-border)]">
             <a
               href="/api/admin/signout"
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-[var(--a-muted)] hover:text-red-400 hover:bg-[var(--a-hover)] transition-all"
+              className="flex items-center gap-3 px-3 lg:px-4 py-2.5 lg:py-3 rounded-lg text-sm lg:text-base text-[var(--a-muted)] hover:text-red-400 hover:bg-[var(--a-hover)] transition-all"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
@@ -101,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex-1 flex flex-col min-h-screen min-w-0">
           {/* Top bar */}
           <header className="sticky top-0 z-30 bg-[var(--a-topbar)]/80 backdrop-blur-md border-b border-[var(--a-border)]">
-            <div className="flex items-center justify-between px-6 h-14">
+            <div className="flex items-center justify-between px-4 sm:px-6 h-14 lg:h-16">
               <button
                 onClick={() => setSidebarOpen(true)}
                 className="lg:hidden p-2 text-[var(--a-muted)] hover:text-[var(--a-text)] rounded-lg hover:bg-[var(--a-hover)]"
@@ -120,8 +120,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </header>
 
-          {/* Page content — centered within max-w-7xl */}
-          <main className="flex-1 w-full max-w-7xl mx-auto px-6 py-8">
+          {/* Page content — centered */}
+          <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
             {children}
           </main>
         </div>
