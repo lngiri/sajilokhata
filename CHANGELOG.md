@@ -10,22 +10,31 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 - **Migration 022** (`022_ensure_admin_users.sql`): Idempotent migration that creates the `admins` table if missing, recreates RLS policy, and seeds `lngiri@gmail.com` as admin. Safe to run on any DB state.
 - **Admin seed script** (`scripts/seed-admin.ts`): Standalone Node.js script that can be run via `npx tsx scripts/seed-admin.ts` to seed the admin user without running a full migration.
 - **Living documentation**: `ARCHITECTURE.md`, `CHANGELOG.md`, `TODO_LIST.md` — documentation-first protocol established.
+- **Role selection UI**: New `select_role` step in login flow between OTP and PIN. New users choose Merchant or Customer; existing multi-role users choose which role to log in as.
+- **`registerNewUser(phone, role)` action**: Creates merchant or customer row, sets session cookie, records session. Replaces auto-creation that was inside `verifyRegistrationOtp`.
+- **`scripts/audit-ghost-users.ts`**: Read-only audit to find incomplete registrations (`pin_hash IS NULL`). Run with `--delete` to clean up.
+- **`scripts/wipe-all-users.ts`**: Wipes all user data (merchants, customers, sessions, logs) for a fresh start.
 
 ### Changed
-- **Middleware logging** (`proxy.ts`): Logs `verifySessionToken()` result, `supabase.auth.getUser()` result, DB role lookup outcome, and final middleware action per request — enables tracing exactly where auth state diverges
-- **SessionGuard retry**: Non-force-logout mismatches now retry `/api/auth/session` after 2s instead of wiping immediately, masking transient cookie-propagation races
-- **Session API logging** (`/api/auth/session`): Logs cookie presence, HMAC verify result, DB lookup result (merchant/customer existence, force_logout_at, errors), and specific reason for returning `userId: null`
-- **Auth action verification**: `verifyRegistrationOtp`, `loginWithPin`, and `setPin` now read back the cookie after setting to confirm it was written (`verifyCookie === token`)
-- **Logging format**: All new logs include timestamps, userIds, and structured JSON for easy grep
+- **`verifyRegistrationOtp`**: No longer creates user rows or sets session cookies. Only verifies OTP and returns existence info (`{ exists, hasPin, userId, userType }`). Caller must use `registerNewUser()` after role selection.
+- **Login flow**: OTP → role selection → account creation (`registerNewUser`) → PIN setup. No more auto-assumed "merchant" role.
+- **Onboard page**: Uses `registerNewUser(phone, 'customer')` for new customers instead of relying on `verifyRegistrationOtp` to create a merchant.
+- **Middleware logging** (`proxy.ts`): Logs `verifySessionToken()` result, `supabase.auth.getUser()` result, DB role lookup outcome, and final middleware action per request.
+- **SessionGuard retry**: Non-force-logout mismatches retry `/api/auth/session` after 2s before wiping.
+- **Session API logging** (`/api/auth/session`): Logs cookie presence, HMAC verify result, DB lookup result, and specific reason for `userId: null`.
+- **Auth action verification**: `registerNewUser`, `loginWithPin`, and `setPin` read back the cookie after setting to confirm it was written.
+- **HMAC key resolution** (`session.ts`, `admin-session.ts`): Priority chain `SESSION_HMAC_SECRET → SUPABASE_SERVICE_ROLE_KEY → fallback`, with console log showing which source is used.
+- **`next.config.ts` `env`** bridges `SUPABASE_SERVICE_ROLE_KEY` → `SESSION_HMAC_SECRET` so both Edge and Node.js runtimes use the same HMAC key.
 
 ### Fixed
-- Auth flow: `setPin()` now creates a session cookie (was missing, causing redirect to phone after PIN setup)
-- Auth flow: `handleSetPin` gracefully redirects to phone step if `userInfoRef` is missing
-- Admin signout redirect: Changed `https://www.qrhisab.com` to `http://localhost:3000` fallback so signout works in dev mode
-- Auth signout redirect: Same fix — relative dev fallback instead of hardcoded production URL
-- Forgot PIN flow: `forgotPinVerifyOtp` now returns `redirect` URL based on `verified.userType` instead of hardcoding `/merchant/dashboard`
-- Forgot PIN flow: Login page `handleForgotOtpSubmit` uses the dynamic `redirect` URL from the server action
-- Logging: Added `[Login]`, `[OTP]`, `[loginWithPin]`, `[setPin]`, `[forgotPinVerifyOtp]` console logs at every auth transition point
+- **Redirect loop (root cause)**: `verifySessionToken` in middleware (Edge Runtime) was using fallback `"session-secret-fallback"` while `createSessionToken` in server actions (Node.js) used the real `SUPABASE_SERVICE_ROLE_KEY`. Every cookie created by a server action was rejected by the middleware → immediate redirect to `/login`. Fix: `SESSION_HMAC_SECRET` is now bridged via `next.config.ts` `env` (available in ALL runtimes), and `getHmacKey()` logs which key source is used.
+- Role-based routing: `verifyRegistrationOtp` no longer auto-creates merchants — new users register with their chosen role.
+- Auth flow: `setPin()` now creates a session cookie (was missing, causing redirect to phone after PIN setup).
+- Auth flow: `handleSetPin` gracefully redirects to phone step if `userInfoRef` is missing.
+- Admin signout redirect: Changed `https://www.qrhisab.com` to `http://localhost:3000` fallback.
+- Auth signout redirect: Relative dev fallback instead of hardcoded production URL.
+- Forgot PIN flow: `forgotPinVerifyOtp` validates `exists` before proceeding, returns `redirect` URL based on `verified.userType`.
+- Admin session module (`admin-session.ts`) also uses `SESSION_HMAC_SECRET` for HMAC consistency.
 
 ---
 
