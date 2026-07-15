@@ -16,7 +16,9 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 - Auth flow: `handleSetPin` gracefully redirects to phone step if `userInfoRef` is missing
 - Admin signout redirect: Changed `https://www.qrhisab.com` to `http://localhost:3000` fallback so signout works in dev mode
 - Auth signout redirect: Same fix — relative dev fallback instead of hardcoded production URL
-- Logging: Added `[Login]`, `[OTP]`, `[loginWithPin]`, `[setPin]` console logs at every auth transition point
+- Forgot PIN flow: `forgotPinVerifyOtp` now returns `redirect` URL based on `verified.userType` instead of hardcoding `/merchant/dashboard`
+- Forgot PIN flow: Login page `handleForgotOtpSubmit` uses the dynamic `redirect` URL from the server action
+- Logging: Added `[Login]`, `[OTP]`, `[loginWithPin]`, `[setPin]`, `[forgotPinVerifyOtp]` console logs at every auth transition point
 
 ---
 

@@ -12,7 +12,7 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] Verify returning-user flow (phone → PIN → dashboard)
 - [ ] Check `SessionGuard.tsx` doesn't conflict with middleware — may cause double-redirect
 - [ ] Test `force_logout_at` kill-switch from admin panel
-- [ ] Test "Forgot PIN" flow end-to-end
+- [x] Fix Forgot PIN redirect: now returns type-aware URL (merchant/customer/select-role) instead of hardcoded `/merchant/dashboard`
 
 ## Merchant Dashboard
 

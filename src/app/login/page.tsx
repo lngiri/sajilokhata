@@ -290,8 +290,8 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    console.log("[Login] PIN reset, redirecting to /merchant/dashboard");
-    window.location.replace("/merchant/dashboard");
+    console.log("[Login] PIN reset, redirecting to", result.redirect);
+    window.location.replace(result.redirect || "/merchant/dashboard");
   };
 
   const backToPhone = () => { setStep("phone"); setError(""); };

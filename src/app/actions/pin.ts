@@ -297,16 +297,30 @@ export async function forgotPinVerifyOtp(
   phone: string,
   otp: string,
   newPin: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; redirect?: string }> {
+  console.log("[forgotPinVerifyOtp] Starting for phone:", phone);
   const { verifyRegistrationOtp } = await import("./otp");
   const verified = await verifyRegistrationOtp(phone, otp);
   if (!verified.success) {
+    console.log("[forgotPinVerifyOtp] OTP verify failed:", verified.error);
     return { success: false, error: verified.error || "Verification failed" };
   }
 
   if (!verified.userId) {
+    console.log("[forgotPinVerifyOtp] No userId from OTP verify");
     return { success: false, error: "Could not identify user" };
   }
 
-  return setPin(verified.userId, newPin);
+  console.log("[forgotPinVerifyOtp] Setting new PIN for user:", verified.userId, "type:", verified.userType);
+  const pinResult = await setPin(verified.userId, newPin);
+  if (!pinResult.success) return pinResult;
+
+  const redirect =
+    verified.userType === "merchant"
+      ? "/merchant/dashboard"
+      : verified.userType === "customer"
+        ? "/customer/dashboard"
+        : "/select-role";
+
+  return { success: true, redirect };
 }
