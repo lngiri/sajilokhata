@@ -88,6 +88,8 @@ export default function ScanPage() {
       setPhone(session.phone);
       setName(session.name);
       setStep("scan");
+      // Re-sync the cookie so middleware doesn't block /customer/* routes
+      document.cookie = `customer_session=${encodeURIComponent(JSON.stringify(session))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
     }
     setInitialized(true);
   }, []);

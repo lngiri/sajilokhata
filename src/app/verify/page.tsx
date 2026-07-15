@@ -148,10 +148,12 @@ export default function VerifyPage() {
 
   const handleGoToDashboard = () => {
     if (log?.customers?.phone) {
-      localStorage.setItem("sajilo_customer_session", JSON.stringify({
+      const session = JSON.stringify({
         phone: log.customers.phone,
         name: log.customers.name || "",
-      }));
+      });
+      localStorage.setItem("sajilo_customer_session", session);
+      document.cookie = `customer_session=${encodeURIComponent(session)}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
     }
     window.location.replace("/customer/dashboard");
   };

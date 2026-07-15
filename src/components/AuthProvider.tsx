@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useRef } from "react";
 
-const STORAGE_KEYS = ["merchant_id", "sajilo_customer_session"];
+const STORAGE_KEYS = ["merchant_id"];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = useRef(createClient()).current;

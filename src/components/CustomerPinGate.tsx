@@ -32,6 +32,13 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
 
   useEffect(() => {
     if (!phone) return;
+
+    // Skip PIN if already unlocked this tab session
+    if (sessionStorage.getItem("customer_pin_unlocked")) {
+      setStep("unlocked");
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       const { hasPin } = await checkCustomerHasPin(phone);
@@ -90,6 +97,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
       setLoading(false);
       return;
     }
+    sessionStorage.setItem("customer_pin_unlocked", "1");
     setStep("unlocked");
   };
 
@@ -107,10 +115,12 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
       setLoading(false);
       return;
     }
+    sessionStorage.setItem("customer_pin_unlocked", "1");
     setStep("unlocked");
   };
 
   const handleSkip = () => {
+    sessionStorage.setItem("customer_pin_unlocked", "1");
     setStep("unlocked");
   };
 

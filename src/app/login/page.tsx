@@ -254,9 +254,11 @@ export default function LoginPage() {
     }
 
     // Existing user
-    // Wipe previous state
+    // Wipe previous state (preserve customer session)
+    const savedCustomerSession = localStorage.getItem("sajilo_customer_session");
     localStorage.clear();
     sessionStorage.clear();
+    if (savedCustomerSession) localStorage.setItem("sajilo_customer_session", savedCustomerSession);
     try {
       const { clearIndexedDB } = await import("@/lib/offline/db");
       await clearIndexedDB();
@@ -324,9 +326,11 @@ export default function LoginPage() {
         return;
       }
 
-      // Wipe previous state before setting new
+      // Wipe previous state before setting new (preserve customer session)
+      const savedCustomerSession = localStorage.getItem("sajilo_customer_session");
       localStorage.clear();
       sessionStorage.clear();
+      if (savedCustomerSession) localStorage.setItem("sajilo_customer_session", savedCustomerSession);
       try {
         const { clearIndexedDB } = await import("@/lib/offline/db");
         await clearIndexedDB();
