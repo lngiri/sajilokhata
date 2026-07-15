@@ -294,69 +294,100 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
     const admin = getAdminClient();
     if (!admin) return [];
 
-    const [mRes, cRes] = await Promise.all([
-      (admin.from("merchants") as any)
-        .select("id, name, business_name, phone, created_at, status")
-        .limit(500)
-        .order("created_at", { ascending: false }),
-      (admin.from("customers") as any)
-        .select("id, name, phone, created_at")
-        .limit(500)
-        .order("created_at", { ascending: false }),
-    ]);
+    let results: DirectoryUser[] = [];
 
-    const merchants: any[] = mRes?.data ?? [];
-    const customers: any[] = cRes?.data ?? [];
-
-    const merchantPhones = new Set<string>();
-    merchantPhones.clear();
-    for (const m of merchants) {
-      if (m.phone) merchantPhones.add(m.phone);
-    }
-
-    const customerPhones = new Set<string>();
-    customerPhones.clear();
-    for (const c of customers) {
-      if (c.phone) customerPhones.add(c.phone);
-    }
-
-    const combined = new Map<string, DirectoryUser>();
-
-    for (const m of merchants) {
-      combined.set(m.id, {
-        id: m.id,
-        name: m.name || m.business_name || "",
-        phone: m.phone || "",
-        role: m.phone && customerPhones.has(m.phone) ? "both" : "merchant",
-        businessName: m.business_name || "",
-        status: m.status || "active",
-        transactionCount: 0,
-        createdAt: m.created_at,
-      });
-    }
-
-    for (const c of customers) {
-      if (!combined.has(c.id)) {
-        combined.set(c.id, {
-          id: c.id,
-          name: c.name || "",
-          phone: c.phone || "",
-          role: c.phone && merchantPhones.has(c.phone) ? "both" : "customer",
-          businessName: "",
+    // Try SQL RPC first (JOIN-based role detection)
+    try {
+      const { data: rows, error } = await (admin.rpc("get_user_directory_safe") as any);
+      if (!error && Array.isArray(rows) && rows.length > 0) {
+        console.log("[getAdminUserDirectory] RPC returned", rows.length, "rows");
+        if (rows.length > 0) console.log("[getAdminUserDirectory] First row:", JSON.stringify(rows[0]));
+        results = rows.map((r: any) => ({
+          id: r.id,
+          name: r.name || "",
+          phone: r.phone || "",
+          role: (r.role === "both" ? "both" : r.role === "customer" ? "customer" : "merchant") as "merchant" | "customer" | "both",
+          businessName: r.business_name || "",
           status: "active",
           transactionCount: 0,
-          createdAt: c.created_at,
-        });
+          createdAt: r.created_at,
+        }));
       } else {
-        const existing = combined.get(c.id)!;
-        existing.role = "both";
+        console.warn("[getAdminUserDirectory] RPC failed or empty, falling back to JS:", error);
       }
+    } catch (rpcErr) {
+      console.warn("[getAdminUserDirectory] RPC exception, falling back to JS:", rpcErr);
     }
 
-    let results = Array.from(combined.values());
+    // Fallback: JS-based approach if RPC didn't return data
+    if (results.length === 0) {
+      console.log("[getAdminUserDirectory] Using JS fallback");
+
+      const [mRes, cRes] = await Promise.all([
+        (admin.from("merchants") as any)
+          .select("id, name, business_name, phone, created_at")
+          .limit(500)
+          .order("created_at", { ascending: false }),
+        (admin.from("customers") as any)
+          .select("id, name, phone, created_at")
+          .limit(500)
+          .order("created_at", { ascending: false }),
+      ]);
+
+      const merchants: any[] = mRes?.data ?? [];
+      const customers: any[] = cRes?.data ?? [];
+      console.log("[getAdminUserDirectory] JS fallback: merchants=", merchants.length, "customers=", customers.length);
+
+      const merchantPhones = new Set<string>();
+      for (const m of merchants) {
+        if (m.phone) merchantPhones.add(m.phone);
+      }
+      const customerPhones = new Set<string>();
+      for (const c of customers) {
+        if (c.phone) customerPhones.add(c.phone);
+      }
+
+      const combined = new Map<string, DirectoryUser>();
+
+      for (const m of merchants) {
+        combined.set(m.id, {
+          id: m.id,
+          name: m.name || m.business_name || "",
+          phone: m.phone || "",
+          role: m.phone && customerPhones.has(m.phone) ? "both" : "merchant",
+          businessName: m.business_name || "",
+          status: "active",
+          transactionCount: 0,
+          createdAt: m.created_at,
+        });
+      }
+
+      for (const c of customers) {
+        if (!combined.has(c.id)) {
+          combined.set(c.id, {
+            id: c.id,
+            name: c.name || "",
+            phone: c.phone || "",
+            role: c.phone && merchantPhones.has(c.phone) ? "both" : "customer",
+            businessName: "",
+            status: "active",
+            transactionCount: 0,
+            createdAt: c.created_at,
+          });
+        } else {
+          const existing = combined.get(c.id)!;
+          existing.role = "both";
+        }
+      }
+
+      results = Array.from(combined.values());
+    }
 
     // Add tx counts for merchants
-    const merchantIds = merchants.map((m: any) => m.id);
+    const merchantIds = results
+      .filter((u) => u.role === "merchant" || u.role === "both")
+      .map((u) => u.id);
+
     if (merchantIds.length > 0) {
       try {
         const { data: txCounts } = await (admin.from("credit_logs") as any)
@@ -488,18 +519,43 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
   try {
     await requireAdmin();
     const admin = getAdminClient();
-    if (!admin) return null;
+    if (!admin) {
+      console.error("[getAdminMerchantDetail] getAdminClient returned null");
+      return null;
+    }
 
-    const { data: m } = await (admin.from("merchants") as any)
-      .select("id, name, business_name, phone, status, business_type, address, created_at")
-      .eq("id", merchantId)
-      .maybeSingle();
+    console.log("[getAdminMerchantDetail] Loading ID:", merchantId);
+
+    let m: any = null;
+
+    // Try RPC first
+    try {
+      const { data: rows, error } = await (admin.rpc("get_user_directory_safe") as any);
+      if (!error && Array.isArray(rows)) {
+        m = rows.find((r: any) => r.id === merchantId) || null;
+        if (m) console.log("[getAdminMerchantDetail] Found via RPC:", JSON.stringify(m));
+      }
+    } catch (e) {
+      console.warn("[getAdminMerchantDetail] RPC lookup failed:", e);
+    }
+
+    // Fallback: direct merchant query
+    if (!m) {
+      console.log("[getAdminMerchantDetail] Falling back to direct query");
+      const { data: merchant } = await (admin.from("merchants") as any)
+        .select("*")
+        .eq("id", merchantId)
+        .maybeSingle();
+      m = merchant;
+      console.log("[getAdminMerchantDetail] Direct query result:", JSON.stringify(m));
+    }
 
     if (!m) {
       console.error("[getAdminMerchantDetail] No merchant found for ID:", merchantId);
       return null;
     }
 
+    // Get counts with individual try-catch
     let txCount = 0, custCount = 0;
     try {
       const r = await (admin.from("credit_logs") as any)
@@ -507,7 +563,7 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
         .eq("merchant_id", m.id);
       txCount = r?.count ?? 0;
     } catch (e) {
-      console.error("[getAdminMerchantDetail] tx count failed for", m.id, e);
+      console.error("[getAdminMerchantDetail] tx count failed:", e);
     }
     try {
       const r = await (admin.from("merchant_customers") as any)
@@ -515,10 +571,10 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
         .eq("merchant_id", m.id);
       custCount = r?.count ?? 0;
     } catch (e) {
-      console.error("[getAdminMerchantDetail] cust count failed for", m.id, e);
+      console.error("[getAdminMerchantDetail] cust count failed:", e);
     }
 
-    return {
+    const result = {
       id: m.id,
       name: m.name || "",
       businessName: m.business_name || "",
@@ -526,12 +582,15 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
       status: m.status || "active",
       businessType: m.business_type || "",
       address: m.address || "",
-      createdAt: m.created_at,
+      createdAt: m.created_at || m.createdAt,
       transactionCount: txCount,
       customerCount: custCount,
     };
+    console.log("[getAdminMerchantDetail] Returning:", JSON.stringify(result));
+    return result;
   } catch (err) {
-    console.error("[getAdminMerchantDetail]", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[getAdminMerchantDetail] Exception:", msg);
     return null;
   }
 }
