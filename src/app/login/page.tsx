@@ -72,21 +72,25 @@ export default function LoginPage() {
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
         const data: { userId: string | null; roles: string[] } = await res.json();
+        console.log("[Login] Mount session check:", JSON.stringify(data));
         if (cancelled) return;
         if (data.userId) {
           if (data.roles.length === 0) {
+            console.log("[Login] Session exists but no roles → showing phone");
             if (!cancelled) setStep("phone");
             return;
           }
           if (data.roles.length === 1) {
-            window.location.replace(data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard");
+            const target = data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
+            console.log("[Login] Single role, redirecting to", target);
+            window.location.replace(target);
             return;
           }
-          // Both roles
+          console.log("[Login] Both roles, redirecting to /select-role");
           window.location.replace("/select-role");
           return;
         }
-      } catch { /* network error */ }
+      } catch (e) { console.log("[Login] Session check failed:", e); }
       if (!cancelled) setStep("phone");
     })();
     return () => { cancelled = true; };
@@ -98,16 +102,20 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    console.log("[Login] Phone submit, checking existence for:", phone);
     const { exists, users } = await checkUserExists(phone);
+    console.log("[Login] checkUserExists result:", { exists, users });
 
     if (!exists) {
-      // New user → send OTP
+      console.log("[Login] New user → sending OTP");
       const result = await sendRegistrationOtp(phone);
       if (!result.success) {
+        console.log("[Login] OTP send failed:", result.error);
         setError(result.error || "Failed to send OTP");
         setLoading(false);
         return;
       }
+      console.log("[Login] OTP sent, transitioning to otp step");
       setStep("otp");
       setLoading(false);
       return;
@@ -116,11 +124,13 @@ export default function LoginPage() {
     // Existing user
     const user = users[0];
     userInfoRef.current = { userId: user.userId, userType: user.userType };
+    console.log("[Login] Existing user:", userInfoRef.current);
 
     if (user.hasPin) {
+      console.log("[Login] User has PIN → showing PIN entry");
       setStep("pin");
     } else {
-      // Legacy user, must set PIN
+      console.log("[Login] User has no PIN → showing set_pin");
       setStep("set_pin");
     }
     setLoading(false);
@@ -135,7 +145,9 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    console.log("[Login] Verifying PIN for user:", info.userId);
     const result = await loginWithPin(info.userId, pinStr, info.userType);
+    console.log("[Login] loginWithPin result:", JSON.stringify(result));
     if (!result.success) {
       setError(result.error || "Incorrect PIN");
       setPin(["", "", "", ""]);
@@ -144,7 +156,7 @@ export default function LoginPage() {
       return;
     }
 
-    // Redirect based on userType
+    console.log("[Login] PIN verified, redirecting to", result.redirect);
     window.location.replace(result.redirect || "/merchant/dashboard");
   };
 
@@ -156,18 +168,27 @@ export default function LoginPage() {
     if (newPinStr !== confirmStr) { setError("PINs do not match"); return; }
 
     const info = userInfoRef.current;
-    if (!info) return;
+    if (!info) {
+      console.log("[Login] Set PIN: no userInfoRef, cannot proceed");
+      setError("Session expired. Please re-enter your phone.");
+      setStep("phone");
+      return;
+    }
     setLoading(true);
     setError("");
 
+    console.log("[Login] Setting PIN for user:", info.userId, "type:", info.userType);
     const result = await setMerchantPin(info.userId, newPinStr);
+    console.log("[Login] setPin result:", JSON.stringify(result));
     if (!result.success) {
       setError(result.error || "Failed to set PIN");
       setLoading(false);
       return;
     }
 
-    window.location.replace(info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard");
+    const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
+    console.log("[Login] PIN set successfully, redirecting to", target);
+    window.location.replace(target);
   };
 
   const handleSkipPin = () => {
@@ -181,7 +202,9 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    console.log("[Login] Verifying OTP for phone:", phone);
     const result = await verifyRegistrationOtp(phone, otp);
+    console.log("[Login] verifyRegistrationOtp result:", JSON.stringify(result));
     if (!result.success) {
       setError(result.error || "Invalid OTP");
       setLoading(false);
@@ -208,6 +231,7 @@ export default function LoginPage() {
 
     if (result.userId) {
       localStorage.setItem("merchant_id", result.userId);
+      console.log("[Login] Stored merchant_id in localStorage:", result.userId);
     }
     if (result.phone) {
       localStorage.setItem("merchant_phone", result.phone);
@@ -215,14 +239,19 @@ export default function LoginPage() {
 
     const userType = result.userType || "merchant";
     userInfoRef.current = { userId: result.userId!, userType };
+    console.log("[Login] OTP verified, userInfoRef set:", userInfoRef.current);
 
     // Check if PIN already set
     const checkResult = await checkUserExists(phone);
     const hasPin = checkResult.users.some((u) => u.hasPin);
+    console.log("[Login] PIN check after OTP:", { hasPin, users: checkResult.users });
     if (hasPin && result.userId) {
       const info = userInfoRef.current;
-      window.location.replace(info?.userType === "both" ? "/select-role" : info?.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard");
+      const target = info?.userType === "both" ? "/select-role" : info?.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
+      console.log("[Login] PIN already set, redirecting to", target);
+      window.location.replace(target);
     } else {
+      console.log("[Login] No PIN set, transitioning to set_pin step");
       setStep("set_pin");
       setLoading(false);
     }
@@ -233,7 +262,9 @@ export default function LoginPage() {
     if (!phone || phone.length < 10) return;
     setLoading(true);
     setError("");
+    console.log("[Login] Forgot PIN: sending OTP to", phone);
     const result = await forgotPinSendOtp(phone);
+    console.log("[Login] Forgot PIN OTP result:", JSON.stringify(result));
     if (!result.success) {
       setError(result.error || "Failed to send OTP");
       setLoading(false);
@@ -251,12 +282,15 @@ export default function LoginPage() {
     if (newPinStr !== confirmStr) { setError("PINs do not match"); return; }
     setLoading(true);
     setError("");
+    console.log("[Login] Forgot PIN: verifying OTP and resetting PIN");
     const result = await forgotPinVerifyOtp(phone, otp, newPinStr);
+    console.log("[Login] Forgot PIN result:", JSON.stringify(result));
     if (!result.success) {
       setError(result.error || "Verification failed");
       setLoading(false);
       return;
     }
+    console.log("[Login] PIN reset, redirecting to /merchant/dashboard");
     window.location.replace("/merchant/dashboard");
   };
 

@@ -84,15 +84,20 @@ export async function verifyRegistrationOtp(
     const storedCode = cookieStore.get("otp_code")?.value;
     const storedPhone = cookieStore.get("otp_phone")?.value;
 
+    console.log("[OTP] Verifying OTP, storedCode:", !!storedCode, "storedPhone:", storedPhone, "inputPhone:", cleanPhone, "inputCode:", code);
+
     if (!storedCode || !storedPhone) {
+      console.log("[OTP] No stored OTP cookies (expired)");
       return { success: false, error: "OTP expired. Please request a new one." };
     }
 
     if (storedPhone !== cleanPhone) {
+      console.log("[OTP] Phone mismatch: stored:", storedPhone, "input:", cleanPhone);
       return { success: false, error: "Phone number mismatch." };
     }
 
     if (storedCode !== code) {
+      console.log("[OTP] Code mismatch: stored:", storedCode, "input:", code);
       return { success: false, error: "Invalid OTP. Please try again." };
     }
 
@@ -118,20 +123,23 @@ export async function verifyRegistrationOtp(
     }
 
     const existing = await findUserByPhone(cleanPhone);
+    console.log("[OTP] Existing user lookup:", JSON.stringify(existing));
     let userId: string | null = null;
     let userType: "merchant" | "customer" | "both" = "merchant";
 
     if (existing.merchant) {
       userId = existing.merchant.id;
       userType = existing.customer ? "both" : "merchant";
+      console.log("[OTP] Found existing merchant:", userId, "userType:", userType);
     } else if (existing.customer) {
       userId = existing.customer.id;
       userType = "customer";
+      console.log("[OTP] Found existing customer:", userId);
     }
 
     // ---- 3. Create merchant row if new user ----
     if (!userId) {
-      // Generate a UUID-like ID for the new merchant
+      console.log("[OTP] No existing user → creating new merchant");
       userId = crypto.randomUUID();
       const normalizedPhone = normalizePhone(cleanPhone);
 
@@ -155,6 +163,7 @@ export async function verifyRegistrationOtp(
     }
 
     // ---- 4. Set session cookie ----
+    console.log("[OTP] Creating session token for user:", userId);
     const { token, maxAge } = await createSessionToken(userId);
     cookieStore.set(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -163,6 +172,7 @@ export async function verifyRegistrationOtp(
       maxAge,
       path: "/",
     });
+    console.log("[OTP] Session cookie set for user:", userId);
 
     // ---- 5. Record session in DB ----
     try {

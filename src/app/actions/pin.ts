@@ -145,14 +145,19 @@ export async function loginWithPin(
   pin: string,
   userType: "merchant" | "customer" | "both"
 ): Promise<{ success: boolean; error?: string; redirect?: string }> {
+  console.log("[loginWithPin] Verifying PIN for user:", userId);
   const verified = await verifyPin(userId, pin);
-  if (!verified.success) return verified;
+  if (!verified.success) {
+    console.log("[loginWithPin] PIN verification failed:", verified.error);
+    return verified;
+  }
 
   try {
     const admin = getAdminClient();
     const cookieStore = await cookies();
 
     // Create session cookie
+    console.log("[loginWithPin] Creating session for user:", userId);
     const { token, maxAge } = await createSessionToken(userId);
     cookieStore.set(SESSION_COOKIE, token, {
       httpOnly: true,
@@ -161,6 +166,7 @@ export async function loginWithPin(
       maxAge,
       path: "/",
     });
+    console.log("[loginWithPin] Session cookie set");
 
     // Record session in DB
     if (admin) {
@@ -173,6 +179,7 @@ export async function loginWithPin(
           device_info: userAgent,
           ip_address: ip,
         });
+        console.log("[loginWithPin] Session recorded in DB");
       } catch (e) {
         console.warn("[loginWithPin] session record failed:", e);
       }
@@ -186,6 +193,7 @@ export async function loginWithPin(
           ? "/customer/dashboard"
           : "/select-role";
 
+    console.log("[loginWithPin] Success, redirecting to", redirect);
     return { success: true, redirect };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -201,6 +209,7 @@ export async function setPin(
   if (!pin || pin.length < 4 || pin.length > 6) {
     return { success: false, error: "PIN must be 4-6 digits" };
   }
+  console.log("[setPin] Setting PIN for user:", userId);
 
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Server config" };
@@ -225,6 +234,36 @@ export async function setPin(
   if (errors.length > 0) {
     console.error("[setPin] update errors:", errors);
     return { success: false, error: "Failed to save PIN" };
+  }
+
+  // Create/refresh session cookie (same as loginWithPin)
+  try {
+    const cookieStore = await cookies();
+    const { token, maxAge } = await createSessionToken(userId);
+    cookieStore.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+    console.log("[setPin] Session cookie set for user:", userId);
+
+    // Record session in DB
+    try {
+      const headersList = await headers();
+      const userAgent = headersList.get("user-agent") || "";
+      const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "";
+      await (admin.from("sessions") as any).insert({
+        merchant_id: userId,
+        device_info: userAgent,
+        ip_address: ip,
+      });
+    } catch (e) {
+      console.warn("[setPin] session record failed:", e);
+    }
+  } catch (err) {
+    console.error("[setPin] failed to create session cookie:", err);
   }
 
   return { success: true };
