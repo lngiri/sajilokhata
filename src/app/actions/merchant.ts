@@ -485,3 +485,144 @@ export async function uploadAttachment(
 
   return urlData.publicUrl;
 }
+
+// ──────────────────────────────────────────────
+// Customer Trust Status
+// ──────────────────────────────────────────────
+
+/**
+ * View a customer's trust_status (masked to 'unknown' if no relationship exists).
+ * Used by the customer detail page to enforce the "relation-only" access rule.
+ */
+export async function getCustomerTrustStatus(
+  merchantId: string,
+  customerId: string
+): Promise<{ trust_status: string; trust_notes: string | null }> {
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    throw new Error("Not logged in");
+  }
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  // Verify relationship exists via merchant_customers OR credit_logs
+  const { data: rel } = await (admin.from("merchant_customers") as any)
+    .select("id")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  const { data: logRel } = !rel
+    ? await (admin.from("credit_logs") as any)
+        .select("id")
+        .eq("merchant_id", merchantId)
+        .eq("customer_id", customerId)
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  // No relationship → mask trust status
+  if (!rel && !logRel) {
+    return { trust_status: "unknown", trust_notes: null };
+  }
+
+  // Relationship exists → return actual status (but NOT flagged_by_merchant_id)
+  const { data: cust } = await (admin.from("customers") as any)
+    .select("trust_status, trust_notes")
+    .eq("id", customerId)
+    .single();
+
+  return {
+    trust_status: cust?.trust_status || "good",
+    trust_notes: cust?.trust_notes || null,
+  };
+}
+
+/**
+ * Flag or clear a customer's trust status.
+ * Only the flagging merchant can modify/clear their own flag.
+ */
+export async function updateCustomerTrustStatus(
+  merchantId: string,
+  customerId: string,
+  action: "flag" | "clear",
+  options?: { status?: "warning" | "defaulter"; notes?: string }
+): Promise<{ success: boolean; error?: string }> {
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, error: "Not logged in" };
+  }
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  // Verify relationship exists
+  const { data: rel } = await (admin.from("merchant_customers") as any)
+    .select("id")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  const { data: logRel } = !rel
+    ? await (admin.from("credit_logs") as any)
+        .select("id")
+        .eq("merchant_id", merchantId)
+        .eq("customer_id", customerId)
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  if (!rel && !logRel) {
+    return { success: false, error: "No customer relationship found" };
+  }
+
+  if (action === "flag") {
+    const status = options?.status || "warning";
+    if (!["warning", "defaulter"].includes(status)) {
+      return { success: false, error: "Invalid trust status" };
+    }
+    const { error } = await (admin.from("customers") as any)
+      .update({
+        trust_status: status,
+        trust_notes: options?.notes || null,
+        flagged_by_merchant_id: merchantId,
+        flagged_at: new Date().toISOString(),
+      })
+      .eq("id", customerId);
+
+    if (error) {
+      console.error("[TrustStatus] Flag error:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  }
+
+  if (action === "clear") {
+    // Only the flagging merchant can clear
+    const { data: cust } = await (admin.from("customers") as any)
+      .select("flagged_by_merchant_id")
+      .eq("id", customerId)
+      .single();
+
+    if (!cust) return { success: false, error: "Customer not found" };
+    if (cust.flagged_by_merchant_id !== merchantId) {
+      return { success: false, error: "Only the merchant who flagged can remove this status" };
+    }
+
+    const { error } = await (admin.from("customers") as any)
+      .update({
+        trust_status: "good",
+        trust_notes: null,
+        flagged_by_merchant_id: null,
+        flagged_at: null,
+      })
+      .eq("id", customerId);
+
+    if (error) {
+      console.error("[TrustStatus] Clear error:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  }
+
+  return { success: false, error: "Invalid action" };
+}

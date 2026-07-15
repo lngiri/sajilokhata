@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin } from "@/app/actions/merchant";
+import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus } from "@/app/actions/merchant";
 import TransactionIcon from "@/components/TransactionIcon";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -44,6 +44,8 @@ interface CustomerDetail {
   total_debit_amount: number;
   total_credit_amount: number;
   transactions: Transaction[];
+  trust_status: string;
+  trust_notes: string | null;
 }
 
 export default function CustomerDetailPage() {
@@ -60,6 +62,10 @@ export default function CustomerDetailPage() {
   const [savingLimit, setSavingLimit] = useState(false);
   const [showResetPinModal, setShowResetPinModal] = useState(false);
   const [resettingPin, setResettingPin] = useState(false);
+  const [showFlagModal, setShowFlagModal] = useState(false);
+  const [flagStatus, setFlagStatus] = useState<"warning" | "defaulter">("warning");
+  const [flagNotes, setFlagNotes] = useState("");
+  const [flagging, setFlagging] = useState(false);
 
   useEffect(() => {
     if (!showCreditLimitModal) return;
@@ -94,7 +100,7 @@ export default function CustomerDetailPage() {
 
         const { data: mc } = await supabase
           .from("merchant_customers")
-          .select("*, customers(id, name, phone)")
+          .select("*, customers(id, name, phone, trust_status, trust_notes)")
           .eq("merchant_id", merchantId)
           .eq("customer_id", customerId)
           .single();
@@ -130,6 +136,8 @@ export default function CustomerDetailPage() {
           total_debit_amount: totalDebit,
           total_credit_amount: totalCredit,
           transactions: (logs as Transaction[]) || [],
+          trust_status: mc.customers?.trust_status || "good",
+          trust_notes: mc.customers?.trust_notes || null,
         });
       } catch {
         if (!cancelled) addToastRef.current("Failed to load customer details.", "error");
@@ -226,14 +234,74 @@ export default function CustomerDetailPage() {
                 <p className="text-sm text-[var(--color-text-muted)]">{customer.phone}</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowResetPinModal(true)}
-              className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium active:scale-[0.98]"
-            >
-              Reset PIN
-            </button>
+            <div className="flex gap-2">
+              {customer.trust_status === "good" ? (
+                <button
+                  onClick={() => { setFlagStatus("warning"); setFlagNotes(""); setShowFlagModal(true); }}
+                  className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                >
+                  Flag
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    const merchantId = await getCurrentMerchantId();
+                    if (!merchantId) return;
+                    const r = await updateCustomerTrustStatus(merchantId, customer.id, "clear");
+                    if (r.success) {
+                      setCustomer((prev) => prev ? { ...prev, trust_status: "good", trust_notes: null } : prev);
+                      addToast("Trust flag cleared", "success");
+                    } else {
+                      addToast(r.error || "Failed to clear", "error");
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                >
+                  Clear Flag
+                </button>
+              )}
+              <button
+                onClick={() => setShowResetPinModal(true)}
+                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+              >
+                Reset PIN
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Trust Warning Banner (only if flagged — no identity leak) */}
+        {customer.trust_status !== "good" && (
+          <div className={`rounded-2xl p-4 shadow-sm border ${
+            customer.trust_status === "defaulter"
+              ? "bg-red-50 border-red-200"
+              : "bg-amber-50 border-amber-200"
+          }`}>
+            <div className="flex items-start gap-3">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                customer.trust_status === "defaulter" ? "bg-red-100" : "bg-amber-100"
+              }`}>
+                <svg className={`w-4 h-4 ${customer.trust_status === "defaulter" ? "text-red-600" : "text-amber-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className={`font-semibold text-sm ${customer.trust_status === "defaulter" ? "text-red-800" : "text-amber-800"}`}>
+                  Trust Warning
+                </p>
+                <p className={`text-xs mt-0.5 ${customer.trust_status === "defaulter" ? "text-red-600" : "text-amber-600"}`}>
+                  This customer has been flagged as{" "}
+                  <span className="font-medium capitalize">{customer.trust_status}</span>
+                </p>
+                {customer.trust_notes && (
+                  <p className={`text-xs mt-1 italic ${customer.trust_status === "defaulter" ? "text-red-500" : "text-amber-500"}`}>
+                    "{customer.trust_notes}"
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Balance Overview */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
@@ -354,6 +422,81 @@ export default function CustomerDetailPage() {
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 "Save Limit"
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Flag Customer Modal */}
+      {showFlagModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Flag Customer</h3>
+              <button onClick={() => setShowFlagModal(false)} className="p-1">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">Status</label>
+                <div className="flex gap-2 mt-1">
+                  <button
+                    onClick={() => setFlagStatus("warning")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${flagStatus === "warning" ? "bg-amber-500 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}
+                  >
+                    Warning
+                  </button>
+                  <button
+                    onClick={() => setFlagStatus("defaulter")}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${flagStatus === "defaulter" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}
+                  >
+                    Defaulter
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">Notes (optional)</label>
+                <textarea
+                  value={flagNotes}
+                  onChange={(e) => setFlagNotes(e.target.value)}
+                  rows={2}
+                  maxLength={200}
+                  placeholder="e.g. Repeated late payments"
+                  className="w-full mt-1 px-3 py-2 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
+                />
+              </div>
+            </div>
+            <button
+              onClick={async () => {
+                const merchantId = await getCurrentMerchantId();
+                if (!merchantId) return;
+                setFlagging(true);
+                try {
+                  const r = await updateCustomerTrustStatus(merchantId, customer.id, "flag", { status: flagStatus, notes: flagNotes || undefined });
+                  if (r.success) {
+                    setCustomer((prev) => prev ? { ...prev, trust_status: flagStatus, trust_notes: flagNotes || null } : prev);
+                    addToast("Customer flagged", "success");
+                    setShowFlagModal(false);
+                  } else {
+                    addToast(r.error || "Failed to flag", "error");
+                  }
+                } catch {
+                  addToast("Failed to flag customer", "error");
+                } finally {
+                  setFlagging(false);
+                }
+              }}
+              disabled={flagging}
+              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {flagging ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                `Flag as ${flagStatus === "warning" ? "Warning" : "Defaulter"}`
               )}
             </button>
           </div>
