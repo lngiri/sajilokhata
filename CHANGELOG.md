@@ -11,6 +11,13 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 - **Admin seed script** (`scripts/seed-admin.ts`): Standalone Node.js script that can be run via `npx tsx scripts/seed-admin.ts` to seed the admin user without running a full migration.
 - **Living documentation**: `ARCHITECTURE.md`, `CHANGELOG.md`, `TODO_LIST.md` — documentation-first protocol established.
 
+### Changed
+- **Middleware logging** (`proxy.ts`): Logs `verifySessionToken()` result, `supabase.auth.getUser()` result, DB role lookup outcome, and final middleware action per request — enables tracing exactly where auth state diverges
+- **SessionGuard retry**: Non-force-logout mismatches now retry `/api/auth/session` after 2s instead of wiping immediately, masking transient cookie-propagation races
+- **Session API logging** (`/api/auth/session`): Logs cookie presence, HMAC verify result, DB lookup result (merchant/customer existence, force_logout_at, errors), and specific reason for returning `userId: null`
+- **Auth action verification**: `verifyRegistrationOtp`, `loginWithPin`, and `setPin` now read back the cookie after setting to confirm it was written (`verifyCookie === token`)
+- **Logging format**: All new logs include timestamps, userIds, and structured JSON for easy grep
+
 ### Fixed
 - Auth flow: `setPin()` now creates a session cookie (was missing, causing redirect to phone after PIN setup)
 - Auth flow: `handleSetPin` gracefully redirects to phone step if `userInfoRef` is missing

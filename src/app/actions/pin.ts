@@ -166,7 +166,9 @@ export async function loginWithPin(
       maxAge,
       path: "/",
     });
-    console.log("[loginWithPin] Session cookie set");
+    console.log("[loginWithPin] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
+    const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
+    console.log("[loginWithPin] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
 
     // Record session in DB
     if (admin) {
@@ -247,7 +249,11 @@ export async function setPin(
       maxAge,
       path: "/",
     });
-    console.log("[setPin] Session cookie set for user:", userId);
+    console.log("[setPin] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
+
+    // Verify cookie was written by reading it back
+    const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
+    console.log("[setPin] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
 
     // Record session in DB
     try {

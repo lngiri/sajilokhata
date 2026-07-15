@@ -172,7 +172,11 @@ export async function verifyRegistrationOtp(
       maxAge,
       path: "/",
     });
-    console.log("[OTP] Session cookie set for user:", userId);
+    console.log("[OTP] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
+
+    // Verify cookie was written by reading it back
+    const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
+    console.log("[OTP] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
 
     // ---- 5. Record session in DB ----
     try {

@@ -22,6 +22,13 @@ export async function proxy(request: NextRequest) {
   // ── Auth checks — Supabase and custom-session are fully independent ──
   let user: any = null;
   let validUserId: string | null = null;
+  const envCheck = {
+    supabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    serviceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    anonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  };
+
+  console.log("[Proxy] ENV check:", JSON.stringify(envCheck), "| path:", pathname);
 
   // 1. Supabase Auth (with timeout so slow startup doesn't block navigation)
   try {
@@ -62,15 +69,18 @@ export async function proxy(request: NextRequest) {
     if (authResult !== "TIMEOUT") {
       user = (authResult as any).data?.user;
     }
+    console.log("[Proxy] Supabase auth result:", user?.id ? `user=${user.id}` : "no-user");
   } catch (err) {
     console.warn("[Proxy] Supabase auth check failed (continuing):", err);
   }
 
   // 2. Custom session cookie — fully independent from Supabase above
+  const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
+  console.log("[Proxy] Session cookie present:", !!rawSession, "| cookie name:", SESSION_COOKIE);
   try {
-    const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
     if (rawSession) {
       validUserId = await verifySessionToken(rawSession);
+      console.log("[Proxy] Session token verified:", validUserId ? `userId=${validUserId}` : "INVALID-TOKEN");
     }
   } catch (err) {
     console.warn("[Proxy] Session cookie verify failed (continuing):", err);
@@ -80,6 +90,7 @@ export async function proxy(request: NextRequest) {
   const isBypassed = bypassCookie?.value === "true";
 
   const isAuthenticated = !!user || !!validUserId || isBypassed;
+  console.log("[Proxy] Auth state:", { isAuthenticated, hasSupabaseUser: !!user, hasSessionUser: !!validUserId, isBypassed });
 
   // ── Determine user roles from DB for session-based users ──
   let userRoles: ("merchant" | "customer")[] = [];
@@ -103,8 +114,11 @@ export async function proxy(request: NextRequest) {
             .maybeSingle(),
         ]);
 
+        console.log("[Proxy] DB lookup for userId:", validUserId, "| merchant:", !!mRes?.data?.id, "| customer:", !!cRes?.data?.id, "| force_logout_at:", mRes?.data?.force_logout_at);
+
         // Force-logout check
         if (mRes?.data?.force_logout_at) {
+          console.log("[Proxy] FORCE LOGOUT detected for userId:", validUserId);
           const res = NextResponse.redirect(new URL("/login?forceLogout=1", request.url));
           res.cookies.delete(SESSION_COOKIE);
           return res;
@@ -112,11 +126,15 @@ export async function proxy(request: NextRequest) {
 
         if (mRes?.data?.id) userRoles.push("merchant");
         if (cRes?.data?.id) userRoles.push("customer");
+      } else {
+        console.warn("[Proxy] Missing DB creds (url or service key) — skipping role lookup");
       }
-    } catch {
-      console.warn("[Proxy] Role lookup failed — allowing access");
+    } catch (err) {
+      console.warn("[Proxy] Role lookup failed — allowing access:", err);
     }
   }
+
+  console.log("[Proxy] Final decision:", { pathname, isAuthenticated, userRoles, action: "continue" });
 
   // === Merchant / Delivery Protection ===
   const isMerchantPath = request.nextUrl.pathname.startsWith("/merchant");
