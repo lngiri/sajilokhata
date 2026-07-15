@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/Toast";
 import NetworkStatus from "@/components/NetworkStatus";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import ActionHub from "@/components/ActionHub";
 import SessionGuard from "@/components/SessionGuard";
 import SessionHeartbeat from "@/components/SessionHeartbeat";
 import VersionGuard from "@/components/VersionGuard";
@@ -60,6 +61,7 @@ export default function RootLayout({
             <NetworkStatus />
             <main className="min-h-dvh">{children}</main>
             <PWAInstallBanner />
+            <ActionHub />
           </ToastProvider>
         </ThemeProvider>
       </body>
