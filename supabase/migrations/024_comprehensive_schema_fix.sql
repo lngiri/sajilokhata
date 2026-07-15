@@ -38,5 +38,3 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
 
--- ── 7. Refresh the customer_summary materialized view ──
-REFRESH MATERIALIZED VIEW CONCURRENTLY customer_summary;
