@@ -1,7 +1,6 @@
 "use server";
 
 import { getAdminClient } from "@/lib/supabase/admin";
-import { sendTransactionNotification } from "./sms";
 import { normalizePhone } from "@/lib/phone";
 
 // ──────────────────────────────────────────────
@@ -161,17 +160,6 @@ export async function saveEntry(params: {
     }
 
     console.log("[Entry] Entry saved successfully:", data?.id, "status:", data?.status);
-
-    // ── Step 3: Fire-and-forget SMS ──
-    if (params.customer_phone && params.merchant_id) {
-      sendTransactionNotification({
-        to: params.customer_phone,
-        merchantId: params.merchant_id,
-        amount: params.amount,
-        type: params.type,
-        customerName: resolvedCustomerName,
-      }).catch((err) => console.warn("[Entry] SMS notify failed:", err));
-    }
 
     return {
       success: true,

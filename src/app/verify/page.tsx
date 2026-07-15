@@ -7,13 +7,9 @@ import {
   approveByToken,
   disputeByToken,
   requestAmountEdit,
-  findOrCreateCustomer,
-  checkOtpRateLimit,
 } from "@/lib/actions";
-import { createClient } from "@/lib/supabase/client";
-import { sendTransactionSMS } from "@/app/actions/sms";
 
-type Step = "loading" | "invalid" | "phone" | "otp" | "action" | "done";
+type Step = "loading" | "invalid" | "action" | "done";
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
@@ -21,13 +17,10 @@ export default function VerifyPage() {
 
   const [step, setStep] = useState<Step>("loading");
   const [log, setLog] = useState<any>(null);
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
   const [message, setMessage] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionDone, setActionDone] = useState<"approved" | "disputed" | "edit_requested" | null>(null);
-  const [generatedOtp, setGeneratedOtp] = useState("");
   const [creditCheck, setCreditCheck] = useState<{
     overLimit: boolean;
     remainingLimit: number;
@@ -48,85 +41,10 @@ export default function VerifyPage() {
           return;
         }
         setLog(data);
-        checkAuth(data);
+        setStep("action");
       })
       .catch(() => setStep("invalid"));
   }, [token]);
-
-  const checkAuth = async (logData: any) => {
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.phone && logData?.customers?.phone) {
-        const normalizedUserPhone = user.phone.replace(/^\+977/, "");
-        const normalizedLogPhone = logData.customers.phone.replace(/^\+977/, "");
-        if (normalizedUserPhone === normalizedLogPhone) {
-          setStep("action");
-          return;
-        }
-      }
-    } catch { /* not authenticated */ }
-    setStep("phone");
-  };
-
-  const handleSendOtp = async () => {
-    if (!phone || phone.length < 6) {
-      setMessage("Enter a valid phone number (at least 6 digits)");
-      return;
-    }
-    if (!checkOtpRateLimit(phone)) {
-      setMessage("Too many attempts. Please try again later.");
-      return;
-    }
-    setMessage("");
-
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setGeneratedOtp(code);
-
-    const shopName = log?.merchants?.name || "Shop";
-    const smsText = `Your OTP code for QRHisab is: ${code}. Do not share this code.`;
-
-    const result = await sendTransactionSMS(phone, smsText);
-
-    if (!result.success) {
-      setMessage("Failed to send OTP. Please try again.");
-      return;
-    }
-
-    setStep("otp");
-    setMessage("OTP sent to your phone");
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otp || otp.length < 4) {
-      setMessage("Enter the OTP code");
-      return;
-    }
-    setMessage("");
-
-    if (otp !== generatedOtp) {
-      setMessage("Invalid OTP. Please try again.");
-      return;
-    }
-
-    const normalizedPhone = phone.replace(/^\+977/, "");
-    const normalizedLogPhone = (log?.customers?.phone || "").replace(/^\+977/, "");
-
-    if (normalizedPhone !== normalizedLogPhone) {
-      setMessage("This phone does not match this transaction");
-      setStep("phone");
-      return;
-    }
-
-    try {
-      await findOrCreateCustomer(normalizedPhone);
-    } catch {
-      // Customer may already exist — proceed
-    }
-
-    setStep("action");
-    setMessage("");
-  };
 
   useEffect(() => {
     if (step !== "action" || !log) return;
@@ -136,7 +54,7 @@ export default function VerifyPage() {
     }
     const check = async () => {
       try {
-        const supabase = createClient();
+        const supabase = (await import("@/lib/supabase/client")).createClient();
         const { data: mc } = await supabase
           .from("merchant_customers")
           .select("credit_limit")
@@ -228,6 +146,16 @@ export default function VerifyPage() {
     }
   };
 
+  const handleGoToDashboard = () => {
+    if (log?.customers?.phone) {
+      localStorage.setItem("sajilo_customer_session", JSON.stringify({
+        phone: log.customers.phone,
+        name: log.customers.name || "",
+      }));
+    }
+    window.location.replace("/customer/dashboard");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-lg p-6 space-y-5 animate-fade-in">
@@ -271,65 +199,7 @@ export default function VerifyPage() {
           </div>
         )}
 
-        {/* Phone input */}
-        {step === "phone" && (
-          <div className="space-y-4">
-            <p className="text-sm text-[var(--color-text-muted)] text-center">
-              Enter your phone number to verify
-            </p>
-            <div>
-              <label className="text-xs font-medium text-[var(--color-text)]">Phone Number</label>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm font-medium text-gray-500">+977</span>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                  placeholder="98XXXXXXXX"
-                  className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
-                />
-              </div>
-            </div>
-            <button
-              onClick={handleSendOtp}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
-            >
-              Send OTP
-            </button>
-          </div>
-        )}
-
-        {/* OTP input */}
-        {step === "otp" && (
-          <div className="space-y-4">
-            <p className="text-sm text-[var(--color-text-muted)] text-center">
-              Enter the OTP sent to your phone
-            </p>
-            <div>
-              <label className="text-xs font-medium text-[var(--color-text)]">OTP Code</label>
-              <input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="6-digit code"
-                maxLength={6}
-                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono tracking-widest"
-              />
-            </div>
-            <button
-              onClick={handleVerifyOtp}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
-            >
-              Verify
-            </button>
-            <button onClick={() => setStep("phone")}
-              className="w-full text-xs text-[var(--color-text-muted)] underline active:opacity-70 transition-opacity">
-              Use different number
-            </button>
-          </div>
-        )}
-
-        {/* Action (Approve/Dispute/Edit) */}
+        {/* Action (Approve/Dispute/Edit) — shown immediately with token */}
         {step === "action" && log && (
           <div className="space-y-4">
             <div className="bg-gray-50 rounded-xl p-4 space-y-2">
@@ -481,6 +351,12 @@ export default function VerifyPage() {
                 ? "Your amount edit request has been submitted. The merchant will review it."
                 : "Your dispute has been submitted. The merchant will be notified."}
             </p>
+            <button
+              onClick={handleGoToDashboard}
+              className="w-full mt-4 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
+            >
+              Go to Dashboard
+            </button>
           </div>
         )}
 

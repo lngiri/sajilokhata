@@ -8,17 +8,16 @@ import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { saveEntry } from "@/app/actions/entry";
 import {
-  getMerchantCustomers,
   getMerchantCustomerBalance,
   getMerchantRecentDescriptions,
   uploadAttachment,
 } from "@/app/actions/merchant";
 import { compressImage, blobToBase64 } from "@/lib/image";
+import { checkCustomerByPhone, addCustomerForMerchant, sendOnboardingSMS } from "@/app/actions/customer";
 
 import { savePendingLog, savePendingAttachment } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
-import { sanitizePhoneForUrl } from "@/lib/phone";
-import QuickAddCustomer from "@/components/QuickAddCustomer";
+import { sanitizePhoneForUrl, normalizePhone } from "@/lib/phone";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 
 
@@ -26,13 +25,6 @@ type Step = "scan" | "enter" | "confirm" | "success";
 
 /** Prefix that identifies a customer identity QR */
 const CUSTOMER_QR_PREFIX = "sajilokhata:customer:";
-
-interface CustomerOption {
-  id: string;
-  name: string | null;
-  phone: string;
-  current_balance: number;
-}
 
 export default function MerchantScanPage() {
   const { addToast } = useToast();
@@ -58,18 +50,17 @@ export default function MerchantScanPage() {
   const [merchantId, setMerchantId] = useState<string | null>(null);
 
   // Manual mode state
-  const [customerList, setCustomerList] = useState<CustomerOption[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showDropdown, setShowDropdown] = useState(false);
   const [customerBalance, setCustomerBalance] = useState<number | null>(null);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
-  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [customerLookup, setCustomerLookup] = useState<"idle" | "looking" | "found" | "not_found">("idle");
+  const [addingCustomer, setAddingCustomer] = useState(false);
+  const [smsSent, setSmsSent] = useState(false);
   const [recentDescriptions, setRecentDescriptions] = useState<string[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Load merchant ID and customer list on mount
   useEffect(() => {
@@ -85,51 +76,9 @@ export default function MerchantScanPage() {
 
   useEffect(() => {
     if (isManual && merchantId) {
-      getMerchantCustomers(merchantId).then((data) => {
-        const mapped: CustomerOption[] = (data || []).map((r: any) => ({
-          id: r.customers?.id || r.customer_id,
-          name: r.customers?.name || null,
-          phone: r.customers?.phone || "",
-          current_balance: r.current_balance || 0,
-        }));
-        setCustomerList(mapped.sort((a, b) => (a.name || a.phone).localeCompare(b.name || b.phone)));
-      });
-
       getMerchantRecentDescriptions(merchantId).then(setRecentDescriptions).catch(() => {});
     }
   }, [isManual, merchantId]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const filteredCustomers = customerList.filter(
-    (c) =>
-      (c.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.phone.includes(searchQuery)
-  );
-
-  const handleSelectCustomer = async (c: CustomerOption) => {
-    setCustomerId(c.id);
-    setCustomerPhone(c.phone);
-    setCustomerName(c.name);
-    setSearchQuery(c.name || c.phone);
-    setShowDropdown(false);
-    if (merchantId) {
-      try {
-        const { balance } = await getMerchantCustomerBalance(merchantId, c.id);
-        setCustomerBalance(balance);
-      } catch {
-        setCustomerBalance(null);
-      }
-    }
-  };
 
   const handleScan = useCallback(
     (data: string) => {
@@ -311,7 +260,8 @@ export default function MerchantScanPage() {
     setEntryType("debit");
     setVerificationToken(null);
     setSearchQuery("");
-    setShowDropdown(false);
+    setCustomerLookup("idle");
+    setSmsSent(false);
   };
 
   // ─── Hydration guard: return matching skeleton until mounted ────
@@ -341,70 +291,136 @@ export default function MerchantScanPage() {
           {/* Manual: Enter Details */}
           {step === "enter" && (
             <div className="space-y-4 animate-fade-in">
-              <div ref={dropdownRef} className="relative">
+              {/* Customer phone input with auto-detect */}
+              <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">
-                  {entryType === "cash" ? "Customer (Optional)" : "Search Customer (Name or Phone)"}
+                  {entryType === "cash" ? "Customer Phone (Optional)" : "Customer Phone Number"}
                 </label>
-                <div className="relative mt-1">
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm font-medium text-gray-500">+977</span>
                   <input
-                    type="text"
-                    placeholder="Search or click + to add customer"
+                    type="tel"
+                    placeholder="98XXXXXXXX"
                     value={searchQuery}
-                    onFocus={() => setShowDropdown(true)}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setShowDropdown(true);
-                      if (!customerList.find((c) => (c.name || c.phone) === e.target.value)) {
+                    onChange={async (e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                      setSearchQuery(val);
+                      setCustomerLookup("idle");
+                      setSmsSent(false);
+                      if (val.length === 10) {
+                        setCustomerLookup("looking");
+                        try {
+                          const result = await checkCustomerByPhone(val);
+                          if (result.exists && result.customer) {
+                            setCustomerId(result.customer.id);
+                            setCustomerPhone(result.customer.phone);
+                            setCustomerName(result.customer.name);
+                            setCustomerLookup("found");
+                            if (merchantId) {
+                              try {
+                                const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
+                                setCustomerBalance(balance);
+                              } catch { setCustomerBalance(null); }
+                            }
+                          } else {
+                            setCustomerId(null);
+                            setCustomerPhone(val);
+                            setCustomerName(null);
+                            setCustomerLookup("not_found");
+                            setCustomerBalance(null);
+                          }
+                        } catch {
+                          setCustomerLookup("idle");
+                        }
+                      } else {
                         setCustomerId(null);
-                        setCustomerPhone(e.target.value);
+                        setCustomerPhone(val || searchQuery);
                         setCustomerName(null);
                         setCustomerBalance(null);
                       }
                     }}
-                    className="w-full px-4 py-3 pr-12 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                    className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowQuickAdd(true)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-3 rounded-full bg-[var(--color-primary)] text-white active:scale-90 transition-transform hover:bg-[var(--color-primary-dark)]"
-                    title="Add new customer"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-                    </svg>
-                  </button>
+                  {customerLookup === "looking" && (
+                    <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                  )}
                 </div>
-                {showDropdown && filteredCustomers.length > 0 && (
-                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 max-h-48 overflow-y-auto">
-                    {filteredCustomers.map((c) => (
+
+                {/* Lookup result */}
+                {customerLookup === "found" && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg text-sm font-medium text-green-700">
+                      <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Already registered{customerName ? ` as ${customerName}` : ""}</span>
+                    </div>
+                    {customerBalance !== null && (
+                      <div className={`px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                        {customerBalance > 0 ? `Current Due: Rs. ${customerBalance.toLocaleString()}` : "No outstanding balance"}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {customerLookup === "not_found" && (
+                  <div className="mt-2 space-y-2">
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg text-sm font-medium text-amber-700">
+                      <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                      </svg>
+                      <span>Not registered yet</span>
+                    </div>
+                    {!smsSent ? (
                       <button
-                        key={c.id}
                         type="button"
-                        onClick={() => handleSelectCustomer(c)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-[var(--color-primary)]/5 active:bg-[var(--color-primary)]/10 transition-colors flex items-center justify-between"
+                        disabled={addingCustomer}
+                        onClick={async () => {
+                          setAddingCustomer(true);
+                          try {
+                            if (!merchantId) { addToast("Not logged in", "error"); return; }
+                            const result = await addCustomerForMerchant(merchantId, searchQuery);
+                            if (!result.success || !result.customer) {
+                              addToast(result.error || "Failed to add customer", "error");
+                              return;
+                            }
+                            setCustomerId(result.customer.id);
+                            setCustomerPhone(result.customer.phone);
+                            setCustomerName(result.customer.name || "");
+                            // Send onboarding SMS
+                            sendOnboardingSMS(searchQuery, result.customer.name || undefined)
+                              .catch(() => {});
+                            setSmsSent(true);
+                            setCustomerLookup("found");
+                            addToast("Customer added! SMS sent with registration link.", "success");
+                            if (merchantId) {
+                              try {
+                                const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
+                                setCustomerBalance(balance);
+                              } catch { setCustomerBalance(null); }
+                            }
+                          } catch {
+                            addToast("Failed to add customer", "error");
+                          } finally {
+                            setAddingCustomer(false);
+                          }
+                        }}
+                        className="w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                       >
-                        <div>
-                          <p className="text-sm font-medium text-[var(--color-text)]">{c.name || "Unknown"}</p>
-                          <p className="text-xs text-[var(--color-text-muted)]">{c.phone}</p>
-                        </div>
-                        {c.current_balance > 0 && (
-                          <span className="text-xs font-medium text-red-600">Due: Rs. {c.current_balance.toLocaleString()}</span>
+                        {addingCustomer ? (
+                          <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Adding...</>
+                        ) : (
+                          <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg> Add & Send SMS</>
                         )}
                       </button>
-                    ))}
-                  </div>
-                )}
-                {showDropdown && searchQuery && filteredCustomers.length === 0 && (
-                  <div className="absolute z-50 mt-1 w-full bg-white rounded-xl shadow-lg border border-gray-100 p-4 text-center">
-                    <p className="text-sm text-[var(--color-text-muted)]">No customers found</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                      {entryType === "cash" ? "Leave blank for walk-in cash sale" : "The customer will be created automatically on save"}
-                    </p>
-                  </div>
-                )}
-                {customerBalance !== null && entryType !== "cash" && (
-                  <div className={`mt-2 px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
-                    {customerBalance > 0 ? `Current Due: Rs. ${customerBalance.toLocaleString()}` : "No outstanding balance"}
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg text-sm text-green-700">
+                        <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>SMS sent with registration link</span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -643,19 +659,6 @@ export default function MerchantScanPage() {
         </div>
 
         <BottomNav />
-
-        {showQuickAdd && merchantId && (
-          <QuickAddCustomer
-            merchantId={merchantId}
-            onCustomerAdded={(c) => {
-              setCustomerId(c.id);
-              setCustomerPhone(c.phone);
-              setCustomerName(c.name);
-              setSearchQuery(c.name || c.phone);
-            }}
-            onClose={() => setShowQuickAdd(false)}
-          />
-        )}
       </div>
     );
   }
