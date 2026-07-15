@@ -369,7 +369,7 @@ export default function SettingsPage() {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. ABC Kirana Pasal"
+                placeholder="e.g. Giri Kirana Store"
                 className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
               />
             </div>

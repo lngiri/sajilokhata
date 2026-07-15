@@ -302,15 +302,20 @@ export default function MerchantDashboard() {
           >
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
-                <span className="text-xs font-bold text-white">SK</span>
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
-                  {merchantProfile?.name || "SajiloKhata"}
+                  {merchantProfile?.name || "QR Hisab"}
                 </h1>
-                <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
-                  {merchantProfile?.address || merchantProfile?.business_type || "Digital Diary"}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
+                    {merchantProfile?.address || merchantProfile?.business_type || ""}
+                  </p>
+                  <span className="text-[8px] text-[var(--color-primary)] font-medium opacity-60">QR Hisab</span>
+                </div>
               </div>
             </div>
           </button>

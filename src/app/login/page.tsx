@@ -538,7 +538,7 @@ export default function LoginPage() {
                 type="text"
                 value={registerName}
                 onChange={(e) => setRegisterName(e.target.value)}
-                placeholder="e.g. ABC Kirana Pasal"
+                placeholder="e.g. Giri Kirana Store"
                 maxLength={100}
                 className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 autoFocus
