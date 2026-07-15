@@ -32,14 +32,14 @@ export async function sendRegistrationOtp(
     const cookieStore = await cookies();
     cookieStore.set("otp_code", code, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 300, // 5 minutes
       path: "/",
     });
     cookieStore.set("otp_phone", cleanPhone, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge: 300,
       path: "/",

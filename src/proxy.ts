@@ -79,11 +79,13 @@ export async function proxy(request: NextRequest) {
   console.log("[Proxy] Session cookie present:", !!rawSession, "| cookie name:", SESSION_COOKIE);
   try {
     if (rawSession) {
+      const start = Date.now();
       validUserId = await verifySessionToken(rawSession);
-      console.log("[Proxy] Session token verified:", validUserId ? `userId=${validUserId}` : "INVALID-TOKEN");
+      const elapsed = Date.now() - start;
+      console.log("[Proxy] Session token verified:", validUserId ? `userId=${validUserId}` : "INVALID-TOKEN", "| elapsed:", elapsed, "ms", "| token prefix:", rawSession.slice(0, 20));
     }
   } catch (err) {
-    console.warn("[Proxy] Session cookie verify failed (continuing):", err);
+    console.warn("[Proxy] Session cookie verify threw exception:", err instanceof Error ? err.message : String(err));
   }
 
   const bypassCookie = request.cookies.get("auth_bypass");
@@ -141,6 +143,22 @@ export async function proxy(request: NextRequest) {
 
   if (!isAuthenticated) {
     if (isMerchantPath || request.nextUrl.pathname.startsWith("/delivery")) {
+      console.log(
+        "[Proxy] REDIRECT TO /login — unauthenticated protected route.",
+        JSON.stringify({
+          pathname,
+          reason: !rawSession
+            ? "NO_SESSION_COOKIE"
+            : !validUserId
+              ? "INVALID_TOKEN"
+              : "NO_USER_NO_BYPASS",
+          rawCookiePrefix: rawSession?.slice(0, 20) || "(none)",
+          hasSupabaseUser: !!user,
+          hasValidUserId: !!validUserId,
+          isBypassed,
+          supabaseUserId: user?.id || null,
+        })
+      );
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
@@ -148,12 +166,20 @@ export async function proxy(request: NextRequest) {
   } else {
     // Role-based route protection for session users
     if (isMerchantPath && validUserId && !userRoles.includes("merchant")) {
+      console.log(
+        "[Proxy] REDIRECT — merchant path but user is not a merchant.",
+        JSON.stringify({ pathname, validUserId, userRoles, hasSessionUser: !!validUserId })
+      );
       // Customer-only user trying to access merchant pages
       if (userRoles.includes("customer")) {
         const url = request.nextUrl.clone();
         url.pathname = "/customer/dashboard";
         return NextResponse.redirect(url);
       }
+      console.log(
+        "[Proxy] REDIRECT TO /login — merchant path, no valid roles.",
+        JSON.stringify({ pathname, validUserId, userRoles, rawCookiePrefix: rawSession?.slice(0, 20) })
+      );
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);

@@ -161,7 +161,7 @@ export async function loginWithPin(
     const { token, maxAge } = await createSessionToken(userId);
     cookieStore.set(SESSION_COOKIE, token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge,
       path: "/",
@@ -244,7 +244,7 @@ export async function setPin(
     const { token, maxAge } = await createSessionToken(userId);
     cookieStore.set(SESSION_COOKIE, token, {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       maxAge,
       path: "/",
@@ -321,7 +321,7 @@ export async function registerNewUser(
       const cookieStore = await cookies();
       const { token, maxAge } = await createSessionToken(localId);
       cookieStore.set(SESSION_COOKIE, token, {
-        httpOnly: true, secure: true, sameSite: "lax", maxAge, path: "/",
+        httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge, path: "/",
       });
       return { success: true, userId: localId, phone: cleanPhone, userType: role };
     }
@@ -358,7 +358,7 @@ export async function registerNewUser(
     const cookieStore = await cookies();
     const { token, maxAge } = await createSessionToken(userId);
     cookieStore.set(SESSION_COOKIE, token, {
-      httpOnly: true, secure: true, sameSite: "lax", maxAge, path: "/",
+      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge, path: "/",
     });
     console.log("[registerNewUser] Session cookie set for", role, "userId:", userId);
 
