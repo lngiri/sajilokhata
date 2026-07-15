@@ -276,6 +276,17 @@ export async function resolveDispute(logId: string): Promise<{ success: boolean;
 // ──────────────────────────────────────────────
 // User Directory — unified (merchants + customers)
 // ──────────────────────────────────────────────
+// Normalize phone to consistent 10-digit format
+// Strips non-numeric chars, removes country prefix (977), returns last 10 digits
+function normalizePhone(phone: string): string {
+  if (!phone) return "";
+  let digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("977") && digits.length > 10) digits = digits.slice(3);
+  if (digits.length > 10) digits = digits.slice(-10);
+  return digits;
+}
+
+// ──────────────────────────────────────────────
 
 export interface DirectoryUser {
   id: string;
@@ -305,7 +316,7 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
         results = rows.map((r: any) => ({
           id: r.id,
           name: r.name || "",
-          phone: r.phone || "",
+          phone: normalizePhone(r.phone || ""),
           role: (r.role === "both" ? "both" : r.role === "customer" ? "customer" : "merchant") as "merchant" | "customer" | "both",
           businessName: r.business_name || "",
           status: "active",
@@ -340,21 +351,24 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
 
       const merchantPhones = new Set<string>();
       for (const m of merchants) {
-        if (m.phone) merchantPhones.add(m.phone);
+        const np = normalizePhone(m.phone);
+        if (np) merchantPhones.add(np);
       }
       const customerPhones = new Set<string>();
       for (const c of customers) {
-        if (c.phone) customerPhones.add(c.phone);
+        const np = normalizePhone(c.phone);
+        if (np) customerPhones.add(np);
       }
 
       const combined = new Map<string, DirectoryUser>();
 
       for (const m of merchants) {
+        const np = normalizePhone(m.phone);
         combined.set(m.id, {
           id: m.id,
           name: m.name || m.business_name || "",
-          phone: m.phone || "",
-          role: m.phone && customerPhones.has(m.phone) ? "both" : "merchant",
+          phone: np,
+          role: np && customerPhones.has(np) ? "both" : "merchant",
           businessName: m.business_name || "",
           status: "active",
           transactionCount: 0,
@@ -363,12 +377,13 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
       }
 
       for (const c of customers) {
+        const np = normalizePhone(c.phone);
         if (!combined.has(c.id)) {
           combined.set(c.id, {
             id: c.id,
             name: c.name || "",
-            phone: c.phone || "",
-            role: c.phone && merchantPhones.has(c.phone) ? "both" : "customer",
+            phone: np,
+            role: np && merchantPhones.has(np) ? "both" : "customer",
             businessName: "",
             status: "active",
             transactionCount: 0,
@@ -408,6 +423,45 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
         console.error("[getAdminUserDirectory] tx counts query failed:", e);
       }
     }
+
+    // ── Dedup by normalized phone ──
+    const dedupMap = new Map<string, DirectoryUser>();
+    for (const user of results) {
+      // Normalize phone on RPC results too (might have +977)
+      const np = user.phone ? normalizePhone(user.phone) : "";
+      if (!np) {
+        // No phone — key by id to preserve
+        dedupMap.set(`__nophone__${user.id}`, user);
+        continue;
+      }
+      user.phone = np;
+
+      const existing = dedupMap.get(np);
+      if (!existing) {
+        dedupMap.set(np, { ...user });
+      } else {
+        // Merge: combine roles, sum tx counts, keep latest createdAt
+        const roleSet = new Set([existing.role, user.role]);
+        const mergedRole: "merchant" | "customer" | "both" =
+          roleSet.has("both") || (roleSet.has("merchant") && roleSet.has("customer"))
+            ? "both"
+            : roleSet.has("merchant")
+              ? "merchant"
+              : "customer";
+
+        dedupMap.set(np, {
+          ...existing,
+          role: mergedRole,
+          name: user.name || existing.name,
+          businessName: user.businessName || existing.businessName,
+          phone: np,
+          transactionCount: existing.transactionCount + user.transactionCount,
+          status: user.status === "suspended" || existing.status === "suspended" ? "suspended" : "active",
+          createdAt: user.createdAt > existing.createdAt ? user.createdAt : existing.createdAt,
+        });
+      }
+    }
+    results = Array.from(dedupMap.values());
 
     if (search) {
       const q = search.toLowerCase();
