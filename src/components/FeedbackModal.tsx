@@ -21,22 +21,19 @@ export default function FeedbackModal({ open, onClose }: Props) {
     setError("");
 
     try {
-      // Send feedback via a webhook or API
-      const res = await fetch("https://formspree.io/f/xjkyqkwd", {
+      const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
           url: window.location.href,
           userAgent: navigator.userAgent,
-          timestamp: new Date().toISOString(),
         }),
       });
 
       if (!res.ok) {
-        const body = await res.text().catch(() => "(no body)");
-        console.log("[Feedback] Formspree error:", res.status, res.statusText, body);
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+        const err = await res.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || "Failed to send");
       }
       setSent(true);
       setMessage("");

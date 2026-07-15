@@ -38,10 +38,11 @@ const ITEMS = [
   },
 ];
 
-const HELP_URL = "https://wa.me/9779800000000";
+const HELP_URL = "https://wa.me/9779763658505";
 const FAB_SIZE = 56;
-const INITIAL_RIGHT = 24;
-const INITIAL_BOTTOM = 24;
+
+/** Distance from screen bottom to trigger dismiss (px) */
+const DISMISS_THRESHOLD = 80;
 
 export default function ActionHub() {
   const [mounted, setMounted] = useState(false);
@@ -49,14 +50,14 @@ export default function ActionHub() {
   const [referOpen, setReferOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
-  const dragRef = useRef({ startX: 0, startY: 0, elX: 0, elY: 0, moved: false });
+  const dragRef = useRef({ startX: 0, startY: 0, elX: 0, elY: 0, moved: false, dismissed: false });
   const fabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setPos({
-        x: window.innerWidth - FAB_SIZE - INITIAL_RIGHT,
-        y: window.innerHeight - FAB_SIZE - INITIAL_BOTTOM,
+        x: window.innerWidth - FAB_SIZE - 24,
+        y: window.innerHeight - FAB_SIZE - 24,
       });
       setMounted(true);
     }
@@ -72,6 +73,7 @@ export default function ActionHub() {
       elX: pos.x,
       elY: pos.y,
       moved: false,
+      dismissed: false,
     };
   }, [pos]);
 
@@ -82,14 +84,21 @@ export default function ActionHub() {
       dragRef.current.moved = true;
     }
     if (dragRef.current.moved) {
+      const newY = Math.max(0, Math.min(window.innerHeight - FAB_SIZE, dragRef.current.elY + dy));
+      dragRef.current.dismissed = (window.innerHeight - newY) <= DISMISS_THRESHOLD;
       setPos({
         x: Math.max(0, Math.min(window.innerWidth - FAB_SIZE, dragRef.current.elX + dx)),
-        y: Math.max(0, Math.min(window.innerHeight - FAB_SIZE, dragRef.current.elY + dy)),
+        y: newY,
       });
     }
   }, []);
 
   const handlePointerUp = useCallback(() => {
+    if (dragRef.current.dismissed) {
+      setOpen(false);
+      // Keep at bottom so it's visually "closed"
+      return;
+    }
     if (!dragRef.current.moved) {
       setOpen((v) => !v);
     }

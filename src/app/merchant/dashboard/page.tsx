@@ -310,12 +310,13 @@ export default function MerchantDashboard() {
                 <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
                   {merchantProfile?.name || "QR Hisab"}
                 </h1>
-                <div className="flex items-center gap-1.5">
-                  <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
-                    {merchantProfile?.address || merchantProfile?.business_type || ""}
-                  </p>
-                  <span className="text-[8px] text-[var(--color-primary)] font-medium opacity-60">QR Hisab</span>
-                </div>
+                <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
+                  {merchantProfile?.address || merchantProfile?.business_type || ""}
+                </p>
+                <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">
+                  {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Asia/Kathmandu" })}
+                </p>
+                <span className="text-[8px] text-[var(--color-primary)] font-medium opacity-60">A Digital Copy</span>
               </div>
             </div>
           </button>
