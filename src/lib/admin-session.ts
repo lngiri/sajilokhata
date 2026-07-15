@@ -1,9 +1,15 @@
 const ADMIN_SESSION_COOKIE = "admin_session";
 const ADMIN_SESSION_DURATION = 2 * 60 * 60; // 2 hours (shorter than merchant sessions)
 
+function getHmacKey(): string {
+  const key = process.env.SESSION_HMAC_SECRET
+    || process.env.SUPABASE_SERVICE_ROLE_KEY
+    || "admin-session-secret-fallback";
+  return key;
+}
+
 async function hmacSign(payload: string): Promise<string> {
-  const secret =
-    process.env.SUPABASE_SERVICE_ROLE_KEY || "admin-session-secret-fallback";
+  const secret = getHmacKey();
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
