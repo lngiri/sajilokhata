@@ -23,8 +23,10 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Admin Panel
 
-- [ ] Need admin seed script/process for new production database (no admin users exist after migration 021)
-- [ ] Verify admin login → session → dashboard flow works end-to-end
+- [x] Create migration 022 (`022_ensure_admin_users.sql`) — idempotent, creates admins table + seeds `lngiri@gmail.com`
+- [x] Create seed script (`scripts/seed-admin.ts`) — standalone Node.js runner
+- [x] Fix admin signout redirect URL (was hardcoded to production URL, now uses localhost fallback for dev)
+- [ ] Verify admin login → session → dashboard flow works end-to-end (needs DB access to test)
 - [ ] Admin "sessions" page might need DB query adjustment for new schema
 - [ ] Storage monitor — verify usage stats work with fresh DB
 - [ ] User directory pagination — verify RPC function works with empty DB

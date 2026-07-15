@@ -6,9 +6,16 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 
 ## [Unreleased]
 
+### Added
+- **Migration 022** (`022_ensure_admin_users.sql`): Idempotent migration that creates the `admins` table if missing, recreates RLS policy, and seeds `lngiri@gmail.com` as admin. Safe to run on any DB state.
+- **Admin seed script** (`scripts/seed-admin.ts`): Standalone Node.js script that can be run via `npx tsx scripts/seed-admin.ts` to seed the admin user without running a full migration.
+- **Living documentation**: `ARCHITECTURE.md`, `CHANGELOG.md`, `TODO_LIST.md` — documentation-first protocol established.
+
 ### Fixed
 - Auth flow: `setPin()` now creates a session cookie (was missing, causing redirect to phone after PIN setup)
 - Auth flow: `handleSetPin` gracefully redirects to phone step if `userInfoRef` is missing
+- Admin signout redirect: Changed `https://www.qrhisab.com` to `http://localhost:3000` fallback so signout works in dev mode
+- Auth signout redirect: Same fix — relative dev fallback instead of hardcoded production URL
 - Logging: Added `[Login]`, `[OTP]`, `[loginWithPin]`, `[setPin]` console logs at every auth transition point
 
 ---
