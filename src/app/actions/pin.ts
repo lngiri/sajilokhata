@@ -299,6 +299,95 @@ export async function forgotPinSendOtp(
   return sendRegistrationOtp(phone);
 }
 
+/**
+ * Register a NEW user with the chosen role.
+ * Creates the user row and sets the session cookie.
+ * Called AFTER role selection (not within OTP verification).
+ */
+export async function registerNewUser(
+  phone: string,
+  role: "merchant" | "customer"
+): Promise<{ success: boolean; error?: string; userId?: string; phone?: string; userType?: string }> {
+  console.log("[registerNewUser] Registering new", role, "with phone:", phone);
+
+  try {
+    const cleanPhone = phone.replace(/\D/g, "").slice(-10);
+    const normalizedPhone = normalizePhone(cleanPhone);
+    const admin = getAdminClient();
+
+    if (!admin) {
+      // Dev mode fallback
+      const localId = `local_${cleanPhone}`;
+      const cookieStore = await cookies();
+      const { token, maxAge } = await createSessionToken(localId);
+      cookieStore.set(SESSION_COOKIE, token, {
+        httpOnly: true, secure: true, sameSite: "lax", maxAge, path: "/",
+      });
+      return { success: true, userId: localId, phone: cleanPhone, userType: role };
+    }
+
+    const userId = crypto.randomUUID();
+
+    if (role === "merchant") {
+      const { error: upsertError } = await (admin.from("merchants") as any).upsert(
+        {
+          id: userId,
+          phone: normalizedPhone,
+          name: "Shop",
+          business_type: "kirana",
+        },
+        { onConflict: "id" }
+      );
+      if (upsertError) {
+        console.error("[registerNewUser] Failed to create merchant:", upsertError);
+        return { success: false, error: "Could not create account. Please try again." };
+      }
+    } else {
+      const { error: insertError } = await (admin.from("customers") as any).insert({
+        id: userId,
+        phone: normalizedPhone,
+        name: "Customer",
+      });
+      if (insertError) {
+        console.error("[registerNewUser] Failed to create customer:", insertError);
+        return { success: false, error: "Could not create account. Please try again." };
+      }
+    }
+
+    // Set session cookie
+    const cookieStore = await cookies();
+    const { token, maxAge } = await createSessionToken(userId);
+    cookieStore.set(SESSION_COOKIE, token, {
+      httpOnly: true, secure: true, sameSite: "lax", maxAge, path: "/",
+    });
+    console.log("[registerNewUser] Session cookie set for", role, "userId:", userId);
+
+    // Verify cookie was written
+    const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
+    console.log("[registerNewUser] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
+
+    // Record session in DB
+    try {
+      const headersList = await headers();
+      const userAgent = headersList.get("user-agent") || "";
+      const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "";
+      await (admin.from("sessions") as any).insert({
+        merchant_id: userId,
+        device_info: userAgent,
+        ip_address: ip,
+      });
+    } catch (e) {
+      console.warn("[registerNewUser] Session record failed:", e);
+    }
+
+    return { success: true, userId, phone: cleanPhone, userType: role };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[registerNewUser] Error:", msg);
+    return { success: false, error: "Internal error. Please try again." };
+  }
+}
+
 export async function forgotPinVerifyOtp(
   phone: string,
   otp: string,
@@ -312,9 +401,9 @@ export async function forgotPinVerifyOtp(
     return { success: false, error: verified.error || "Verification failed" };
   }
 
-  if (!verified.userId) {
-    console.log("[forgotPinVerifyOtp] No userId from OTP verify");
-    return { success: false, error: "Could not identify user" };
+  if (!verified.exists || !verified.userId) {
+    console.log("[forgotPinVerifyOtp] No existing user — cannot reset PIN");
+    return { success: false, error: "No account found with this phone number" };
   }
 
   console.log("[forgotPinVerifyOtp] Setting new PIN for user:", verified.userId, "type:", verified.userType);

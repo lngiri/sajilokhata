@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
+import { registerNewUser } from "@/app/actions/pin";
 
 type Step = "phone" | "otp" | "done";
 
@@ -47,8 +48,22 @@ export default function OnboardPage() {
       setLoading(false);
       return;
     }
-    if (res.userId) localStorage.setItem("merchant_id", res.userId);
-    if (res.phone) localStorage.setItem("merchant_phone", res.phone);
+
+    if (!res.exists) {
+      // New customer — create account
+      const reg = await registerNewUser(phone, "customer");
+      if (!reg.success) {
+        setError(reg.error || "Failed to create account");
+        setLoading(false);
+        return;
+      }
+      if (reg.userId) localStorage.setItem("merchant_id", reg.userId);
+      if (reg.phone) localStorage.setItem("merchant_phone", reg.phone);
+    } else {
+      // Existing user
+      if (res.userId) localStorage.setItem("merchant_id", res.userId);
+      if (res.phone) localStorage.setItem("merchant_phone", res.phone);
+    }
     setStep("done");
     setLoading(false);
   };

@@ -62,7 +62,8 @@ export async function sendRegistrationOtp(
 
 /**
  * Verify the OTP code against the stored cookie.
- * On success, creates a merchant row (if not exists) and sets the session cookie.
+ * Returns info about existing users WITHOUT creating or modifying any records.
+ * Session cookie is NOT set here — caller decides the next step.
  */
 export async function verifyRegistrationOtp(
   phone: string,
@@ -73,6 +74,8 @@ export async function verifyRegistrationOtp(
   userId?: string;
   phone?: string;
   userType?: "merchant" | "customer" | "both";
+  exists: boolean;
+  hasPin?: boolean;
 }> {
   console.log("[OTP] verifyRegistrationOtp called for phone:", phone);
 
@@ -88,17 +91,17 @@ export async function verifyRegistrationOtp(
 
     if (!storedCode || !storedPhone) {
       console.log("[OTP] No stored OTP cookies (expired)");
-      return { success: false, error: "OTP expired. Please request a new one." };
+      return { success: false, error: "OTP expired. Please request a new one.", exists: false };
     }
 
     if (storedPhone !== cleanPhone) {
       console.log("[OTP] Phone mismatch: stored:", storedPhone, "input:", cleanPhone);
-      return { success: false, error: "Phone number mismatch." };
+      return { success: false, error: "Phone number mismatch.", exists: false };
     }
 
     if (storedCode !== code) {
       console.log("[OTP] Code mismatch: stored:", storedCode, "input:", code);
-      return { success: false, error: "Invalid OTP. Please try again." };
+      return { success: false, error: "Invalid OTP. Please try again.", exists: false };
     }
 
     // Clear OTP cookies
@@ -109,93 +112,46 @@ export async function verifyRegistrationOtp(
     // ---- 2. Check if user already exists ----
     const admin = getAdminClient();
     if (!admin) {
-      // Dev mode — no DB fallback
-      const localId = `local_${cleanPhone}`;
-      const { token, maxAge } = await createSessionToken(localId);
-      cookieStore.set(SESSION_COOKIE, token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "lax",
-        maxAge,
-        path: "/",
-      });
-      return { success: true, userId: localId, phone: cleanPhone, userType: "merchant" };
+      // Dev mode — no DB
+      return { success: true, exists: false, phone: cleanPhone };
     }
 
     const existing = await findUserByPhone(cleanPhone);
     console.log("[OTP] Existing user lookup:", JSON.stringify(existing));
-    let userId: string | null = null;
-    let userType: "merchant" | "customer" | "both" = "merchant";
+
+    if (existing.merchant && existing.customer) {
+      const hasPin = !!(existing.merchant.pin_hash || existing.customer.pin_hash);
+      return { success: true, exists: true, phone: cleanPhone, userType: "both", userId: existing.merchant.id, hasPin };
+    }
 
     if (existing.merchant) {
-      userId = existing.merchant.id;
-      userType = existing.customer ? "both" : "merchant";
-      console.log("[OTP] Found existing merchant:", userId, "userType:", userType);
-    } else if (existing.customer) {
-      userId = existing.customer.id;
-      userType = "customer";
-      console.log("[OTP] Found existing customer:", userId);
+      return {
+        success: true,
+        exists: true,
+        userId: existing.merchant.id,
+        phone: cleanPhone,
+        userType: "merchant",
+        hasPin: !!existing.merchant.pin_hash,
+      };
     }
 
-    // ---- 3. Create merchant row if new user ----
-    if (!userId) {
-      console.log("[OTP] No existing user → creating new merchant");
-      userId = crypto.randomUUID();
-      const normalizedPhone = normalizePhone(cleanPhone);
-
-      const { error: upsertError } = await (admin.from("merchants") as any).upsert(
-        {
-          id: userId,
-          phone: normalizedPhone,
-          name: "Shop",
-          business_type: "kirana",
-        },
-        { onConflict: "id" }
-      );
-
-      if (upsertError) {
-        console.error("[OTP] Failed to create merchant row:", upsertError);
-        return { success: false, error: "Could not create account. Please try again." };
-      }
-
-      console.log("[OTP] Created new merchant:", userId);
-      userType = "merchant";
+    if (existing.customer) {
+      return {
+        success: true,
+        exists: true,
+        userId: existing.customer.id,
+        phone: cleanPhone,
+        userType: "customer",
+        hasPin: !!existing.customer.pin_hash,
+      };
     }
 
-    // ---- 4. Set session cookie ----
-    console.log("[OTP] Creating session token for user:", userId);
-    const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      maxAge,
-      path: "/",
-    });
-    console.log("[OTP] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
-
-    // Verify cookie was written by reading it back
-    const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
-    console.log("[OTP] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
-
-    // ---- 5. Record session in DB ----
-    try {
-      const headersList = await headers();
-      const userAgent = headersList.get("user-agent") || "";
-      const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "";
-      await (admin.from("sessions") as any).insert({
-        merchant_id: userId,
-        device_info: userAgent,
-        ip_address: ip,
-      });
-    } catch (e) {
-      console.warn("[OTP] Session record failed:", e);
-    }
-
-    return { success: true, userId, phone: cleanPhone, userType };
+    // No existing user — caller must create one via registerNewUser
+    console.log("[OTP] No existing user — caller should create with role selection");
+    return { success: true, exists: false, phone: cleanPhone };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[OTP] verifyRegistrationOtp error:", msg);
-    return { success: false, error: "Internal error. Please try again." };
+    return { success: false, error: "Internal error. Please try again.", exists: false };
   }
 }

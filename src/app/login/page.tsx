@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
-import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp } from "@/app/actions/pin";
+import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp, registerNewUser } from "@/app/actions/pin";
 
 type Step =
   | "loading"
@@ -10,8 +10,11 @@ type Step =
   | "pin"
   | "set_pin"
   | "otp"
+  | "select_role"
   | "forgot_phone"
   | "forgot_otp";
+
+type SelectRoleMode = "register" | "login";
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("loading");
@@ -28,6 +31,8 @@ export default function LoginPage() {
   const otpRef = useRef<HTMLInputElement>(null);
   // Track user info after lookup
   const userInfoRef = useRef<{ userId: string; userType: "merchant" | "customer" | "both" } | null>(null);
+  const [selectRoleMode, setSelectRoleMode] = useState<SelectRoleMode>("register");
+  const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
 
   const focusPinInput = useCallback((refs: React.MutableRefObject<(HTMLInputElement | null)[]>, idx: number) => {
     if (idx >= 0 && idx < 4) refs.current[idx]?.focus();
@@ -121,7 +126,16 @@ export default function LoginPage() {
       return;
     }
 
-    // Existing user
+    // Existing user — check for multi-role
+    if (users.length > 1 || users[0]?.userType === "both") {
+      console.log("[Login] Multi-role user → showing role selector");
+      setAvailableRoles(users.map((u) => u.userType as "merchant" | "customer"));
+      setSelectRoleMode("login");
+      setStep("select_role");
+      setLoading(false);
+      return;
+    }
+
     const user = users[0];
     userInfoRef.current = { userId: user.userId, userType: user.userType };
     console.log("[Login] Existing user:", userInfoRef.current);
@@ -193,7 +207,12 @@ export default function LoginPage() {
 
   const handleSkipPin = () => {
     const info = userInfoRef.current;
-    window.location.replace(info?.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard");
+    const target = info?.userType === "customer" ? "/customer/dashboard"
+      : info?.userType === "merchant" ? "/merchant/dashboard"
+      : info?.userType === "both" ? "/select-role"
+      : "/merchant/dashboard";
+    console.log("[Login] Skipping PIN, redirecting to", target);
+    window.location.replace(target);
   };
 
   // ── OTP Verify (new user registration) ──
@@ -211,6 +230,19 @@ export default function LoginPage() {
       return;
     }
 
+    if (!result.exists) {
+      // New user — need role selection before creating account
+      console.log("[Login] New user, no existing account → role selection");
+      setSelectRoleMode("register");
+      setAvailableRoles(["merchant", "customer"]);
+      // Store phone in userInfoRef for use after role selection
+      userInfoRef.current = null;
+      setStep("select_role");
+      setLoading(false);
+      return;
+    }
+
+    // Existing user
     // Wipe previous state
     localStorage.clear();
     sessionStorage.clear();
@@ -239,15 +271,22 @@ export default function LoginPage() {
 
     const userType = result.userType || "merchant";
     userInfoRef.current = { userId: result.userId!, userType };
-    console.log("[Login] OTP verified, userInfoRef set:", userInfoRef.current);
+    console.log("[Login] OTP verified for existing user:", userInfoRef.current);
 
     // Check if PIN already set
-    const checkResult = await checkUserExists(phone);
-    const hasPin = checkResult.users.some((u) => u.hasPin);
-    console.log("[Login] PIN check after OTP:", { hasPin, users: checkResult.users });
-    if (hasPin && result.userId) {
-      const info = userInfoRef.current;
-      const target = info?.userType === "both" ? "/select-role" : info?.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
+    const hasPin = result.hasPin;
+    console.log("[Login] PIN check after OTP:", { hasPin, userType });
+    if (userType === "both") {
+      // Multi-role existing user — let them choose
+      console.log("[Login] Multi-role after OTP → role selection");
+      setSelectRoleMode("login");
+      setAvailableRoles(["merchant", "customer"]);
+      setStep("select_role");
+      setLoading(false);
+      return;
+    }
+    if (hasPin) {
+      const target = userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
       console.log("[Login] PIN already set, redirecting to", target);
       window.location.replace(target);
     } else {
@@ -255,6 +294,80 @@ export default function LoginPage() {
       setStep("set_pin");
       setLoading(false);
     }
+  };
+
+  // ── Role Selection (new user or multi-role existing) ──
+  const handleRoleSelect = async (role: "merchant" | "customer") => {
+    setLoading(true);
+    setError("");
+
+    if (selectRoleMode === "register") {
+      // New user — create account with chosen role
+      console.log("[Login] Creating new", role, "account for phone:", phone);
+      const regResult = await registerNewUser(phone, role);
+      console.log("[Login] registerNewUser result:", JSON.stringify(regResult));
+      if (!regResult.success) {
+        setError(regResult.error || "Failed to create account");
+        setLoading(false);
+        return;
+      }
+
+      // Wipe previous state before setting new
+      localStorage.clear();
+      sessionStorage.clear();
+      try {
+        const { clearIndexedDB } = await import("@/lib/offline/db");
+        await clearIndexedDB();
+      } catch { /* ignore */ }
+      document.cookie.split(";").forEach((c) => {
+        const name = c.trim().split("=")[0];
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+      });
+      if ("caches" in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch { /* ignore */ }
+      }
+
+      if (regResult.userId) {
+        localStorage.setItem("merchant_id", regResult.userId);
+      }
+      if (regResult.phone) {
+        localStorage.setItem("merchant_phone", regResult.phone);
+      }
+
+      userInfoRef.current = { userId: regResult.userId!, userType: role };
+      console.log("[Login] New user created, proceeding to PIN setup");
+      setStep("set_pin");
+      setLoading(false);
+      return;
+    }
+
+    // Existing multi-role user — login with chosen role
+    console.log("[Login] Logging in as", role, "for user:", userInfoRef.current?.userId);
+    if (!userInfoRef.current?.userId) {
+      setError("Session expired. Please re-enter your phone.");
+      setStep("phone");
+      return;
+    }
+
+    const selectedInfo = { userId: userInfoRef.current.userId, userType: role };
+    userInfoRef.current = selectedInfo;
+
+    // Check if this role has a PIN set
+    const checkResult = await checkUserExists(phone);
+    const userForRole = checkResult.users.find((u) => u.userType === role || u.userType === "both");
+    const hasPin = userForRole?.hasPin ?? false;
+
+    if (hasPin) {
+      console.log("[Login] Multi-role user has PIN → showing PIN entry");
+      setStep("pin");
+    } else {
+      console.log("[Login] Multi-role user has no PIN → set_pin");
+      setStep("set_pin");
+    }
+    setLoading(false);
   };
 
   // ── Forgot PIN ──
@@ -398,6 +511,65 @@ export default function LoginPage() {
           <button onClick={handleSkipPin} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
             Skip for now
           </button>
+        </div>
+      )}
+
+      {/* ── Role Selection — new user or multi-role existing ── */}
+      {step === "select_role" && (
+        <div className="w-full max-w-xs space-y-6 animate-fade-in">
+          <p className="text-sm text-[var(--color-text-muted)] text-center">
+            {selectRoleMode === "register"
+              ? "Register as"
+              : "Login as"}
+          </p>
+
+          <div className="space-y-3">
+            {availableRoles.includes("merchant") && (
+              <button
+                onClick={() => handleRoleSelect("merchant")}
+                disabled={loading}
+                className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4"
+              >
+                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-[var(--color-text)]">Merchant</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Manage your shop, credits & customers</p>
+                </div>
+              </button>
+            )}
+
+            {availableRoles.includes("customer") && (
+              <button
+                onClick={() => handleRoleSelect("customer")}
+                disabled={loading}
+                className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4"
+              >
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <p className="font-semibold text-[var(--color-text)]">Customer</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Track your purchases & credit history</p>
+                </div>
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+          )}
+
+          {loading && (
+            <div className="flex justify-center">
+              <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
         </div>
       )}
 
