@@ -10,6 +10,7 @@ import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import RoleSwitcher from "@/components/RoleSwitcher";
+import OtherRolePrompt from "@/components/OtherRolePrompt";
 import CustomerPinGate from "@/components/CustomerPinGate";
 import { createClient } from "@/lib/supabase/client";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
@@ -656,6 +657,8 @@ export default function CustomerDashboard() {
         }}
         onClose={() => setShowPendingModal(false)}
       />
+
+      <OtherRolePrompt currentRole="customer" />
     </div>
     </CustomerPinGate>
   );

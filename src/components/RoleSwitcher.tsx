@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
 
 const ROLE_KEY = "active_role";
-const CUSTOMER_SESSION_KEY = "sajilo_customer_session";
 
 type Role = "merchant" | "customer";
 
@@ -12,9 +11,9 @@ type Role = "merchant" | "customer";
  * Smart Role Switcher — appears in the dashboard header when the user
  * has both a Merchant and a Customer account.
  *
+ * - Detects dual-role via API instead of localStorage keys
  * - Persists active role in localStorage
- * - On switch: clears stale data context and does a HARD navigation
- *   (full page reload) so no React state leaks between roles.
+ * - On switch: hard-navigates (full page reload)
  */
 export default function RoleSwitcher() {
   const pathname = usePathname();
@@ -22,16 +21,29 @@ export default function RoleSwitcher() {
   const [currentRole, setCurrentRole] = useState<Role>("merchant");
   const [switching, setSwitching] = useState(false);
 
-  useEffect(() => {
-    const hasMerchant = !!localStorage.getItem("merchant_id");
-    const hasCustomer = !!localStorage.getItem(CUSTOMER_SESSION_KEY);
-    setHasDualRole(hasMerchant && hasCustomer);
+  const checkRoles = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/session");
+      const data = await res.json();
+      const roles: string[] = data?.roles ?? [];
+      setHasDualRole(roles.includes("merchant") && roles.includes("customer"));
 
-    const saved = localStorage.getItem(ROLE_KEY) as Role | null;
-    if (saved === "merchant" || saved === "customer") {
-      setCurrentRole(saved);
+      const saved = localStorage.getItem(ROLE_KEY) as Role | null;
+      if (roles.includes("merchant") && roles.includes("customer")) {
+        setCurrentRole(saved === "customer" || saved === "merchant" ? saved : "merchant");
+      } else if (roles.includes("merchant")) {
+        setCurrentRole("merchant");
+      } else {
+        setCurrentRole("customer");
+      }
+    } catch {
+      setHasDualRole(false);
     }
-  }, [pathname]);
+  }, []);
+
+  useEffect(() => {
+    checkRoles();
+  }, [checkRoles, pathname]);
 
   const handleSwitch = () => {
     if (switching) return;
@@ -40,7 +52,6 @@ export default function RoleSwitcher() {
     const next: Role = currentRole === "merchant" ? "customer" : "merchant";
     localStorage.setItem(ROLE_KEY, next);
 
-    // Hard-navigate to force a full data-context reset
     window.location.replace(
       next === "merchant" ? "/merchant/dashboard" : "/customer/dashboard"
     );
@@ -49,7 +60,6 @@ export default function RoleSwitcher() {
   if (!hasDualRole) return null;
 
   const isMerchant = currentRole === "merchant";
-  const isCustomer = currentRole === "customer";
 
   return (
     <button

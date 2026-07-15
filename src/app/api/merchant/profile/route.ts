@@ -74,8 +74,32 @@ export async function POST(request: Request) {
           { status: 409 }
         );
       }
+      // Missing column (e.g. photo_url not deployed yet) — skip that field
+      if (error.code === "42703") {
+        console.warn("[Profile] Missing column (42703) — retrying without photo_url");
+        const { name: n, business_name: bn, business_type: bt, address: a, phone: p } = body;
+        const retryData: Record<string, unknown> = { id: resolvedId };
+        if (n !== undefined) retryData.name = n;
+        if (bn !== undefined) retryData.business_name = bn;
+        if (bt !== undefined) retryData.business_type = bt;
+        if (a !== undefined) retryData.address = a;
+        if (p !== undefined) retryData.phone = p;
+        const { data: retryData2, error: retryErr } = await (admin.from("merchants") as any)
+          .upsert(retryData, { onConflict: "id" })
+          .select()
+          .single();
+        if (retryErr) {
+          console.error("[Profile] Retry upsert still failed:", retryErr);
+          return NextResponse.json(
+            { error: `Database error: ${retryErr.message}` },
+            { status: 500 }
+          );
+        }
+        console.log("[Profile] Profile saved successfully (after 42703 retry)");
+        return NextResponse.json({ success: true, profile: retryData2, merchant_id: resolvedId });
+      }
       return NextResponse.json(
-        { error: "Could not save profile. Please try again." },
+        { error: `Database error: ${error.message}` },
         { status: 500 }
       );
     }

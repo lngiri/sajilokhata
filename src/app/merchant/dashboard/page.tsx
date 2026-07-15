@@ -20,6 +20,7 @@ import { getCurrentMerchantId } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import TransactionIcon from "@/components/TransactionIcon";
 import RoleSwitcher from "@/components/RoleSwitcher";
+import OtherRolePrompt from "@/components/OtherRolePrompt";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
 const POLL_INTERVAL = 30_000;
@@ -656,6 +657,7 @@ export default function MerchantDashboard() {
         </PullToRefresh>
 
       <BottomNav />
+      <OtherRolePrompt currentRole="merchant" />
     </div>
   );
 }

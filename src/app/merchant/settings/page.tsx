@@ -25,13 +25,32 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [merchantId, setMerchantId] = useState<string | null>(null);
   const [merchantName, setMerchantName] = useState("");
-  const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("kirana");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [authPhone, setAuthPhone] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+
+  const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w <= maxDim && h <= maxDim) { resolve(file); return; }
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio); h = Math.round(h * ratio);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob); else reject(new Error("Canvas toBlob failed"));
+        }, "image/webp", 0.85);
+      };
+      img.onerror = () => reject(new Error("Image load failed"));
+      img.src = URL.createObjectURL(file);
+    });
 
   // PIN change state
   const [showPinChange, setShowPinChange] = useState(false);
@@ -47,7 +66,22 @@ export default function SettingsPage() {
 
   const loadProfile = async () => {
     try {
-      const id = await getCurrentMerchantId();
+      let id = await getCurrentMerchantId();
+
+      // Fallback: try session API if localStorage key is missing
+      if (!id) {
+        try {
+          const sessionRes = await fetch("/api/auth/session");
+          const sessionData = await sessionRes.json();
+          if (sessionData?.userId && typeof sessionData.userId === "string") {
+            id = sessionData.userId;
+            localStorage.setItem("merchant_id", sessionData.userId);
+          }
+        } catch {
+          // session API unavailable
+        }
+      }
+
       setMerchantId(id);
 
       const sessionPhone = await getCurrentUserPhone();
@@ -55,8 +89,7 @@ export default function SettingsPage() {
 
       if (id) {
         const profile = await getMerchantProfile(id);
-        setMerchantName(profile.name || "");
-        setBusinessName(profile.business_name || "");
+        setMerchantName(profile.name || profile.business_name || "");
         setBusinessType(profile.business_type || "kirana");
         setAddress(profile.address || "");
         setPhone(profile.phone || "");
@@ -78,18 +111,34 @@ export default function SettingsPage() {
   const displayPhone = formatPhone(phone || authPhone || "");
 
   const handleSave = async () => {
-    if (!merchantId) {
+    let id = merchantId;
+
+    // Retry from session API if merchantId state is empty
+    if (!id) {
+      try {
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        if (sessionData?.userId && typeof sessionData.userId === "string") {
+          id = sessionData.userId;
+          setMerchantId(id);
+          localStorage.setItem("merchant_id", sessionData.userId);
+        }
+      } catch {
+        // session API unavailable
+      }
+    }
+
+    if (!id) {
       console.warn("[Settings] handleSave — merchantId is null/undefined");
       addToast("Not logged in", "error");
       return;
     }
 
-    console.log("[Settings] handleSave — merchantId:", merchantId);
+    console.log("[Settings] handleSave — merchantId:", id);
     setSaving(true);
     try {
-      await updateMerchantProfile(merchantId, {
+      await updateMerchantProfile(id, {
         name: merchantName.trim() || undefined,
-        business_name: businessName.trim() || undefined,
         business_type: businessType,
         address: address.trim() || undefined,
       });
@@ -301,8 +350,10 @@ export default function SettingsPage() {
                         if (!file || !merchantId) return;
                         setPhotoUploading(true);
                         try {
+                          const resized = await resizeImage(file, 512);
+                          const uploadFile = new File([resized], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
                           const formData = new FormData();
-                          formData.append("file", file);
+                          formData.append("file", uploadFile);
                           formData.append("merchantId", merchantId);
                           const res = await fetch("/api/merchant/upload-photo", { method: "POST", body: formData });
                           const data = await res.json();
@@ -340,34 +391,15 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
-            {/* Shop Name (read-only) */}
-            <div className="p-4">
-              <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
-                Shop Name
-              </label>
-              {loading ? (
-                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl">
-                  <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
-                </div>
-              ) : (
-                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-700 border border-gray-100 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-                  </svg>
-                  <span>{merchantName || "No name set"}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Business Name */}
+            {/* Business Name (editable — maps to DB `name` column) */}
             <div className="p-4">
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
                 Business Name
               </label>
               <input
                 type="text"
-                value={businessName}
-                onChange={(e) => setBusinessName(e.target.value)}
+                value={merchantName}
+                onChange={(e) => setMerchantName(e.target.value)}
                 placeholder="e.g. Giri Kirana Store"
                 className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
               />
@@ -384,6 +416,8 @@ export default function SettingsPage() {
                 className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all capitalize appearance-none"
               >
                 <option value="kirana">Kirana</option>
+                <option value="dairy">Dairy</option>
+                <option value="meat">Meat</option>
                 <option value="hardware">Hardware</option>
                 <option value="clothing">Clothing</option>
                 <option value="pharmacy">Pharmacy</option>
