@@ -1,18 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { sendLoginOtp, verifyLoginOtp } from "@/app/actions/otp";
-import { checkHasPin, verifyPin, setPin as setMerchantPin, forgotPinSendOtp, forgotPinVerifyOtp } from "@/app/actions/pin";
+import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
+import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp } from "@/app/actions/pin";
 
 type Step =
   | "loading"
+  | "phone"
   | "pin"
   | "set_pin"
-  | "phone"
   | "otp"
   | "forgot_phone"
-  | "forgot_otp"
-  | "forgot_set_pin";
+  | "forgot_otp";
 
 export default function LoginPage() {
   const [step, setStep] = useState<Step>("loading");
@@ -20,8 +19,6 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [rememberMe, setRememberMe] = useState(true);
-  const [merchantId, setMerchantId] = useState<string | null>(null);
   const [pin, setPin] = useState(["", "", "", ""]);
   const [newPin, setNewPin] = useState(["", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
@@ -29,38 +26,11 @@ export default function LoginPage() {
   const newPinRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
   const confirmPinRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
   const otpRef = useRef<HTMLInputElement>(null);
-
-  // Silent session check on mount
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/auth/session", { cache: "no-store" });
-        const data: { userId: string | null } = await res.json();
-        if (cancelled) return;
-        if (data.userId) {
-          setMerchantId(data.userId);
-          const { hasPin } = await checkHasPin(data.userId);
-          if (cancelled) return;
-          if (hasPin) {
-            setStep("pin");
-          } else {
-            setStep("set_pin");
-          }
-          return;
-        }
-      } catch {
-        // Network error
-      }
-      if (!cancelled) setStep("phone");
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  // Track user info after lookup
+  const userInfoRef = useRef<{ userId: string; userType: "merchant" | "customer" | "both" } | null>(null);
 
   const focusPinInput = useCallback((refs: React.MutableRefObject<(HTMLInputElement | null)[]>, idx: number) => {
-    if (idx >= 0 && idx < 4) {
-      refs.current[idx]?.focus();
-    }
+    if (idx >= 0 && idx < 4) refs.current[idx]?.focus();
   }, []);
 
   const handlePinDigit = (
@@ -75,9 +45,7 @@ export default function LoginPage() {
     const next = [...pinArr];
     next[idx] = digit;
     setter(next);
-    if (digit && idx < 3) {
-      focusPinInput(refs, idx + 1);
-    }
+    if (digit && idx < 3) focusPinInput(refs, idx + 1);
   };
 
   const handlePinKeyDown = (
@@ -97,14 +65,77 @@ export default function LoginPage() {
 
   const pinArrayToString = (arr: string[]) => arr.join("");
 
+  // ── Silent session check on mount ──
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/session", { cache: "no-store" });
+        const data: { userId: string | null; roles: string[] } = await res.json();
+        if (cancelled) return;
+        if (data.userId) {
+          if (data.roles.length === 0) {
+            if (!cancelled) setStep("phone");
+            return;
+          }
+          if (data.roles.length === 1) {
+            window.location.replace(data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard");
+            return;
+          }
+          // Both roles
+          window.location.replace("/select-role");
+          return;
+        }
+      } catch { /* network error */ }
+      if (!cancelled) setStep("phone");
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  // ── Phone Submit ──
+  const handlePhoneSubmit = async () => {
+    if (!phone || phone.length < 10) return;
+    setLoading(true);
+    setError("");
+
+    const { exists, users } = await checkUserExists(phone);
+
+    if (!exists) {
+      // New user → send OTP
+      const result = await sendRegistrationOtp(phone);
+      if (!result.success) {
+        setError(result.error || "Failed to send OTP");
+        setLoading(false);
+        return;
+      }
+      setStep("otp");
+      setLoading(false);
+      return;
+    }
+
+    // Existing user
+    const user = users[0];
+    userInfoRef.current = { userId: user.userId, userType: user.userType };
+
+    if (user.hasPin) {
+      setStep("pin");
+    } else {
+      // Legacy user, must set PIN
+      setStep("set_pin");
+    }
+    setLoading(false);
+  };
+
   // ── PIN Entry ──
   const handlePinSubmit = async () => {
     const pinStr = pinArrayToString(pin);
     if (pinStr.length < 4) return;
-    if (!merchantId) return;
+    const info = userInfoRef.current;
+    if (!info) return;
     setLoading(true);
     setError("");
-    const result = await verifyPin(merchantId, pinStr);
+
+    const result = await loginWithPin(info.userId, pinStr, info.userType);
     if (!result.success) {
       setError(result.error || "Incorrect PIN");
       setPin(["", "", "", ""]);
@@ -112,59 +143,52 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    window.location.replace("/merchant/dashboard");
+
+    // Redirect based on userType
+    window.location.replace(result.redirect || "/merchant/dashboard");
   };
 
-  // ── Set PIN ──
+  // ── Set PIN (legacy user or after OTP) ──
   const handleSetPin = async () => {
     const newPinStr = pinArrayToString(newPin);
     const confirmStr = pinArrayToString(confirmPin);
     if (newPinStr.length < 4) { setError("Enter a 4-digit PIN"); return; }
     if (newPinStr !== confirmStr) { setError("PINs do not match"); return; }
-    if (!merchantId) return;
+
+    const info = userInfoRef.current;
+    if (!info) return;
     setLoading(true);
     setError("");
-    const result = await setMerchantPin(merchantId, newPinStr);
+
+    const result = await setMerchantPin(info.userId, newPinStr);
     if (!result.success) {
       setError(result.error || "Failed to set PIN");
       setLoading(false);
       return;
     }
-    window.location.replace("/merchant/dashboard");
+
+    window.location.replace(info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard");
   };
 
   const handleSkipPin = () => {
-    window.location.replace("/merchant/dashboard");
+    const info = userInfoRef.current;
+    window.location.replace(info?.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard");
   };
 
-  // ── OTP Phone Submit ──
-  const handlePhoneSubmit = async () => {
-    if (!phone || phone.length < 10) return;
-    setLoading(true);
-    setError("");
-    const result = await sendLoginOtp(phone);
-    if (!result.success) {
-      setError(result.error || "Failed to send OTP. Please try again.");
-      setLoading(false);
-      return;
-    }
-    setStep("otp");
-    setLoading(false);
-  };
-
-  // ── OTP Verify ──
+  // ── OTP Verify (new user registration) ──
   const handleOtpSubmit = async () => {
     if (otp.length < 4) return;
     setLoading(true);
     setError("");
-    const result = await verifyLoginOtp(phone, otp, rememberMe);
+
+    const result = await verifyRegistrationOtp(phone, otp);
     if (!result.success) {
-      setError(result.error || "Invalid OTP. Please try again.");
+      setError(result.error || "Invalid OTP");
       setLoading(false);
       return;
     }
 
-    // ── Secure login: wipe ALL previous state before setting new identity ──
+    // Wipe previous state
     localStorage.clear();
     sessionStorage.clear();
     try {
@@ -184,23 +208,27 @@ export default function LoginPage() {
 
     if (result.userId) {
       localStorage.setItem("merchant_id", result.userId);
-      setMerchantId(result.userId);
     }
     if (result.phone) {
       localStorage.setItem("merchant_phone", result.phone);
     }
 
+    const userType = result.userType || "merchant";
+    userInfoRef.current = { userId: result.userId!, userType };
+
     // Check if PIN already set
-    const { hasPin } = await checkHasPin(result.userId!);
-    if (hasPin) {
-      window.location.replace(`/merchant/dashboard?status=${result.userId ? "existing" : "new"}`);
+    const checkResult = await checkUserExists(phone);
+    const hasPin = checkResult.users.some((u) => u.hasPin);
+    if (hasPin && result.userId) {
+      const info = userInfoRef.current;
+      window.location.replace(info?.userType === "both" ? "/select-role" : info?.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard");
     } else {
       setStep("set_pin");
       setLoading(false);
     }
   };
 
-  // ── Forgot PIN: Send OTP ──
+  // ── Forgot PIN ──
   const handleForgotPhoneSubmit = async () => {
     if (!phone || phone.length < 10) return;
     setLoading(true);
@@ -215,7 +243,6 @@ export default function LoginPage() {
     setLoading(false);
   };
 
-  // ── Forgot PIN: Verify OTP + Set new PIN ──
   const handleForgotOtpSubmit = async () => {
     if (otp.length < 4) return;
     const newPinStr = pinArrayToString(newPin);
@@ -233,7 +260,7 @@ export default function LoginPage() {
     window.location.replace("/merchant/dashboard");
   };
 
-  const backToPin = () => { setStep("pin"); setError(""); setPhone(""); };
+  const backToPhone = () => { setStep("phone"); setError(""); };
 
   if (step === "loading") {
     return (
@@ -273,7 +300,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
-      {/* Logo */}
       <div className="mb-8 text-center animate-fade-in">
         <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-lg">
           <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -300,13 +326,11 @@ export default function LoginPage() {
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              "Unlock"
-            )}
+            ) : "Unlock"}
           </button>
 
           <button
-            onClick={() => { setStep("forgot_phone"); setError(""); setPhone(""); }}
+            onClick={() => { setStep("forgot_phone"); setError(""); }}
             className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
           >
             Forgot PIN?
@@ -314,13 +338,12 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* ── Set PIN (after OTP login or when no PIN set) ── */}
+      {/* ── Set PIN (legacy user or after OTP) ── */}
       {step === "set_pin" && (
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
           <p className="text-sm text-[var(--color-text-muted)] text-center">
             Set a 4-digit PIN for quick login next time
           </p>
-
           {renderPinDots(newPin, setNewPin, newPinRefs, "New PIN")}
           {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
 
@@ -335,33 +358,24 @@ export default function LoginPage() {
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              "Set PIN & Continue"
-            )}
+            ) : "Set PIN & Continue"}
           </button>
 
-          <button
-            onClick={handleSkipPin}
-            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
-          >
+          <button onClick={handleSkipPin} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
             Skip for now
           </button>
         </div>
       )}
 
-      {/* ── OTP Phone Entry ── */}
-      {(step === "phone" || step === "forgot_phone") && (
+      {/* ── Phone Entry ── */}
+      {step === "phone" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
-          <p className="text-sm text-[var(--color-text-muted)] text-center">
-            {step === "forgot_phone" ? "Enter your registered phone to reset PIN" : "Sign in with your shop phone"}
-          </p>
+          <p className="text-sm text-[var(--color-text-muted)] text-center">Sign in with your phone number</p>
 
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
             <div className="flex mt-1">
-              <span className="px-3 py-3 bg-gray-100 rounded-l-xl text-sm font-medium text-gray-500 border border-r-0 border-gray-100">
-                +977
-              </span>
+              <span className="px-3 py-3 bg-gray-100 rounded-l-xl text-sm font-medium text-gray-500 border border-r-0 border-gray-100">+977</span>
               <input
                 type="tel"
                 placeholder="9841234567"
@@ -377,46 +391,20 @@ export default function LoginPage() {
             <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
-          {step === "phone" && (
-            <div className="flex items-center gap-2">
-              <input
-                id="remember-me"
-                type="checkbox"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-[var(--color-primary)] focus:ring-[var(--color-primary)]"
-              />
-              <label htmlFor="remember-me" className="text-sm text-[var(--color-text-muted)] cursor-pointer select-none">
-                Remember me for 30 days
-              </label>
-            </div>
-          )}
-
           <button
-            onClick={step === "phone" ? handlePhoneSubmit : handleForgotPhoneSubmit}
+            onClick={handlePhoneSubmit}
             disabled={phone.length < 10 || loading}
             className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              step === "forgot_phone" ? "Send Reset OTP" : "Send OTP"
-            )}
+            ) : "Continue"}
           </button>
-
-          {step === "forgot_phone" && (
-            <button
-              onClick={backToPin}
-              className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
-            >
-              Back to PIN entry
-            </button>
-          )}
         </div>
       )}
 
-      {/* ── OTP Verify ── */}
-      {(step === "otp" || step === "forgot_otp") && (
+      {/* ── OTP Verify (new user) ── */}
+      {step === "otp" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
           <div className="bg-[var(--color-primary)]/5 rounded-xl p-3 text-center">
             <p className="text-xs text-[var(--color-text-muted)]">
@@ -446,61 +434,118 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* For forgot_otp: show PIN set fields before OTP submit */}
-          {step === "forgot_otp" && (
-            <div className="space-y-4 pt-2 border-t border-gray-100">
-              <p className="text-xs text-[var(--color-text-muted)] text-center">Set a new 4-digit PIN</p>
-              {renderPinDots(newPin, setNewPin, newPinRefs, "New PIN")}
-              {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
-            </div>
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
+
+          <button
+            onClick={handleOtpSubmit}
+            disabled={otp.length < 4 || loading}
+            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : "Verify & Login"}
+          </button>
+
+          <button onClick={backToPhone} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+            Change phone number
+          </button>
+        </div>
+      )}
+
+      {/* ── Forgot PIN ── */}
+      {step === "forgot_phone" && (
+        <div className="w-full max-w-xs space-y-4 animate-fade-in">
+          <p className="text-sm text-[var(--color-text-muted)] text-center">Enter your registered phone to reset PIN</p>
+
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
+            <div className="flex mt-1">
+              <span className="px-3 py-3 bg-gray-100 rounded-l-xl text-sm font-medium text-gray-500 border border-r-0 border-gray-100">+977</span>
+              <input
+                type="tel"
+                placeholder="9841234567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                className="flex-1 px-4 py-3 bg-white rounded-r-xl text-lg font-mono border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                maxLength={10}
+              />
+            </div>
+          </div>
 
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button
-            onClick={step === "otp" ? handleOtpSubmit : handleForgotOtpSubmit}
-            disabled={otp.length < 4 || loading || (step === "forgot_otp" && (pinArrayToString(newPin).length < 4 || pinArrayToString(confirmPin).length < 4))}
+            onClick={handleForgotPhoneSubmit}
+            disabled={phone.length < 10 || loading}
             className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              step === "forgot_otp" ? "Verify & Reset PIN" : "Verify & Login"
-            )}
+            ) : "Send Reset OTP"}
           </button>
 
-          <button
-            onClick={() => { setStep(step === "otp" ? "phone" : "forgot_phone"); setError(""); }}
-            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
-          >
-            {step === "otp" ? "Change phone number" : "Back"}
+          <button onClick={() => { setStep("pin"); setError(""); }} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+            Back to PIN entry
           </button>
         </div>
       )}
 
-      {/* ── Forgot PIN: Set new PIN (after OTP verified) ── */}
-      {step === "forgot_set_pin" && (
-        <div className="w-full max-w-xs space-y-6 animate-fade-in">
-          <p className="text-sm text-[var(--color-text-muted)] text-center">
-            Set a new 4-digit PIN
-          </p>
-          {renderPinDots(newPin, setNewPin, newPinRefs, "New PIN")}
-          {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
+      {step === "forgot_otp" && (
+        <div className="w-full max-w-xs space-y-4 animate-fade-in">
+          <div className="bg-[var(--color-primary)]/5 rounded-xl p-3 text-center">
+            <p className="text-xs text-[var(--color-text-muted)]">
+              OTP sent to <span className="font-medium text-[var(--color-text)]">+977{phone}</span>
+            </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text)]">Enter OTP</label>
+            <input
+              ref={otpRef}
+              type="text"
+              placeholder="4-6 digit code"
+              value={otp}
+              onChange={(e) => {
+                const filtered = e.target.value.replace(/\D/g, "").slice(0, 6);
+                setOtp(filtered);
+                requestAnimationFrame(() => {
+                  if (otpRef.current) {
+                    const pos = Math.min(e.target.selectionStart || filtered.length, filtered.length);
+                    otpRef.current.setSelectionRange(pos, pos);
+                  }
+                });
+              }}
+              className="w-full mt-1 px-4 py-3 bg-white rounded-xl text-2xl font-mono text-center border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none tracking-widest"
+              maxLength={6}
+            />
+          </div>
+
+          <div className="space-y-4 pt-2 border-t border-gray-100">
+            <p className="text-xs text-[var(--color-text-muted)] text-center">Set a new 4-digit PIN</p>
+            {renderPinDots(newPin, setNewPin, newPinRefs, "New PIN")}
+            {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
+          </div>
+
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
+
           <button
             onClick={handleForgotOtpSubmit}
-            disabled={pinArrayToString(newPin).length < 4 || pinArrayToString(confirmPin).length < 4 || loading}
+            disabled={otp.length < 4 || pinArrayToString(newPin).length < 4 || pinArrayToString(confirmPin).length < 4 || loading}
             className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              "Reset PIN & Continue"
-            )}
+            ) : "Verify & Reset PIN"}
+          </button>
+
+          <button onClick={() => { setStep("forgot_phone"); setError(""); }} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+            Back
           </button>
         </div>
       )}

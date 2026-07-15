@@ -70,22 +70,80 @@ export async function proxy(request: NextRequest) {
 
   const isAuthenticated = !!user || !!validUserId || isBypassed;
 
-  // On / or /login with a valid session → skip to dashboard
+  // ── Determine user roles from DB for session-based users ──
+  let userRoles: ("merchant" | "customer")[] = [];
+  if (validUserId) {
+    try {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (supabaseUrl && serviceKey) {
+        const admin = createClient(supabaseUrl, serviceKey, {
+          auth: { persistSession: false },
+        });
+        const [mRes, cRes] = await Promise.all([
+          (admin.from("merchants") as any)
+            .select("id, force_logout_at")
+            .eq("id", validUserId)
+            .maybeSingle(),
+          (admin.from("customers") as any)
+            .select("id")
+            .eq("id", validUserId)
+            .maybeSingle(),
+        ]);
+
+        // Force-logout check
+        if (mRes?.data?.force_logout_at) {
+          const res = NextResponse.redirect(new URL("/login?forceLogout=1", request.url));
+          res.cookies.delete(SESSION_COOKIE);
+          return res;
+        }
+
+        if (mRes?.data?.id) userRoles.push("merchant");
+        if (cRes?.data?.id) userRoles.push("customer");
+      }
+    } catch {
+      console.warn("[Proxy] Role lookup failed — allowing access");
+    }
+  }
+
+  // On / or /login with a valid session → skip to correct dashboard
   if (
     (request.nextUrl.pathname === "/login" || request.nextUrl.pathname === "/") &&
     isAuthenticated
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/merchant/dashboard";
+    if (userRoles.includes("merchant") && userRoles.includes("customer")) {
+      url.pathname = "/select-role";
+    } else if (userRoles.includes("merchant")) {
+      url.pathname = "/merchant/dashboard";
+    } else if (userRoles.includes("customer")) {
+      url.pathname = "/customer/dashboard";
+    } else {
+      // Fallback
+      url.pathname = "/merchant/dashboard";
+    }
     return NextResponse.redirect(url);
   }
 
   // === Merchant / Delivery Protection ===
+  const isMerchantPath = request.nextUrl.pathname.startsWith("/merchant");
+
   if (!isAuthenticated) {
-    if (
-      request.nextUrl.pathname.startsWith("/merchant") ||
-      request.nextUrl.pathname.startsWith("/delivery")
-    ) {
+    if (isMerchantPath || request.nextUrl.pathname.startsWith("/delivery")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      return NextResponse.redirect(url);
+    }
+  } else {
+    // Role-based route protection for session users
+    if (isMerchantPath && validUserId && !userRoles.includes("merchant")) {
+      // Customer-only user trying to access merchant pages
+      if (userRoles.includes("customer")) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/customer/dashboard";
+        return NextResponse.redirect(url);
+      }
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);

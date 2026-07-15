@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { sendLoginOtp, verifyLoginOtp } from "@/app/actions/otp";
+import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
 
 type Step = "phone" | "otp" | "done";
 
@@ -19,7 +19,7 @@ export default function OnboardPage() {
   // Auto-send OTP if phone was prefilled from URL
   useEffect(() => {
     if (prefilled) {
-      sendLoginOtp(prefilled).catch(() => {});
+      sendRegistrationOtp(prefilled).catch(() => {});
     }
   }, [prefilled]);
 
@@ -27,7 +27,7 @@ export default function OnboardPage() {
     if (phone.length < 10) return;
     setLoading(true);
     setError("");
-    const res = await sendLoginOtp(phone);
+    const res = await sendRegistrationOtp(phone);
     if (!res.success) {
       setError(res.error || "Failed to send OTP");
       setLoading(false);
@@ -41,7 +41,7 @@ export default function OnboardPage() {
     if (otp.length < 4) return;
     setLoading(true);
     setError("");
-    const res = await verifyLoginOtp(phone, otp);
+    const res = await verifyRegistrationOtp(phone, otp);
     if (!res.success) {
       setError(res.error || "Invalid OTP");
       setLoading(false);

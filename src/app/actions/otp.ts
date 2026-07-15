@@ -1,25 +1,31 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
-import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
-import { createSessionToken, createSessionTokenWithTTL, SESSION_COOKIE } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { findUserByPhone } from "./pin";
 
-export async function sendLoginOtp(
+// ──────────────────────────────────────────────
+// OTP generation and storage (cookie-based)
+// ──────────────────────────────────────────────
+
+/**
+ * Generate a 6-digit OTP, store it in an HTTP-only cookie (5 min TTL),
+ * and send it via SMS.
+ * Called ONLY for new user registration or forgot-PIN flows.
+ */
+export async function sendRegistrationOtp(
   phone: string
 ): Promise<{ success: boolean; error?: string }> {
-  console.log("[OTP] sendLoginOtp called with phone:", phone);
+  console.log("[OTP] sendRegistrationOtp called with phone:", phone);
 
   try {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
     if (cleanPhone.length !== 10) {
-      console.warn("[OTP] Invalid phone number:", phone);
       return { success: false, error: "Invalid phone number" };
     }
 
-    // NOTE: No database/Supabase lookup happens here.
-    // The SMS is sent unconditionally — works for both new and existing users.
     const code = String(Math.floor(100000 + Math.random() * 900000));
     console.log("[OTP] Generated code:", code, "for phone:", cleanPhone);
 
@@ -28,7 +34,7 @@ export async function sendLoginOtp(
       httpOnly: true,
       secure: true,
       sameSite: "lax",
-      maxAge: 300,
+      maxAge: 300, // 5 minutes
       path: "/",
     });
     cookieStore.set("otp_phone", cleanPhone, {
@@ -38,23 +44,37 @@ export async function sendLoginOtp(
       maxAge: 300,
       path: "/",
     });
-    console.log("[OTP] Cookies set for phone:", cleanPhone);
 
-    const message = `Your OTP code for QRHisab is: ${code}. Do not share this code.`;
+    // Send SMS
+    const { sendTransactionSMS } = await import("./sms");
+    const message = `Your OTP for QRHisab is: ${code}. Valid for 5 minutes.`;
     return sendTransactionSMS(cleanPhone, message);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[OTP] Unexpected error in sendLoginOtp:", msg);
-    return { success: false, error: "Internal error. Please try again." };
+    console.error("[OTP] sendRegistrationOtp error:", msg);
+    return { success: false, error: "Failed to send OTP. Please try again." };
   }
 }
 
-export async function verifyLoginOtp(
+// ──────────────────────────────────────────────
+// OTP verification (new user registration)
+// ──────────────────────────────────────────────
+
+/**
+ * Verify the OTP code against the stored cookie.
+ * On success, creates a merchant row (if not exists) and sets the session cookie.
+ */
+export async function verifyRegistrationOtp(
   phone: string,
-  code: string,
-  rememberMe: boolean = true
-): Promise<{ success: boolean; error?: string; userId?: string; phone?: string }> {
-  console.log("[OTP] verifyLoginOtp called for phone:", phone);
+  code: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  userId?: string;
+  phone?: string;
+  userType?: "merchant" | "customer" | "both";
+}> {
+  console.log("[OTP] verifyRegistrationOtp called for phone:", phone);
 
   try {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
@@ -65,117 +85,28 @@ export async function verifyLoginOtp(
     const storedPhone = cookieStore.get("otp_phone")?.value;
 
     if (!storedCode || !storedPhone) {
-      console.warn("[OTP] No stored OTP cookie — expired or never sent");
       return { success: false, error: "OTP expired. Please request a new one." };
     }
 
     if (storedPhone !== cleanPhone) {
-      console.warn("[OTP] Phone mismatch: stored", storedPhone, "vs", cleanPhone);
       return { success: false, error: "Phone number mismatch." };
     }
 
     if (storedCode !== code) {
-      console.warn("[OTP] Invalid OTP: expected", storedCode, "got", code);
       return { success: false, error: "Invalid OTP. Please try again." };
     }
 
-    // Clear OTP cookies immediately after successful verification
+    // Clear OTP cookies
     cookieStore.delete("otp_code");
     cookieStore.delete("otp_phone");
     console.log("[OTP] OTP verified successfully for phone:", cleanPhone);
 
-    // ---- 2. Find or create Supabase Auth user ----
+    // ---- 2. Check if user already exists ----
     const admin = getAdminClient();
     if (!admin) {
-      console.warn("[OTP] Admin client unavailable — using localStorage fallback");
-      // If admin client is unavailable (no service role key configured),
-      // return a synthetic userId so the login still works on local/dev
-      return { success: true, userId: `local_${cleanPhone}` };
-    }
-
-    const normalizedPhone = normalizePhone(phone);
-    let userId: string | null = null;
-
-    // 2a. Try to find existing merchant by phone (fast path for returning users)
-    try {
-      const { data: existing } = await (admin.from("merchants") as any)
-        .select("id")
-        .eq("phone", normalizedPhone)
-        .maybeSingle();
-      if (existing?.id) {
-        userId = existing.id;
-        console.log("[OTP] Found existing merchant user:", userId);
-      }
-    } catch (err) {
-      console.warn("[OTP] merchants lookup error (non-fatal):", err);
-    }
-
-    // 2b. If not found in merchants, try creating a new Auth user
-    if (!userId) {
-      try {
-        const { data, error } = await admin.auth.admin.createUser({
-          phone: normalizedPhone,
-          phone_confirm: true,
-        });
-        if (error) throw error;
-        userId = data.user?.id || null;
-        console.log("[OTP] Created new Auth user:", userId);
-      } catch (createErr) {
-        const msg = createErr instanceof Error ? createErr.message : String(createErr);
-        console.warn("[OTP] createUser failed:", msg);
-
-        // 2c. User already exists in Auth but not in merchants table yet
-        if (msg.includes("already exists") || msg.includes("already registered")) {
-          try {
-            const { data: users } = await admin.auth.admin.listUsers({
-              perPage: 10000,
-            });
-            const matched = users?.users?.find(
-              (u: any) => u.phone === normalizedPhone
-            );
-            userId = matched?.id || null;
-            if (userId) {
-              console.log("[OTP] Found existing Auth user via listUsers:", userId);
-            }
-          } catch (listErr) {
-            console.error("[OTP] listUsers also failed:", listErr);
-          }
-        } else {
-          console.error("[OTP] Unrecoverable createUser error:", msg);
-          return { success: false, error: "Failed to verify. Please try again." };
-        }
-      }
-    }
-
-    if (!userId) {
-      console.error("[OTP] Could not determine userId for phone:", cleanPhone);
-      return { success: false, error: "Could not find or create user account" };
-    }
-
-    console.log("[OTP] Verified successfully for user:", userId);
-
-    // ---- 3. Ensure merchant row exists ----
-    try {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com"}/api/merchant/setup`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            merchant_id: userId,
-            phone: normalizedPhone,
-          }),
-        }
-      );
-    } catch (err) {
-      console.warn("[OTP] Merchant setup call failed (non-critical):", err);
-    }
-
-    // ---- 4. Set session cookie (short-lived or persistent) ----
-    try {
-      const { token, maxAge } = rememberMe
-        ? await createSessionToken(userId)
-        : await createSessionTokenWithTTL(userId, 60 * 60); // 1 hour
+      // Dev mode — no DB fallback
+      const localId = `local_${cleanPhone}`;
+      const { token, maxAge } = await createSessionToken(localId);
       cookieStore.set(SESSION_COOKIE, token, {
         httpOnly: true,
         secure: true,
@@ -183,12 +114,57 @@ export async function verifyLoginOtp(
         maxAge,
         path: "/",
       });
-      console.log(`[OTP] Session cookie set for user: ${userId} (${rememberMe ? "30d" : "1hr"})`);
-    } catch (err) {
-      console.warn("[OTP] Failed to set session cookie (non-fatal):", err);
+      return { success: true, userId: localId, phone: cleanPhone, userType: "merchant" };
     }
 
-    // ---- 5. Record session in sessions table ----
+    const existing = await findUserByPhone(cleanPhone);
+    let userId: string | null = null;
+    let userType: "merchant" | "customer" | "both" = "merchant";
+
+    if (existing.merchant) {
+      userId = existing.merchant.id;
+      userType = existing.customer ? "both" : "merchant";
+    } else if (existing.customer) {
+      userId = existing.customer.id;
+      userType = "customer";
+    }
+
+    // ---- 3. Create merchant row if new user ----
+    if (!userId) {
+      // Generate a UUID-like ID for the new merchant
+      userId = crypto.randomUUID();
+      const normalizedPhone = normalizePhone(cleanPhone);
+
+      const { error: upsertError } = await (admin.from("merchants") as any).upsert(
+        {
+          id: userId,
+          phone: normalizedPhone,
+          name: "Shop",
+          business_type: "kirana",
+        },
+        { onConflict: "id" }
+      );
+
+      if (upsertError) {
+        console.error("[OTP] Failed to create merchant row:", upsertError);
+        return { success: false, error: "Could not create account. Please try again." };
+      }
+
+      console.log("[OTP] Created new merchant:", userId);
+      userType = "merchant";
+    }
+
+    // ---- 4. Set session cookie ----
+    const { token, maxAge } = await createSessionToken(userId);
+    cookieStore.set(SESSION_COOKIE, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      maxAge,
+      path: "/",
+    });
+
+    // ---- 5. Record session in DB ----
     try {
       const headersList = await headers();
       const userAgent = headersList.get("user-agent") || "";
@@ -198,15 +174,14 @@ export async function verifyLoginOtp(
         device_info: userAgent,
         ip_address: ip,
       });
-      console.log("[OTP] Session recorded in DB for user:", userId);
-    } catch (err) {
-      console.warn("[OTP] Failed to record session in DB (non-fatal):", err);
+    } catch (e) {
+      console.warn("[OTP] Session record failed:", e);
     }
 
-    return { success: true, userId, phone: normalizedPhone };
+    return { success: true, userId, phone: cleanPhone, userType };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[OTP] Unexpected error in verifyLoginOtp:", msg);
+    console.error("[OTP] verifyRegistrationOtp error:", msg);
     return { success: false, error: "Internal error. Please try again." };
   }
 }
