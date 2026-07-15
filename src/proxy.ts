@@ -116,18 +116,36 @@ export async function proxy(request: NextRequest) {
             .maybeSingle(),
         ]);
 
-        console.log("[Proxy] DB lookup for userId:", validUserId, "| merchant:", !!mRes?.data?.id, "| customer:", !!cRes?.data?.id, "| force_logout_at:", mRes?.data?.force_logout_at);
+        // Gracefully handle missing column (e.g. force_logout_at not deployed yet)
+        if (mRes?.error && !mRes?.data?.id) {
+          console.warn("[Proxy] Merchants query error — retrying without force_logout_at:", mRes.error.message || mRes.error);
+          const fb = await (admin.from("merchants") as any)
+            .select("id")
+            .eq("id", validUserId)
+            .maybeSingle();
+          if (!fb?.error && fb?.data?.id) {
+            mRes.data = fb.data;
+            mRes.error = null;
+          }
+        }
 
-        // Force-logout check
-        if (mRes?.data?.force_logout_at) {
+        const merchantData = mRes?.data ?? null;
+        const merchantErr = mRes?.error && !merchantData ? mRes.error : null;
+        const customerData = cRes?.data ?? null;
+
+        console.log("[Proxy] DB lookup for userId:", validUserId, "| merchant:", !!merchantData?.id, "| customer:", !!customerData?.id, "| force_logout_at:", merchantData?.force_logout_at, "| mErr:", !!merchantErr, "| cErr:", !!cRes?.error);
+
+        // Force-logout check (only if query succeeded)
+        if (merchantData?.force_logout_at) {
           console.log("[Proxy] FORCE LOGOUT detected for userId:", validUserId);
           const res = NextResponse.redirect(new URL("/login?forceLogout=1", request.url));
           res.cookies.delete(SESSION_COOKIE);
           return res;
         }
 
-        if (mRes?.data?.id) userRoles.push("merchant");
-        if (cRes?.data?.id) userRoles.push("customer");
+        // If merchants query errored and we have no merchant data, still trust the session
+        if (merchantData?.id) userRoles.push("merchant");
+        if (customerData?.id) userRoles.push("customer");
       } else {
         console.warn("[Proxy] Missing DB creds (url or service key) — skipping role lookup");
       }

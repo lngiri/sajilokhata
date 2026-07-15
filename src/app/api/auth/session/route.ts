@@ -38,17 +38,39 @@ export async function GET() {
           .maybeSingle(),
       ]);
 
-      const isMerchant = !!mRes?.data?.id;
-      const isCustomer = !!cRes?.data?.id;
+      // Gracefully handle missing column (e.g. force_logout_at not deployed yet)
+      if (mRes?.error && !mRes?.data?.id) {
+        console.warn("[API::session] Merchants query error — retrying without force_logout_at:", mRes.error.message || mRes.error);
+        const fb = await (admin.from("merchants") as any)
+          .select("id")
+          .eq("id", userId)
+          .maybeSingle();
+        if (!fb?.error && fb?.data?.id) {
+          mRes.data = fb.data;
+          mRes.error = null;
+        }
+      }
+
+      const merchantData = mRes?.data ?? null;
+      const merchantErr = mRes?.error && !merchantData ? mRes.error : null;
+      const customerData = cRes?.data ?? null;
+      const isMerchant = !!merchantData?.id;
+      const isCustomer = !!customerData?.id;
 
       console.log("[API::session] DB lookup:", {
         userId,
         isMerchant,
         isCustomer,
-        forceLogoutAt: mRes?.data?.force_logout_at,
-        merchantError: mRes?.error,
-        customerError: cRes?.error,
+        forceLogoutAt: merchantData?.force_logout_at,
+        merchantErrMsg: merchantErr?.message || null,
+        customerErrMsg: cRes?.error?.message || null,
       });
+
+      // If DB errored, fall through to cookie-only auth (skip role/force-logout checks)
+      if (merchantErr && !isMerchant && !isCustomer) {
+        console.log("[API::session] DB lookup errored — trusting cookie for userId:", userId);
+        return NextResponse.json({ userId, forceLogout: false, roles: ["merchant"] });
+      }
 
       if (!isMerchant && !isCustomer) {
         console.log("[API::session] User not found in DB → returning null userId");
@@ -56,7 +78,7 @@ export async function GET() {
       }
 
       // If an admin force-logged-out this merchant, invalidate the session
-      if (mRes?.data?.force_logout_at) {
+      if (merchantData?.force_logout_at) {
         console.log("[API::session] Force logout detected for userId:", userId);
         return NextResponse.json({ userId: null, forceLogout: true, roles: [] });
       }
