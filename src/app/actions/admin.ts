@@ -816,68 +816,202 @@ export async function getSystemHealth(): Promise<{
 // Session Monitor
 // ──────────────────────────────────────────────
 
+export interface SessionRecord {
+  sessionId: string;
+  deviceInfo: string;
+  ipAddress: string;
+  loginTime: string;
+  lastActive: string;
+}
+
+export interface UserSessionResult {
+  userId: string;
+  name: string;
+  businessName: string;
+  phone: string;
+  userType: "merchant" | "customer" | "both";
+  status: string;
+  forceLogoutAt: string | null;
+  sessions: SessionRecord[];
+}
+
 /**
- * Search merchants by phone or name and return their current
- * session state as far as the server can determine.
+ * Search users (merchants AND customers) by phone or name,
+ * then return their active session details from the sessions table.
  */
 export async function searchMerchantSession(
   query: string
-): Promise<
-  {
-    id: string;
-    name: string;
-    businessName: string;
-    phone: string;
-    status: string;
-    lastActive: string | null;
-    forceLogoutAt: string | null;
-  }[]
-> {
+): Promise<UserSessionResult[]> {
   try {
     await requireAdmin();
     const admin = getAdminClient();
     if (!admin || !query.trim()) return [];
 
     const clean = query.trim();
+    const np = normalizePhone(clean);
 
-    // Try phone match first, then name/business_name
-    const phoneQuery = clean.replace(/\D/g, "");
-    let results: any[] = [];
+    // Collect matching user IDs (merchant IDs for session lookup)
+    const userIds = new Set<string>();
+    const userMap = new Map<string, {
+      name: string;
+      businessName: string;
+      phone: string;
+      status: string;
+      forceLogoutAt: string | null;
+      isMerchant: boolean;
+      isCustomer: boolean;
+    }>();
 
-    if (phoneQuery.length >= 6) {
+    // 1a. Search merchants by normalized phone
+    if (np.length >= 6) {
       const { data } = await (admin.from("merchants") as any)
-        .select("id, name, business_name, phone, status, updated_at, force_logout_at")
-        .or(`phone.ilike.%${phoneQuery}%`)
+        .select("id, name, business_name, phone, status, force_logout_at")
+        .or(`phone.ilike.%${np}%`)
         .limit(20);
-      if (data) results = data;
+      if (data) {
+        for (const m of data) {
+          userIds.add(m.id);
+          userMap.set(m.id, {
+            name: m.name || "",
+            businessName: m.business_name || "",
+            phone: m.phone || "",
+            status: m.status || "active",
+            forceLogoutAt: m.force_logout_at || null,
+            isMerchant: true,
+            isCustomer: false,
+          });
+        }
+      }
     }
 
-    if (results.length === 0) {
+    // 1b. If no merchants found by phone, try name/business_name
+    if (userIds.size === 0) {
       const { data } = await (admin.from("merchants") as any)
-        .select("id, name, business_name, phone, status, updated_at, force_logout_at")
+        .select("id, name, business_name, phone, status, force_logout_at")
         .or(`name.ilike.%${clean}%,business_name.ilike.%${clean}%`)
         .limit(20);
-      if (data) results = data;
+      if (data) {
+        for (const m of data) {
+          userIds.add(m.id);
+          userMap.set(m.id, {
+            name: m.name || "",
+            businessName: m.business_name || "",
+            phone: m.phone || "",
+            status: m.status || "active",
+            forceLogoutAt: m.force_logout_at || null,
+            isMerchant: true,
+            isCustomer: false,
+          });
+        }
+      }
     }
 
-    return results.map((m: any) => ({
-      id: m.id,
-      name: m.name || "",
-      businessName: m.business_name || "",
-      phone: m.phone || "",
-      status: m.status || "active",
-      lastActive: m.updated_at || null,
-      forceLogoutAt: m.force_logout_at || null,
-    }));
-  } catch {
+    // 2. Also search customers by phone or name
+    if (np.length >= 6) {
+      const { data } = await (admin.from("customers") as any)
+        .select("id, name, phone")
+        .or(`phone.ilike.%${np}%`)
+        .limit(20);
+      if (data) {
+        for (const c of data) {
+          if (userMap.has(c.id)) {
+            userMap.get(c.id)!.isCustomer = true;
+          } else {
+            userIds.add(c.id);
+            userMap.set(c.id, {
+              name: c.name || "",
+              businessName: "",
+              phone: c.phone || "",
+              status: "active",
+              forceLogoutAt: null,
+              isMerchant: false,
+              isCustomer: true,
+            });
+          }
+        }
+      }
+    }
+
+    if (userIds.size === 0 && np.length >= 6) {
+      const { data } = await (admin.from("customers") as any)
+        .select("id, name, phone")
+        .or(`name.ilike.%${clean}%`)
+        .limit(20);
+      if (data) {
+        for (const c of data) {
+          if (!userMap.has(c.id)) {
+            userIds.add(c.id);
+            userMap.set(c.id, {
+              name: c.name || "",
+              businessName: "",
+              phone: c.phone || "",
+              status: "active",
+              forceLogoutAt: null,
+              isMerchant: false,
+              isCustomer: true,
+            });
+          }
+        }
+      }
+    }
+
+    if (userIds.size === 0) return [];
+
+    // 3. Query sessions for all found merchant IDs
+    const merchantIds = Array.from(userIds);
+    const sessionMap = new Map<string, SessionRecord[]>();
+    try {
+      const { data: sessions } = await (admin.from("sessions") as any)
+        .select("id, merchant_id, device_info, ip_address, created_at, last_active")
+        .in("merchant_id", merchantIds)
+        .order("created_at", { ascending: false });
+      if (sessions) {
+        for (const s of sessions) {
+          const mid = s.merchant_id;
+          if (!sessionMap.has(mid)) sessionMap.set(mid, []);
+          sessionMap.get(mid)!.push({
+            sessionId: s.id,
+            deviceInfo: s.device_info || "",
+            ipAddress: s.ip_address || "",
+            loginTime: s.created_at,
+            lastActive: s.last_active,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("[searchMerchantSession] sessions query failed:", e);
+    }
+
+    // 4. Build results
+    const results: UserSessionResult[] = [];
+    for (const uid of merchantIds) {
+      const u = userMap.get(uid);
+      if (!u) continue;
+      const userType: "merchant" | "customer" | "both" =
+        u.isMerchant && u.isCustomer ? "both" :
+        u.isMerchant ? "merchant" : "customer";
+      results.push({
+        userId: uid,
+        name: u.name,
+        businessName: u.businessName,
+        phone: normalizePhone(u.phone),
+        userType,
+        status: u.status,
+        forceLogoutAt: u.forceLogoutAt,
+        sessions: sessionMap.get(uid) || [],
+      });
+    }
+
+    return results;
+  } catch (err) {
+    console.error("[searchMerchantSession]", err);
     return [];
   }
 }
 
 /**
- * Force-logout a merchant by setting a `force_logout_at` timestamp.
- * The middleware and SessionGuard will check this field; if it's
- * newer than the session creation time, the user is redirected to login.
+ * Force-logout a user by setting a `force_logout_at` timestamp.
+ * Also terminates all their active sessions.
  */
 export async function forceMerchantLogout(
   merchantId: string
@@ -891,6 +1025,15 @@ export async function forceMerchantLogout(
       .update({ force_logout_at: new Date().toISOString() })
       .eq("id", merchantId);
 
+    // Also delete their sessions
+    try {
+      await (admin.from("sessions") as any)
+        .delete()
+        .eq("merchant_id", merchantId);
+    } catch (e) {
+      console.error("[forceMerchantLogout] session delete failed:", e);
+    }
+
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -899,7 +1042,7 @@ export async function forceMerchantLogout(
 }
 
 /**
- * Clear a merchant's force-logout flag so they can log in again.
+ * Clear a user's force-logout flag so they can log in again.
  */
 export async function clearForceLogout(
   merchantId: string
@@ -912,6 +1055,30 @@ export async function clearForceLogout(
     await (admin.from("merchants") as any)
       .update({ force_logout_at: null })
       .eq("id", merchantId);
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Terminate a single session record. Deletes it from the sessions table.
+ */
+export async function terminateSession(
+  sessionId: string,
+  merchantId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await requireAdmin();
+    const admin = getAdminClient();
+    if (!admin) return { success: false, error: "Server config" };
+
+    await (admin.from("sessions") as any)
+      .delete()
+      .eq("id", sessionId)
+      .eq("merchant_id", merchantId); // safety check
 
     return { success: true };
   } catch (err) {

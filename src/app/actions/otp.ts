@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
@@ -186,6 +186,21 @@ export async function verifyLoginOtp(
       console.log(`[OTP] Session cookie set for user: ${userId} (${rememberMe ? "30d" : "1hr"})`);
     } catch (err) {
       console.warn("[OTP] Failed to set session cookie (non-fatal):", err);
+    }
+
+    // ---- 5. Record session in sessions table ----
+    try {
+      const headersList = await headers();
+      const userAgent = headersList.get("user-agent") || "";
+      const ip = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "";
+      await (admin.from("sessions") as any).insert({
+        merchant_id: userId,
+        device_info: userAgent,
+        ip_address: ip,
+      });
+      console.log("[OTP] Session recorded in DB for user:", userId);
+    } catch (err) {
+      console.warn("[OTP] Failed to record session in DB (non-fatal):", err);
     }
 
     return { success: true, userId, phone: normalizedPhone };
