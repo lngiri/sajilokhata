@@ -306,9 +306,10 @@ export async function forgotPinSendOtp(
  */
 export async function registerNewUser(
   phone: string,
-  role: "merchant" | "customer"
+  role: "merchant" | "customer",
+  name?: string
 ): Promise<{ success: boolean; error?: string; userId?: string; phone?: string; userType?: string }> {
-  console.log("[registerNewUser] Registering new", role, "with phone:", phone);
+  console.log("[registerNewUser] Registering new", role, "with phone:", phone, "name:", name);
 
   try {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
@@ -333,7 +334,7 @@ export async function registerNewUser(
         {
           id: userId,
           phone: normalizedPhone,
-          name: "Shop",
+          name: name || "Shop",
           business_type: "kirana",
         },
         { onConflict: "id" }
@@ -392,7 +393,7 @@ export async function forgotPinVerifyOtp(
   phone: string,
   otp: string,
   newPin: string
-): Promise<{ success: boolean; error?: string; redirect?: string }> {
+): Promise<{ success: boolean; error?: string; redirect?: string; userId?: string }> {
   console.log("[forgotPinVerifyOtp] Starting for phone:", phone);
   const { verifyRegistrationOtp } = await import("./otp");
   const verified = await verifyRegistrationOtp(phone, otp);
@@ -417,5 +418,5 @@ export async function forgotPinVerifyOtp(
         ? "/customer/dashboard"
         : "/select-role";
 
-  return { success: true, redirect };
+  return { success: true, redirect, userId: verified.userId };
 }

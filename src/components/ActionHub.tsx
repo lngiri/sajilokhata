@@ -58,7 +58,9 @@ export default function ActionHub() {
   const handleAction = (action: string) => {
     setOpen(false);
     if (action === "home") {
-      window.location.href = "/";
+      if (window.confirm("Are you sure you want to leave this app?")) {
+        window.location.href = "/";
+      }
     } else if (action === "support") {
       window.open(HELP_URL, "_blank", "noopener");
     } else if (action === "refer") {
@@ -100,7 +102,7 @@ export default function ActionHub() {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => handleAction(item.action)}
-                className="flex items-center gap-3 px-5 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all text-left"
+                className="flex items-center gap-3 px-5 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all text-left will-change-transform"
               >
                 <svg
                   className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400"
@@ -125,7 +127,7 @@ export default function ActionHub() {
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blue-600/90 hover:bg-blue-600 text-white shadow-xl flex items-center justify-center backdrop-blur-sm transition-colors"
+        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blue-600/90 hover:bg-blue-600 text-white shadow-xl flex items-center justify-center backdrop-blur-sm transition-colors will-change-transform"
       >
         {open ? (
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

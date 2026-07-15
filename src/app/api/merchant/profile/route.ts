@@ -6,7 +6,7 @@ import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    let { merchant_id, name, business_name, business_type, address, phone } = body;
+    let { merchant_id, name, business_name, business_type, address, phone, photo_url } = body;
     if (phone) phone = normalizePhone(phone);
 
     console.log("[Profile] POST called — body merchant_id:", merchant_id);
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
           ...(business_type !== undefined && { business_type }),
           ...(address !== undefined && { address }),
           ...(phone !== undefined && { phone }),
+          ...(photo_url !== undefined && { photo_url }),
         },
         { onConflict: "id" }
       )

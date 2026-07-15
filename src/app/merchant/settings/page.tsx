@@ -30,8 +30,11 @@ export default function SettingsPage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [authPhone, setAuthPhone] = useState<string | null>(null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
 
   // PIN change state
+  const [showPinChange, setShowPinChange] = useState(false);
   const [currentPin, setCurrentPin] = useState(["", "", "", ""]);
   const [newPin, setNewPin] = useState(["", "", "", ""]);
   const [confirmPin, setConfirmPin] = useState(["", "", "", ""]);
@@ -57,6 +60,7 @@ export default function SettingsPage() {
         setBusinessType(profile.business_type || "kirana");
         setAddress(profile.address || "");
         setPhone(profile.phone || "");
+        setPhotoUrl(profile.photo_url || null);
       }
     } catch (err) {
       console.error("Failed to load merchant profile:", err);
@@ -82,7 +86,6 @@ export default function SettingsPage() {
         business_name: businessName.trim() || undefined,
         business_type: businessType,
         address: address.trim() || undefined,
-        phone: phone || undefined,
       });
       console.log("[Settings] Profile saved successfully");
       addToast("Profile updated successfully.", "success");
@@ -261,18 +264,94 @@ export default function SettingsPage() {
             Shop Profile
           </h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-50">
-            {/* Shop Name */}
+            {/* Profile Photo */}
+            <div className="p-4">
+              <label className="block text-sm font-medium text-[var(--color-text)] mb-3">
+                Profile Photo
+              </label>
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-gray-200">
+                  {photoUrl ? (
+                    <img src={photoUrl} alt="Profile" loading="lazy" className="w-full h-full object-cover" />
+                  ) : (
+                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium cursor-pointer active:scale-[0.98] transition-transform">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                    </svg>
+                    {photoUploading ? "Uploading..." : "Change Photo"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file || !merchantId) return;
+                        setPhotoUploading(true);
+                        try {
+                          const formData = new FormData();
+                          formData.append("file", file);
+                          formData.append("merchantId", merchantId);
+                          const res = await fetch("/api/merchant/upload-photo", { method: "POST", body: formData });
+                          const data = await res.json();
+                          if (data.url) {
+                            setPhotoUrl(data.url);
+                            addToast("Photo updated!", "success");
+                          } else {
+                            addToast(data.error || "Upload failed", "error");
+                          }
+                        } catch {
+                          addToast("Upload failed. Please try again.", "error");
+                        } finally {
+                          setPhotoUploading(false);
+                        }
+                      }}
+                    />
+                  </label>
+                  {photoUrl && (
+                    <button
+                      onClick={async () => {
+                        if (!merchantId) return;
+                        try {
+                          await updateMerchantProfile(merchantId, { photo_url: null });
+                          setPhotoUrl(null);
+                          addToast("Photo removed", "success");
+                        } catch {
+                          addToast("Failed to remove photo", "error");
+                        }
+                      }}
+                      className="block mt-2 text-xs text-red-500 font-medium active:opacity-70"
+                    >
+                      Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+            {/* Shop Name (read-only) */}
             <div className="p-4">
               <label className="block text-sm font-medium text-[var(--color-text)] mb-1.5">
                 Shop Name
               </label>
-              <input
-                type="text"
-                value={merchantName}
-                onChange={(e) => setMerchantName(e.target.value)}
-                placeholder="Enter shop name"
-                className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
-              />
+              {loading ? (
+                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl">
+                  <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ) : (
+                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl text-sm text-gray-700 border border-gray-100 flex items-center gap-2">
+                  <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                  </svg>
+                  <span>{merchantName || "No name set"}</span>
+                </div>
+              )}
             </div>
 
             {/* Business Name */}
@@ -384,24 +463,46 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             PIN Security
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 space-y-4">
-            {renderPinInputs(currentPin, setCurrentPin, "Current PIN")}
-            {renderPinInputs(newPin, setNewPin, "New PIN")}
-            {renderPinInputs(confirmPin, setConfirmPin, "Confirm New PIN")}
-            {pinError && (
-              <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{pinError}</div>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+            {!showPinChange ? (
+              <button
+                onClick={() => { setShowPinChange(true); setPinError(""); }}
+                className="w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                Change PIN
+              </button>
+            ) : (
+              <div className="space-y-4">
+                {renderPinInputs(currentPin, setCurrentPin, "Current PIN")}
+                {renderPinInputs(newPin, setNewPin, "New PIN")}
+                {renderPinInputs(confirmPin, setConfirmPin, "Confirm New PIN")}
+                {pinError && (
+                  <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{pinError}</div>
+                )}
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowPinChange(false); setPinError(""); setCurrentPin(["", "", "", ""]); setNewPin(["", "", "", ""]); setConfirmPin(["", "", "", ""]); }}
+                    className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleChangePin}
+                    disabled={changingPin}
+                    className="flex-1 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {changingPin ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      "Update PIN"
+                    )}
+                  </button>
+                </div>
+              </div>
             )}
-            <button
-              onClick={handleChangePin}
-              disabled={changingPin}
-              className="w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {changingPin ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                "Change PIN"
-              )}
-            </button>
           </div>
         </section>
 

@@ -40,6 +40,7 @@ export async function updateMerchantProfile(
     business_type?: string;
     address?: string;
     phone?: string;
+    photo_url?: string | null;
   }
 ): Promise<any> {
   const res = await fetch("/api/merchant/profile", {

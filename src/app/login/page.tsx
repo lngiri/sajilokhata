@@ -33,6 +33,7 @@ export default function LoginPage() {
   const userInfoRef = useRef<{ userId: string; userType: "merchant" | "customer" | "both" } | null>(null);
   const [selectRoleMode, setSelectRoleMode] = useState<SelectRoleMode>("register");
   const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
+  const [registerName, setRegisterName] = useState("");
 
   const focusPinInput = useCallback((refs: React.MutableRefObject<(HTMLInputElement | null)[]>, idx: number) => {
     if (idx >= 0 && idx < 4) refs.current[idx]?.focus();
@@ -170,6 +171,9 @@ export default function LoginPage() {
       return;
     }
 
+    localStorage.setItem("merchant_id", info.userId);
+    if (phone) localStorage.setItem("merchant_phone", phone);
+
     console.log("[Login] PIN verified, redirecting to", result.redirect);
     window.location.replace(result.redirect || "/merchant/dashboard");
   };
@@ -200,6 +204,9 @@ export default function LoginPage() {
       return;
     }
 
+    localStorage.setItem("merchant_id", info.userId);
+    if (phone) localStorage.setItem("merchant_phone", phone);
+
     const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
     console.log("[Login] PIN set successfully, redirecting to", target);
     window.location.replace(target);
@@ -207,6 +214,10 @@ export default function LoginPage() {
 
   const handleSkipPin = () => {
     const info = userInfoRef.current;
+    if (info?.userId) {
+      localStorage.setItem("merchant_id", info.userId);
+      if (phone) localStorage.setItem("merchant_phone", phone);
+    }
     const target = info?.userType === "customer" ? "/customer/dashboard"
       : info?.userType === "merchant" ? "/merchant/dashboard"
       : info?.userType === "both" ? "/select-role"
@@ -303,8 +314,9 @@ export default function LoginPage() {
 
     if (selectRoleMode === "register") {
       // New user — create account with chosen role
-      console.log("[Login] Creating new", role, "account for phone:", phone);
-      const regResult = await registerNewUser(phone, role);
+      const shopName = role === "merchant" ? registerName.trim() || undefined : undefined;
+      console.log("[Login] Creating new", role, "account for phone:", phone, "name:", shopName);
+      const regResult = await registerNewUser(phone, role, shopName);
       console.log("[Login] registerNewUser result:", JSON.stringify(regResult));
       if (!regResult.success) {
         setError(regResult.error || "Failed to create account");
@@ -403,6 +415,8 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+    if (result.userId) localStorage.setItem("merchant_id", result.userId);
+    if (phone) localStorage.setItem("merchant_phone", phone);
     console.log("[Login] PIN reset, redirecting to", result.redirect);
     window.location.replace(result.redirect || "/merchant/dashboard");
   };
@@ -517,6 +531,20 @@ export default function LoginPage() {
       {/* ── Role Selection — new user or multi-role existing ── */}
       {step === "select_role" && (
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
+          {selectRoleMode === "register" && (
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text)]">Shop Name *</label>
+              <input
+                type="text"
+                value={registerName}
+                onChange={(e) => setRegisterName(e.target.value)}
+                placeholder="e.g. Giri Kirana Store"
+                maxLength={100}
+                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                autoFocus
+              />
+            </div>
+          )}
           <p className="text-sm text-[var(--color-text-muted)] text-center">
             {selectRoleMode === "register"
               ? "Register as"
@@ -527,8 +555,8 @@ export default function LoginPage() {
             {availableRoles.includes("merchant") && (
               <button
                 onClick={() => handleRoleSelect("merchant")}
-                disabled={loading}
-                className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4"
+                disabled={loading || (selectRoleMode === "register" && !registerName.trim())}
+                className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
               >
                 <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
