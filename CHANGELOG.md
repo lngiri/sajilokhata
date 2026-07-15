@@ -7,9 +7,21 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 ## [Unreleased]
 
 ### Added
-- **Migration 022** (`022_ensure_admin_users.sql`): Idempotent migration that creates the `admins` table if missing, recreates RLS policy, and seeds `lngiri@gmail.com` as admin. Safe to run on any DB state.
-- **Admin seed script** (`scripts/seed-admin.ts`): Standalone Node.js script that can be run via `npx tsx scripts/seed-admin.ts` to seed the admin user without running a full migration.
-- **Living documentation**: `ARCHITECTURE.md`, `CHANGELOG.md`, `TODO_LIST.md` — documentation-first protocol established.
+- **Migration 025** (`025_add_merchant_photo_url.sql`): Adds `photo_url TEXT` column to merchants table for profile photo support.
+- **Photo upload endpoint** (`POST /api/merchant/upload-photo`): Stores profile photos in Supabase Storage `app_assets` bucket.
+- **Photo upload UI**: Camera/gallery file picker + preview in merchant settings page.
+- **Draggable ActionHub**: The blue "+" FAB can now be dragged anywhere on the screen (Messenger-style chat head). Turns red when menu is open. Uses pointer events for smooth drag.
+- **ActionHub close/dismiss**: Menu closes on backdrop tap. FAB shows X icon when open for explicit close.
+
+### Changed
+- **Dashboard header**: Shop name is now the primary heading with business name/type and address shown as subtitle. App branding ("SK") is minimal — just a small icon badge.
+- **SyncStatus compact view**: Now shows only a colored dot (green/amber/red/blue) without text labels. Tap to expand for full sync details.
+- **Manual entry cash default**: When entering manual mode from "Record Cash Sales", the Cash Sale tab is now pre-selected.
+- **ActionHub menu positioning**: Menu opens above or below the FAB depending on vertical position to stay within viewport.
+
+### Fixed
+- **Login localStorage**: `merchant_id` and `merchant_phone` now saved before redirect in all PIN flows (`handlePinSubmit`, `handleSetPin`, `handleSkipPin`, `handleForgotOtpSubmit`), fixing "+" button, QR scan, and phone-in-settings issues.
+- **"Not logged in" on save**: Root cause was `getCurrentMerchantId()` returning null because `merchant_id` wasn't set in localStorage on PIN login.
 - **Role selection UI**: New `select_role` step in login flow between OTP and PIN. New users choose Merchant or Customer; existing multi-role users choose which role to log in as.
 - **`registerNewUser(phone, role)` action**: Creates merchant or customer row, sets session cookie, records session. Replaces auto-creation that was inside `verifyRegistrationOtp`.
 - **`scripts/audit-ghost-users.ts`**: Read-only audit to find incomplete registrations (`pin_hash IS NULL`). Run with `--delete` to clean up.

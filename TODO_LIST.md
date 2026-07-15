@@ -8,8 +8,9 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 - [x] Fix `setPin()` creates session cookie (was missing — caused redirect loop after PIN setup)
 - [x] Add console logging at every auth transition (phone → OTP → PIN → set_pin → dashboard)
-- [ ] Verify full auth flow end-to-end in production (phone → OTP → PIN → dashboard)
-- [ ] Verify returning-user flow (phone → PIN → dashboard)
+- [x] Fix login localStorage keys (`merchant_id`/`merchant_phone`) for all PIN flows
+- [x] Verify full auth flow end-to-end in production (phone → OTP → PIN → dashboard)
+- [x] Verify returning-user flow (phone → PIN → dashboard)
 - [ ] Check `SessionGuard.tsx` doesn't conflict with middleware — may cause double-redirect
 - [ ] Test `force_logout_at` kill-switch from admin panel
 - [x] Fix Forgot PIN redirect: now returns type-aware URL (merchant/customer/select-role) instead of hardcoded `/merchant/dashboard`

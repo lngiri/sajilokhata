@@ -1,23 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReferModal from "./ReferModal";
 import FeedbackModal from "./FeedbackModal";
 
 const menuVariants = {
-  hidden: {
-    opacity: 0,
-    scale: 0.8,
-    y: 20,
-    transition: { duration: 0.15 },
-  },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { duration: 0.2, staggerChildren: 0.04 },
-  },
+  hidden: { opacity: 0, scale: 0.8, y: 20, transition: { duration: 0.15 } },
+  visible: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.2, staggerChildren: 0.04 } },
 };
 
 const itemVariants = {
@@ -49,11 +39,61 @@ const ITEMS = [
 ];
 
 const HELP_URL = "https://wa.me/9779800000000";
+const FAB_SIZE = 56;
+const INITIAL_RIGHT = 24;
+const INITIAL_BOTTOM = 24;
 
 export default function ActionHub() {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [referOpen, setReferOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const dragRef = useRef({ startX: 0, startY: 0, elX: 0, elY: 0, moved: false });
+  const fabRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setPos({
+        x: window.innerWidth - FAB_SIZE - INITIAL_RIGHT,
+        y: window.innerHeight - FAB_SIZE - INITIAL_BOTTOM,
+      });
+      setMounted(true);
+    }
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    const el = fabRef.current;
+    if (!el) return;
+    el.setPointerCapture(e.pointerId);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      elX: pos.x,
+      elY: pos.y,
+      moved: false,
+    };
+  }, [pos]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+      dragRef.current.moved = true;
+    }
+    if (dragRef.current.moved) {
+      setPos({
+        x: Math.max(0, Math.min(window.innerWidth - FAB_SIZE, dragRef.current.elX + dx)),
+        y: Math.max(0, Math.min(window.innerHeight - FAB_SIZE, dragRef.current.elY + dy)),
+      });
+    }
+  }, []);
+
+  const handlePointerUp = useCallback(() => {
+    if (!dragRef.current.moved) {
+      setOpen((v) => !v);
+    }
+  }, []);
 
   const handleAction = (action: string) => {
     setOpen(false);
@@ -70,9 +110,12 @@ export default function ActionHub() {
     }
   };
 
+  if (!mounted) return null;
+
+  const menuAbove = pos.y > window.innerHeight / 2;
+
   return (
     <>
-      {/* Backdrop */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -85,7 +128,6 @@ export default function ActionHub() {
         )}
       </AnimatePresence>
 
-      {/* Menu items */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -93,7 +135,13 @@ export default function ActionHub() {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="fixed bottom-24 right-5 z-50 flex flex-col gap-2"
+            className="fixed z-50 flex flex-col gap-2"
+            style={{
+              left: pos.x,
+              ...(menuAbove
+                ? { bottom: window.innerHeight - pos.y + 8 }
+                : { top: pos.y + FAB_SIZE + 8 }),
+            }}
           >
             {ITEMS.map((item) => (
               <motion.button
@@ -104,13 +152,7 @@ export default function ActionHub() {
                 onClick={() => handleAction(item.action)}
                 className="flex items-center gap-3 px-5 py-3 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 transition-all text-left will-change-transform"
               >
-                <svg
-                  className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                >
+                <svg className="w-5 h-5 shrink-0 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
                 </svg>
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap">
@@ -122,12 +164,25 @@ export default function ActionHub() {
         )}
       </AnimatePresence>
 
-      {/* FAB */}
-      <motion.button
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-blue-600/90 hover:bg-blue-600 text-white shadow-xl flex items-center justify-center backdrop-blur-sm transition-colors will-change-transform"
+      <button
+        ref={fabRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        style={{
+          left: pos.x,
+          top: pos.y,
+          touchAction: "none",
+          position: "fixed",
+          zIndex: 50,
+          width: FAB_SIZE,
+          height: FAB_SIZE,
+        }}
+        className={`rounded-full shadow-xl flex items-center justify-center backdrop-blur-sm will-change-transform transition-colors ${
+          open
+            ? "bg-red-500/90 hover:bg-red-500 text-white"
+            : "bg-blue-600/90 hover:bg-blue-600 text-white"
+        }`}
       >
         {open ? (
           <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -138,9 +193,8 @@ export default function ActionHub() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
           </svg>
         )}
-      </motion.button>
+      </button>
 
-      {/* Modals */}
       <ReferModal open={referOpen} onClose={() => setReferOpen(false)} />
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </>

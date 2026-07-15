@@ -170,13 +170,12 @@ export default function SyncStatus() {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors active:scale-95"
+        className="flex items-center justify-center w-6 h-6 rounded-full border transition-colors active:scale-95"
         style={{
           backgroundColor: totalPending > 0 ? "rgb(255 251 235)" : online ? "rgb(240 253 244)" : "rgb(254 242 242)",
           borderColor: totalPending > 0 ? "rgb(253 230 138)" : online ? "rgb(187 247 208)" : "rgb(254 202 202)",
         }}
       >
-        {/* Status dot */}
         <span
           className={`w-2 h-2 rounded-full ${
             syncing
@@ -188,25 +187,6 @@ export default function SyncStatus() {
                 : "bg-red-500 animate-pulse"
           }`}
         />
-        {/* Label */}
-        <span
-          className="text-[10px] font-medium"
-          style={{
-            color: totalPending > 0
-              ? "rgb(217 119 6)"
-              : online
-                ? "rgb(22 163 74)"
-                : "rgb(220 38 38)",
-          }}
-        >
-          {syncing
-            ? "Syncing..."
-            : online
-              ? totalPending > 0
-                ? `${totalPending} pending`
-                : "Synced"
-              : "Offline"}
-        </span>
       </button>
     );
   }

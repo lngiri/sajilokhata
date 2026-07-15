@@ -79,6 +79,7 @@ export default function MerchantScanPage() {
   useEffect(() => {
     if (isManual && step === "scan") {
       setStep("enter");
+      setEntryType("cash");
     }
   }, [isManual, step]);
 

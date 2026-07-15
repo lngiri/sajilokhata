@@ -69,7 +69,13 @@ export default function SettingsPage() {
     }
   };
 
-  const displayPhone = phone || authPhone || "";
+  const formatPhone = (p: string) => {
+    if (!p) return "";
+    const cleaned = p.replace(/^\+977/, "").replace(/^0+/, "");
+    return cleaned ? `+977 ${cleaned}` : "";
+  };
+
+  const displayPhone = formatPhone(phone || authPhone || "");
 
   const handleSave = async () => {
     if (!merchantId) {
@@ -363,7 +369,7 @@ export default function SettingsPage() {
                 type="text"
                 value={businessName}
                 onChange={(e) => setBusinessName(e.target.value)}
-                placeholder="e.g. Giri Kirana Store"
+                placeholder="e.g. ABC Kirana Pasal"
                 className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
               />
             </div>
@@ -415,7 +421,7 @@ export default function SettingsPage() {
                   <svg className="w-4 h-4 text-emerald-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <span>+977 {displayPhone.replace(/^\+977/, "")}</span>
+                  <span>{displayPhone}</span>
                 </div>
               )}
               {!loading && authPhone && authPhone !== phone && (

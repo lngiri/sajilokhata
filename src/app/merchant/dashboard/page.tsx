@@ -43,6 +43,7 @@ interface MerchantProfile {
   name: string;
   business_type: string;
   business_name: string | null;
+  address?: string | null;
   phone?: string;
 }
 
@@ -137,7 +138,7 @@ export default function MerchantDashboard() {
             getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
-            getMerchantProfile(id, "id, name, business_type, business_name, phone").catch(() => null),
+            getMerchantProfile(id, "id, name, business_type, business_name, phone, address").catch(() => null),
           ]);
         if (!mountedRef.current) return;
         setStats(statsData);
@@ -297,34 +298,23 @@ export default function MerchantDashboard() {
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={handleBrandingRefresh}
-            className="text-left active:scale-95 transition-transform flex items-center gap-2"
+            className="text-left active:scale-95 transition-transform flex-1 min-w-0"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
-              <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg font-extrabold text-[var(--color-primary)]">
-                QR Hisab
-              </h1>
-              <p className="text-xs text-[var(--color-text-muted)]">
-                Digital Diary
-              </p>
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Asia/Kathmandu" })}
-              </p>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
+                <span className="text-xs font-bold text-white">SK</span>
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
+                  {merchantProfile?.name || "SajiloKhata"}
+                </h1>
+                <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
+                  {merchantProfile?.address || merchantProfile?.business_type || "Digital Diary"}
+                </p>
+              </div>
             </div>
           </button>
-          <div className="flex items-center gap-2">
-            {merchantProfile && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200">
-                <svg className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
-                </svg>
-                <span className="text-[11px] font-medium text-slate-700 whitespace-nowrap">Shop: {merchantProfile.name}</span>
-              </div>
-            )}
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
             {isRefreshing ? (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50">
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
