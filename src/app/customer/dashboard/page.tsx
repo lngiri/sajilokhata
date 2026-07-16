@@ -705,24 +705,26 @@ export default function CustomerDashboard() {
                 <input
                   type="tel"
                   value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  readOnly
+                  className="w-full mt-1 px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 text-gray-500 cursor-not-allowed"
                 />
+                <p className="text-xs text-[var(--color-text-muted)] mt-1">
+                  Phone number cannot be changed. Contact admin to update.
+                </p>
               </div>
               <button
                 onClick={() => {
-                  if (editPhone) {
+                  if (editName) {
                     setCustomerName(editName);
-                    setCustomerPhone(editPhone);
                     try {
-                      localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name: editName, phone: editPhone }));
+                      localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name: editName, phone: customerPhone }));
                     } catch { /* ignore */ }
                     setShowEditProfile(false);
                     addToast("Profile updated!", "success");
                     loadStats();
                   }
                 }}
-                disabled={!editPhone}
+                disabled={!editName}
                 className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
               >
                 Save
