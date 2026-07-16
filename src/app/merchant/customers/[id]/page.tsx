@@ -33,6 +33,8 @@ interface Transaction {
   status: string;
   description: string | null;
   created_at: string;
+  attachment_url: string | null;
+  initiated_by: string | null;
   ip_address: string | null;
   device_info: string | null;
 }
@@ -73,6 +75,7 @@ export default function CustomerDetailPage() {
   const [auditLoading, setAuditLoading] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showCreditLimitModal) return;
@@ -412,6 +415,17 @@ export default function CustomerDetailPage() {
                         {[tx.device_info, tx.ip_address].filter(Boolean).join(" · ")}
                       </p>
                     )}
+                    {tx.attachment_url && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setPreviewImage(tx.attachment_url); }}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] text-purple-600 font-medium active:opacity-70"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                        </svg>
+                        View Voucher
+                      </button>
+                    )}
                   </div>
                   <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600" : "text-[var(--color-primary)]"}`}>
                     {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}Rs. {tx.amount.toLocaleString()}
@@ -681,6 +695,28 @@ export default function CustomerDetailPage() {
               Cancel
             </button>
           </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 animate-fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white z-10"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={previewImage}
+            alt="Voucher screenshot"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       )}
 

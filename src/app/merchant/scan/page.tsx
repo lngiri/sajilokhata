@@ -61,6 +61,8 @@ export default function MerchantScanPage() {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [quantity, setQuantity] = useState("");
+  const [unit, setUnit] = useState("");
 
   // Load merchant ID and customer list on mount
   useEffect(() => {
@@ -175,6 +177,8 @@ export default function MerchantScanPage() {
             amount: Number(amount),
             type: entryType,
             description: description || null,
+            quantity: quantity ? Number(quantity) : null,
+            unit: (unit || null) as any,
             attachment_url: attachmentUrl,
           });
 
@@ -218,6 +222,8 @@ export default function MerchantScanPage() {
             type: entryType,
             amount: Number(amount),
             description: description || null,
+            quantity: quantity ? Number(quantity) : null,
+            unit: (unit || null) as any,
             attachment_url: attachmentUrl ?? null,
             status: entryType === "cash" ? "approved" : "unverified",
           });
@@ -262,6 +268,8 @@ export default function MerchantScanPage() {
     setSearchQuery("");
     setCustomerLookup("idle");
     setSmsSent(false);
+    setQuantity("");
+    setUnit("");
   };
 
   // ─── Hydration guard: return matching skeleton until mounted ────
@@ -460,6 +468,27 @@ export default function MerchantScanPage() {
                   />
                 </div>
 
+                {/* Quantity / Unit */}
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-[var(--color-text)]">Quantity</label>
+                    <input type="number" min="0" step="any" placeholder="0" value={quantity} onChange={(e) => setQuantity(e.target.value)}
+                      className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-sm font-medium text-[var(--color-text)]">Unit</label>
+                    <select value={unit} onChange={(e) => setUnit(e.target.value)}
+                      className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm appearance-none">
+                      <option value="">—</option>
+                      <option value="liter">Liter</option>
+                      <option value="kg">Kg</option>
+                      <option value="piece">Piece</option>
+                      <option value="jar">Jar</option>
+                      <option value="npr">NPR</option>
+                    </select>
+                  </div>
+                </div>
+
                 {/* Attach Bill / Photo */}
                 <div>
                   <input
@@ -560,6 +589,12 @@ export default function MerchantScanPage() {
                     <div>
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Description</p>
                       <p className="text-sm text-[var(--color-text)]">{description}</p>
+                    </div>
+                  )}
+                  {quantity && unit && (
+                    <div>
+                      <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Quantity</p>
+                      <p className="text-sm font-medium text-[var(--color-text)]">{quantity} {unit}</p>
                     </div>
                   )}
                   {entryType === "cash" ? (

@@ -15,6 +15,7 @@ import {
   deletePendingAttachment,
 } from "@/lib/offline/db";
 import { createCreditLog, findOrCreateCustomer, linkCustomerToMerchant, uploadAttachment } from "@/lib/actions";
+import { updateEntryAttachment } from "@/app/actions/entry";
 
 /** Format a timestamp as a relative string (e.g. "2 min ago") */
 function timeAgo(date: Date): string {
@@ -95,7 +96,8 @@ export default function SyncStatus() {
       for (const att of pendingAttachments) {
         try {
           const blob = await (await fetch(att.data)).blob();
-          await uploadAttachment(att.merchantId, att.logId, blob);
+          const url = await uploadAttachment(att.merchantId, att.logId, blob);
+          await updateEntryAttachment(att.logId, url);
           await deletePendingAttachment(att.id);
           attachmentSynced++;
         } catch {
@@ -136,7 +138,8 @@ export default function SyncStatus() {
         for (const att of pendingAttachments) {
           try {
             const blob = await (await fetch(att.data)).blob();
-            await uploadAttachment(att.merchantId, att.logId, blob);
+            const url = await uploadAttachment(att.merchantId, att.logId, blob);
+            await updateEntryAttachment(att.logId, url);
             await deletePendingAttachment(att.id);
             attachmentSynced++;
           } catch {

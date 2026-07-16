@@ -74,6 +74,8 @@ export async function saveEntry(params: {
   amount: number;
   type: "debit" | "credit" | "cash";
   description?: string | null;
+  quantity?: number | null;
+  unit?: "liter" | "jar" | "kg" | "piece" | "npr" | null;
   attachment_url?: string | null;
 }): Promise<{
   success: boolean;
@@ -140,6 +142,12 @@ export async function saveEntry(params: {
       status: isCash ? "approved" : "unverified",
       approved_at: isCash ? new Date().toISOString() : null,
     };
+    if (params.quantity != null) {
+      insertData.quantity = params.quantity;
+    }
+    if (params.unit) {
+      insertData.unit = params.unit;
+    }
     // Only include attachment_url if it has a value — avoids 42703 crash
     // when the column has not been deployed yet (migration 024).
     if (params.attachment_url) {

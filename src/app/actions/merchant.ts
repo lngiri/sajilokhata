@@ -843,20 +843,23 @@ export async function sendPaymentReminder(
   }
 
   try {
-    const [merchantResult, customerResult, balanceResult] = await Promise.all([
+    const [merchantResult, customerResult, logsResult] = await Promise.all([
       (admin.from("merchants") as any).select("name").eq("id", merchantId).single(),
       (admin.from("customers") as any).select("name, phone").eq("id", customerId).single(),
-      (admin.from("merchant_customers") as any)
-        .select("current_balance")
+      (admin.from("credit_logs") as any)
+        .select("amount, type")
         .eq("merchant_id", merchantId)
         .eq("customer_id", customerId)
-        .maybeSingle(),
+        .eq("status", "approved")
+        .neq("type", "cash"),
     ]);
 
     const shopName = merchantResult.data?.name || "Shop";
     const customerName = customerResult.data?.name || "Customer";
     const customerPhone = customerResult.data?.phone || "";
-    const balance = balanceResult.data?.current_balance || 0;
+    const balance = (logsResult.data || []).reduce((sum: number, l: any) => {
+      return sum + (l.type === "debit" ? l.amount : -l.amount);
+    }, 0);
 
     let message: string;
 
@@ -984,12 +987,38 @@ export async function checkAndSendAutoReminders(
       return { success: true, sent: 0 };
     }
 
-    const { data: customers } = await (admin.from("merchant_customers") as any)
-      .select("customer_id, current_balance, customers!inner(name, phone)")
-      .eq("merchant_id", merchantId)
-      .gt("current_balance", 0);
+    const { data: allLinks } = await (admin.from("merchant_customers") as any)
+      .select("customer_id, customers!inner(id, name, phone)")
+      .eq("merchant_id", merchantId);
 
-    if (!customers || customers.length === 0) {
+    if (!allLinks || allLinks.length === 0) {
+      return { success: true, sent: 0 };
+    }
+
+    const customerIds = allLinks.map((r: any) => r.customer_id);
+
+    const { data: approvedLogs } = await (admin.from("credit_logs") as any)
+      .select("customer_id, amount, type")
+      .eq("merchant_id", merchantId)
+      .eq("status", "approved")
+      .neq("type", "cash")
+      .in("customer_id", customerIds);
+
+    const balanceMap: Record<string, number> = {};
+    for (const log of approvedLogs || []) {
+      const sign = log.type === "debit" ? 1 : -1;
+      balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
+    }
+
+    const customersWithBalance = allLinks
+      .map((r: any) => ({
+        customer_id: r.customer_id,
+        current_balance: balanceMap[r.customer_id] || 0,
+        customers: r.customers,
+      }))
+      .filter((c: any) => c.current_balance > 0);
+
+    if (customersWithBalance.length === 0) {
       return { success: true, sent: 0 };
     }
 
@@ -1004,7 +1033,7 @@ export async function checkAndSendAutoReminders(
     const { sendTransactionSMS } = await import("./sms");
 
     let sent = 0;
-    for (const row of customers) {
+    for (const row of customersWithBalance) {
       const customerName = row.customers?.name || "Customer";
       const customerPhone = row.customers?.phone;
       if (!customerPhone) continue;
@@ -1070,4 +1099,68 @@ export async function getMerchantPaymentMethodsPublic(
     .order("method_type", { ascending: true });
 
   return data || [];
+}
+
+// ──────────────────────────────────────────────
+// Voucher Payment (customer-initiated)
+// ──────────────────────────────────────────────
+
+export async function submitPaymentVoucher(
+  merchantId: string,
+  customerId: string,
+  amount: number,
+  screenshotFile: Blob
+): Promise<{ success: boolean; error?: string; logId?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  if (!amount || amount <= 0) {
+    return { success: false, error: "Amount must be positive" };
+  }
+
+  try {
+    const logId = crypto.randomUUID();
+
+    const fileName = `${merchantId}/${logId}/${Date.now()}.webp`;
+    const { error: uploadError } = await admin.storage
+      .from("transaction_attachments")
+      .upload(fileName, screenshotFile, {
+        contentType: "image/webp",
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error("[submitPaymentVoucher] Upload error:", uploadError);
+      return { success: false, error: `Upload failed: ${uploadError.message}` };
+    }
+
+    const { data: urlData } = admin.storage
+      .from("transaction_attachments")
+      .getPublicUrl(fileName);
+    const publicUrl = urlData.publicUrl;
+
+    const { error: insertError } = await (admin.from("credit_logs") as any)
+      .insert({
+        id: logId,
+        merchant_id: merchantId,
+        customer_id: customerId,
+        amount,
+        type: "credit",
+        status: "pending",
+        initiated_by: "customer",
+        description: "Payment voucher submitted",
+        attachment_url: publicUrl,
+      });
+
+    if (insertError) {
+      console.error("[submitPaymentVoucher] Insert error:", insertError);
+      return { success: false, error: insertError.message };
+    }
+
+    return { success: true, logId };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[submitPaymentVoucher] error:", msg);
+    return { success: false, error: msg };
+  }
 }

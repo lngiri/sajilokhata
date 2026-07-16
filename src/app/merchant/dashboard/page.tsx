@@ -14,6 +14,7 @@ import {
   getMerchantCustomers,
   sendPaymentReminder,
   checkAndSendAutoReminders,
+  updateCreditLogStatus,
 } from "@/app/actions/merchant";
 import {
   acceptEditRequest,
@@ -74,6 +75,7 @@ export default function MerchantDashboard() {
       description: string | null;
       proposed_amount: number | null;
       created_at: string;
+      attachment_url: string | null;
       customer_id: string | null;
       customers: { name: string | null; phone: string } | null;
     }[]
@@ -100,6 +102,7 @@ export default function MerchantDashboard() {
     current_balance: number;
   }>>([]);
   const [remindingCustomerId, setRemindingCustomerId] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
@@ -146,7 +149,7 @@ export default function MerchantDashboard() {
         try {
           const [statsData, pendingData, editRequestedData, activityData, profileData, customersData] = await Promise.all([
             getMerchantStats(id),
-            getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
+            getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, attachment_url, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
             getMerchantProfile(id, "id, name, business_type, business_name, phone, address").catch(() => null),
@@ -683,16 +686,23 @@ export default function MerchantDashboard() {
                       <div
                         key={log.id}
                         className={`bg-white rounded-xl p-4 shadow-sm border flex items-center gap-3 ${
-                          isEditRequest ? "border-blue-200 bg-blue-50/30" : "border-gray-50"
+                          isEditRequest ? "border-blue-200 bg-blue-50/30" : log.attachment_url ? "border-purple-200 bg-purple-50/30" : "border-gray-50"
                         }`}
                       >
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : log.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
                           <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"} />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                            {log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                              {log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
+                            </p>
+                            {log.attachment_url && (
+                              <span className="text-[10px] font-medium text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                                Voucher
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-[var(--color-text-muted)] truncate">
                             {log.description || "No description"}
                           </p>
@@ -700,6 +710,17 @@ export default function MerchantDashboard() {
                             <p className="text-xs text-blue-700 font-medium mt-1">
                               Customer requested amount change from Rs. {log.amount.toLocaleString()} to Rs. {log.proposed_amount.toLocaleString()}
                             </p>
+                          )}
+                          {log.attachment_url && (
+                            <button
+                              onClick={() => setPreviewImage(log.attachment_url)}
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 font-medium active:opacity-70"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
+                              </svg>
+                              View Screenshot
+                            </button>
                           )}
                         </div>
                         <div className="flex-shrink-0 space-y-1">
@@ -734,6 +755,37 @@ export default function MerchantDashboard() {
                                 Reject
                               </button>
                             </>
+                          ) : log.attachment_url ? (
+                            <>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await updateCreditLogStatus(log.id, "approved");
+                                    addToast("Voucher approved! Balance updated.", "success");
+                                    loadData();
+                                  } catch {
+                                    addToast("Failed to approve", "error");
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await updateCreditLogStatus(log.id, "rejected");
+                                    addToast("Voucher rejected", "success");
+                                    loadData();
+                                  } catch {
+                                    addToast("Failed to reject", "error");
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                              >
+                                Reject
+                              </button>
+                            </>
                           ) : (
                             <a href={href} className="block text-right">
                               <p className="font-bold text-[var(--color-text)]">
@@ -753,6 +805,28 @@ export default function MerchantDashboard() {
             </div>
           </div>
         </PullToRefresh>
+
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-fade-in"
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white z-10"
+          >
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <img
+            src={previewImage}
+            alt="Payment voucher screenshot"
+            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
 
       <BottomNav />
       <OtherRolePrompt currentRole="merchant" />

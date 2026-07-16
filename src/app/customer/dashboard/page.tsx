@@ -20,7 +20,7 @@ import {
   createCreditLog,
   getCustomerStats,
 } from "@/lib/actions";
-import { getMerchantPaymentMethodsPublic } from "@/app/actions/merchant";
+import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -60,6 +60,14 @@ export default function CustomerDashboard() {
   // Edit profile modal
   const [showEditProfile, setShowEditProfile] = useState(false);
 
+  // Voucher upload modal
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [voucherMerchant, setVoucherMerchant] = useState<{ id: string; name: string } | null>(null);
+  const [voucherAmount, setVoucherAmount] = useState("");
+  const [voucherFile, setVoucherFile] = useState<File | null>(null);
+  const [voucherPreview, setVoucherPreview] = useState<string | null>(null);
+  const [voucherUploading, setVoucherUploading] = useState(false);
+
   // Payment methods modal
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [paymentMethodsMerchant, setPaymentMethodsMerchant] = useState<{ id: string; name: string } | null>(null);
@@ -76,6 +84,26 @@ export default function CustomerDashboard() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
+
+  const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w <= maxDim && h <= maxDim) { resolve(file); return; }
+        const ratio = Math.min(maxDim / w, maxDim / h);
+        w = Math.round(w * ratio); h = Math.round(h * ratio);
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob); else reject(new Error("Canvas toBlob failed"));
+        }, "image/webp", 0.85);
+      };
+      img.onerror = () => reject(new Error("Image load failed"));
+      img.src = URL.createObjectURL(file);
+    });
 
   function maskPhone(phone: string): string {
     if (phone.length < 8) return phone;
@@ -231,6 +259,7 @@ export default function CustomerDashboard() {
           type: entryType,
           status: "pending",
           sync_status: "online",
+          initiated_by: "customer",
         });
       } else {
         await savePendingLog({
@@ -399,25 +428,41 @@ export default function CustomerDashboard() {
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                       <span className="font-semibold">Rs. {rel.current_balance.toLocaleString()}</span>
                       {rel.current_balance > 0 && (
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
-                            setShowPaymentMethods(true);
-                            setPaymentMethodsLoading(true);
-                            getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
-                              setPaymentMethods(methods);
-                              setPaymentMethodsLoading(false);
-                            }).catch(() => {
-                              setPaymentMethods([]);
-                              setPaymentMethodsLoading(false);
-                            });
-                          }}
-                          className="px-2.5 py-1 bg-white/20 text-white rounded-lg text-[10px] font-medium active:bg-white/30 transition-colors"
-                        >
-                          Pay Now
-                        </button>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                              setShowPaymentMethods(true);
+                              setPaymentMethodsLoading(true);
+                              getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
+                                setPaymentMethods(methods);
+                                setPaymentMethodsLoading(false);
+                              }).catch(() => {
+                                setPaymentMethods([]);
+                                setPaymentMethodsLoading(false);
+                              });
+                            }}
+                            className="px-2.5 py-1 bg-white/20 text-white rounded-lg text-[10px] font-medium active:bg-white/30 transition-colors"
+                          >
+                            Pay Now
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setVoucherMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                              setVoucherAmount("");
+                              setVoucherFile(null);
+                              setVoucherPreview(null);
+                              setShowVoucherModal(true);
+                            }}
+                            className="px-2.5 py-1 bg-purple-500/20 text-purple-200 rounded-lg text-[10px] font-medium active:bg-purple-500/30 transition-colors"
+                          >
+                            Upload Voucher
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -681,6 +726,125 @@ export default function CustomerDashboard() {
                 className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
               >
                 Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== VOUCHER UPLOAD MODAL ===== */}
+      {showVoucherModal && voucherMerchant && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 animate-fade-in"
+          onClick={() => setShowVoucherModal(false)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Upload Payment Voucher</h3>
+              <button onClick={() => setShowVoucherModal(false)} className="p-1">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-sm text-[var(--color-text-muted)] mb-4">
+              Paying <strong>{voucherMerchant.name}</strong>? Upload a screenshot of your payment confirmation (bank transfer, e-wallet, etc.).
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Amount Paid (Rs.)</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={voucherAmount}
+                  onChange={(e) => setVoucherAmount(e.target.value)}
+                  placeholder="e.g. 500"
+                  className="w-full px-4 py-3 bg-white rounded-xl text-lg font-bold border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Payment Screenshot</label>
+                <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer active:bg-gray-50 transition-colors">
+                  {voucherPreview ? (
+                    <div className="relative w-full">
+                      <img src={voucherPreview} alt="Voucher preview" className="w-full max-h-40 object-contain rounded-lg" />
+                      <button
+                        onClick={() => { setVoucherFile(null); setVoucherPreview(null); }}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                      </svg>
+                      <p className="text-sm text-[var(--color-text-muted)]">Tap to upload screenshot</p>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setVoucherFile(file);
+                        setVoucherPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
+              <button
+                onClick={async () => {
+                  if (!voucherMerchant || !voucherAmount || !voucherFile) return;
+                  setVoucherUploading(true);
+                  try {
+                    const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
+                    if (!customer?.id) {
+                      addToast("Customer lookup failed", "error");
+                      setVoucherUploading(false);
+                      return;
+                    }
+                    const compressed = await resizeImage(voucherFile, 1024);
+                    const result = await submitPaymentVoucher(
+                      voucherMerchant.id,
+                      customer.id,
+                      Number(voucherAmount),
+                      compressed
+                    );
+                    if (result.success) {
+                      addToast("Voucher submitted! Awaiting merchant approval.", "success");
+                      setShowVoucherModal(false);
+                      loadStats();
+                    } else {
+                      addToast(result.error || "Failed to submit", "error");
+                    }
+                  } catch {
+                    addToast("Failed to submit voucher", "error");
+                  } finally {
+                    setVoucherUploading(false);
+                  }
+                }}
+                disabled={voucherUploading || !voucherAmount || !voucherFile}
+                className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {voucherUploading ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  "Submit Voucher"
+                )}
               </button>
             </div>
           </div>

@@ -19,6 +19,7 @@ export type TransactionStatus = "pending" | "unverified" | "approved" | "dispute
 export type SyncStatus = "online" | "offline_pending";
 export type ActorType = "merchant" | "customer" | "admin";
 export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected" | "pin_reset";
+export type InitiatedBy = "merchant" | "customer";
 
 export type PaymentMethodType = "fonepay" | "esewa" | "khalti" | "nepalpay" | "bank_deposit" | "cash";
 export type ReminderType = "sms" | "share_link";
@@ -152,6 +153,7 @@ export interface Database {
           disputed_reason: string | null;
           proposed_amount: number | null;
           attachment_url: string | null;
+          initiated_by: InitiatedBy;
           created_at: string;
           approved_at: string | null;
           updated_at: string;
@@ -173,6 +175,7 @@ export interface Database {
           disputed_reason?: string | null;
           proposed_amount?: number | null;
           attachment_url?: string | null;
+          initiated_by?: InitiatedBy;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
@@ -194,6 +197,7 @@ export interface Database {
           disputed_reason?: string | null;
           proposed_amount?: number | null;
           attachment_url?: string | null;
+          initiated_by?: InitiatedBy;
           created_at?: string;
           approved_at?: string | null;
           updated_at?: string;
