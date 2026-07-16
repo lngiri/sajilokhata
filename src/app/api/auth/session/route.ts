@@ -14,7 +14,9 @@ export async function GET() {
     return NextResponse.json({ userId: null, forceLogout: false, roles: [] });
   }
 
-  const userId = await verifySessionToken(raw);
+  const session = await verifySessionToken(raw);
+  const userId = session?.userId ?? null;
+  const sessionIat = session?.iat ?? null;
   console.log("[API::session] Token verify result:", userId ? `userId=${userId}` : "INVALID-TOKEN");
 
   if (!userId) {
@@ -77,10 +79,13 @@ export async function GET() {
         return NextResponse.json({ userId: null, forceLogout: false, roles: [] });
       }
 
-      // If an admin force-logged-out this merchant, invalidate the session
-      if (merchantData?.force_logout_at) {
-        console.log("[API::session] Force logout detected for userId:", userId);
-        return NextResponse.json({ userId: null, forceLogout: true, roles: [] });
+      // Force-logout check: compare session iat vs force_logout_at
+      if (sessionIat !== null && merchantData?.force_logout_at) {
+        const forceLogoutAt = new Date(merchantData.force_logout_at).getTime();
+        if (sessionIat < forceLogoutAt) {
+          console.log("[API::session] FORCE LOGOUT — session issued before force_logout_at:", { sessionIat, forceLogoutAt });
+          return NextResponse.json({ userId: null, forceLogout: true, roles: [] });
+        }
       }
 
       const roles: ("merchant" | "customer")[] = [];

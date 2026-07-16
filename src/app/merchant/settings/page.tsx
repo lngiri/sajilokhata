@@ -73,7 +73,19 @@ export default function SettingsPage() {
     { key: "nepalpay", label: "NepalPay", icon: "🏧", hasQr: true },
     { key: "bank_deposit", label: "Bank Deposit", icon: "🏛️", hasQr: false },
     { key: "cash", label: "Cash", icon: "💵", hasQr: false },
-  ];
+  ] as const;
+
+  function canToggleMethod(methodType: string, method: Record<string, any> | undefined): boolean {
+    if (!method) return false;
+    if (methodType === "bank_deposit") {
+      return !!(method.account_holder && method.account_number);
+    }
+    if (["fonepay", "esewa", "khalti", "nepalpay"].includes(methodType)) {
+      return !!method.qr_url;
+    }
+    // Cash — always toggleable
+    return true;
+  }
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
     new Promise((resolve, reject) => {
@@ -620,6 +632,11 @@ export default function SettingsPage() {
                           checked={isActive}
                           onChange={async (e) => {
                             if (!merchantId) return;
+                            // Validate required details before enabling
+                            if (e.target.checked && !canToggleMethod(pt.key, method)) {
+                              addToast("Please expand the payment method and enter your details first!", "warning");
+                              return;
+                            }
                             setSavingPaymentMethod(pt.key);
                             try {
                               await upsertMerchantPaymentMethod(merchantId, pt.key, {

@@ -17,7 +17,8 @@ async function requireMerchant(): Promise<string> {
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   if (!raw) throw new Error("Not logged in");
 
-  const userId = await verifySessionToken(raw);
+  const session = await verifySessionToken(raw);
+  const userId = session?.userId ?? null;
   if (!userId) throw new Error("Session expired");
 
   return userId;

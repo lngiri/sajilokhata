@@ -216,6 +216,27 @@ export async function updatePendingLogSyncStatus(
   }
 }
 
+/** Mark a pending log as currently being synced */
+export async function markLogAsSyncing(id: string) {
+  await updatePendingLogSyncStatus(id, "syncing");
+}
+
+/** Mark a pending log as failed (will be retried later) */
+export async function markLogAsFailed(id: string) {
+  await updatePendingLogSyncStatus(id, "failed");
+}
+
+/** Get count of pending logs by sync status */
+export async function getPendingLogsCount(status?: SyncStatus): Promise<number> {
+  const db = await getDB();
+  if (status) {
+    const all = await db.getAll("pendingLogs");
+    return all.filter((l) => l.syncStatus === status).length;
+  }
+  const all = await db.getAll("pendingLogs");
+  return all.length;
+}
+
 // ============================================================
 // Pending Attachments (offline photo capture)
 // ============================================================

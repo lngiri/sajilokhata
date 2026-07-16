@@ -76,11 +76,14 @@ export async function proxy(request: NextRequest) {
 
   // 2. Custom session cookie — fully independent from Supabase above
   const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
+  let sessionIat: number | null = null;
   console.log("[Proxy] Session cookie present:", !!rawSession, "| cookie name:", SESSION_COOKIE);
   try {
     if (rawSession) {
       const start = Date.now();
-      validUserId = await verifySessionToken(rawSession);
+      const session = await verifySessionToken(rawSession);
+      validUserId = session?.userId ?? null;
+      sessionIat = session?.iat ?? null;
       const elapsed = Date.now() - start;
       console.log("[Proxy] Session token verified:", validUserId ? `userId=${validUserId}` : "INVALID-TOKEN", "| elapsed:", elapsed, "ms", "| token prefix:", rawSession.slice(0, 20));
     }
@@ -135,12 +138,15 @@ export async function proxy(request: NextRequest) {
 
         console.log("[Proxy] DB lookup for userId:", validUserId, "| merchant:", !!merchantData?.id, "| customer:", !!customerData?.id, "| force_logout_at:", merchantData?.force_logout_at, "| mErr:", !!merchantErr, "| cErr:", !!cRes?.error);
 
-        // Force-logout check (only if query succeeded)
-        if (merchantData?.force_logout_at) {
-          console.log("[Proxy] FORCE LOGOUT detected for userId:", validUserId);
-          const res = NextResponse.redirect(new URL("/login?forceLogout=1", request.url));
-          res.cookies.delete(SESSION_COOKIE);
-          return res;
+        // Force-logout check: compare session iat vs force_logout_at
+        if (sessionIat !== null && merchantData?.force_logout_at) {
+          const forceLogoutAt = new Date(merchantData.force_logout_at).getTime();
+          if (sessionIat < forceLogoutAt) {
+            console.log("[Proxy] FORCE LOGOUT — session issued before force_logout_at:", { sessionIat, forceLogoutAt });
+            const res = NextResponse.redirect(new URL("/login?forceLogout=1", request.url));
+            res.cookies.delete(SESSION_COOKIE);
+            return res;
+          }
         }
 
         // If merchants query errored and we have no merchant data, still trust the session

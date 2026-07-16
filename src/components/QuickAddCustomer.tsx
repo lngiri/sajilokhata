@@ -6,7 +6,6 @@ import {
   addCustomerForMerchant,
   checkCustomerByPhone,
   checkCustomerOnboarded,
-  sendOnboardingSMS,
 } from "@/app/actions/customer";
 
 interface QuickAddCustomerProps {
@@ -90,7 +89,6 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
         sentRef.current = true;
         checkCustomerOnboarded(trimmedPhone).then(({ onboarded }) => {
           if (!onboarded) {
-            sendOnboardingSMS(trimmedPhone, customer.name || trimmedName).catch(() => {});
           }
         });
       }

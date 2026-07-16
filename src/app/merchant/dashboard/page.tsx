@@ -389,6 +389,40 @@ export default function MerchantDashboard() {
         </a>
       )}
 
+      {/* Business Name Prompt */}
+      {!loading && merchantProfile && (
+        (() => {
+          const name = merchantProfile.name?.trim();
+          const needsUpdate = !name || name.toLowerCase() === "shop";
+          if (!needsUpdate) return null;
+          return (
+            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-blue-900">
+                    Please update your business name from &apos;Shop&apos; to your actual shop name so your customers recognize you on QRHisab!
+                  </p>
+                  <a
+                    href="/merchant/settings"
+                    className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium active:scale-[0.97] transition-transform hover:bg-blue-700"
+                  >
+                    Update Profile Now
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })()
+      )}
+
       {loadError && !loading && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-50 flex items-center justify-center">

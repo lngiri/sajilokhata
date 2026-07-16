@@ -47,7 +47,7 @@ export async function sendRegistrationOtp(
 
     // Send SMS
     const { sendTransactionSMS } = await import("./sms");
-    const message = `Your OTP for QRHisab is: ${code}. Valid for 5 minutes.`;
+    const message = `Your QRHisab OTP is ${code}. Track your credits & transactions securely by logging into qrhisab.com now.`;
     return sendTransactionSMS(cleanPhone, message);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

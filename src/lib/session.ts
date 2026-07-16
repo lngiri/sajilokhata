@@ -41,8 +41,9 @@ export async function createSessionToken(userId: string): Promise<{
   token: string;
   maxAge: number;
 }> {
-  const expiresAt = Date.now() + SESSION_DURATION * 1000;
-  const payload = `${userId}.${expiresAt}`;
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + SESSION_DURATION * 1000;
+  const payload = `${userId}.${issuedAt}.${expiresAt}`;
   const signature = await hmacSign(payload);
   return { token: `${payload}.${signature}`, maxAge: SESSION_DURATION };
 }
@@ -55,23 +56,39 @@ export async function createSessionTokenWithTTL(
   userId: string,
   ttlSeconds: number
 ): Promise<{ token: string; maxAge: number }> {
-  const expiresAt = Date.now() + ttlSeconds * 1000;
-  const payload = `${userId}.${expiresAt}`;
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + ttlSeconds * 1000;
+  const payload = `${userId}.${issuedAt}.${expiresAt}`;
   const signature = await hmacSign(payload);
   return { token: `${payload}.${signature}`, maxAge: ttlSeconds };
 }
 
 export async function verifySessionToken(
   token: string
-): Promise<string | null> {
+): Promise<{ userId: string; iat: number | null } | null> {
   const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  const [userId, expiresAt, signature] = parts;
-  const payload = `${userId}.${expiresAt}`;
-  const expected = await hmacSign(payload);
-  if (signature !== expected) return null;
-  if (Date.now() > Number(expiresAt)) return null;
-  return userId;
+
+  // New format: userId.iat.expiresAt.signature (4 parts)
+  if (parts.length === 4) {
+    const [userId, iat, expiresAt, signature] = parts;
+    const payload = `${userId}.${iat}.${expiresAt}`;
+    const expected = await hmacSign(payload);
+    if (signature !== expected) return null;
+    if (Date.now() > Number(expiresAt)) return null;
+    return { userId, iat: Number(iat) };
+  }
+
+  // Legacy format (backward compat): userId.expiresAt.signature (3 parts)
+  if (parts.length === 3) {
+    const [userId, expiresAt, signature] = parts;
+    const payload = `${userId}.${expiresAt}`;
+    const expected = await hmacSign(payload);
+    if (signature !== expected) return null;
+    if (Date.now() > Number(expiresAt)) return null;
+    return { userId, iat: Number(expiresAt) - SESSION_DURATION * 1000 };
+  }
+
+  return null;
 }
 
 export { SESSION_COOKIE, SESSION_DURATION };

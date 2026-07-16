@@ -23,7 +23,8 @@ export async function POST(request: NextRequest) {
     if (!raw) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
-    const userId = await verifySessionToken(raw);
+    const session = await verifySessionToken(raw);
+    const userId = session?.userId ?? null;
     if (!userId || userId !== merchantId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }

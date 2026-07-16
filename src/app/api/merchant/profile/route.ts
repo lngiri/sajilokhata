@@ -16,7 +16,8 @@ export async function POST(request: Request) {
     const sessionCookie = parseCookie(cookieHeader, SESSION_COOKIE);
     let sessionUserId: string | null = null;
     if (sessionCookie) {
-      sessionUserId = await verifySessionToken(sessionCookie);
+      const session = await verifySessionToken(sessionCookie);
+      sessionUserId = session?.userId ?? null;
       console.log("[Profile] Session cookie valid — userId:", sessionUserId);
     } else {
       console.log("[Profile] No session cookie found");

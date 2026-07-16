@@ -9,6 +9,8 @@ const STATIC_ASSETS = [
   "/merchant/logs",
   "/merchant/qr",
   "/merchant/settings",
+  "/merchant/billing",
+  "/onboard",
   "/manifest.json",
 ];
 const AUTH_ROUTES = ["/login", "/api/auth/"];

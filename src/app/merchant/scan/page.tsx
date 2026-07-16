@@ -13,7 +13,7 @@ import {
   uploadAttachment,
 } from "@/app/actions/merchant";
 import { compressImage, blobToBase64 } from "@/lib/image";
-import { checkCustomerByPhone, addCustomerForMerchant, sendOnboardingSMS } from "@/app/actions/customer";
+import { checkCustomerByPhone, addCustomerForMerchant } from "@/app/actions/customer";
 
 import { savePendingLog, savePendingAttachment } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
@@ -246,7 +246,15 @@ export default function MerchantScanPage() {
       }
 
       setStep("success");
-      addToast(isCash ? "Cash sale recorded!" : "Entry saved! Customer notified.", "success");
+      const wasOffline = !navigator.onLine;
+      addToast(
+        wasOffline
+          ? "Entry saved offline. Will sync when internet returns."
+          : isCash
+            ? "Cash sale recorded!"
+            : "Entry saved! Customer notified.",
+        "success"
+      );
     } catch (err) {
       console.error("Failed to save entry:", err);
       addToast("Failed to save. Please try again.", "error");
@@ -395,9 +403,6 @@ export default function MerchantScanPage() {
                             setCustomerId(result.customer.id);
                             setCustomerPhone(result.customer.phone);
                             setCustomerName(result.customer.name || "");
-                            // Send onboarding SMS
-                            sendOnboardingSMS(searchQuery, result.customer.name || undefined)
-                              .catch(() => {});
                             setSmsSent(true);
                             setCustomerLookup("found");
                             addToast("Customer added! SMS sent with registration link.", "success");

@@ -54,16 +54,14 @@ export async function checkCustomerOnboarded(
 
 export async function sendOnboardingSMS(
   phone: string,
-  customerName?: string
+  _customerName?: string
 ): Promise<{ success: boolean; error?: string }> {
   const cleanPhone = phone.replace(/\D/g, "").slice(-10);
   if (cleanPhone.length !== 10) {
     return { success: false, error: "Invalid phone" };
   }
 
-  const greeting = customerName ? `Dear ${customerName}, ` : "";
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
-  const message = `${greeting}You have been added as a customer on QRHisab. Please onboard using this link: ${siteUrl}/onboard?phone=${cleanPhone}`;
+  const message = "Welcome to QRHisab! You have been added. Track your ledger and transaction history at qrhisab.com.";
 
   return sendTransactionSMS(cleanPhone, message);
 }
@@ -95,6 +93,9 @@ export async function addCustomerForMerchant(
         return { success: false, error: `DB error: ${error.message}` };
       }
       customer = inserted;
+
+      // Non-blocking onboarding SMS — fire-and-forget, don't block the response
+      sendOnboardingSMS(normalized, name).catch(() => {});
     }
 
     // Link to merchant

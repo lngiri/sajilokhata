@@ -22,7 +22,8 @@ export async function heartbeatSession(): Promise<{ ok: boolean }> {
     const raw = cookieStore.get(SESSION_COOKIE)?.value;
     if (!raw) return { ok: false };
 
-    const userId = await verifySessionToken(raw);
+    const session = await verifySessionToken(raw);
+    const userId = session?.userId ?? null;
     if (!userId) return { ok: false };
 
     // Re-issue with fresh 30-day TTL
