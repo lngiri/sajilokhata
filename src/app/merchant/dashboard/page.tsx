@@ -29,7 +29,7 @@ import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
-const POLL_INTERVAL = 30_000;
+const POLL_INTERVAL = 45_000;
 
 /** Format a timestamp as a relative time string (e.g. "2 min ago") */
 function timeAgo(dateString: string): string {
@@ -228,10 +228,10 @@ export default function MerchantDashboard() {
     };
   }, [loadData]);
 
-  // Close notification dropdown on click outside
+  // Close notification dropdown on click outside (mobile & desktop)
   useEffect(() => {
     if (!showNotifications) return;
-    const handler = (e: MouseEvent) => {
+    const handler = (e: PointerEvent) => {
       if (notificationRef.current && !notificationRef.current.contains(e.target as Node)) {
         setShowNotifications(false);
       }
@@ -239,10 +239,10 @@ export default function MerchantDashboard() {
     const escHandler = (e: KeyboardEvent) => {
       if (e.key === "Escape") setShowNotifications(false);
     };
-    document.addEventListener("mousedown", handler);
+    document.addEventListener("pointerdown", handler);
     window.addEventListener("keydown", escHandler);
     return () => {
-      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("pointerdown", handler);
       window.removeEventListener("keydown", escHandler);
     };
   }, [showNotifications]);
@@ -375,7 +375,7 @@ export default function MerchantDashboard() {
                 </h1>
                 <p className="text-[10px] text-emerald-600 truncate leading-tight flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                  qrhisab.com &middot; Active
+                  {merchantProfile?.business_name?.trim() || merchantProfile?.name || "Shop"}{merchantProfile?.address ? ` · ${merchantProfile.address}` : ""}
                 </p>
               </div>
             </div>
@@ -415,7 +415,7 @@ export default function MerchantDashboard() {
                     {smsBalance} SMS
                   </a>
                 )}
-                <div className="relative" ref={notificationRef}>
+                <div ref={notificationRef}>
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="p-1.5 active:scale-90 transition-transform relative"
@@ -427,69 +427,6 @@ export default function MerchantDashboard() {
                       <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
                     )}
                   </button>
-
-                  {showNotifications && (
-                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in">
-                      <div className="p-3 border-b border-gray-100">
-                        <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
-                      </div>
-                      <div className="max-h-64 overflow-y-auto">
-                        {pendingLogs.length > 0 ? (
-                          pendingLogs.slice(0, 3).map((log) => (
-                            <a
-                              key={log.id}
-                              href="/merchant/ledger"
-                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-bold text-amber-600">!</span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-[var(--color-text)] truncate">
-                                  {log.customers?.name || log.customers?.phone || "Unknown"} requested Rs. {log.amount.toLocaleString()}
-                                </p>
-                                <p className="text-[10px] text-[var(--color-text-muted)]">
-                                  {timeAgo(log.created_at)}
-                                </p>
-                              </div>
-                            </a>
-                          ))
-                        ) : recentActivity.length > 0 ? (
-                          recentActivity.slice(0, 3).map((log) => (
-                            <a
-                              key={log.id}
-                              href="/merchant/ledger"
-                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-                                <span className="text-xs font-bold text-gray-500">
-                                  {(log.customers?.name || log.customers?.phone || "?").charAt(0).toUpperCase()}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-medium text-[var(--color-text)] truncate">
-                                  {log.customers?.name || log.customers?.phone || "Unknown"} — {log.type === "debit" ? "Debit" : log.type === "credit" ? "Payment" : "Cash"}
-                                </p>
-                                <p className="text-[10px] text-[var(--color-text-muted)]">
-                                  Rs. {log.amount.toLocaleString()} · {timeAgo(log.created_at)}
-                                </p>
-                              </div>
-                            </a>
-                          ))
-                        ) : (
-                          <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
-                            No notifications
-                          </div>
-                        )}
-                      </div>
-                      <a
-                        href="/merchant/ledger"
-                        className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                      >
-                        View All
-                      </a>
-                    </div>
-                  )}
                 </div>
                 <SyncStatus />
                 <RoleSwitcher />
@@ -498,6 +435,73 @@ export default function MerchantDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Notification dropdown (outside sticky header to avoid stacking context issues) */}
+      {showNotifications && (
+        <div
+          className="fixed right-4 top-16 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100] animate-fade-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {pendingLogs.length > 0 ? (
+              pendingLogs.slice(0, 3).map((log) => (
+                <a
+                  key={log.id}
+                  href="/merchant/ledger"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-amber-600">!</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                      {log.customers?.name || log.customers?.phone || "Unknown"} requested Rs. {log.amount.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      {timeAgo(log.created_at)}
+                    </p>
+                  </div>
+                </a>
+              ))
+            ) : recentActivity.length > 0 ? (
+              recentActivity.slice(0, 3).map((log) => (
+                <a
+                  key={log.id}
+                  href="/merchant/ledger"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-gray-500">
+                      {(log.customers?.name || log.customers?.phone || "?").charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                      {log.customers?.name || log.customers?.phone || "Unknown"} — {log.type === "debit" ? "Debit" : log.type === "credit" ? "Payment" : "Cash"}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      Rs. {log.amount.toLocaleString()} · {timeAgo(log.created_at)}
+                    </p>
+                  </div>
+                </a>
+              ))
+            ) : (
+              <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                No notifications
+              </div>
+            )}
+          </div>
+          <a
+            href="/merchant/ledger"
+            className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          >
+            View All
+          </a>
+        </div>
+      )}
 
       {/* Pending banner */}
       {!loading && pendingLogs.length > 0 && (
@@ -523,8 +527,7 @@ export default function MerchantDashboard() {
       {!loading && merchantProfile && (
         (() => {
           const name = merchantProfile.name?.trim();
-          const businessName = merchantProfile.business_name?.trim();
-          const needsUpdate = !name || name.toLowerCase() === "shop" || !businessName || businessName.toLowerCase() === "shop";
+          const needsUpdate = !name || name.toLowerCase() === "shop";
           if (!needsUpdate) return null;
           return (
             <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">

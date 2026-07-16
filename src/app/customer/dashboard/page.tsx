@@ -85,6 +85,15 @@ export default function CustomerDashboard() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<Array<{
+    id: string;
+    shopName: string;
+    amount: number;
+    status: string;
+    created_at: string;
+  }>>([]);
+  const customerNotificationRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
@@ -195,6 +204,9 @@ export default function CustomerDashboard() {
                 `${verb} Rs. ${Number(payload.new?.amount || 0).toLocaleString()} request`,
                 newStatus === "approved" ? "success" : "warning"
               );
+              setNotifications((prev) =>
+                [{ id: payload.new?.id || crypto.randomUUID(), shopName: payload.new?.description || "Shop", amount: payload.new?.amount || 0, status: newStatus, created_at: new Date().toISOString() }, ...prev].slice(0, 10)
+              );
               loadStatsRef();
             }
           }
@@ -212,6 +224,25 @@ export default function CustomerDashboard() {
       }
     };
   }, [initialized, customerPhone, addToast]);
+
+  // Close customer notification dropdown on click outside
+  useEffect(() => {
+    if (!showNotifications) return;
+    const handler = (e: PointerEvent) => {
+      if (customerNotificationRef.current && !customerNotificationRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowNotifications(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", escHandler);
+    };
+  }, [showNotifications]);
 
   const loadStats = async () => {
     if (!customerPhone) return;
@@ -343,6 +374,19 @@ export default function CustomerDashboard() {
           <div className="flex items-center gap-2">
             <SyncStatus />
             <RoleSwitcher />
+            <div ref={customerNotificationRef}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="p-1.5 active:scale-90 transition-transform relative"
+              >
+                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+                {notifications.length > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                )}
+              </button>
+            </div>
             {customerPhone && (
               <button
                 onClick={() => router.push("/customer/settings")}
@@ -354,6 +398,57 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Customer notification dropdown (outside sticky header) */}
+      {showNotifications && (
+        <div
+          className="fixed right-4 top-16 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100] animate-fade-in"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-3 border-b border-gray-100">
+            <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
+          </div>
+          <div className="max-h-64 overflow-y-auto">
+            {notifications.length > 0 ? (
+              notifications.slice(0, 3).map((n) => (
+                <a
+                  key={n.id}
+                  href="/customer/history"
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    n.status === "approved" ? "bg-green-50" : n.status === "rejected" ? "bg-red-50" : "bg-amber-50"
+                  }`}>
+                    <span className={`text-xs font-bold ${
+                      n.status === "approved" ? "text-green-600" : n.status === "rejected" ? "text-red-600" : "text-amber-600"
+                    }`}>
+                      {n.status === "approved" ? "✓" : n.status === "rejected" ? "✗" : "!"}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                      {n.shopName} — Rs. {n.amount.toLocaleString()} {n.status}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      {new Date(n.created_at).toLocaleTimeString()}
+                    </p>
+                  </div>
+                </a>
+              ))
+            ) : (
+              <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                No notifications
+              </div>
+            )}
+          </div>
+          <a
+            href="/customer/history"
+            className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          >
+            View All
+          </a>
+        </div>
+      )}
 
       {/* ===== ALWAYS-VISIBLE DASHBOARD CONTENT ===== */}
       <PullToRefresh onRefresh={loadStats}>

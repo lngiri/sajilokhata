@@ -209,16 +209,15 @@ export default function BillingPage() {
                 <div key={log.id} className="px-4 py-3 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-[var(--color-text)] truncate">
-                      {log.customers?.name || log.customers?.phone || "Unknown"}
+                      {log.customers?.name || "Unknown"}
                     </p>
                     <p className="text-xs text-[var(--color-text-muted)]">
+                      {log.customers?.phone && `${log.customers.phone} · `}
                       {new Date(log.sent_at).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
+                        month: "short", day: "numeric",
+                        hour: "2-digit", minute: "2-digit",
                       })}
-                      {log.type === "share_link" && " · Shared"}
+                      {log.type === "share_link" ? " · Shared" : ""}
                     </p>
                     <p className="text-xs text-gray-400 truncate mt-0.5 max-w-[220px]">
                       {log.message}
