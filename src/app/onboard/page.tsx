@@ -11,18 +11,44 @@ export default function OnboardPage() {
   const searchParams = useSearchParams();
   const prefilled = searchParams?.get("phone") || "";
 
-  const [step, setStep] = useState<Step>(prefilled ? "otp" : "phone");
+  const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState(prefilled);
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sendingOtp, setSendingOtp] = useState(!!prefilled);
   const [error, setError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendMessage, setResendMessage] = useState("");
 
   // Auto-send OTP if phone was prefilled from URL
   useEffect(() => {
     if (prefilled) {
-      sendRegistrationOtp(prefilled).catch(() => {});
+      setSendingOtp(true);
+      setError("");
+      sendRegistrationOtp(prefilled)
+        .then((res) => {
+          if (res.success) {
+            setStep("otp");
+            setResendCooldown(30);
+          } else {
+            setError(res.error || "Failed to send OTP. Please try again.");
+          }
+        })
+        .catch(() => {
+          setError("Network error. Please try again.");
+        })
+        .finally(() => {
+          setSendingOtp(false);
+        });
     }
   }, [prefilled]);
+
+  // Resend cooldown countdown
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
 
   const handleSendOtp = async () => {
     if (phone.length < 10) return;
@@ -35,7 +61,25 @@ export default function OnboardPage() {
       return;
     }
     setStep("otp");
+    setResendCooldown(30);
     setLoading(false);
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || loading) return;
+    setLoading(true);
+    setError("");
+    setResendMessage("");
+    const res = await sendRegistrationOtp(phone);
+    if (!res.success) {
+      setError(res.error || "Failed to resend OTP");
+      setLoading(false);
+      return;
+    }
+    setResendCooldown(30);
+    setResendMessage("OTP resent!");
+    setLoading(false);
+    setTimeout(() => setResendMessage(""), 4000);
   };
 
   const handleVerifyOtp = async () => {
@@ -50,7 +94,6 @@ export default function OnboardPage() {
     }
 
     if (!res.exists) {
-      // New customer — create account
       const reg = await registerNewUser(phone, "customer");
       if (!reg.success) {
         setError(reg.error || "Failed to create account");
@@ -60,12 +103,19 @@ export default function OnboardPage() {
       if (reg.userId) localStorage.setItem("merchant_id", reg.userId);
       if (reg.phone) localStorage.setItem("merchant_phone", reg.phone);
     } else {
-      // Existing user
       if (res.userId) localStorage.setItem("merchant_id", res.userId);
       if (res.phone) localStorage.setItem("merchant_phone", res.phone);
     }
     setStep("done");
     setLoading(false);
+  };
+
+  const handleChangePhone = () => {
+    setStep("phone");
+    setOtp("");
+    setError("");
+    setResendCooldown(0);
+    setResendMessage("");
   };
 
   return (
@@ -79,7 +129,14 @@ export default function OnboardPage() {
         <h1 className="text-2xl font-extrabold text-[var(--color-primary)]">QR Hisab</h1>
         <p className="text-sm text-[var(--color-text-muted)]">Customer Onboarding</p>
 
-        {step === "phone" && (
+        {sendingOtp && (
+          <div className="flex flex-col items-center gap-3 py-8">
+            <div className="w-8 h-8 border-[3px] border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-[var(--color-text-muted)]">Sending OTP...</p>
+          </div>
+        )}
+
+        {!sendingOtp && step === "phone" && (
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-text-muted)]">Enter your phone number to get started</p>
             <input
@@ -105,7 +162,6 @@ export default function OnboardPage() {
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-text-muted)]">Enter the OTP sent to +977{phone}</p>
             <input
-              ref={(input) => { if (input) { input.focus(); input.inputMode = "numeric"; }}}
               type="text"
               inputMode="numeric"
               placeholder="000000"
@@ -113,8 +169,10 @@ export default function OnboardPage() {
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="w-full px-4 py-3 bg-white rounded-xl text-2xl font-mono text-center tracking-[0.5em] border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               maxLength={6}
+              autoFocus
             />
             {error && <p className="text-sm text-red-500">{error}</p>}
+            {resendMessage && <p className="text-sm text-green-600">{resendMessage}</p>}
             <button
               onClick={handleVerifyOtp}
               disabled={loading || otp.length < 4}
@@ -122,12 +180,22 @@ export default function OnboardPage() {
             >
               {loading ? "Verifying..." : "Verify & Onboard"}
             </button>
-            <button
-              onClick={() => { setStep("phone"); setOtp(""); setError(""); }}
-              className="text-sm text-[var(--color-text-muted)] underline"
-            >
-              Change phone number
-            </button>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={handleResendOtp}
+                disabled={resendCooldown > 0 || loading}
+                className="text-sm font-medium text-[var(--color-primary)] active:opacity-70 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : "Resend OTP"}
+              </button>
+              <span className="text-gray-200">|</span>
+              <button
+                onClick={handleChangePhone}
+                className="text-sm text-[var(--color-text-muted)] underline active:opacity-70"
+              >
+                Change phone
+              </button>
+            </div>
           </div>
         )}
 

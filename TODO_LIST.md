@@ -4,6 +4,18 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ---
 
+## 🎯 Recently Completed (July 2026)
+
+- [x] **Aakash SMS API Integration** — Fully working transaction messages via `https://sms.aakashsms.com/sms/v3/send` with OTP + payment reminders + onboarding.
+- [x] **SMS Balance Guard / Interceptor** — `sendTransactionSMS` checks merchant's `sms_balance` before hitting Aakash API; returns `INSUFFICIENT_SMS_CREDIT` error if <= 0; atomically decrements by 1 on success via `decrement_sms_balance` RPC.
+- [x] **eSewa Web Checkout Integration** — HMAC-SHA256 backend signature verification, UAT environment (`https://uat.esewa.com.np/epay/main`), 3 pricing packages (101/50, 201/110, 501/300), `sms_recharge_logs` table for auditable transaction trail, `increment_sms_balance` RPC for atomic credit addition.
+- [x] **Billing Page (`/merchant/billing`)** — Plan cards with "Buy Now" auto-submit hidden form to eSewa, low-balance warning banner, recharge history table.
+- [x] **eSewa Callback Route (`/api/merchant/billing/callback`)** — POST handler decodes Base64 response, verifies signature, checks idempotency (`esewa_ref_id` + `transaction_uuid` dedup), updates log + balance.
+- [x] **Success/Failure UI (`/merchant/billing/success`)** — Confirmation card with SMS count or error message.
+- [x] **Onboarding Silent Failure Fix** — Replaced `.catch(() => {})` with proper async/await, loading spinner + "Sending OTP..." state, explicit error banners on failure.
+- [x] **Resend OTP with 30s Cooldown** — Resend button with countdown timer, disabled state during cooldown, green "OTP resent!" message auto-clears after 4s.
+- [x] **Change Phone Fallback** — "Change phone" link on OTP screen returns to phone input step, clears all OTP/resend state.
+
 ## Auth & Sessions
 
 - [x] Fix `setPin()` creates session cookie (was missing — caused redirect loop after PIN setup)
@@ -34,9 +46,9 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 ## Customer Flow
 
+- [x] Customer onboarding (`/onboard`) — OTP flow with resend + error handling now fully robust
 - [ ] Customer PIN gate (`CustomerPinGate.tsx`) — verify SHA-256 PIN verification works
 - [ ] Customer session cookie (`customer_session`) — verify middleware redirects correctly
-- [ ] Customer onboarding (`/onboard`) — verify OTP flow creates customer record
 - [ ] QR scan → entry creation flow — test with fresh merchant + customer
 
 ## Feedback & Support
@@ -67,11 +79,12 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [ ] Set up automatic migration runs on deploy
 - [ ] Configure Formspree allowed domains (add production domain)
 
-## Future Features
+## 🔮 Future Features / Backlog
 
+- [ ] **Move eSewa from UAT to production** — Replace `EPAYTEST` + `8g8M8maxQPm86ksx` with live product code and secret once corporate merchant status is approved.
+- [ ] **Advanced analytics hooks** — B2B ledger micro-loans, merchant data analysis dashboards.
+- [ ] **Targeted advertising** — Distributor placement components inside merchant dashboard.
 - [ ] Email notifications for transaction summaries
 - [ ] Multi-language support (Nepali + English)
 - [ ] Barcode/QR-based inventory management
-- [ ] Payment gateway integration (eSewa, Khalti)
 - [ ] Export to accounting software (QuickBooks, Tally)
-- [ ] Automated SMS reminders for due payments

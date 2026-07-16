@@ -12,15 +12,20 @@
 ```
 src/
 ├── app/                          # Next.js App Router pages
-│   ├── actions/                  # Server Actions (otp, pin, merchant, admin, etc.)
+│   ├── actions/                  # Server Actions (otp, pin, merchant, admin, sms-billing, etc.)
 │   ├── admin/                    # Admin panel (dashboard, users, analytics, etc.)
-│   ├── api/                      # API route handlers (auth, merchant, sms, verify)
+│   ├── api/                      # API route handlers (auth, merchant, sms, verify, billing)
+│   │   └── merchant/
+│   │       └── billing/
+│   │           └── callback/     # eSewa POST callback handler (Base64 decode + verify)
 │   ├── business/[merchantId]/    # Public merchant landing page
 │   ├── customer/                 # Customer-facing pages (dashboard, history)
 │   ├── delivery/                 # Delivery diary page
 │   ├── login/                    # Auth wizard (phone → OTP → PIN → dashboard)
 │   ├── merchant/                 # Merchant pages (dashboard, logs, customers, qr, settings, scan)
-│   ├── onboard/                  # Customer onboarding
+│   │   ├── billing/              # SMS credit recharge (plan cards + auto-submit to eSewa)
+│   │   │   └── success/          # Payment confirmation / failure UI
+│   ├── onboard/                  # Customer onboarding (OTP with resend + cooldown)
 │   ├── scan/                     # QR scanner for customer entry
 │   ├── select-role/              # Dual-role user picks merchant or customer
 │   ├── verify/                   # Verification dispute/resolution page
@@ -68,7 +73,10 @@ src/
 │   ├── offline/db.ts             # IndexedDB wrapper (idb) for offline storage
 │   ├── supabase/admin.ts         # Service-role admin client (server-side only)
 │   ├── supabase/client.ts        # Browser-side Supabase client
-│   └── supabase/server.ts        # Server-side Supabase SSR client
+│   ├── supabase/server.ts        # Server-side Supabase SSR client
+│   └── types/
+│       ├── database.ts           # Row/Insert/Update types for all DB tables
+│       └── sms-billing.ts        # SMS_PACKAGES constants + EsewaInitResponse/EsewaVerifyResponse types
 │
 ├── proxy.ts                      # Middleware (route protection, session check, role guard)
 ├── types/                        # TypeScript declarations
@@ -81,7 +89,7 @@ public/
 ├── robots.txt
 └── favicon.ico
 
-supabase/migrations/              # 21 SQL migrations (001-021)
+supabase/migrations/              # 33 SQL migrations (001-033)
 docs/                             # Legacy product docs
 ```
 
@@ -137,16 +145,20 @@ Runs on all routes except static assets. Order of operations:
 
 ## Database (Supabase Postgres)
 
-21 migrations applied. Key tables:
+33 migrations applied (001–033). Key tables:
 
 | Table | Purpose |
 |-------|---------|
-| `merchants` | Shop accounts (id, phone, pin_hash, business_type, force_logout_at) |
-| `customers` | Customer accounts (id, phone, pin_hash) |
+| `merchants` | Shop accounts (id, phone, pin_hash, business_type, sms_balance, force_logout_at) |
+| `customers` | Customer accounts (id, phone, pin_hash, trust_status) |
 | `merchant_customers` | Junction (merchant_id, customer_id, credit_limit) |
-| `credit_logs` | Transaction ledger (amount, type, status, customer_id) |
+| `credit_logs` | Transaction ledger (amount, type, status, customer_id, initiated_by, attachment_url) |
 | `sessions` | Login session records (merchant_id, device_info, ip_address) |
 | `audit_logs` | Immutable change tracking |
+| `merchant_payment_methods` | QR/bank/cash payment configs per merchant |
+| `merchant_reminder_settings` | Auto-reminder template + day-of-month |
+| `payment_reminder_logs` | SMS share-link delivery history |
+| `sms_recharge_logs` | eSewa payment logs (amount, sms_count, transaction_uuid, esewa_ref_id, status) |
 
 ---
 
@@ -176,4 +188,112 @@ Runs on all routes except static assets. Order of operations:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service role key (HMAC secret + admin client) |
-| `AAKASH_SMS_TOKEN` | SMS API token for OTP delivery |
+| `AAKASH_SMS_TOKEN` | SMS API token for OTP delivery via Aakash SMS |
+| `ESEWA_PRODUCT_CODE` | eSewa merchant product code (default `EPAYTEST` for UAT) |
+| `ESEWA_SECRET_KEY` | eSewa HMAC-SHA256 secret (default `8g8M8maxQPm86ksx` for UAT) |
+| `NEXT_PUBLIC_SITE_URL` | Canonical site URL for eSewa success/failure redirects |
+
+---
+
+## SMS Credit Management Flow
+
+### Merchant-Initiated SMS (Payment Reminders)
+
+```
+Merchant clicks "Send Reminder"
+         │
+         ▼
+  sendPaymentReminder() / checkAndSendAutoReminders()
+         │
+         ▼
+  sendTransactionSMS(to, message, merchantId)
+         │
+         ├── [No merchantId] → System SMS (OTP, onboarding) — skip guard
+         │
+         └── [merchantId provided]
+                 │
+                 ▼
+          SMS Balance Guard
+           SELECT sms_balance FROM merchants WHERE id = merchantId
+                 │
+         ┌───────┴───────┐
+         ▼               ▼
+    sms_balance      sms_balance
+       <= 0             >  0
+         │               │
+         ▼               ▼
+   Return error      Proceed to
+   INSUFFICIENT_     Aakash SMS API
+   SMS_CREDIT        POST /sms/v3/send
+                         │
+                    ┌────┴────┐
+                    ▼         ▼
+                 Success    Failure
+                    │         │
+                    ▼         ▼
+              decrement_   Return
+              sms_balance  error
+              (atomic RPC)
+```
+
+### eSewa Recharge Flow
+
+```
+Merchant clicks "Buy Now" on /merchant/billing
+         │
+         ▼
+  initiateEsewaPayment(merchantId, packageType)
+         │
+         ├── Determine package (small/medium/large)
+         │    101→50sms, 201→110sms, 501→300sms
+         │
+         ├── Generate unique transaction_uuid
+         │
+         ├── INSERT pending row INTO sms_recharge_logs
+         │
+         ├── Generate HMAC-SHA256 signature
+         │    data: "total_amount=X,transaction_uuid=Y,product_code=EPAYTEST"
+         │    key:  ESEWA_SECRET_KEY
+         │    algo: SHA256 → Base64
+         │
+         └── Return formParams to client
+                 │
+                 ▼
+         Build hidden HTML <form>
+         action = https://uat.esewa.com.np/epay/main
+         method = POST
+         fields: amt, psc, pdc, txAmt, tAmt, pid, scd, su, fu
+                 │
+                 ▼
+         Browser auto-submits to eSewa
+         User logs in with test MPIN + OTP
+                 │
+                 ▼
+         eSewa POSTs to /api/merchant/billing/callback
+         Body: data=<Base64-encoded JSON>
+                 │
+                 ▼
+         verifyEsewaPayment(encodedData)
+                 │
+         ├── Base64 decode → parse JSON
+         │    { transaction_code, status, total_amount,
+         │      transaction_uuid, signature }
+         │
+         ├── Verify status === "COMPLETE"
+         │
+         ├── Recalculate HMAC-SHA256 signature locally
+         │    Compare with response signature
+         │
+         ├── Idempotency checks:
+         │    • transaction_uuid not already completed
+         │    • esewa_ref_id not already used
+         │
+         ├── UPDATE sms_recharge_logs SET status='completed',
+         │    esewa_ref_id=transaction_code
+         │
+         └── increment_sms_balance(merchant_id, sms_count)
+                    │
+                    ▼
+         Redirect to /merchant/billing/success
+         Query: ?status=completed&sms=50
+```
