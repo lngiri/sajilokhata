@@ -9,6 +9,7 @@ import {
   getMerchantSmsBalance,
   getMerchantRechargeHistory,
 } from "@/app/actions/sms-billing";
+import { getReminderLogs } from "@/app/actions/merchant";
 import { SMS_PACKAGES, type SmsPackageType } from "@/lib/types/sms-billing";
 
 type PackageKey = SmsPackageType;
@@ -26,6 +27,7 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [buying, setBuying] = useState<PackageKey | null>(null);
   const [logs, setLogs] = useState<any[]>([]);
+  const [reminderLogs, setReminderLogs] = useState<any[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -33,12 +35,14 @@ export default function BillingPage() {
       const mid = await getCurrentMerchantId();
       if (!mid) return;
       setMerchantId(mid);
-      const [balance, history] = await Promise.all([
+      const [balance, history, reminders] = await Promise.all([
         getMerchantSmsBalance(mid),
         getMerchantRechargeHistory(mid),
+        getReminderLogs(mid),
       ]);
       setSmsBalance(balance);
       if (history.success) setLogs(history.logs || []);
+      setReminderLogs(reminders);
       setLoading(false);
     };
     init();
@@ -189,6 +193,47 @@ export default function BillingPage() {
                     }`}
                   >
                     {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* SMS History */}
+        {reminderLogs.length > 0 && (
+          <section>
+            <h2 className="font-semibold text-[var(--color-text)] mb-3">SMS History</h2>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-100">
+              {reminderLogs.map((log: any) => (
+                <div key={log.id} className="px-4 py-3 flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-[var(--color-text)] truncate">
+                      {log.customers?.name || log.customers?.phone || "Unknown"}
+                    </p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {new Date(log.sent_at).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                      {log.type === "share_link" && " · Shared"}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5 max-w-[220px]">
+                      {log.message}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
+                      log.status === "sent"
+                        ? "bg-green-100 text-green-700"
+                        : log.status === "failed"
+                        ? "bg-red-100 text-red-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {log.type === "share_link" ? "Shared" : log.status.charAt(0).toUpperCase() + log.status.slice(1)}
                   </span>
                 </div>
               ))}

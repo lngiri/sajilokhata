@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import BottomNav from "@/components/BottomNav";
 import SyncStatus from "@/components/SyncStatus";
+import SmsReminderModal from "@/components/SmsReminderModal";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
@@ -51,6 +52,7 @@ interface MerchantProfile {
   business_name: string | null;
   address?: string | null;
   phone?: string;
+  photo_url?: string | null;
 }
 
 export default function MerchantDashboard() {
@@ -105,6 +107,15 @@ export default function MerchantDashboard() {
   const [remindingCustomerId, setRemindingCustomerId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [smsBalance, setSmsBalance] = useState<number | null>(null);
+  const [showSmsReminderModal, setShowSmsReminderModal] = useState(false);
+  const [reminderCustomer, setReminderCustomer] = useState<{
+    customer_id: string;
+    customer_name: string | null;
+    customer_phone: string;
+    current_balance: number;
+  } | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
@@ -154,7 +165,7 @@ export default function MerchantDashboard() {
             getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, attachment_url, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
-            getMerchantProfile(id, "id, name, business_type, business_name, phone, address").catch(() => null),
+            getMerchantProfile(id, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null),
             getMerchantCustomers(id).catch(() => []),
           ]);
         if (!mountedRef.current) return;
@@ -216,6 +227,25 @@ export default function MerchantDashboard() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [loadData]);
+
+  // Close notification dropdown on click outside
+  useEffect(() => {
+    if (!showNotifications) return;
+    const handler = (e: MouseEvent) => {
+      if (notificationRef.current && !notificationRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowNotifications(false);
+    };
+    document.addEventListener("mousedown", handler);
+    window.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("keydown", escHandler);
+    };
+  }, [showNotifications]);
 
   // ================================================================
   // Issue 1: Supabase Realtime — new credit log INSERT for this merchant
@@ -358,6 +388,22 @@ export default function MerchantDashboard() {
               </div>
             ) : (
               <>
+                {merchantProfile && (
+                  <button
+                    onClick={() => router.push("/merchant/settings")}
+                    className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden flex-shrink-0"
+                  >
+                    {merchantProfile.photo_url ? (
+                      <img
+                        src={merchantProfile.photo_url}
+                        alt=""
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      (merchantProfile.name || "S").charAt(0).toUpperCase()
+                    )}
+                  </button>
+                )}
                 {smsBalance !== null && (
                   <a
                     href="/merchant/billing"
@@ -369,12 +415,82 @@ export default function MerchantDashboard() {
                     {smsBalance} SMS
                   </a>
                 )}
-                <button className="p-1.5 active:scale-90 transition-transform relative">
-                  <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                  </svg>
-                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
-                </button>
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="p-1.5 active:scale-90 transition-transform relative"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                    </svg>
+                    {pendingLogs.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                    )}
+                  </button>
+
+                  {showNotifications && (
+                    <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-50 animate-fade-in">
+                      <div className="p-3 border-b border-gray-100">
+                        <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto">
+                        {pendingLogs.length > 0 ? (
+                          pendingLogs.slice(0, 3).map((log) => (
+                            <a
+                              key={log.id}
+                              href="/merchant/ledger"
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-bold text-amber-600">!</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                                  {log.customers?.name || log.customers?.phone || "Unknown"} requested Rs. {log.amount.toLocaleString()}
+                                </p>
+                                <p className="text-[10px] text-[var(--color-text-muted)]">
+                                  {timeAgo(log.created_at)}
+                                </p>
+                              </div>
+                            </a>
+                          ))
+                        ) : recentActivity.length > 0 ? (
+                          recentActivity.slice(0, 3).map((log) => (
+                            <a
+                              key={log.id}
+                              href="/merchant/ledger"
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                            >
+                              <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
+                                <span className="text-xs font-bold text-gray-500">
+                                  {(log.customers?.name || log.customers?.phone || "?").charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                                  {log.customers?.name || log.customers?.phone || "Unknown"} — {log.type === "debit" ? "Debit" : log.type === "credit" ? "Payment" : "Cash"}
+                                </p>
+                                <p className="text-[10px] text-[var(--color-text-muted)]">
+                                  Rs. {log.amount.toLocaleString()} · {timeAgo(log.created_at)}
+                                </p>
+                              </div>
+                            </a>
+                          ))
+                        ) : (
+                          <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                            No notifications
+                          </div>
+                        )}
+                      </div>
+                      <a
+                        href="/merchant/ledger"
+                        className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      >
+                        View All
+                      </a>
+                    </div>
+                  )}
+                </div>
                 <SyncStatus />
                 <RoleSwitcher />
               </>
@@ -407,7 +523,8 @@ export default function MerchantDashboard() {
       {!loading && merchantProfile && (
         (() => {
           const name = merchantProfile.name?.trim();
-          const needsUpdate = !name || name.toLowerCase() === "shop";
+          const businessName = merchantProfile.business_name?.trim();
+          const needsUpdate = !name || name.toLowerCase() === "shop" || !businessName || businessName.toLowerCase() === "shop";
           if (!needsUpdate) return null;
           return (
             <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
@@ -613,35 +730,21 @@ export default function MerchantDashboard() {
                         </a>
                       </div>
                       <button
-                        onClick={async () => {
-                          if (!merchantId) return;
-                          setRemindingCustomerId(rc.customer_id);
-                          try {
-                            const result = await sendPaymentReminder(merchantId, rc.customer_id, "sms");
-                            if (result.success) {
-                              addToast("Reminder sent!", "success");
-                            } else {
-                              addToast(result.error || "Failed", "error");
-                            }
-                          } catch {
-                            addToast("Failed to send reminder", "error");
-                          } finally {
-                            setRemindingCustomerId(null);
-                          }
+                        onClick={() => {
+                          setReminderCustomer({
+                            customer_id: rc.customer_id,
+                            customer_name: rc.customer_name,
+                            customer_phone: rc.customer_phone,
+                            current_balance: rc.current_balance,
+                          });
+                          setShowSmsReminderModal(true);
                         }}
-                        disabled={remindingCustomerId === rc.customer_id}
-                        className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform disabled:opacity-50 flex items-center gap-1.5 flex-shrink-0"
+                        className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform flex items-center gap-1.5 flex-shrink-0"
                       >
-                        {remindingCustomerId === rc.customer_id ? (
-                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                            </svg>
-                            Remind
-                          </>
-                        )}
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                        </svg>
+                        Remind
                       </button>
                     </div>
                   ))}
@@ -898,6 +1001,20 @@ export default function MerchantDashboard() {
             onClick={(e) => e.stopPropagation()}
           />
         </div>
+      )}
+
+      {merchantId && reminderCustomer && (
+        <SmsReminderModal
+          open={showSmsReminderModal}
+          onClose={() => { setShowSmsReminderModal(false); setReminderCustomer(null); }}
+          merchantId={merchantId}
+          merchantName={merchantProfile?.name || "Shop"}
+          customerId={reminderCustomer.customer_id}
+          customerName={reminderCustomer.customer_name}
+          customerPhone={reminderCustomer.customer_phone}
+          balance={reminderCustomer.current_balance}
+          smsBalance={smsBalance ?? 0}
+        />
       )}
 
       <BottomNav />

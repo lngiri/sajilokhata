@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
 import { QRScanner } from "@/components/QRCode";
@@ -84,6 +85,7 @@ export default function CustomerDashboard() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
+  const router = useRouter();
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
     new Promise((resolve, reject) => {
@@ -342,9 +344,12 @@ export default function CustomerDashboard() {
             <SyncStatus />
             <RoleSwitcher />
             {customerPhone && (
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+              <button
+                onClick={() => router.push("/customer/settings")}
+                className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform"
+              >
                 {(customerName || customerPhone).charAt(0).toUpperCase()}
-              </div>
+              </button>
             )}
           </div>
         </div>

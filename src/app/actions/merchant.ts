@@ -833,7 +833,8 @@ export async function updateMerchantReminderSettings(
 export async function sendPaymentReminder(
   merchantId: string,
   customerId: string,
-  type: "sms" | "share_link"
+  type: "sms" | "share_link",
+  customMessage?: string
 ): Promise<{ success: boolean; error?: string }> {
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Server config" };
@@ -865,10 +866,17 @@ export async function sendPaymentReminder(
     let message: string;
 
     if (type === "sms") {
-      const firstName = shopName.split(" ")[0];
-      message = `Dear ${customerName}, pay Rs. ${Number(balance).toLocaleString()} to ${firstName}.`;
-      if (message.length > 150) {
-        message = message.substring(0, 147) + "...";
+      if (customMessage) {
+        message = customMessage;
+        if (message.length > 150) {
+          message = message.substring(0, 147) + "...";
+        }
+      } else {
+        const firstName = shopName.split(" ")[0];
+        message = `Dear ${customerName}, pay Rs. ${Number(balance).toLocaleString()} to ${firstName}.`;
+        if (message.length > 150) {
+          message = message.substring(0, 147) + "...";
+        }
       }
 
       const { sendTransactionSMS } = await import("./sms");

@@ -1,0 +1,280 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import { useToast } from "@/components/Toast";
+import { sendPaymentReminder } from "@/app/actions/merchant";
+
+interface SmsReminderModalProps {
+  open: boolean;
+  onClose: () => void;
+  merchantId: string;
+  merchantName: string;
+  customerId: string;
+  customerName: string | null;
+  customerPhone: string;
+  balance: number;
+  smsBalance: number;
+}
+
+const MAX_CHARS = 150;
+
+function buildDefaultMessage(
+  customerName: string | null,
+  balance: number,
+  shopName: string
+): string {
+  const name = customerName || "Customer";
+  const firstName = shopName.split(" ")[0];
+  return `Dear ${name}, pay Rs. ${Number(balance).toLocaleString()} to ${firstName}.`;
+}
+
+export default function SmsReminderModal({
+  open,
+  onClose,
+  merchantId,
+  merchantName,
+  customerId,
+  customerName,
+  customerPhone,
+  balance,
+  smsBalance,
+}: SmsReminderModalProps) {
+  const { addToast } = useToast();
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setMessage(buildDefaultMessage(customerName, balance, merchantName));
+      setSending(false);
+      setSharing(false);
+    }
+  }, [open, customerName, balance, merchantName]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
+  const charCount = message.length;
+  const smsCredits = Math.max(1, Math.ceil(charCount / MAX_CHARS));
+  const canSend = charCount > 0 && charCount <= MAX_CHARS && smsBalance > 0 && !sending;
+
+  const handleSendSms = async () => {
+    if (!canSend) return;
+    setSending(true);
+    try {
+      const result = await sendPaymentReminder(
+        merchantId,
+        customerId,
+        "sms",
+        message
+      );
+      if (result.success) {
+        addToast("SMS reminder sent!", "success");
+        onClose();
+      } else {
+        addToast(result.error || "Failed to send SMS", "error");
+      }
+    } catch {
+      addToast("Failed to send reminder", "error");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleShareLink = async () => {
+    setSharing(true);
+    try {
+      const baseUrl = window.location.origin;
+      const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
+      const shareText = `Dear ${customerName || "Customer"}, your outstanding balance at ${merchantName} is Rs. ${Number(balance).toLocaleString()}. View your ledger: ${ledgerLink}`;
+
+      if (navigator.share) {
+        await navigator.share({
+          title: `Payment Reminder - ${merchantName}`,
+          text: shareText,
+          url: ledgerLink,
+        });
+        addToast("Shared successfully!", "success");
+        onClose();
+      } else {
+        await navigator.clipboard.writeText(shareText);
+        addToast("Link copied to clipboard!", "success");
+      }
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        addToast("Failed to share", "error");
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleOpenWhatsApp = () => {
+    const baseUrl = window.location.origin;
+    const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
+    const text = `Dear ${customerName || "Customer"}, your outstanding balance at ${merchantName} is Rs. ${Number(balance).toLocaleString()}. View ledger: ${ledgerLink}`;
+    const waUrl = `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, "_blank");
+    onClose();
+  };
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 animate-slide-up max-h-[90dvh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-lg text-[var(--color-text)]">
+            Send Reminder
+          </h3>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform">
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-red-600">
+                {(customerName || customerPhone).charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                {customerName || customerPhone}
+              </p>
+              {customerName && (
+                <p className="text-xs text-[var(--color-text-muted)]">{customerPhone}</p>
+              )}
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-xs text-[var(--color-text-muted)]">Outstanding</p>
+              <p className="text-lg font-bold text-[var(--color-danger)]">
+                Rs. {Number(balance).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-3">
+          <label className="text-sm font-medium text-[var(--color-text)] block mb-1.5">
+            Message
+          </label>
+          <textarea
+            ref={textareaRef}
+            value={message}
+            onChange={(e) => {
+              if (e.target.value.length <= MAX_CHARS) {
+                setMessage(e.target.value);
+              }
+            }}
+            className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all resize-none text-sm"
+            rows={4}
+            placeholder="Type your reminder message..."
+          />
+          <div className="flex items-center justify-between mt-1.5">
+            <span className="text-xs text-[var(--color-text-muted)]">
+              {charCount}/{MAX_CHARS} characters
+            </span>
+            <span className="text-xs font-medium text-[var(--color-text-muted)]">
+              1 SMS credit {smsCredits > 1 ? `(×${smsCredits}) ` : ""}will be used
+            </span>
+          </div>
+        </div>
+
+        {smsBalance <= 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-2.5 mb-4">
+            <svg className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+            </svg>
+            <p className="text-xs text-amber-800">
+              No SMS credits remaining.{" "}
+              <a href="/merchant/billing" className="font-medium underline">Recharge to send SMS reminders</a>.
+            </p>
+          </div>
+        )}
+
+        <div className="space-y-3">
+          <button
+            onClick={handleSendSms}
+            disabled={!canSend}
+            className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform disabled:opacity-50 text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+              </svg>
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-medium text-sm text-[var(--color-text)]">Send via SMS</p>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {smsBalance > 0
+                  ? `Via Aakash SMS (${smsBalance} credit${smsBalance !== 1 ? "s" : ""} remaining)`
+                  : "No credits available"}
+              </p>
+            </div>
+            {sending && <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />}
+          </button>
+
+          <button
+            onClick={handleShareLink}
+            disabled={sharing}
+            className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform disabled:opacity-50 text-left"
+          >
+            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+              </svg>
+            </div>
+            <div className="text-left flex-1">
+              <p className="font-medium text-sm text-[var(--color-text)]">Share Link</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Via WhatsApp, Messenger, or copy to clipboard</p>
+            </div>
+            {sharing && <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />}
+          </button>
+
+          {!navigator.share && (
+            <button
+              onClick={handleOpenWhatsApp}
+              className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 21.75c-4.556 0-8.25-3.694-8.25-8.25S7.444 5.25 12 5.25s8.25 3.694 8.25 8.25-3.694 8.25-8.25 8.25z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9.75a3.75 3.75 0 100 7.5 3.75 3.75 0 000-7.5z" />
+                </svg>
+              </div>
+              <div className="text-left flex-1">
+                <p className="font-medium text-sm text-[var(--color-text)]">Send via WhatsApp</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Open WhatsApp with pre-filled message</p>
+              </div>
+              <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        <button
+          onClick={onClose}
+          className="w-full mt-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}

@@ -5,8 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus, getAuditLogsForCreditLog, sendPaymentReminder } from "@/app/actions/merchant";
+import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile } from "@/app/actions/merchant";
+import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import TransactionIcon from "@/components/TransactionIcon";
+import SmsReminderModal from "@/components/SmsReminderModal";
 
 const STATUS_BADGE: Record<string, string> = {
   approved: "bg-green-50 text-green-700",
@@ -76,6 +78,9 @@ export default function CustomerDetailPage() {
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [merchantName, setMerchantName] = useState("");
+  const [merchantIdState, setMerchantIdState] = useState<string | null>(null);
+  const [smsBalance, setSmsBalance] = useState<number>(0);
 
   useEffect(() => {
     if (!showCreditLimitModal) return;
@@ -137,6 +142,8 @@ export default function CustomerDetailPage() {
 
         const computedBalance = totalDebit - totalCredit;
 
+        setMerchantIdState(merchantId);
+
         setCustomer({
           id: customerId,
           name: mc.customers?.name || null,
@@ -149,6 +156,11 @@ export default function CustomerDetailPage() {
           trust_status: mc.customers?.trust_status || "good",
           trust_notes: mc.customers?.trust_notes || null,
         });
+
+        getMerchantProfile(merchantId, "name").then((p: any) => {
+          if (p?.name) setMerchantName(p.name);
+        }).catch(() => {});
+        getMerchantSmsBalance(merchantId).then(setSmsBalance).catch(() => {});
       } catch {
         if (!cancelled) addToastRef.current("Failed to load customer details.", "error");
       } finally {
@@ -601,101 +613,18 @@ export default function CustomerDetailPage() {
         </div>
       )}
 
-      {/* Send Reminder Modal */}
-      {showReminderModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-[var(--color-text)]">Send Reminder</h3>
-              <button onClick={() => setShowReminderModal(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <p className="text-sm text-[var(--color-text-muted)] mb-6">
-              Send a payment reminder to {customer.name || customer.phone} for their outstanding balance of <strong>Rs. {customer.current_balance.toLocaleString()}</strong>.
-            </p>
-            <div className="space-y-3">
-              <button
-                onClick={async () => {
-                  setSendingReminder(true);
-                  try {
-                    const merchantId = await getCurrentMerchantId();
-                    if (!merchantId) return;
-                    const result = await sendPaymentReminder(merchantId, customer.id, "sms");
-                    if (result.success) {
-                      addToast("SMS reminder sent!", "success");
-                      setShowReminderModal(false);
-                    } else {
-                      addToast(result.error || "Failed to send SMS", "error");
-                    }
-                  } catch {
-                    addToast("Failed to send reminder", "error");
-                  } finally {
-                    setSendingReminder(false);
-                  }
-                }}
-                disabled={sendingReminder}
-                className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform disabled:opacity-50"
-              >
-                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                  </svg>
-                </div>
-                <div className="text-left flex-1">
-                  <p className="font-medium text-sm text-[var(--color-text)]">Send SMS Reminder</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">Via Aakash SMS (within 150 chars)</p>
-                </div>
-                {sendingReminder && (
-                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                )}
-              </button>
-              <button
-                onClick={async () => {
-                  setSendingReminder(true);
-                  try {
-                    const merchantId = await getCurrentMerchantId();
-                    if (!merchantId) return;
-                    const result = await sendPaymentReminder(merchantId, customer.id, "share_link");
-                    if (result.success) {
-                      addToast("Share link generated!", "success");
-                      setShowReminderModal(false);
-                    } else {
-                      addToast(result.error || "Failed to generate link", "error");
-                    }
-                  } catch {
-                    addToast("Failed to generate share link", "error");
-                  } finally {
-                    setSendingReminder(false);
-                  }
-                }}
-                disabled={sendingReminder}
-                className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform disabled:opacity-50"
-              >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
-                  </svg>
-                </div>
-                <div className="text-left flex-1">
-                  <p className="font-medium text-sm text-[var(--color-text)]">Share via WhatsApp</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">Share ledger link with payment methods</p>
-                </div>
-                {sendingReminder && (
-                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                )}
-              </button>
-            </div>
-            <button
-              onClick={() => setShowReminderModal(false)}
-              className="w-full mt-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {merchantIdState && (
+        <SmsReminderModal
+          open={showReminderModal}
+          onClose={() => setShowReminderModal(false)}
+          merchantId={merchantIdState}
+          merchantName={merchantName || "Shop"}
+          customerId={customer.id}
+          customerName={customer.name}
+          customerPhone={customer.phone}
+          balance={customer.current_balance}
+          smsBalance={smsBalance}
+        />
       )}
 
       {previewImage && (
