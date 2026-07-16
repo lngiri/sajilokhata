@@ -22,7 +22,7 @@ src/
 │   ├── customer/                 # Customer-facing pages (dashboard, history)
 │   ├── delivery/                 # Delivery diary page
 │   ├── login/                    # Auth wizard (phone → OTP → PIN → dashboard)
-│   ├── merchant/                 # Merchant pages (dashboard, logs, customers, qr, settings, scan)
+│   ├── merchant/                 # Merchant pages (dashboard, logs, customers, qr, billing, settings, scan)
 │   │   ├── billing/              # SMS credit recharge (plan cards + auto-submit to eSewa)
 │   │   │   └── success/          # Payment confirmation / failure UI
 │   ├── onboard/                  # Customer onboarding (OTP with resend + cooldown)
@@ -100,11 +100,13 @@ docs/                             # Legacy product docs
 Two independent auth systems that coexist:
 
 ### 1. Custom Session Cookie (primary)
-- HMAC-SHA256 signed token: `{userId}.{expiresAt}.{hexSignature}`
+- HMAC-SHA256 signed token: `{userId}.{issuedAt}.{expiresAt}.{hexSignature}`
+- `issuedAt` (iat) millisecond timestamp enables force-logout comparison
 - Secret: `SUPABASE_SERVICE_ROLE_KEY` (fallback: `"session-secret-fallback"`)
 - Cookie: `"session"`, HTTP-only, Secure, SameSite=Lax, 30-day TTL
 - Set by server actions: `verifyRegistrationOtp()`, `loginWithPin()`, `setPin()`
 - Verified by middleware (proxy.ts) and `/api/auth/session`
+- Legacy 3-part tokens (`userId.expiresAt.sig`) tolerated for backward compat during rollout
 
 ### 2. Supabase Auth (legacy/fallback)
 - Uses `@supabase/ssr` for SSR cookie handling
@@ -172,12 +174,85 @@ Runs on all routes except static assets. Order of operations:
 
 ---
 
+## Session Revocation (Kill-Switch)
+
+The `force_logout_at` column on the `merchants` table enables an admin to globally invalidate all sessions for a compromised merchant account.
+
+### Flow
+
+```
+Admin sets merchants.force_logout_at = NOW()
+         │
+         ▼
+Next request from merchant hits middleware (proxy.ts)
+         │
+         ├── verifySessionToken(rawCookie)
+         │       │
+         │       └── Returns { userId, iat } (issued-at ms timestamp)
+         │
+         ├── DB query: SELECT force_logout_at FROM merchants WHERE id = userId
+         │
+         └── Compare: iat < Date(force_logout_at).getTime()
+                 │
+           ┌─────┴─────┐
+           ▼           ▼
+       iat <        iat >=
+     forceLogout   forceLogout
+           │           │
+           ▼           ▼
+    Delete session   Allow request
+    cookie +         to proceed
+    redirect to
+    /login?forceLogout=1
+```
+
+### Key files
+- **`src/lib/session.ts`** — Token format: `userId.iat.expiresAt.sig`; `verifySessionToken()` returns `{ userId, iat } | null`
+- **`src/proxy.ts`** — Middleware compares `iat` against `merchant.force_logout_at`; clears session cookie and redirects if revoked
+- **`src/app/api/auth/session/route.ts`** — Same comparison in the API endpoint for client-side session checks
+
+### Legacy token backward compat
+Tokens issued before the `iat` field was added (3-part format `userId.expiresAt.sig`) derive an approximate `iat` via `expiresAt - SESSION_DURATION * 1000`. This ensures most existing sessions still participate in the kill-switch check without forcing a global re-login.
+
+---
+
+## Receive Payments Toggle State Guard
+
+The `/merchant/settings` page enforces per-method validation before a merchant can enable a payment method via the toggle switch.
+
+### Validation rules (`canToggleMethod()`)
+
+| Method | Required fields to enable |
+|--------|--------------------------|
+| Fonepay QR | `qr_url` must be non-null |
+| E-Sewa | `qr_url` must be non-null |
+| Khalti | `qr_url` must be non-null |
+| NepalPay | `qr_url` must be non-null |
+| Bank Deposit | `account_holder` + `account_number` both non-null |
+| Cash | Always toggleable (no required fields) |
+
+### UX flow
+1. Merchant clicks toggle ON → `canToggleMethod()` runs
+2. If validation fails → toast: "Please expand the payment method and enter your details first!" — toggle stays OFF
+3. Merchant expands the card using the chevron arrow, fills in required fields, clicks **Save**
+4. Method record persists to `merchant_payment_methods` with `is_active: false`
+5. Now toggle click passes validation → `upsertMerchantPaymentMethod()` sets `is_active: true`
+
+### Key files
+- **`src/app/merchant/settings/page.tsx`** — `canToggleMethod()` helper, toggle `onChange` handler with pre-validation
+- **`src/app/actions/merchant.ts`** — `upsertMerchantPaymentMethod()` server action persists to DB
+
+---
+
 ## Offline Strategy
 
-- **Service worker** (`sw.js`): Network-first for navigations + static assets, cache-fallback with `/` as last resort
-- **IndexedDB**: Pending credit logs stored offline, synced when online
-- **Auth routes bypassed**: `/login`, `/api/auth/*` never cached by SW
-- **Formspree bypassed**: Feedback form POSTs go directly to network
+- **Service worker** (`sw.js`): Network-first for navigations + static assets, cache-fallback with `/` as last resort. Static asset list includes `/onboard`, `/merchant/billing`.
+- **IndexedDB** (`src/lib/offline/db.ts`): Pending credit logs, delivery logs, and photo attachments stored offline with per-item sync status (`"offline_pending"` | `"syncing"` | `"failed"`).
+- **Sync queue** (`src/components/SyncStatus.tsx`): Processes one log at a time with a 15-second `Promise.race` timeout. Marks item as `"syncing"` → sends to server → deletes on success, or marks `"failed"` on error/timeout. Handles three queues: credit logs, delivery logs, photo attachments.
+- **Sync trigger**: Auto-starts when browser transitions offline → online via `onOnlineStatusChange` callback.
+- **Offline indicator** (`src/components/OfflineIndicator.tsx`): Shows amber "Offline Mode — X items pending" when disconnected, blue spinner during sync, green checkmark when fully synced.
+- **Auth routes bypassed**: `/login`, `/api/auth/*` never cached by SW.
+- **Formspree bypassed**: Feedback form POSTs go directly to network.
 
 ---
 

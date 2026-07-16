@@ -15,6 +15,10 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] **Onboarding Silent Failure Fix** — Replaced `.catch(() => {})` with proper async/await, loading spinner + "Sending OTP..." state, explicit error banners on failure.
 - [x] **Resend OTP with 30s Cooldown** — Resend button with countdown timer, disabled state during cooldown, green "OTP resent!" message auto-clears after 4s.
 - [x] **Change Phone Fallback** — "Change phone" link on OTP screen returns to phone input step, clears all OTP/resend state.
+- [x] **Admin Force Logout Kill-Switch** — Token format upgraded to `userId.iat.expiresAt.sig`; middleware and `/api/auth/session` compare `iat` against `merchant.force_logout_at` DB field to revoke compromised sessions.
+- [x] **Dashboard Business Name Prompt** — Banner on `/merchant/dashboard` alerts merchants using placeholder "Shop" to update their profile; links to `/merchant/settings`.
+- [x] **Receive Payments Toggle State Guard** — `canToggleMethod()` validates required fields (QR URL for eSewa/Khalti/Fonepay/NepalPay; account holder + number for bank deposit) before enabling toggles.
+- [x] **Onboarding SMS Optimization & Centralization** — Messages reduced to <150 chars English format; `sendOnboardingSMS` centralized inside `addCustomerForMerchant`; duplicate calls removed from `QuickAddCustomer.tsx` and `scan/page.tsx`.
 
 ## Auth & Sessions
 
@@ -24,12 +28,13 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 - [x] Verify full auth flow end-to-end in production (phone → OTP → PIN → dashboard)
 - [x] Verify returning-user flow (phone → PIN → dashboard)
 - [ ] Check `SessionGuard.tsx` doesn't conflict with middleware — may cause double-redirect
+- [x] Implement `force_logout_at` kill-switch with iat-based token validation
 - [ ] Test `force_logout_at` kill-switch from admin panel
 - [x] Fix Forgot PIN redirect: now returns type-aware URL (merchant/customer/select-role) instead of hardcoded `/merchant/dashboard`
 
 ## Merchant Dashboard
 
-- [ ] Profile prompt: merchant created with name="Shop" — dashboard should prompt to set real name
+- [x] Profile prompt: merchant created with name="Shop" — dashboard prompts to set real name
 - [ ] Verify `getCurrentMerchantId()` works after PIN-set redirect (reads `merchant_id` from localStorage)
 - [ ] Check `SyncStatus` component works with offline log queue
 - [ ] Verify `SessionHeartbeat` actually refreshes the session cookie (periodic `/api/auth/session` call)

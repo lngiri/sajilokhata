@@ -325,25 +325,26 @@ export default function CustomerDashboard() {
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
-        <div className="flex items-center px-4 py-3">
-          <a href="/" className="mr-3 p-1 active:scale-95 transition-transform">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </a>
-          <div>
-            <h1 className="text-lg font-bold text-[var(--color-text)]">My Dashboard</h1>
-            <p className="text-[10px] text-[var(--color-text-muted)]">
-              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Asia/Kathmandu" })}
-            </p>
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+              <span className="text-sm font-bold text-white tracking-tight">QR</span>
+            </div>
+            <div>
+              <h1 className="text-base font-bold text-[var(--color-text)]">QRHisab Customer</h1>
+              <p className="text-[10px] text-emerald-600 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                qrhisab.com &middot; Active
+              </p>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center gap-2">
             <SyncStatus />
             <RoleSwitcher />
             {customerPhone && (
-              <span className="text-[10px] text-[var(--color-text-muted)]">
-                ID: {customerPhone.slice(-4)}
-              </span>
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                {(customerName || customerPhone).charAt(0).toUpperCase()}
+              </div>
             )}
           </div>
         </div>

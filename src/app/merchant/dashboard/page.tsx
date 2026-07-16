@@ -335,36 +335,50 @@ export default function MerchantDashboard() {
             onClick={handleBrandingRefresh}
             className="text-left active:scale-95 transition-transform flex-1 min-w-0"
           >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
-                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+                <span className="text-sm font-bold text-white tracking-tight">QR</span>
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
                   {merchantProfile?.name || "QR Hisab"}
                 </h1>
-                <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight">
-                  {merchantProfile?.address || merchantProfile?.business_type || ""}
+                <p className="text-[10px] text-emerald-600 truncate leading-tight flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                  qrhisab.com &middot; Active
                 </p>
-                <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">
-                  {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "Asia/Kathmandu" })}
-                </p>
-                <span className="text-[8px] text-[var(--color-primary)] font-medium opacity-60">A Digital Copy</span>
               </div>
             </div>
           </button>
-          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {isRefreshing ? (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50">
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                 <span className="text-[10px] font-medium text-blue-600">Syncing...</span>
               </div>
             ) : (
-              <SyncStatus />
+              <>
+                {smsBalance !== null && (
+                  <a
+                    href="/merchant/billing"
+                    className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-semibold border border-emerald-200 active:scale-95 transition-transform"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51" />
+                    </svg>
+                    {smsBalance} SMS
+                  </a>
+                )}
+                <button className="p-1.5 active:scale-90 transition-transform relative">
+                  <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                  </svg>
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                </button>
+                <SyncStatus />
+                <RoleSwitcher />
+              </>
             )}
-            <RoleSwitcher />
           </div>
         </div>
       </div>
