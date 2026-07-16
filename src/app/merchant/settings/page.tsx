@@ -19,6 +19,7 @@ import {
   updateMerchantReminderSettings,
 } from "@/app/actions/merchant";
 import { changePin } from "@/app/actions/pin";
+import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 
 export default function SettingsPage() {
   const { addToast } = useToast();
@@ -94,6 +95,9 @@ export default function SettingsPage() {
       img.src = URL.createObjectURL(file);
     });
 
+  // SMS Balance state
+  const [smsBalance, setSmsBalance] = useState<number | null>(null);
+
   // PIN change state
   const [showPinChange, setShowPinChange] = useState(false);
   const [currentPin, setCurrentPin] = useState(["", "", "", ""]);
@@ -142,6 +146,14 @@ export default function SettingsPage() {
 
         // Load reminder settings
         loadReminderSettings(id);
+
+        // Load SMS balance
+        try {
+          const balance = await getMerchantSmsBalance(id);
+          setSmsBalance(balance);
+        } catch {
+          // Non-critical
+        }
       }
     } catch (err) {
       console.error("Failed to load merchant profile:", err);
@@ -1057,6 +1069,45 @@ export default function SettingsPage() {
             </button>
           </div>
         </section>
+
+        {/* SMS Balance Section */}
+        {smsBalance !== null && (
+          <section>
+            <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+              SMS Credits
+            </h2>
+            <a
+              href="/merchant/billing"
+              className="block bg-white rounded-2xl shadow-sm border border-gray-50 p-4 active:scale-[0.99] transition-transform"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-[var(--color-text)]">SMS Balance</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {smsBalance} credit{smsBalance !== 1 ? "s" : ""} remaining
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {smsBalance <= 5 && (
+                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                      LOW
+                    </span>
+                  )}
+                  <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                  </svg>
+                </div>
+              </div>
+            </a>
+          </section>
+        )}
 
         {/* Account Section */}
         <section>

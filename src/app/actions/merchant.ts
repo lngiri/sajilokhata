@@ -871,7 +871,7 @@ export async function sendPaymentReminder(
       }
 
       const { sendTransactionSMS } = await import("./sms");
-      const smsResult = await sendTransactionSMS(customerPhone, message);
+      const smsResult = await sendTransactionSMS(customerPhone, message, merchantId);
 
       await (admin.from("payment_reminder_logs") as any).insert({
         merchant_id: merchantId,
@@ -1047,7 +1047,7 @@ export async function checkAndSendAutoReminders(
         msg = msg.substring(0, 147) + "...";
       }
 
-      const result = await sendTransactionSMS(customerPhone, msg);
+      const result = await sendTransactionSMS(customerPhone, msg, merchantId);
 
       await (admin.from("payment_reminder_logs") as any).insert({
         merchant_id: merchantId,

@@ -40,6 +40,7 @@ export interface Database {
           status: MerchantStatus;
           suspended_at: string | null;
           force_logout_at: string | null;
+          sms_balance: number;
           created_at: string;
         };
         Insert: {
@@ -54,6 +55,7 @@ export interface Database {
           status?: MerchantStatus;
           suspended_at?: string | null;
           force_logout_at?: string | null;
+          sms_balance?: number;
           created_at?: string;
         };
         Update: {
@@ -68,6 +70,7 @@ export interface Database {
           status?: MerchantStatus;
           suspended_at?: string | null;
           force_logout_at?: string | null;
+          sms_balance?: number;
           created_at?: string;
         };
       };
@@ -412,6 +415,38 @@ export interface Database {
           error_message?: string | null;
         };
       };
+      sms_recharge_logs: {
+        Row: {
+          id: string;
+          merchant_id: string;
+          amount: number;
+          sms_count: number;
+          transaction_uuid: string;
+          status: string;
+          esewa_ref_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          merchant_id: string;
+          amount: number;
+          sms_count: number;
+          transaction_uuid: string;
+          status?: string;
+          esewa_ref_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          merchant_id?: string;
+          amount?: number;
+          sms_count?: number;
+          transaction_uuid?: string;
+          status?: string;
+          esewa_ref_id?: string | null;
+          created_at?: string;
+        };
+      };
     };
   };
 }
@@ -434,6 +469,7 @@ export type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Inser
 export type MerchantPaymentMethod = Database["public"]["Tables"]["merchant_payment_methods"]["Row"];
 export type MerchantReminderSetting = Database["public"]["Tables"]["merchant_reminder_settings"]["Row"];
 export type PaymentReminderLog = Database["public"]["Tables"]["payment_reminder_logs"]["Row"];
+export type SmsRechargeLog = Database["public"]["Tables"]["sms_recharge_logs"]["Row"];
 
 // Customer Summary (from materialized view)
 export interface CustomerSummary {

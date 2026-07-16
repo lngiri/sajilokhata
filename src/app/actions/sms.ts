@@ -4,7 +4,8 @@ import { getAdminClient } from "@/lib/supabase/admin";
 
 export async function sendTransactionSMS(
   to: string,
-  message: string
+  message: string,
+  merchantId?: string
 ): Promise<{ success: boolean; error?: string }> {
   const authToken = process.env.AAKASH_SMS_TOKEN || "";
 
@@ -23,6 +24,21 @@ export async function sendTransactionSMS(
   if (cleanNumber.length !== 10) {
     console.warn(`[SMS] Invalid phone number: ${to} — cleaned: ${cleanNumber}`);
     return { success: false, error: "Invalid phone number" };
+  }
+
+  // ─── SMS Credit Guard ──────────────────────────────────────
+  if (merchantId) {
+    const admin = getAdminClient();
+    if (admin) {
+      const { data: merchant } = await (admin.from("merchants") as any)
+        .select("sms_balance")
+        .eq("id", merchantId)
+        .single();
+      if (!merchant || merchant.sms_balance <= 0) {
+        console.warn(`[SMS] Merchant ${merchantId} has insufficient SMS credits`);
+        return { success: false, error: "INSUFFICIENT_SMS_CREDIT" };
+      }
+    }
   }
 
   const payload = new URLSearchParams();
@@ -64,6 +80,15 @@ export async function sendTransactionSMS(
     }
 
     console.log("[SMS] Sent successfully:", body);
+
+    // ─── Decrement SMS balance for merchant-initiated sends ──
+    if (merchantId) {
+      const admin = getAdminClient();
+      if (admin) {
+        await (admin.rpc as any)("decrement_sms_balance", { p_merchant_id: merchantId });
+      }
+    }
+
     return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -111,5 +136,5 @@ export async function sendTransactionNotification(params: {
     message = `${greeting}${formattedAmount} has been credited to your account at ${shopName}.`;
   }
 
-  return sendTransactionSMS(to, message);
+  return sendTransactionSMS(to, message, merchantId);
 }

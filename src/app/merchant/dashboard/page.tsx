@@ -21,6 +21,7 @@ import {
   rejectEditRequest,
 } from "@/lib/actions";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import { useRouter } from "next/navigation";
 import TransactionIcon from "@/components/TransactionIcon";
 import RoleSwitcher from "@/components/RoleSwitcher";
@@ -103,6 +104,7 @@ export default function MerchantDashboard() {
   }>>([]);
   const [remindingCustomerId, setRemindingCustomerId] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [smsBalance, setSmsBalance] = useState<number | null>(null);
   const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
@@ -174,6 +176,9 @@ export default function MerchantDashboard() {
         );
         setLastRefreshed(new Date());
         setLoadError(false);
+
+        // Load SMS balance silently
+        getMerchantSmsBalance(id).then(setSmsBalance).catch(() => {});
 
         // Check auto reminders silently
         checkAndSendAutoReminders(id).catch(() => {});
@@ -461,6 +466,25 @@ export default function MerchantDashboard() {
               </a>
             </div>
           )}
+
+            {/* Low SMS Balance Warning */}
+            {smsBalance !== null && smsBalance <= 5 && (
+              <a
+                href="/merchant/billing"
+                className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl active:scale-[0.98] transition-transform"
+              >
+                <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                </svg>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-amber-800">SMS Balance Low</p>
+                  <p className="text-xs text-amber-700">{smsBalance} credit{smsBalance !== 1 ? "s" : ""} remaining — Recharge to continue sending reminders</p>
+                </div>
+                <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+              </a>
+            )}
 
             {/* Quick Actions */}
             <div className="grid grid-cols-2 gap-3">
