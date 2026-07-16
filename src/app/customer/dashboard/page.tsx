@@ -20,6 +20,7 @@ import {
   createCreditLog,
   getCustomerStats,
 } from "@/lib/actions";
+import { getMerchantPaymentMethodsPublic } from "@/app/actions/merchant";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -58,6 +59,20 @@ export default function CustomerDashboard() {
 
   // Edit profile modal
   const [showEditProfile, setShowEditProfile] = useState(false);
+
+  // Payment methods modal
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [paymentMethodsMerchant, setPaymentMethodsMerchant] = useState<{ id: string; name: string } | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<Array<{
+    method_type: string;
+    label: string | null;
+    qr_url: string | null;
+    account_holder: string | null;
+    account_number: string | null;
+    bank_name: string | null;
+    is_active: boolean;
+  }>>([]);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
@@ -370,15 +385,42 @@ export default function CustomerDashboard() {
 
             {stats.relationships.length > 0 && (
               <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
-                {stats.relationships.map((rel, i) => (
-                  <a
+                {stats.relationships.filter(r => r.merchants?.id).map((rel, i) => (
+                  <div
                     key={i}
-                    href={`/customer/history?merchantId=${rel.merchants?.id || ""}&shopName=${encodeURIComponent(rel.merchants?.name || "Shop")}`}
-                    className="flex items-center justify-between text-sm py-1.5 -mx-1 px-2 rounded-lg active:bg-white/10 transition-colors"
+                    className="flex items-center justify-between text-sm py-1.5 -mx-1 px-2 rounded-lg"
                   >
-                    <span className="opacity-80">{rel.merchants?.name || "Unknown Shop"}</span>
-                    <span className="font-semibold">Rs. {rel.current_balance.toLocaleString()}</span>
-                  </a>
+                    <a
+                      href={`/customer/history?merchantId=${rel.merchants!.id}&shopName=${encodeURIComponent(rel.merchants!.name || "Shop")}`}
+                      className="flex-1 min-w-0 opacity-80 hover:opacity-100 transition-opacity truncate"
+                    >
+                      {rel.merchants!.name || "Unknown Shop"}
+                    </a>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      <span className="font-semibold">Rs. {rel.current_balance.toLocaleString()}</span>
+                      {rel.current_balance > 0 && (
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                            setShowPaymentMethods(true);
+                            setPaymentMethodsLoading(true);
+                            getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
+                              setPaymentMethods(methods);
+                              setPaymentMethodsLoading(false);
+                            }).catch(() => {
+                              setPaymentMethods([]);
+                              setPaymentMethodsLoading(false);
+                            });
+                          }}
+                          className="px-2.5 py-1 bg-white/20 text-white rounded-lg text-[10px] font-medium active:bg-white/30 transition-colors"
+                        >
+                          Pay Now
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             )}
@@ -641,6 +683,94 @@ export default function CustomerDashboard() {
                 Save
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== PAYMENT METHODS MODAL ===== */}
+      {showPaymentMethods && paymentMethodsMerchant && (
+        <div
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 animate-fade-in"
+          onClick={() => setShowPaymentMethods(false)}
+        >
+          <div
+            className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Pay {paymentMethodsMerchant.name}</h3>
+              <button onClick={() => setShowPaymentMethods(false)} className="p-1">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {paymentMethodsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : paymentMethods.length === 0 ? (
+              <div className="text-center py-8 text-[var(--color-text-muted)]">
+                <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+                </svg>
+                <p className="text-sm">No payment methods available</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {paymentMethods.map((pm, i) => (
+                  <div key={i} className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-lg">
+                        {pm.method_type === "fonepay" ? "🏦" :
+                         pm.method_type === "esewa" ? "💳" :
+                         pm.method_type === "khalti" ? "💰" :
+                         pm.method_type === "nepalpay" ? "🏧" :
+                         pm.method_type === "bank_deposit" ? "🏛️" : "💵"}
+                      </span>
+                      <div>
+                        <p className="font-medium text-sm text-[var(--color-text)]">
+                          {pm.label || pm.method_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                        </p>
+                      </div>
+                    </div>
+
+                    {pm.qr_url && (
+                      <div className="flex justify-center mb-2">
+                        <img
+                          src={pm.qr_url}
+                          alt={pm.label || pm.method_type}
+                          className="w-32 h-32 object-contain rounded-lg border border-gray-200 bg-white"
+                        />
+                      </div>
+                    )}
+
+                    {pm.method_type === "bank_deposit" && (
+                      <div className="text-xs text-[var(--color-text-muted)] space-y-0.5">
+                        {pm.account_holder && <p>Account Holder: <span className="font-medium text-[var(--color-text)]">{pm.account_holder}</span></p>}
+                        {pm.account_number && <p>Account No: <span className="font-medium text-[var(--color-text)]">{pm.account_number}</span></p>}
+                        {pm.bank_name && <p>Bank: <span className="font-medium text-[var(--color-text)]">{pm.bank_name}</span></p>}
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(
+                          pm.method_type === "bank_deposit"
+                            ? `${pm.bank_name || ""} ${pm.account_holder || ""} ${pm.account_number || ""}`
+                            : pm.label || pm.method_type
+                        );
+                        addToast("Copied!", "success");
+                      }}
+                      className="mt-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.97] transition-transform"
+                    >
+                      Copy Details
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

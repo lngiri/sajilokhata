@@ -10,13 +10,18 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type BusinessType = "kirana" | "dairy" | "meat";
+export type BusinessType = "kirana" | "dairy" | "meat" | "hardware" | "clothing" | "pharmacy" | "restaurant" | "other";
+export type TrustStatus = "good" | "warning" | "defaulter";
+export type MerchantStatus = "active" | "suspended";
 export type CreditUnit = "liter" | "jar" | "kg" | "piece" | "npr";
 export type TransactionType = "debit" | "credit" | "cash";
 export type TransactionStatus = "pending" | "unverified" | "approved" | "disputed" | "rejected" | "edit_requested";
 export type SyncStatus = "online" | "offline_pending";
 export type ActorType = "merchant" | "customer" | "admin";
 export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected" | "pin_reset";
+
+export type PaymentMethodType = "fonepay" | "esewa" | "khalti" | "nepalpay" | "bank_deposit" | "cash";
+export type ReminderType = "sms" | "share_link";
 
 export interface Database {
   public: {
@@ -29,6 +34,11 @@ export interface Database {
           business_type: BusinessType;
           business_name: string | null;
           address: string | null;
+          photo_url: string | null;
+          pin_hash: string | null;
+          status: MerchantStatus;
+          suspended_at: string | null;
+          force_logout_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -38,6 +48,11 @@ export interface Database {
           business_type: BusinessType;
           business_name?: string | null;
           address?: string | null;
+          photo_url?: string | null;
+          pin_hash?: string | null;
+          status?: MerchantStatus;
+          suspended_at?: string | null;
+          force_logout_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -47,6 +62,11 @@ export interface Database {
           business_type?: BusinessType;
           business_name?: string | null;
           address?: string | null;
+          photo_url?: string | null;
+          pin_hash?: string | null;
+          status?: MerchantStatus;
+          suspended_at?: string | null;
+          force_logout_at?: string | null;
           created_at?: string;
         };
       };
@@ -57,6 +77,10 @@ export interface Database {
           phone: string;
           pin_hash: string | null;
           home_location_gps: unknown | null;
+          trust_status: TrustStatus;
+          trust_notes: string | null;
+          flagged_by_merchant_id: string | null;
+          flagged_at: string | null;
           created_at: string;
         };
         Insert: {
@@ -65,6 +89,10 @@ export interface Database {
           phone: string;
           pin_hash?: string | null;
           home_location_gps?: unknown | null;
+          trust_status?: TrustStatus;
+          trust_notes?: string | null;
+          flagged_by_merchant_id?: string | null;
+          flagged_at?: string | null;
           created_at?: string;
         };
         Update: {
@@ -73,6 +101,10 @@ export interface Database {
           phone?: string;
           pin_hash?: string | null;
           home_location_gps?: unknown | null;
+          trust_status?: TrustStatus;
+          trust_notes?: string | null;
+          flagged_by_merchant_id?: string | null;
+          flagged_at?: string | null;
           created_at?: string;
         };
       };
@@ -207,6 +239,7 @@ export interface Database {
           id: string;
           merchant_id: string;
           device_info: string;
+          ip_address: string;
           last_active: string;
           created_at: string;
         };
@@ -214,6 +247,7 @@ export interface Database {
           id?: string;
           merchant_id: string;
           device_info: string;
+          ip_address?: string;
           last_active?: string;
           created_at?: string;
         };
@@ -221,8 +255,157 @@ export interface Database {
           id?: string;
           merchant_id?: string;
           device_info?: string;
+          ip_address?: string;
           last_active?: string;
           created_at?: string;
+        };
+      };
+      admins: {
+        Row: {
+          id: string;
+          email: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          name?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          name?: string;
+          created_at?: string;
+        };
+      };
+      app_settings: {
+        Row: {
+          key: string;
+          value: Json;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value: Json;
+          updated_at?: string;
+        };
+        Update: {
+          key?: string;
+          value?: Json;
+          updated_at?: string;
+        };
+      };
+      merchant_payment_methods: {
+        Row: {
+          id: string;
+          merchant_id: string;
+          method_type: PaymentMethodType;
+          label: string | null;
+          qr_url: string | null;
+          account_holder: string | null;
+          account_number: string | null;
+          bank_name: string | null;
+          is_active: boolean;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          merchant_id: string;
+          method_type: PaymentMethodType;
+          label?: string | null;
+          qr_url?: string | null;
+          account_holder?: string | null;
+          account_number?: string | null;
+          bank_name?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          merchant_id?: string;
+          method_type?: PaymentMethodType;
+          label?: string | null;
+          qr_url?: string | null;
+          account_holder?: string | null;
+          account_number?: string | null;
+          bank_name?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      merchant_reminder_settings: {
+        Row: {
+          id: string;
+          merchant_id: string;
+          auto_reminder_enabled: boolean;
+          reminder_message_template: string | null;
+          reminder_day_of_month: number;
+          last_reminder_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          merchant_id: string;
+          auto_reminder_enabled?: boolean;
+          reminder_message_template?: string | null;
+          reminder_day_of_month?: number;
+          last_reminder_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          merchant_id?: string;
+          auto_reminder_enabled?: boolean;
+          reminder_message_template?: string | null;
+          reminder_day_of_month?: number;
+          last_reminder_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      payment_reminder_logs: {
+        Row: {
+          id: string;
+          merchant_id: string;
+          customer_id: string;
+          credit_log_id: string | null;
+          type: ReminderType;
+          message: string;
+          sent_at: string;
+          status: string;
+          error_message: string | null;
+        };
+        Insert: {
+          id?: string;
+          merchant_id: string;
+          customer_id: string;
+          credit_log_id?: string | null;
+          type: ReminderType;
+          message: string;
+          sent_at?: string;
+          status?: string;
+          error_message?: string | null;
+        };
+        Update: {
+          id?: string;
+          merchant_id?: string;
+          customer_id?: string;
+          credit_log_id?: string | null;
+          type?: ReminderType;
+          message?: string;
+          sent_at?: string;
+          status?: string;
+          error_message?: string | null;
         };
       };
     };
@@ -236,11 +419,17 @@ export type MerchantCustomer = Database["public"]["Tables"]["merchant_customers"
 export type CreditLog = Database["public"]["Tables"]["credit_logs"]["Row"];
 export type AuditLog = Database["public"]["Tables"]["audit_logs"]["Row"];
 export type Session = Database["public"]["Tables"]["sessions"]["Row"];
+export type Admin = Database["public"]["Tables"]["admins"]["Row"];
+export type AppSetting = Database["public"]["Tables"]["app_settings"]["Row"];
 
 export type MerchantInsert = Database["public"]["Tables"]["merchants"]["Insert"];
 export type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
 export type MerchantCustomerInsert = Database["public"]["Tables"]["merchant_customers"]["Insert"];
 export type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Insert"];
+
+export type MerchantPaymentMethod = Database["public"]["Tables"]["merchant_payment_methods"]["Row"];
+export type MerchantReminderSetting = Database["public"]["Tables"]["merchant_reminder_settings"]["Row"];
+export type PaymentReminderLog = Database["public"]["Tables"]["payment_reminder_logs"]["Row"];
 
 // Customer Summary (from materialized view)
 export interface CustomerSummary {

@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus } from "@/app/actions/merchant";
+import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus, getAuditLogsForCreditLog, sendPaymentReminder } from "@/app/actions/merchant";
 import TransactionIcon from "@/components/TransactionIcon";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -33,6 +33,8 @@ interface Transaction {
   status: string;
   description: string | null;
   created_at: string;
+  ip_address: string | null;
+  device_info: string | null;
 }
 
 interface CustomerDetail {
@@ -66,6 +68,11 @@ export default function CustomerDetailPage() {
   const [flagStatus, setFlagStatus] = useState<"warning" | "defaulter">("warning");
   const [flagNotes, setFlagNotes] = useState("");
   const [flagging, setFlagging] = useState(false);
+  const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditLogs, setAuditLogs] = useState<Array<{id: string; action: string; actor_type: string | null; created_at: string}>>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
 
   useEffect(() => {
     if (!showCreditLimitModal) return;
@@ -266,6 +273,14 @@ export default function CustomerDetailPage() {
               >
                 Reset PIN
               </button>
+              {customer.current_balance > 0 && (
+                <button
+                  onClick={() => setShowReminderModal(true)}
+                  className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                >
+                  Remind
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -363,7 +378,20 @@ export default function CustomerDetailPage() {
               </div>
             ) : (
               customer.transactions.map((tx) => (
-                <div key={tx.id} className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 ${tx.status === "rejected" ? "opacity-60" : ""}`}>
+                <div
+                  key={tx.id}
+                  onClick={async () => {
+                    setAuditLogs([]);
+                    setAuditLoading(true);
+                    setShowAuditModal(true);
+                    try {
+                      const logs = await getAuditLogsForCreditLog(tx.id);
+                      setAuditLogs(logs);
+                    } catch {} finally {
+                      setAuditLoading(false);
+                    }
+                  }}
+                  className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.99] transition-transform cursor-pointer ${tx.status === "rejected" ? "opacity-60" : ""}`}>
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-50" : tx.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
                     <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600" : tx.type === "cash" ? "text-blue-600" : "text-green-600"} />
                   </div>
@@ -379,6 +407,11 @@ export default function CustomerDetailPage() {
                     <p className="text-xs text-[var(--color-text-muted)]">
                       {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kathmandu" })}
                     </p>
+                    {(tx.ip_address || tx.device_info) && (
+                      <p className="text-[10px] text-gray-400 truncate max-w-[200px]">
+                        {[tx.device_info, tx.ip_address].filter(Boolean).join(" · ")}
+                      </p>
+                    )}
                   </div>
                   <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600" : "text-[var(--color-primary)]"}`}>
                     {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}Rs. {tx.amount.toLocaleString()}
@@ -498,6 +531,154 @@ export default function CustomerDetailPage() {
               ) : (
                 `Flag as ${flagStatus === "warning" ? "Warning" : "Defaulter"}`
               )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Audit Trail Modal */}
+      {showAuditModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in" onClick={() => setShowAuditModal(false)}>
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Audit Trail</h3>
+              <button onClick={() => setShowAuditModal(false)} className="p-1">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            {auditLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : auditLogs.length === 0 ? (
+              <p className="text-center text-sm text-[var(--color-text-muted)] py-8">No audit records found for this transaction.</p>
+            ) : (
+              <div className="space-y-3">
+                {auditLogs.map((log) => (
+                  <div key={log.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 ${
+                      log.action === "approved" ? "bg-green-500" :
+                      log.action === "rejected" ? "bg-red-500" :
+                      log.action === "disputed" ? "bg-red-400" :
+                      log.action === "edit_requested" ? "bg-indigo-500" :
+                      log.action === "edit_accepted" ? "bg-green-400" :
+                      log.action === "edit_rejected" ? "bg-orange-500" :
+                      "bg-gray-400"
+                    }`} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-[var(--color-text)] capitalize">{log.action.replace(/_/g, " ")}</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        by {log.actor_type || "system"}
+                        {" · "}
+                        {new Date(log.created_at).toLocaleString("en-US", {
+                          month: "short", day: "numeric",
+                          hour: "2-digit", minute: "2-digit",
+                          timeZone: "Asia/Kathmandu",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Send Reminder Modal */}
+      {showReminderModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Send Reminder</h3>
+              <button onClick={() => setShowReminderModal(false)} className="p-1">
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="text-sm text-[var(--color-text-muted)] mb-6">
+              Send a payment reminder to {customer.name || customer.phone} for their outstanding balance of <strong>Rs. {customer.current_balance.toLocaleString()}</strong>.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={async () => {
+                  setSendingReminder(true);
+                  try {
+                    const merchantId = await getCurrentMerchantId();
+                    if (!merchantId) return;
+                    const result = await sendPaymentReminder(merchantId, customer.id, "sms");
+                    if (result.success) {
+                      addToast("SMS reminder sent!", "success");
+                      setShowReminderModal(false);
+                    } else {
+                      addToast(result.error || "Failed to send SMS", "error");
+                    }
+                  } catch {
+                    addToast("Failed to send reminder", "error");
+                  } finally {
+                    setSendingReminder(false);
+                  }
+                }}
+                disabled={sendingReminder}
+                className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                  </svg>
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-sm text-[var(--color-text)]">Send SMS Reminder</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Via Aakash SMS (within 150 chars)</p>
+                </div>
+                {sendingReminder && (
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                )}
+              </button>
+              <button
+                onClick={async () => {
+                  setSendingReminder(true);
+                  try {
+                    const merchantId = await getCurrentMerchantId();
+                    if (!merchantId) return;
+                    const result = await sendPaymentReminder(merchantId, customer.id, "share_link");
+                    if (result.success) {
+                      addToast("Share link generated!", "success");
+                      setShowReminderModal(false);
+                    } else {
+                      addToast(result.error || "Failed to generate link", "error");
+                    }
+                  } catch {
+                    addToast("Failed to generate share link", "error");
+                  } finally {
+                    setSendingReminder(false);
+                  }
+                }}
+                disabled={sendingReminder}
+                className="w-full flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-200 active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z" />
+                  </svg>
+                </div>
+                <div className="text-left flex-1">
+                  <p className="font-medium text-sm text-[var(--color-text)]">Share via WhatsApp</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">Share ledger link with payment methods</p>
+                </div>
+                {sendingReminder && (
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                )}
+              </button>
+            </div>
+            <button
+              onClick={() => setShowReminderModal(false)}
+              className="w-full mt-4 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+            >
+              Cancel
             </button>
           </div>
         </div>

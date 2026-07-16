@@ -11,6 +11,9 @@ import {
   getMerchantStats,
   getMerchantCreditLogs,
   getMerchantProfile,
+  getMerchantCustomers,
+  sendPaymentReminder,
+  checkAndSendAutoReminders,
 } from "@/app/actions/merchant";
 import {
   acceptEditRequest,
@@ -90,6 +93,13 @@ export default function MerchantDashboard() {
   const [loadError, setLoadError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [topReceivables, setTopReceivables] = useState<Array<{
+    customer_id: string;
+    customer_name: string | null;
+    customer_phone: string;
+    current_balance: number;
+  }>>([]);
+  const [remindingCustomerId, setRemindingCustomerId] = useState<string | null>(null);
   const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
@@ -134,20 +144,36 @@ export default function MerchantDashboard() {
 
       if (id) {
         try {
-          const [statsData, pendingData, editRequestedData, activityData, profileData] = await Promise.all([
+          const [statsData, pendingData, editRequestedData, activityData, profileData, customersData] = await Promise.all([
             getMerchantStats(id),
             getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
             getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
             getMerchantProfile(id, "id, name, business_type, business_name, phone, address").catch(() => null),
+            getMerchantCustomers(id).catch(() => []),
           ]);
         if (!mountedRef.current) return;
         setStats(statsData);
         setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
         setRecentActivity(activityData as typeof recentActivity);
         setMerchantProfile(profileData);
+        setTopReceivables(
+          ((customersData as any[]) || [])
+            .filter(c => (c.current_balance || 0) > 0)
+            .sort((a, b) => (b.current_balance || 0) - (a.current_balance || 0))
+            .slice(0, 5)
+            .map(c => ({
+              customer_id: c.customer_id,
+              customer_name: c.customers?.name || null,
+              customer_phone: c.customers?.phone || "",
+              current_balance: c.current_balance || 0,
+            }))
+        );
         setLastRefreshed(new Date());
         setLoadError(false);
+
+        // Check auto reminders silently
+        checkAndSendAutoReminders(id).catch(() => {});
       } catch {
         setLoadError(true);
         addToast("Failed to load dashboard data.", "error");
@@ -476,7 +502,79 @@ export default function MerchantDashboard() {
               </div>
             </a>
 
-            {/* Issue 4: Recent Customer Activity Feed */}
+            {/* Smart Receivables Section */}
+            {topReceivables.length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold text-[var(--color-text)]">
+                    Receivables
+                  </h2>
+                  <a
+                    href="/merchant/customers"
+                    className="text-xs text-[var(--color-primary)] font-medium active:opacity-70"
+                  >
+                    View All Customers →
+                  </a>
+                </div>
+                <div className="space-y-2">
+                  {topReceivables.map((rc) => (
+                    <div
+                      key={rc.customer_id}
+                      className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                        <span className="text-sm font-bold text-red-600">
+                          {(rc.customer_name || rc.customer_phone).charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <a href={`/merchant/customers/${rc.customer_id}`} className="block">
+                          <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                            {rc.customer_name || rc.customer_phone}
+                          </p>
+                          <p className="text-xs text-[var(--color-danger)] font-semibold">
+                            Rs. {rc.current_balance.toLocaleString()}
+                          </p>
+                        </a>
+                      </div>
+                      <button
+                        onClick={async () => {
+                          if (!merchantId) return;
+                          setRemindingCustomerId(rc.customer_id);
+                          try {
+                            const result = await sendPaymentReminder(merchantId, rc.customer_id, "sms");
+                            if (result.success) {
+                              addToast("Reminder sent!", "success");
+                            } else {
+                              addToast(result.error || "Failed", "error");
+                            }
+                          } catch {
+                            addToast("Failed to send reminder", "error");
+                          } finally {
+                            setRemindingCustomerId(null);
+                          }
+                        }}
+                        disabled={remindingCustomerId === rc.customer_id}
+                        className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform disabled:opacity-50 flex items-center gap-1.5 flex-shrink-0"
+                      >
+                        {remindingCustomerId === rc.customer_id ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                            </svg>
+                            Remind
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Customer Activity Feed */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-[var(--color-text)]">

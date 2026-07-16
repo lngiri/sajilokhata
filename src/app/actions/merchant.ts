@@ -626,3 +626,448 @@ export async function updateCustomerTrustStatus(
 
   return { success: false, error: "Invalid action" };
 }
+
+// ──────────────────────────────────────────────
+// Audit Logs
+// ──────────────────────────────────────────────
+
+export async function getAuditLogsForCreditLog(
+  creditLogId: string
+): Promise<Array<{
+  id: string;
+  action: string;
+  actor_type: string | null;
+  actor_id: string | null;
+  ip_address: string | null;
+  device_info: string | null;
+  previous_values: unknown;
+  created_at: string;
+}>> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId) return [];
+
+  const { data } = await (admin.from("audit_logs") as any)
+    .select("id, action, actor_type, actor_id, ip_address, device_info, previous_values, created_at")
+    .eq("credit_log_id", creditLogId)
+    .order("created_at", { ascending: true });
+
+  if (!data) return [];
+  return data;
+}
+
+// ──────────────────────────────────────────────
+// Payment Methods CRUD
+// ──────────────────────────────────────────────
+
+export async function getMerchantPaymentMethods(
+  merchantId: string
+): Promise<Array<{
+  id: string;
+  merchant_id: string;
+  method_type: string;
+  label: string | null;
+  qr_url: string | null;
+  account_holder: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  is_active: boolean;
+  sort_order: number;
+  updated_at: string;
+}>> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) return [];
+
+  const { data } = await (admin.from("merchant_payment_methods") as any)
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .order("sort_order", { ascending: true })
+    .order("method_type", { ascending: true });
+
+  return data || [];
+}
+
+export async function upsertMerchantPaymentMethod(
+  merchantId: string,
+  methodType: string,
+  data: {
+    label?: string | null;
+    qr_url?: string | null;
+    account_holder?: string | null;
+    account_number?: string | null;
+    bank_name?: string | null;
+    is_active?: boolean;
+    sort_order?: number;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, error: "Not logged in" };
+  }
+
+  const validTypes = ["fonepay", "esewa", "khalti", "nepalpay", "bank_deposit", "cash"];
+  if (!validTypes.includes(methodType)) {
+    return { success: false, error: "Invalid method type" };
+  }
+
+  const payload: Record<string, unknown> = {
+    ...data,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await (admin.from("merchant_payment_methods") as any)
+    .upsert(
+      { merchant_id: merchantId, method_type: methodType, ...payload },
+      { onConflict: "merchant_id, method_type" }
+    );
+
+  if (error) {
+    console.error("[PaymentMethod] upsert error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+export async function deleteMerchantPaymentMethod(
+  merchantId: string,
+  methodType: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, error: "Not logged in" };
+  }
+
+  const { error } = await (admin.from("merchant_payment_methods") as any)
+    .delete()
+    .eq("merchant_id", merchantId)
+    .eq("method_type", methodType);
+
+  if (error) {
+    console.error("[PaymentMethod] delete error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// ──────────────────────────────────────────────
+// Reminder Settings
+// ──────────────────────────────────────────────
+
+export async function getMerchantReminderSettings(
+  merchantId: string
+): Promise<{
+  id: string;
+  merchant_id: string;
+  auto_reminder_enabled: boolean;
+  reminder_message_template: string | null;
+  reminder_day_of_month: number;
+  last_reminder_at: string | null;
+} | null> {
+  const admin = getAdminClient();
+  if (!admin) return null;
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) return null;
+
+  const { data } = await (admin.from("merchant_reminder_settings") as any)
+    .select("*")
+    .eq("merchant_id", merchantId)
+    .maybeSingle();
+
+  return data || null;
+}
+
+export async function updateMerchantReminderSettings(
+  merchantId: string,
+  data: {
+    auto_reminder_enabled?: boolean;
+    reminder_message_template?: string | null;
+    reminder_day_of_month?: number;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, error: "Not logged in" };
+  }
+
+  const payload: Record<string, unknown> = {
+    ...data,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error } = await (admin.from("merchant_reminder_settings") as any)
+    .upsert(
+      { merchant_id: merchantId, ...payload },
+      { onConflict: "merchant_id" }
+    );
+
+  if (error) {
+    console.error("[ReminderSettings] upsert error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
+// ──────────────────────────────────────────────
+// Payment Reminder Actions
+// ──────────────────────────────────────────────
+
+export async function sendPaymentReminder(
+  merchantId: string,
+  customerId: string,
+  type: "sms" | "share_link"
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, error: "Not logged in" };
+  }
+
+  try {
+    const [merchantResult, customerResult, balanceResult] = await Promise.all([
+      (admin.from("merchants") as any).select("name").eq("id", merchantId).single(),
+      (admin.from("customers") as any).select("name, phone").eq("id", customerId).single(),
+      (admin.from("merchant_customers") as any)
+        .select("current_balance")
+        .eq("merchant_id", merchantId)
+        .eq("customer_id", customerId)
+        .maybeSingle(),
+    ]);
+
+    const shopName = merchantResult.data?.name || "Shop";
+    const customerName = customerResult.data?.name || "Customer";
+    const customerPhone = customerResult.data?.phone || "";
+    const balance = balanceResult.data?.current_balance || 0;
+
+    let message: string;
+
+    if (type === "sms") {
+      const firstName = shopName.split(" ")[0];
+      message = `Dear ${customerName}, pay Rs. ${Number(balance).toLocaleString()} to ${firstName}.`;
+      if (message.length > 150) {
+        message = message.substring(0, 147) + "...";
+      }
+
+      const { sendTransactionSMS } = await import("./sms");
+      const smsResult = await sendTransactionSMS(customerPhone, message);
+
+      await (admin.from("payment_reminder_logs") as any).insert({
+        merchant_id: merchantId,
+        customer_id: customerId,
+        type: "sms",
+        message,
+        status: smsResult.success ? "sent" : "failed",
+        error_message: smsResult.error || null,
+      });
+
+      if (!smsResult.success) {
+        return { success: false, error: smsResult.error || "SMS failed" };
+      }
+    } else {
+      const methods = await (admin.from("merchant_payment_methods") as any)
+        .select("method_type, label, qr_url, account_holder, account_number, bank_name")
+        .eq("merchant_id", merchantId)
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      const methodLines = (methods.data || []).map((m: any) => {
+        if (m.method_type === "bank_deposit") {
+          return `${m.bank_name || "Bank"}: ${m.account_holder || ""} ${m.account_number || ""}`;
+        }
+        return m.label || m.method_type;
+      });
+
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
+      const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
+      const paymentLink = `${baseUrl}/customer/payment-methods?merchantId=${merchantId}`;
+
+      message = `Dear ${customerName}, your outstanding balance at ${shopName} is Rs. ${Number(balance).toLocaleString()}. View ledger: ${ledgerLink}. Payment methods: ${paymentLink}`;
+
+      await (admin.from("payment_reminder_logs") as any).insert({
+        merchant_id: merchantId,
+        customer_id: customerId,
+        type: "share_link",
+        message,
+        status: "sent",
+      });
+    }
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[sendPaymentReminder] error:", msg);
+    return { success: false, error: msg };
+  }
+}
+
+export async function getReminderLogs(
+  merchantId: string
+): Promise<Array<{
+  id: string;
+  merchant_id: string;
+  customer_id: string;
+  credit_log_id: string | null;
+  type: string;
+  message: string;
+  sent_at: string;
+  status: string;
+  error_message: string | null;
+  customers: { name: string | null; phone: string } | null;
+}>> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) return [];
+
+  const { data } = await (admin.from("payment_reminder_logs") as any)
+    .select("*, customers(name, phone)")
+    .eq("merchant_id", merchantId)
+    .order("sent_at", { ascending: false })
+    .limit(50);
+
+  return data || [];
+}
+
+export async function checkAndSendAutoReminders(
+  merchantId: string
+): Promise<{ success: boolean; sent: number; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, sent: 0, error: "Server config" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, sent: 0, error: "Not logged in" };
+  }
+
+  try {
+    const { data: settings } = await (admin.from("merchant_reminder_settings") as any)
+      .select("*")
+      .eq("merchant_id", merchantId)
+      .maybeSingle();
+
+    if (!settings || !settings.auto_reminder_enabled) {
+      return { success: true, sent: 0 };
+    }
+
+    const now = new Date();
+    const today = now.getUTCDate();
+    const currentMonth = now.getUTCMonth();
+    const currentYear = now.getUTCFullYear();
+
+    const startOfMonth = new Date(Date.UTC(currentYear, currentMonth, 1)).toISOString();
+
+    if (today < settings.reminder_day_of_month) {
+      return { success: true, sent: 0 };
+    }
+
+    if (settings.last_reminder_at && settings.last_reminder_at >= startOfMonth) {
+      return { success: true, sent: 0 };
+    }
+
+    const { data: customers } = await (admin.from("merchant_customers") as any)
+      .select("customer_id, current_balance, customers!inner(name, phone)")
+      .eq("merchant_id", merchantId)
+      .gt("current_balance", 0);
+
+    if (!customers || customers.length === 0) {
+      return { success: true, sent: 0 };
+    }
+
+    const { data: merchant } = await (admin.from("merchants") as any)
+      .select("name")
+      .eq("id", merchantId)
+      .single();
+
+    const shopName = merchant?.name || "Shop";
+    const firstName = shopName.split(" ")[0];
+    const template = settings.reminder_message_template || "Dear {customer}, pay Rs. {balance} to {shop}.";
+    const { sendTransactionSMS } = await import("./sms");
+
+    let sent = 0;
+    for (const row of customers) {
+      const customerName = row.customers?.name || "Customer";
+      const customerPhone = row.customers?.phone;
+      if (!customerPhone) continue;
+
+      let msg = template
+        .replace(/\{customer\}/g, customerName)
+        .replace(/\{balance\}/g, Number(row.current_balance).toLocaleString())
+        .replace(/\{shop\}/g, firstName);
+
+      if (msg.length > 150) {
+        msg = msg.substring(0, 147) + "...";
+      }
+
+      const result = await sendTransactionSMS(customerPhone, msg);
+
+      await (admin.from("payment_reminder_logs") as any).insert({
+        merchant_id: merchantId,
+        customer_id: row.customer_id,
+        type: "sms",
+        message: msg,
+        status: result.success ? "sent" : "failed",
+        error_message: result.error || null,
+      });
+
+      if (result.success) sent++;
+    }
+
+    await (admin.from("merchant_reminder_settings") as any)
+      .update({ last_reminder_at: now.toISOString() })
+      .eq("merchant_id", merchantId);
+
+    return { success: true, sent };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[checkAndSendAutoReminders] error:", msg);
+    return { success: false, sent: 0, error: msg };
+  }
+}
+
+// ──────────────────────────────────────────────
+// Public: Merchant Payment Methods (customer-facing)
+// ──────────────────────────────────────────────
+
+export async function getMerchantPaymentMethodsPublic(
+  merchantId: string
+): Promise<Array<{
+  method_type: string;
+  label: string | null;
+  qr_url: string | null;
+  account_holder: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  is_active: boolean;
+}>> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  const { data } = await (admin.from("merchant_payment_methods") as any)
+    .select("method_type, label, qr_url, account_holder, account_number, bank_name, is_active")
+    .eq("merchant_id", merchantId)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("method_type", { ascending: true });
+
+  return data || [];
+}

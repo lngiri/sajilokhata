@@ -13,6 +13,10 @@ import { updateMerchantProfile } from "@/lib/actions";
 import {
   getMerchantProfile,
   getMerchantCreditLogs,
+  getMerchantPaymentMethods,
+  upsertMerchantPaymentMethod,
+  getMerchantReminderSettings,
+  updateMerchantReminderSettings,
 } from "@/app/actions/merchant";
 import { changePin } from "@/app/actions/pin";
 
@@ -31,6 +35,44 @@ export default function SettingsPage() {
   const [authPhone, setAuthPhone] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [photoUploading, setPhotoUploading] = useState(false);
+
+  // Payment methods state
+  const [paymentMethods, setPaymentMethods] = useState<Record<string, {
+    method_type: string;
+    label: string | null;
+    qr_url: string | null;
+    account_holder: string | null;
+    account_number: string | null;
+    bank_name: string | null;
+    is_active: boolean;
+    sort_order: number;
+  }>>({});
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(true);
+  const [expandedMethod, setExpandedMethod] = useState<string | null>(null);
+  const [uploadingQrFor, setUploadingQrFor] = useState<string | null>(null);
+  const [savingPaymentMethod, setSavingPaymentMethod] = useState<string | null>(null);
+
+  // Reminder settings state
+  const [reminderSettings, setReminderSettings] = useState<{
+    auto_reminder_enabled: boolean;
+    reminder_message_template: string;
+    reminder_day_of_month: number;
+  }>({
+    auto_reminder_enabled: false,
+    reminder_message_template: "Dear {customer}, pay Rs. {balance} to {shop}.",
+    reminder_day_of_month: 1,
+  });
+  const [reminderSettingsLoading, setReminderSettingsLoading] = useState(true);
+  const [savingReminder, setSavingReminder] = useState(false);
+
+  const PAYMENT_TYPES = [
+    { key: "fonepay", label: "Fonepay QR", icon: "🏦", hasQr: true },
+    { key: "esewa", label: "E-Sewa", icon: "💳", hasQr: true },
+    { key: "khalti", label: "Khalti", icon: "💰", hasQr: true },
+    { key: "nepalpay", label: "NepalPay", icon: "🏧", hasQr: true },
+    { key: "bank_deposit", label: "Bank Deposit", icon: "🏛️", hasQr: false },
+    { key: "cash", label: "Cash", icon: "💵", hasQr: false },
+  ];
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
     new Promise((resolve, reject) => {
@@ -94,11 +136,49 @@ export default function SettingsPage() {
         setAddress(profile.address || "");
         setPhone(profile.phone || "");
         setPhotoUrl(profile.photo_url || null);
+
+        // Load payment methods
+        loadPaymentMethods(id);
+
+        // Load reminder settings
+        loadReminderSettings(id);
       }
     } catch (err) {
       console.error("Failed to load merchant profile:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPaymentMethods = async (id: string) => {
+    try {
+      const methods = await getMerchantPaymentMethods(id);
+      const map: Record<string, any> = {};
+      for (const m of methods) {
+        map[m.method_type] = m;
+      }
+      setPaymentMethods(map);
+    } catch (err) {
+      console.error("Failed to load payment methods:", err);
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
+
+  const loadReminderSettings = async (id: string) => {
+    try {
+      const settings = await getMerchantReminderSettings(id);
+      if (settings) {
+        setReminderSettings({
+          auto_reminder_enabled: settings.auto_reminder_enabled,
+          reminder_message_template: settings.reminder_message_template || "Dear {customer}, pay Rs. {balance} to {shop}.",
+          reminder_day_of_month: settings.reminder_day_of_month,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load reminder settings:", err);
+    } finally {
+      setReminderSettingsLoading(false);
     }
   };
 
@@ -497,6 +577,273 @@ export default function SettingsPage() {
           </button>
         </section>
 
+        {/* Payment Methods Section */}
+        <section>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+            Receive Payments
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-50">
+            {PAYMENT_TYPES.map((pt) => {
+              const method = paymentMethods[pt.key];
+              const isActive = method?.is_active ?? false;
+              const expanded = expandedMethod === pt.key;
+              const saving = savingPaymentMethod === pt.key;
+
+              return (
+                <div key={pt.key} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <span className="text-lg flex-shrink-0">{pt.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-[var(--color-text)]">{pt.label}</p>
+                        {method?.label && (
+                          <p className="text-xs text-[var(--color-text-muted)] truncate">{method.label}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={isActive}
+                          onChange={async (e) => {
+                            if (!merchantId) return;
+                            setSavingPaymentMethod(pt.key);
+                            try {
+                              await upsertMerchantPaymentMethod(merchantId, pt.key, {
+                                is_active: e.target.checked,
+                              });
+                              const updated = { ...paymentMethods };
+                              if (!updated[pt.key]) {
+                                updated[pt.key] = {
+                                  method_type: pt.key, label: null, qr_url: null,
+                                  account_holder: null, account_number: null, bank_name: null,
+                                  is_active: e.target.checked, sort_order: 0,
+                                };
+                              } else {
+                                updated[pt.key] = { ...updated[pt.key], is_active: e.target.checked };
+                              }
+                              setPaymentMethods(updated);
+                              addToast(`${pt.label} ${e.target.checked ? "enabled" : "disabled"}`, "success");
+                            } catch {
+                              addToast(`Failed to update ${pt.label}`, "error");
+                            } finally {
+                              setSavingPaymentMethod(null);
+                            }
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+                      </label>
+                      <button
+                        onClick={() => setExpandedMethod(expanded ? null : pt.key)}
+                        className="p-1 active:scale-90 transition-transform"
+                      >
+                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+
+                  {expanded && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                      {/* Label field for all except cash */}
+                      {pt.key !== "cash" && (
+                        <div>
+                          <label className="block text-xs text-[var(--color-text-muted)] mb-1">Label</label>
+                          <input
+                            type="text"
+                            value={method?.label || ""}
+                            onChange={(e) => {
+                              const updated = { ...paymentMethods };
+                              if (!updated[pt.key]) {
+                                updated[pt.key] = { method_type: pt.key, label: null, qr_url: null, account_holder: null, account_number: null, bank_name: null, is_active: false, sort_order: 0 };
+                              }
+                              updated[pt.key] = { ...updated[pt.key], label: e.target.value || null };
+                              setPaymentMethods(updated);
+                            }}
+                            placeholder={pt.label}
+                            className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                          />
+                        </div>
+                      )}
+
+                      {/* QR upload for QR-based methods */}
+                      {pt.hasQr && (
+                        <div>
+                          <label className="block text-xs text-[var(--color-text-muted)] mb-1">QR Code Image</label>
+                          {method?.qr_url && (
+                            <div className="mb-2">
+                              <img
+                                src={method.qr_url}
+                                alt={`${pt.label} QR`}
+                                className="w-24 h-24 object-contain rounded-lg border border-gray-200"
+                              />
+                            </div>
+                          )}
+                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium cursor-pointer active:scale-[0.98] transition-transform">
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                            </svg>
+                            {uploadingQrFor === pt.key ? "Uploading..." : (method?.qr_url ? "Change QR" : "Upload QR")}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file || !merchantId) return;
+                                setUploadingQrFor(pt.key);
+                                try {
+                                  const resized = await resizeImage(file, 512);
+                                  const uploadFile = new File([resized], file.name.replace(/\.[^.]+$/, ".webp"), { type: "image/webp" });
+                                  const formData = new FormData();
+                                  formData.append("file", uploadFile);
+                                  formData.append("merchantId", merchantId);
+                                  formData.append("methodType", pt.key);
+                                  const res = await fetch("/api/merchant/upload-payment-qr", { method: "POST", body: formData });
+                                  const data = await res.json();
+                                  if (data.url) {
+                                    const updated = { ...paymentMethods };
+                                    if (!updated[pt.key]) {
+                                      updated[pt.key] = { method_type: pt.key, label: null, qr_url: null, account_holder: null, account_number: null, bank_name: null, is_active: false, sort_order: 0 };
+                                    }
+                                    updated[pt.key] = { ...updated[pt.key], qr_url: data.url };
+                                    setPaymentMethods(updated);
+                                    addToast("QR uploaded!", "success");
+                                  } else {
+                                    addToast(data.error || "Upload failed", "error");
+                                  }
+                                } catch {
+                                  addToast("Upload failed", "error");
+                                } finally {
+                                  setUploadingQrFor(null);
+                                }
+                              }}
+                            />
+                          </label>
+                          {method?.qr_url && (
+                            <button
+                              onClick={async () => {
+                                if (!merchantId) return;
+                                const updated = { ...paymentMethods };
+                                if (updated[pt.key]) {
+                                  updated[pt.key] = { ...updated[pt.key], qr_url: null };
+                                }
+                                setPaymentMethods(updated);
+                              }}
+                              className="block mt-1 text-xs text-red-500 font-medium active:opacity-70"
+                            >
+                              Remove QR
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Bank deposit fields */}
+                      {pt.key === "bank_deposit" && (
+                        <>
+                          <div>
+                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">Account Holder Name</label>
+                            <input
+                              type="text"
+                              value={method?.account_holder || ""}
+                              onChange={(e) => {
+                                const updated = { ...paymentMethods };
+                                if (!updated[pt.key]) {
+                                  updated[pt.key] = { method_type: pt.key, label: null, qr_url: null, account_holder: null, account_number: null, bank_name: null, is_active: false, sort_order: 0 };
+                                }
+                                updated[pt.key] = { ...updated[pt.key], account_holder: e.target.value || null };
+                                setPaymentMethods(updated);
+                              }}
+                              placeholder="e.g. Ram Shrestha"
+                              className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">Account Number</label>
+                            <input
+                              type="text"
+                              value={method?.account_number || ""}
+                              onChange={(e) => {
+                                const updated = { ...paymentMethods };
+                                if (!updated[pt.key]) {
+                                  updated[pt.key] = { method_type: pt.key, label: null, qr_url: null, account_holder: null, account_number: null, bank_name: null, is_active: false, sort_order: 0 };
+                                }
+                                updated[pt.key] = { ...updated[pt.key], account_number: e.target.value || null };
+                                setPaymentMethods(updated);
+                              }}
+                              placeholder="e.g. 1234567890"
+                              className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">Bank Name</label>
+                            <input
+                              type="text"
+                              value={method?.bank_name || ""}
+                              onChange={(e) => {
+                                const updated = { ...paymentMethods };
+                                if (!updated[pt.key]) {
+                                  updated[pt.key] = { method_type: pt.key, label: null, qr_url: null, account_holder: null, account_number: null, bank_name: null, is_active: false, sort_order: 0 };
+                                }
+                                updated[pt.key] = { ...updated[pt.key], bank_name: e.target.value || null };
+                                setPaymentMethods(updated);
+                              }}
+                              placeholder="e.g. NMB Bank"
+                              className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Cash: no extra fields needed */}
+
+                      {/* Save method */}
+                      <button
+                        onClick={async () => {
+                          if (!merchantId) return;
+                          setSavingPaymentMethod(pt.key);
+                          try {
+                            const m = paymentMethods[pt.key];
+                            await upsertMerchantPaymentMethod(merchantId, pt.key, {
+                              label: m?.label || null,
+                              qr_url: m?.qr_url || null,
+                              account_holder: m?.account_holder || null,
+                              account_number: m?.account_number || null,
+                              bank_name: m?.bank_name || null,
+                              is_active: m?.is_active ?? false,
+                              sort_order: m?.sort_order ?? 0,
+                            });
+                            addToast(`${pt.label} saved!`, "success");
+                          } catch {
+                            addToast(`Failed to save ${pt.label}`, "error");
+                          } finally {
+                            setSavingPaymentMethod(null);
+                          }
+                        }}
+                        disabled={saving}
+                        className="w-full py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {saving ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          "Save"
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-[var(--color-text-muted)] mt-2">
+            Customers will see enabled payment methods when making payments.
+          </p>
+        </section>
+
         {/* PIN Change Section */}
         <section>
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
@@ -613,6 +960,99 @@ export default function SettingsPage() {
               </div>
               {exporting && (
                 <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              )}
+            </button>
+          </div>
+        </section>
+
+        {/* Reminder Settings Section */}
+        <section>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+            Auto Reminder
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">End-of-Month SMS Reminder</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Auto-send SMS to customers with balance</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={reminderSettings.auto_reminder_enabled}
+                  onChange={(e) => setReminderSettings({ ...reminderSettings, auto_reminder_enabled: e.target.checked })}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+              </label>
+            </div>
+
+            {reminderSettings.auto_reminder_enabled && (
+              <>
+                <div>
+                  <label className="block text-xs text-[var(--color-text-muted)] mb-1">Reminder Day of Month</label>
+                  <select
+                    value={reminderSettings.reminder_day_of_month}
+                    onChange={(e) => setReminderSettings({ ...reminderSettings, reminder_day_of_month: Number(e.target.value) })}
+                    className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none"
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
+                      <option key={d} value={d}>{d}{d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th"} day</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-[var(--color-text-muted)] mb-1">Message Template</label>
+                  <textarea
+                    value={reminderSettings.reminder_message_template}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 150) {
+                        setReminderSettings({ ...reminderSettings, reminder_message_template: e.target.value });
+                      }
+                    }}
+                    maxLength={150}
+                    rows={2}
+                    className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none resize-none"
+                  />
+                  <p className="text-xs text-[var(--color-text-muted)] text-right mt-1">
+                    {reminderSettings.reminder_message_template.length}/150
+                  </p>
+                </div>
+
+                <div className="bg-gray-50 rounded-xl p-3">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Preview:</p>
+                  <p className="text-sm text-[var(--color-text)]">
+                    {reminderSettings.reminder_message_template
+                      .replace("{customer}", "Ram")
+                      .replace("{balance}", "1,500")
+                      .replace("{shop}", (merchantName || "Shop").split(" ")[0])
+                    }
+                  </p>
+                </div>
+              </>
+            )}
+
+            <button
+              onClick={async () => {
+                if (!merchantId) return;
+                setSavingReminder(true);
+                try {
+                  await updateMerchantReminderSettings(merchantId, reminderSettings);
+                  addToast("Reminder settings saved!", "success");
+                } catch {
+                  addToast("Failed to save reminder settings", "error");
+                } finally {
+                  setSavingReminder(false);
+                }
+              }}
+              disabled={savingReminder}
+              className="w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {savingReminder ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Save Reminder Settings"
               )}
             </button>
           </div>
