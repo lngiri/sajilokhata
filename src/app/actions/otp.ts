@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 import { findUserByPhone } from "./pin";
+import { sendTransactionSMS } from "./sms";
 
 // ──────────────────────────────────────────────
 // OTP generation and storage (cookie-based)
@@ -51,9 +52,11 @@ export async function sendRegistrationOtp(
     });
 
     // Send SMS
-    const { sendTransactionSMS } = await import("./sms");
-    const message = `Your QRHisab OTP is ${code}. Track your credits & transactions securely by logging into qrhisab.com now.`;
-    return sendTransactionSMS(cleanPhone, message);
+    const message = `Your QRHisab OTP is ${code}. Use this to complete your registration on QR Hisab.`;
+    console.log("[OTP] Sending SMS to", cleanPhone, "with message:", message);
+    const smsResult = await sendTransactionSMS(cleanPhone, message);
+    console.log("[OTP] SMS result:", JSON.stringify(smsResult));
+    return smsResult;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[OTP] sendRegistrationOtp error:", msg);

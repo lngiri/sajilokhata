@@ -841,6 +841,35 @@ export async function getSystemHealth(): Promise<{
     }
   }
 
+  // ─── SMS Gateway Check ──────────────────────────────────────
+  const smsToken = process.env.AAKASH_SMS_TOKEN;
+  if (!smsToken) {
+    checks.push({ label: "SMS Gateway Token", ok: false, detail: "AAKASH_SMS_TOKEN not set" });
+  } else {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 10000);
+      const payload = new URLSearchParams({ auth_token: smsToken, to: "9800000000", text: "healthcheck" }).toString();
+      const res = await fetch("https://sms.aakashsms.com/sms/v3/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: payload,
+        signal: controller.signal,
+      });
+      clearTimeout(t);
+      const body = await res.text();
+      let parsed: any;
+      try { parsed = JSON.parse(body); } catch { parsed = {}; }
+      if (parsed?.error === true) {
+        checks.push({ label: "SMS Gateway API", ok: false, detail: parsed.message || "API error" });
+      } else {
+        checks.push({ label: "SMS Gateway API", ok: true });
+      }
+    } catch (err) {
+      checks.push({ label: "SMS Gateway API", ok: false, detail: String(err) });
+    }
+  }
+
   const failures = checks.filter((c) => !c.ok).length;
   const status = failures === 0 ? "green" : failures <= 2 ? "yellow" : "red";
   return { status, message: status === "green" ? "All systems operational" : `${failures} issue(s) detected`, lastCheck: new Date().toISOString(), checks };
