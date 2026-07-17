@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
 import { QRScanner } from "@/components/QRCode";
@@ -21,6 +21,11 @@ import {
   getCustomerStats,
 } from "@/lib/actions";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
+
+function maskPhone(phone: string): string {
+  if (phone.length < 8) return phone;
+  return phone.slice(0, 4) + "****" + phone.slice(-2);
+}
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -95,11 +100,16 @@ export default function CustomerDashboard() {
   const customerNotificationRef = useRef<HTMLDivElement>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
+  const closeModalTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined!);
+  const loadStatsRef = useRef<() => Promise<void>>(undefined!);
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
     new Promise((resolve, reject) => {
       const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
         let w = img.width, h = img.height;
         if (w <= maxDim && h <= maxDim) { resolve(file); return; }
         const ratio = Math.min(maxDim / w, maxDim / h);
@@ -112,14 +122,9 @@ export default function CustomerDashboard() {
           if (blob) resolve(blob); else reject(new Error("Canvas toBlob failed"));
         }, "image/webp", 0.85);
       };
-      img.onerror = () => reject(new Error("Image load failed"));
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("Image load failed")); };
+      img.src = objectUrl;
     });
-
-  function maskPhone(phone: string): string {
-    if (phone.length < 8) return phone;
-    return phone.slice(0, 4) + "****" + phone.slice(-2);
-  }
 
   // On mount, restore customer session from localStorage
   useEffect(() => {
@@ -137,6 +142,15 @@ export default function CustomerDashboard() {
     } finally {
       setInitialized(true);
     }
+  }, []);
+
+  // Mounted ref + cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      if (closeModalTimeoutRef.current) clearTimeout(closeModalTimeoutRef.current);
+    };
   }, []);
 
   // Load stats when phone is available
@@ -163,7 +177,6 @@ export default function CustomerDashboard() {
     if (realtimeSetupStartedRef.current) return;
     realtimeSetupStartedRef.current = true;
 
-    const loadStatsRef = loadStats;
     const supabase = realtimeClientRef.current;
 
     const setupRealtime = async () => {
@@ -207,7 +220,7 @@ export default function CustomerDashboard() {
               setNotifications((prev) =>
                 [{ id: payload.new?.id || crypto.randomUUID(), shopName: payload.new?.description || "Shop", amount: payload.new?.amount || 0, status: newStatus, created_at: new Date().toISOString() }, ...prev].slice(0, 10)
               );
-              loadStatsRef();
+              loadStatsRef.current();
             }
           }
         )
@@ -263,18 +276,24 @@ export default function CustomerDashboard() {
     };
   }, [showProfileMenu]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     if (!customerPhone) return;
+    if (!mountedRef.current) return;
     setStatsLoading(true);
     try {
       const data = await getCustomerStats(customerPhone);
-      setStats(data);
+      if (mountedRef.current) setStats(data);
     } catch {
       // No data yet
     } finally {
-      setStatsLoading(false);
+      if (mountedRef.current) setStatsLoading(false);
     }
-  };
+  }, [customerPhone]);
+
+  // Keep loadStatsRef current for the realtime channel callback
+  useEffect(() => {
+    loadStatsRef.current = loadStats;
+  }, [loadStats]);
 
   // Scan QR handler — moves modal to "enter" step
   const handleQRScan = useCallback(
@@ -348,13 +367,15 @@ export default function CustomerDashboard() {
   const closeModal = () => {
     setShowScanner(false);
     // Delay reset so the modal animation plays out
-    setTimeout(() => {
-      setScanStep("scan");
-      setMerchantId("");
-      setMerchantName("");
-      setAmount("");
-      setDescription("");
-      setEntryType("debit");
+    closeModalTimeoutRef.current = setTimeout(() => {
+      if (mountedRef.current) {
+        setScanStep("scan");
+        setMerchantId("");
+        setMerchantName("");
+        setAmount("");
+        setDescription("");
+        setEntryType("debit");
+      }
     }, 200);
   };
 

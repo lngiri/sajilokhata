@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import BottomNav from "@/components/BottomNav";
 import SyncStatus from "@/components/SyncStatus";
 import SmsReminderModal from "@/components/SmsReminderModal";
@@ -29,7 +29,7 @@ import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
-const POLL_INTERVAL = 45_000;
+const POLL_INTERVAL = 300_000;
 
 /** Format a timestamp as a relative time string (e.g. "2 min ago") */
 function timeAgo(dateString: string): string {
@@ -122,7 +122,9 @@ export default function MerchantDashboard() {
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
 
-
+  const topPendingLogs = useMemo(() => pendingLogs.slice(0, 3), [pendingLogs]);
+  const topActivity = useMemo(() => recentActivity.slice(0, 3), [recentActivity]);
+  const displayedActivity = useMemo(() => recentActivity.slice(0, 10), [recentActivity]);
 
   // Show welcome toast based on account status from login redirect
   useEffect(() => {
@@ -141,24 +143,13 @@ export default function MerchantDashboard() {
   const supabase = useRef(createClient()).current;
 
   const loadData = useCallback(async () => {
-    let id = merchantIdRef.current || (await getCurrentMerchantId());
+    const id = merchantIdRef.current || (await getCurrentMerchantId());
     if (!mountedRef.current) return;
 
-    // Cross-check against authoritative Supabase auth session.
-    // If the stored merchant_id differs from the actual auth.uid(),
-    // it means localStorage is stale — use the auth session ID instead.
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user && user.id !== id) {
-        id = user.id;
-        localStorage.setItem("merchant_id", user.id);
-      }
-    } catch {
-      // Auth unavailable (bypass/demo mode); keep the existing value
+    if (merchantIdRef.current !== id) {
+      merchantIdRef.current = id;
+      setMerchantId(id);
     }
-
-    setMerchantId(id);
-    merchantIdRef.current = id;
 
       if (id) {
         try {
@@ -269,13 +260,13 @@ export default function MerchantDashboard() {
   }, [showProfileMenu]);
 
   // ================================================================
-  // Issue 1: Supabase Realtime — new credit log INSERT for this merchant
+  // Supabase Realtime — listen for INSERT + UPDATE on credit_logs
   // ================================================================
   useEffect(() => {
     if (!merchantId) return;
 
     const channel = supabase
-      .channel("merchant-dashboard-realtime")
+      .channel("merchant-dashboard")
       .on(
         "postgres_changes",
         {
@@ -294,21 +285,6 @@ export default function MerchantDashboard() {
           loadData();
         }
       )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [merchantId, addToast, loadData, supabase]);
-
-  // ================================================================
-  // Issue 1: Realtime — credit_log UPDATE (status changes)
-  // ================================================================
-  useEffect(() => {
-    if (!merchantId) return;
-
-    const channel = supabase
-      .channel("merchant-dashboard-updates")
       .on(
         "postgres_changes",
         {
@@ -425,17 +401,15 @@ export default function MerchantDashboard() {
                     )}
                   </button>
                 )}
-                {smsBalance !== null && (
-                  <a
-                    href="/merchant/billing"
-                    className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-semibold border border-emerald-200 active:scale-95 transition-transform"
-                  >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51" />
-                    </svg>
-                    {smsBalance} SMS
-                  </a>
-                )}
+                <a
+                  href="/merchant/billing"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-semibold border border-emerald-200 active:scale-95 transition-transform"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
+                  </svg>
+                  {smsBalance ?? 0} SMS
+                </a>
                 <div ref={notificationRef}>
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
@@ -468,7 +442,7 @@ export default function MerchantDashboard() {
           </div>
           <div className="max-h-64 overflow-y-auto">
             {pendingLogs.length > 0 ? (
-              pendingLogs.slice(0, 3).map((log) => (
+              topPendingLogs.map((log) => (
                 <a
                   key={log.id}
                   href="/merchant/ledger"
@@ -488,7 +462,7 @@ export default function MerchantDashboard() {
                 </a>
               ))
             ) : recentActivity.length > 0 ? (
-              recentActivity.slice(0, 3).map((log) => (
+              topActivity.map((log) => (
                 <a
                   key={log.id}
                   href="/merchant/ledger"
@@ -579,17 +553,15 @@ export default function MerchantDashboard() {
                 Edit Profile
               </a>
 
-              {smsBalance !== null && (
-                <a
-                  href="/merchant/billing"
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                >
-                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
-                  </svg>
-                  SMS Balance: {smsBalance} credits
-                </a>
-              )}
+              <a
+                href="/merchant/billing"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
+                </svg>
+                SMS Balance: {smsBalance ?? 0} credits
+              </a>
 
               <button
                 onClick={async () => {
@@ -882,7 +854,7 @@ export default function MerchantDashboard() {
                 </div>
               ) : (
                 <div className="space-y-1.5">
-                  {recentActivity.slice(0, 10).map((log) => {
+                  {displayedActivity.map((log) => {
                     const customerId = (log as any).customer_id;
                     const href = customerId ? `/merchant/customers/${customerId}` : "#";
                     return (
