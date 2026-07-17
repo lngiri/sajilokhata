@@ -9,7 +9,7 @@ import {
 } from "@/lib/admin-session";
 
 // ── Helper: verify admin session before any DB operation ──
-async function requireAdmin(): Promise<string> {
+export async function requireAdmin(): Promise<string> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!raw) throw new Error("Unauthorized");

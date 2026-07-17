@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { requireAdmin } from "@/app/actions/admin";
 import { SMS_PACKAGES, type SmsPackageType, type EsewaInitResponse, type EsewaVerifyResponse } from "@/lib/types/sms-billing";
 
 // ─── eSewa Configuration ──────────────────────────────────
@@ -220,4 +221,225 @@ export async function getMerchantRechargeHistory(
 
   if (error) return { success: false, error: error.message };
   return { success: true, logs: data || [] };
+}
+
+// ─── Request Types ──────────────────────────────────────────
+export type SmsRequestRecord = {
+  id: string;
+  merchant_id: string;
+  amount: number;
+  sms_count: number;
+  transaction_id: string | null;
+  screenshot_url: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  merchants?: { name: string; phone: string; business_name: string | null } | null;
+};
+
+// ─── Create Manual SMS Request (Merchant) ──────────────────
+export async function createManualSmsRequest(
+  formData: FormData
+): Promise<{ success: boolean; error?: string; requestId?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server configuration error" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId) return { success: false, error: "Not logged in" };
+
+  const merchantId = formData.get("merchantId") as string;
+  const amount = Number(formData.get("amount"));
+  const smsCount = Number(formData.get("smsCount"));
+  const transactionId = formData.get("transactionId") as string;
+  const screenshotBase64 = formData.get("screenshot") as string;
+
+  if (!merchantId || merchantId !== sessionUserId) {
+    return { success: false, error: "Session mismatch" };
+  }
+  if (!amount || amount <= 0) return { success: false, error: "Invalid amount" };
+  if (!smsCount || smsCount <= 0) return { success: false, error: "Invalid SMS count" };
+  if (!transactionId?.trim()) return { success: false, error: "Transaction ID is required" };
+  if (!screenshotBase64) return { success: false, error: "Screenshot is required" };
+
+  // Decode and upload screenshot
+  let screenshotUrl: string;
+  try {
+    const matches = screenshotBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches) return { success: false, error: "Invalid image data" };
+
+    const mimeType = matches[1];
+    const ext = mimeType.split("/")[1];
+    const buffer = Buffer.from(matches[2], "base64");
+    const fileName = `${merchantId}/${crypto.randomUUID()}.${ext}`;
+
+    const { data: uploadData, error: uploadError } = await (admin.storage
+      .from("payment-proofs") as any).upload(fileName, buffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+    if (uploadError) {
+      console.error("[SMS-BILLING] Screenshot upload failed:", uploadError);
+      return { success: false, error: "Failed to upload screenshot" };
+    }
+
+    // Get public URL (bucket is not public, but service role can generate signed URL)
+    const { data: urlData } = await (admin.storage
+      .from("payment-proofs") as any).getPublicUrl(fileName);
+    screenshotUrl = urlData?.publicUrl || fileName;
+  } catch (err) {
+    console.error("[SMS-BILLING] Screenshot processing error:", err);
+    return { success: false, error: "Failed to process screenshot" };
+  }
+
+  // Insert sms_requests record
+  const { data: newRequest, error: insertError } = await (admin
+    .from("sms_requests") as any)
+    .insert({
+      merchant_id: merchantId,
+      amount,
+      sms_count: smsCount,
+      transaction_id: transactionId.trim(),
+      screenshot_url: screenshotUrl,
+      status: "pending",
+    })
+    .select("id")
+    .single();
+
+  if (insertError) {
+    console.error("[SMS-BILLING] Failed to create request:", insertError);
+    return { success: false, error: "Database error" };
+  }
+
+  return { success: true, requestId: newRequest?.id };
+}
+
+// ─── Get Pending SMS Requests (Admin) ──────────────────────
+export async function getPendingSmsRequests(): Promise<{
+  success: boolean;
+  error?: string;
+  requests?: SmsRequestRecord[];
+}> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server configuration error" };
+
+  try {
+    await requireAdmin();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { data, error } = await (admin
+    .from("sms_requests") as any)
+    .select("*, merchants!inner(name, phone, business_name)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[SMS-BILLING] Failed to fetch pending requests:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, requests: data || [] };
+}
+
+// ─── Approve SMS Request (Admin) ────────────────────────────
+export async function approveSmsRequest(
+  requestId: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server configuration error" };
+
+  try {
+    await requireAdmin();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  // Get the request
+  const { data: request, error: fetchError } = await (admin
+    .from("sms_requests") as any)
+    .select("*")
+    .eq("id", requestId)
+    .single();
+
+  if (fetchError || !request) {
+    return { success: false, error: "Request not found" };
+  }
+
+  if (request.status !== "pending") {
+    return { success: false, error: `Request already ${request.status}` };
+  }
+
+  // Update status to approved
+  const { error: updateError } = await (admin
+    .from("sms_requests") as any)
+    .update({ status: "approved" })
+    .eq("id", requestId);
+
+  if (updateError) {
+    console.error("[SMS-BILLING] Failed to approve request:", updateError);
+    return { success: false, error: "Failed to update request" };
+  }
+
+  // Increment merchant's SMS balance
+  const { error: balanceError } = await (admin.rpc as any)("increment_sms_balance", {
+    p_merchant_id: request.merchant_id,
+    p_amount: request.sms_count,
+  });
+
+  if (balanceError) {
+    console.warn("[SMS-BILLING] RPC failed, trying direct update:", balanceError);
+    const { data: merchant } = await (admin.from("merchants") as any)
+      .select("sms_balance")
+      .eq("id", request.merchant_id)
+      .single();
+    if (merchant) {
+      await (admin.from("merchants") as any)
+        .update({ sms_balance: (merchant.sms_balance || 0) + request.sms_count })
+        .eq("id", request.merchant_id);
+    }
+  }
+
+  return { success: true };
+}
+
+// ─── Reject SMS Request (Admin) ─────────────────────────────
+export async function rejectSmsRequest(
+  requestId: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server configuration error" };
+
+  try {
+    await requireAdmin();
+  } catch {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { data: request, error: fetchError } = await (admin
+    .from("sms_requests") as any)
+    .select("status")
+    .eq("id", requestId)
+    .single();
+
+  if (fetchError || !request) {
+    return { success: false, error: "Request not found" };
+  }
+
+  if (request.status !== "pending") {
+    return { success: false, error: `Request already ${request.status}` };
+  }
+
+  const { error: updateError } = await (admin
+    .from("sms_requests") as any)
+    .update({ status: "rejected" })
+    .eq("id", requestId);
+
+  if (updateError) {
+    console.error("[SMS-BILLING] Failed to reject request:", updateError);
+    return { success: false, error: "Failed to update request" };
+  }
+
+  return { success: true };
 }
