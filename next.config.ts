@@ -2,11 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   // Bridge the HMAC secret to Edge Runtime (next.config env is available in ALL runtimes)
+  // NEVER provide a fallback — getHmacKey() in session.ts will throw fatally if missing.
   env: {
     SESSION_HMAC_SECRET:
       process.env.SESSION_HMAC_SECRET
-      || process.env.SUPABASE_SERVICE_ROLE_KEY
-      || "session-secret-fallback",
+      || process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
 
   // PWA support + cache control

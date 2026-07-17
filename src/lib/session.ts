@@ -3,21 +3,18 @@ const SESSION_DURATION = 30 * 24 * 60 * 60; // 30 days
 
 /**
  * Resolve the HMAC signing key.
- * Priority: SESSION_HMAC_SECRET (explicitly set in next.config.ts env → all runtimes)
- *         → SUPABASE_SERVICE_ROLE_KEY (Vercel env, may not reach Edge)
- *         → fallback string (dev only)
+ * Priority: SESSION_HMAC_SECRET → SUPABASE_SERVICE_ROLE_KEY
+ * Never falls back to a hardcoded string — throws a fatal error if
+ * neither is configured.
  */
 function getHmacKey(): string {
-  const key = process.env.SESSION_HMAC_SECRET
-    || process.env.SUPABASE_SERVICE_ROLE_KEY
-    || "session-secret-fallback";
-  console.log(
-    `[session] HMAC key: ${key.slice(0, 4)}... (len=${key.length}, src=${
-      !!process.env.SESSION_HMAC_SECRET ? "SESSION_HMAC_SECRET"
-        : !!process.env.SUPABASE_SERVICE_ROLE_KEY ? "SUPABASE_SERVICE_ROLE_KEY"
-          : "fallback"
-    })`
-  );
+  const key = process.env.SESSION_HMAC_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error(
+      "CRITICAL_SECURITY_ERROR: Secure HMAC secret key is missing. "
+      + "Set SESSION_HMAC_SECRET (or SUPABASE_SERVICE_ROLE_KEY) in your environment. System halted."
+    );
+  }
   return key;
 }
 

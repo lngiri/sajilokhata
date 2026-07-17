@@ -16,12 +16,10 @@ import { createClient } from "@/lib/supabase/client";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
-  linkCustomerToMerchant,
-  createCreditLog,
   getCustomerStats,
 } from "@/lib/actions";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
-import { getCustomerProfile, updateCustomerAvatar } from "@/app/actions/customer";
+import { getCustomerProfile, updateCustomerAvatar, submitCustomerEntry } from "@/app/actions/customer";
 
 function maskPhone(phone: string): string {
   if (phone.length < 8) return phone;
@@ -333,24 +331,23 @@ export default function CustomerDashboard() {
     [addToast]
   );
 
-  // Submit credit entry from modal
+  // Submit credit entry from modal (server-validated)
   const submitCreditEntry = async () => {
     if (!merchantId || !amount || Number(amount) <= 0) return;
     setSaving(true);
     try {
       if (isOnline()) {
-        const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
-        await linkCustomerToMerchant(merchantId, customer.id);
-        await createCreditLog({
-          merchant_id: merchantId,
-          customer_id: customer.id,
-          amount: Number(amount),
-          description: description || null,
-          type: entryType,
-          status: "pending",
-          sync_status: "online",
-          initiated_by: "customer",
-        });
+        const result = await submitCustomerEntry(
+          merchantId,
+          Number(amount),
+          entryType,
+          description || null,
+        );
+        if (!result.success) {
+          addToast(result.error || "Failed to submit entry", "error");
+          setSaving(false);
+          return;
+        }
       } else {
         await savePendingLog({
           id: crypto.randomUUID(),

@@ -250,17 +250,31 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // === Customer Protection (Cookie-based, localStorage fallback) ===
-  // Customers use a localStorage-based session (set on /scan page).
-  // A matching cookie is also set so middleware can prevent content flash
-  // on server-rendered pages until the client-side useEffect redirect fires.
+  // === Customer Protection (Cookie-based) ===
+  // Validates customer_session cookie has a valid phone number.
   const customerSessionCookie = request.cookies.get("customer_session");
   const isCustomerPath = request.nextUrl.pathname.startsWith("/customer/");
 
-  if (isCustomerPath && !customerSessionCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/scan";
-    return NextResponse.redirect(url);
+  if (isCustomerPath) {
+    if (!customerSessionCookie) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/scan";
+      return NextResponse.redirect(url);
+    }
+    // Validate phone in cookie is present and >= 10 digits
+    try {
+      const session = JSON.parse(decodeURIComponent(customerSessionCookie.value));
+      const phone = session?.phone;
+      if (!phone || String(phone).replace(/\D/g, "").length < 10) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/scan";
+        return NextResponse.redirect(url);
+      }
+    } catch {
+      const url = request.nextUrl.clone();
+      url.pathname = "/scan";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;

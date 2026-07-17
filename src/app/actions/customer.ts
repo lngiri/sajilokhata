@@ -1,6 +1,7 @@
 "use server";
 
 import crypto from "crypto";
+import { cookies } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
@@ -221,6 +222,104 @@ export async function updateCustomerAvatar(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Customer] updateCustomerAvatar error:", msg);
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Server-validated customer credit log submission.
+ * Reads the customer_session cookie to extract the verified phone number —
+ * never trusts the raw client-provided phone param alone.
+ */
+export async function submitCustomerEntry(
+  merchantId: string,
+  amount: number,
+  type: "debit" | "credit",
+  description?: string | null
+): Promise<{ success: boolean; error?: string; logId?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    // Read the verified phone from the httpOnly customer_session cookie
+    const cookieStore = await cookies();
+    const rawCookie = cookieStore.get("customer_session")?.value;
+    if (!rawCookie) {
+      return { success: false, error: "No session — please scan a QR code first" };
+    }
+
+    let session: { phone?: string; name?: string };
+    try {
+      session = JSON.parse(decodeURIComponent(rawCookie));
+    } catch {
+      return { success: false, error: "Invalid session data" };
+    }
+
+    const phone = session.phone;
+    if (!phone || String(phone).replace(/\D/g, "").length < 10) {
+      return { success: false, error: "Invalid session — missing phone" };
+    }
+
+    const normalized = normalizePhone(phone);
+
+    // Find or create customer
+    let customerId: string;
+    const { data: existing } = await (admin.from("customers") as any)
+      .select("id")
+      .eq("phone", normalized)
+      .maybeSingle();
+
+    if (existing) {
+      customerId = existing.id;
+    } else {
+      const { data: inserted, error: insertErr } = await (admin.from("customers") as any)
+        .insert({ phone: normalized, name: session.name || null })
+        .select("id")
+        .single();
+      if (insertErr) {
+        return { success: false, error: "Failed to create customer" };
+      }
+      customerId = inserted.id;
+    }
+
+    // Link to merchant if not already linked
+    const { data: link } = await (admin.from("merchant_customers") as any)
+      .select("id")
+      .eq("merchant_id", merchantId)
+      .eq("customer_id", customerId)
+      .maybeSingle();
+
+    if (!link) {
+      const { error: linkErr } = await (admin.from("merchant_customers") as any)
+        .insert({ merchant_id: merchantId, customer_id: customerId, credit_limit: 5000 });
+      if (linkErr) {
+        return { success: false, error: "Failed to link to merchant" };
+      }
+    }
+
+    // Create the credit log
+    const { data: log, error: logErr } = await (admin.from("credit_logs") as any)
+      .insert({
+        merchant_id: merchantId,
+        customer_id: customerId,
+        amount,
+        type,
+        description: description || null,
+        status: "pending",
+        sync_status: "online",
+        initiated_by: "customer",
+      })
+      .select("id")
+      .single();
+
+    if (logErr) {
+      return { success: false, error: "Failed to create entry" };
+    }
+
+    return { success: true, logId: log.id };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[Customer] submitCustomerEntry error:", msg);
     return { success: false, error: msg };
   }
 }
