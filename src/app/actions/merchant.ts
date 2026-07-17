@@ -43,6 +43,30 @@ export async function getMerchantProfile(merchantId: string, columns = "*") {
   return data;
 }
 
+export async function togglePaymentOption(
+  merchantId: string,
+  enabled: boolean
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return { success: false, error: "Not logged in" };
+  }
+
+  const { error } = await (admin.from("merchants") as any)
+    .update({ payment_enabled: enabled })
+    .eq("id", merchantId);
+
+  if (error) {
+    console.error("[togglePaymentOption] error:", error);
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 // ──────────────────────────────────────────────
 // Stats
 // ──────────────────────────────────────────────

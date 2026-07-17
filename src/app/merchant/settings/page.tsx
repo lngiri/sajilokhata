@@ -17,6 +17,7 @@ import {
   upsertMerchantPaymentMethod,
   getMerchantReminderSettings,
   updateMerchantReminderSettings,
+  togglePaymentOption,
 } from "@/app/actions/merchant";
 import { changePin } from "@/app/actions/pin";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
@@ -52,6 +53,8 @@ export default function SettingsPage() {
   const [expandedMethod, setExpandedMethod] = useState<string | null>(null);
   const [uploadingQrFor, setUploadingQrFor] = useState<string | null>(null);
   const [savingPaymentMethod, setSavingPaymentMethod] = useState<string | null>(null);
+  const [paymentEnabled, setPaymentEnabled] = useState(true);
+  const [togglingPaymentOption, setTogglingPaymentOption] = useState(false);
 
   // Reminder settings state
   const [reminderSettings, setReminderSettings] = useState<{
@@ -152,6 +155,7 @@ export default function SettingsPage() {
         setAddress(profile.address || "");
         setPhone(profile.phone || "");
         setPhotoUrl(profile.photo_url || null);
+        setPaymentEnabled(profile.payment_enabled !== false);
 
         // Load payment methods
         loadPaymentMethods(id);
@@ -606,6 +610,44 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             Receive Payments
           </h2>
+
+          {/* Master toggle */}
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 mb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Payment Option</p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  {paymentEnabled ? "Customers can pay you" : "Payments are paused"}
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={paymentEnabled}
+                  disabled={togglingPaymentOption}
+                  onChange={async (e) => {
+                    const newValue = e.target.checked;
+                    const prevValue = paymentEnabled;
+                    setPaymentEnabled(newValue);
+                    setTogglingPaymentOption(true);
+                    try {
+                      const res = await togglePaymentOption(merchantId!, newValue);
+                      if (!res.success) throw new Error(res.error);
+                      addToast("Payment options updated successfully!", "success");
+                    } catch (err: any) {
+                      setPaymentEnabled(prevValue);
+                      addToast(err.message || "Failed to update payment option", "error");
+                    } finally {
+                      setTogglingPaymentOption(false);
+                    }
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)] peer-disabled:opacity-50" />
+              </label>
+            </div>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-50">
             {PAYMENT_TYPES.map((pt) => {
               const method = paymentMethods[pt.key];

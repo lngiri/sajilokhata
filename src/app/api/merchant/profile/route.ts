@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { normalizePhone } from "@/lib/phone";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    let { merchant_id, name, business_name, business_type, address, phone, photo_url } = body;
-    if (phone) phone = normalizePhone(phone);
+    const { merchant_id, name, business_name, business_type, address, photo_url } = body;
 
     console.log("[Profile] POST called — body merchant_id:", merchant_id);
 
@@ -45,26 +43,31 @@ export async function POST(request: Request) {
     const resolvedId = sessionUserId || merchant_id;
     console.log("[Profile] Using resolved merchant_id:", resolvedId);
 
-    // Upsert merchant profile — DB UNIQUE constraint on phone prevents duplicates
+    // Dynamic partial update — only include explicitly provided fields
+    // Immutable fields like phone are never included
+    const updatePayload: Record<string, unknown> = {};
+    if (name !== undefined) updatePayload.name = name;
+    if (business_name !== undefined) updatePayload.business_name = business_name;
+    if (business_type !== undefined) updatePayload.business_type = business_type;
+    if (address !== undefined) updatePayload.address = address;
+    if (photo_url !== undefined) updatePayload.photo_url = photo_url;
+
+    if (Object.keys(updatePayload).length === 0) {
+      return NextResponse.json(
+        { error: "No fields to update" },
+        { status: 400 }
+      );
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (admin.from("merchants") as any)
-      .upsert(
-        {
-          id: resolvedId,
-          ...(name !== undefined && { name }),
-          ...(business_name !== undefined && { business_name }),
-          ...(business_type !== undefined && { business_type }),
-          ...(address !== undefined && { address }),
-          ...(phone !== undefined && { phone }),
-          ...(photo_url !== undefined && { photo_url }),
-        },
-        { onConflict: "id" }
-      )
+      .update(updatePayload)
+      .eq("id", resolvedId)
       .select()
       .single();
 
     if (error) {
-      console.error("[Profile] Upsert error:", error);
+      console.error("[Profile] Update error:", error);
       // Handle unique violation on phone (PostgreSQL error code 23505)
       if (error.code === "23505") {
         return NextResponse.json(
@@ -78,26 +81,25 @@ export async function POST(request: Request) {
       // Missing column (e.g. photo_url not deployed yet) — skip that field
       if (error.code === "42703") {
         console.warn("[Profile] Missing column (42703) — retrying without photo_url");
-        const { name: n, business_name: bn, business_type: bt, address: a, phone: p } = body;
-        const retryData: Record<string, unknown> = { id: resolvedId };
-        if (n !== undefined) retryData.name = n;
-        if (bn !== undefined) retryData.business_name = bn;
-        if (bt !== undefined) retryData.business_type = bt;
-        if (a !== undefined) retryData.address = a;
-        if (p !== undefined) retryData.phone = p;
-        const { data: retryData2, error: retryErr } = await (admin.from("merchants") as any)
-          .upsert(retryData, { onConflict: "id" })
+        const retryPayload: Record<string, unknown> = {};
+        if (name !== undefined) retryPayload.name = name;
+        if (business_name !== undefined) retryPayload.business_name = business_name;
+        if (business_type !== undefined) retryPayload.business_type = business_type;
+        if (address !== undefined) retryPayload.address = address;
+        const { data: retryData, error: retryErr } = await (admin.from("merchants") as any)
+          .update(retryPayload)
+          .eq("id", resolvedId)
           .select()
           .single();
         if (retryErr) {
-          console.error("[Profile] Retry upsert still failed:", retryErr);
+          console.error("[Profile] Retry update still failed:", retryErr);
           return NextResponse.json(
             { error: `Database error: ${retryErr.message}` },
             { status: 500 }
           );
         }
         console.log("[Profile] Profile saved successfully (after 42703 retry)");
-        return NextResponse.json({ success: true, profile: retryData2, merchant_id: resolvedId });
+        return NextResponse.json({ success: true, profile: retryData, merchant_id: resolvedId });
       }
       return NextResponse.json(
         { error: `Database error: ${error.message}` },
