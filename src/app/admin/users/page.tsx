@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
-import { getAdminUserDirectory, toggleMerchantStatus } from "@/app/actions/admin";
+import { getAdminUserDirectory, toggleMerchantStatus, bulkSuspendMerchants } from "@/app/actions/admin";
 import type { DirectoryUser } from "@/app/actions/admin";
 
 const ROLE_BADGE: Record<string, string> = {
@@ -18,6 +18,8 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
+  const [suspendingAll, setSuspendingAll] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -63,6 +65,34 @@ export default function UsersPage() {
     setToggling(null);
   };
 
+  const handleSuspendAll = async () => {
+    const targetIds = users
+      .filter((u) => (u.role === "merchant" || u.role === "both") && u.status !== "suspended")
+      .map((u) => u.id);
+
+    if (!targetIds.length) {
+      setFeedback({ type: "error", message: "No active merchants to suspend." });
+      setTimeout(() => setFeedback(null), 3000);
+      return;
+    }
+
+    setSuspendingAll(true);
+    setFeedback(null);
+    const result = await bulkSuspendMerchants(targetIds);
+    if (result.success) {
+      setUsers((prev) =>
+        prev.map((u) =>
+          targetIds.includes(u.id) ? { ...u, status: "suspended" as const } : u
+        )
+      );
+      setFeedback({ type: "success", message: `All targeted users suspended successfully! (${result.count} merchant${result.count !== 1 ? "s" : ""})` });
+    } else {
+      setFeedback({ type: "error", message: result.error || "Failed to suspend merchants." });
+    }
+    setSuspendingAll(false);
+    setTimeout(() => setFeedback(null), 3000);
+  };
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-[var(--a-text)] tracking-tight mb-1">User Directory</h1>
@@ -86,6 +116,33 @@ export default function UsersPage() {
           <p className="text-2xl font-bold tracking-tight text-purple-400">{stats.both}</p>
           <p className="text-xs text-[var(--a-muted)] mt-1">Both Roles</p>
         </a>
+      </div>
+
+      {/* Feedback toast */}
+      {feedback && (
+        <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
+          feedback.type === "success"
+            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+            : "bg-red-500/10 text-red-400 border border-red-500/20"
+        }`}>
+          {feedback.message}
+        </div>
+      )}
+
+      {/* Actions row */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
+        <button
+          onClick={handleSuspendAll}
+          disabled={suspendingAll}
+          className="px-4 py-2.5 text-sm font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl transition-colors inline-flex items-center gap-2"
+        >
+          {suspendingAll ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Suspending...
+            </>
+          ) : "Suspend All"}
+        </button>
       </div>
 
       {/* Search + role filter tabs */}

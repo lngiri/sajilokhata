@@ -86,7 +86,11 @@ export default function SessionsPage() {
       {/* Results */}
       {searched && (
         <div className="space-y-4">
-          {results.length === 0 ? (
+          {loading ? (
+            <div className="flex justify-center py-16">
+              <div className="w-6 h-6 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : results.length === 0 ? (
             <div className="text-center py-12 text-[var(--a-muted)]">
               <p className="text-sm font-medium">No users found matching &quot;{query}&quot;</p>
             </div>

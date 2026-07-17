@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
 import { QRScanner } from "@/components/QRCode";
@@ -94,7 +93,8 @@ export default function CustomerDashboard() {
     created_at: string;
   }>>([]);
   const customerNotificationRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
     new Promise((resolve, reject) => {
@@ -244,6 +244,25 @@ export default function CustomerDashboard() {
     };
   }, [showNotifications]);
 
+  // Close profile menu on click outside + Escape
+  useEffect(() => {
+    if (!showProfileMenu) return;
+    const handler = (e: PointerEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowProfileMenu(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", escHandler);
+    };
+  }, [showProfileMenu]);
+
   const loadStats = async () => {
     if (!customerPhone) return;
     setStatsLoading(true);
@@ -389,7 +408,7 @@ export default function CustomerDashboard() {
             </div>
             {customerPhone && (
               <button
-                onClick={() => router.push("/customer/settings")}
+                onClick={() => setShowProfileMenu(true)}
                 className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform"
               >
                 {(customerName || customerPhone).charAt(0).toUpperCase()}
@@ -447,6 +466,72 @@ export default function CustomerDashboard() {
           >
             View All
           </a>
+        </div>
+      )}
+
+      {/* Profile menu modal */}
+      {showProfileMenu && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowProfileMenu(false)}
+        >
+          <div
+            ref={profileMenuRef}
+            onClick={(e) => e.stopPropagation()}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto animate-scale-up"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowProfileMenu(false)}
+              className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 active:scale-90 transition-transform z-10"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Avatar + name header */}
+            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
+                {(customerName || customerPhone).charAt(0).toUpperCase()}
+              </div>
+              <p className="text-base font-bold text-[var(--color-text)] text-center truncate max-w-full">
+                {customerName || "Customer"}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-0.5 font-mono">
+                {customerPhone || ""}
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 space-y-2">
+              <a
+                href="/customer/settings"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a17.933 17.933 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                Edit Profile
+              </a>
+
+              <button
+                onClick={async () => {
+                  setShowProfileMenu(false);
+                  try {
+                    localStorage.removeItem("sajilo_customer_session");
+                    window.location.href = "/scan";
+                  } catch {}
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

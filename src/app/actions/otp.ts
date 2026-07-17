@@ -26,6 +26,12 @@ export async function sendRegistrationOtp(
       return { success: false, error: "Invalid phone number" };
     }
 
+    // Guard: fail fast if SMS gateway is not configured
+    if (!process.env.AAKASH_SMS_TOKEN) {
+      console.error("[OTP] AAKASH_SMS_TOKEN not configured — cannot send OTP");
+      return { success: false, error: "SMS service not configured. Please contact support." };
+    }
+
     const code = String(Math.floor(100000 + Math.random() * 900000));
     console.log("[OTP] Generated code:", code, "for phone:", cleanPhone);
 

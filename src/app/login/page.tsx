@@ -104,17 +104,19 @@ export default function LoginPage() {
 
   // ── Phone Submit ──
   const handlePhoneSubmit = async () => {
-    if (!phone || phone.length < 10) return;
+    const digitsOnly = phone.replace(/\D/g, "");
+    if (digitsOnly.length < 10) return;
     setLoading(true);
     setError("");
 
-    console.log("[Login] Phone submit, checking existence for:", phone);
-    const { exists, users } = await checkUserExists(phone);
+    const cleanPhone = digitsOnly.slice(-10);
+    console.log("[Login] Phone submit, checking existence for:", cleanPhone);
+    const { exists, users } = await checkUserExists(cleanPhone);
     console.log("[Login] checkUserExists result:", { exists, users });
 
     if (!exists) {
       console.log("[Login] New user → sending OTP");
-      const result = await sendRegistrationOtp(phone);
+      const result = await sendRegistrationOtp(cleanPhone);
       if (!result.success) {
         console.log("[Login] OTP send failed:", result.error);
         setError(result.error || "Failed to send OTP");

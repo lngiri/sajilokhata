@@ -554,6 +554,40 @@ export async function toggleMerchantStatus(
   }
 }
 
+export async function bulkSuspendMerchants(
+  merchantIds: string[]
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  try {
+    await requireAdmin();
+
+    if (!merchantIds.length) {
+      return { success: false, error: "No merchants selected" };
+    }
+
+    const admin = getAdminClient();
+    if (!admin) return { success: false, error: "Server config" };
+
+    const updates: Record<string, unknown> = {
+      status: "suspended",
+      suspended_at: new Date().toISOString(),
+    };
+
+    const { error } = await (admin.from("merchants") as any)
+      .update(updates)
+      .in("id", merchantIds);
+
+    if (error) {
+      console.error("[bulkSuspendMerchants] error:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true, count: merchantIds.length };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
 // ──────────────────────────────────────────────
 // Merchant Detail
 // ──────────────────────────────────────────────

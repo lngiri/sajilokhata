@@ -21,7 +21,7 @@ import {
   acceptEditRequest,
   rejectEditRequest,
 } from "@/lib/actions";
-import { getCurrentMerchantId } from "@/lib/auth";
+import { getCurrentMerchantId, signOut } from "@/lib/auth";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import { useRouter } from "next/navigation";
 import TransactionIcon from "@/components/TransactionIcon";
@@ -116,6 +116,8 @@ export default function MerchantDashboard() {
   } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
@@ -246,6 +248,25 @@ export default function MerchantDashboard() {
       window.removeEventListener("keydown", escHandler);
     };
   }, [showNotifications]);
+
+  // Close profile menu on click outside + Escape
+  useEffect(() => {
+    if (!showProfileMenu) return;
+    const handler = (e: PointerEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowProfileMenu(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", escHandler);
+    return () => {
+      document.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", escHandler);
+    };
+  }, [showProfileMenu]);
 
   // ================================================================
   // Issue 1: Supabase Realtime — new credit log INSERT for this merchant
@@ -390,7 +411,7 @@ export default function MerchantDashboard() {
               <>
                 {merchantProfile && (
                   <button
-                    onClick={() => router.push("/merchant/settings")}
+                    onClick={() => setShowProfileMenu(true)}
                     className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden flex-shrink-0"
                   >
                     {merchantProfile.photo_url ? (
@@ -500,6 +521,90 @@ export default function MerchantDashboard() {
           >
             View All
           </a>
+        </div>
+      )}
+
+      {/* Profile menu modal */}
+      {showProfileMenu && merchantProfile && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
+          onClick={() => setShowProfileMenu(false)}
+        >
+          <div
+            ref={profileMenuRef}
+            onClick={(e) => e.stopPropagation()}
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto animate-scale-up"
+          >
+            {/* Close button */}
+            <button
+              onClick={() => setShowProfileMenu(false)}
+              className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 active:scale-90 transition-transform z-10"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* Avatar + name header */}
+            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
+                {merchantProfile.photo_url ? (
+                  <img src={merchantProfile.photo_url} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (merchantProfile.name || "S").charAt(0).toUpperCase()
+                )}
+              </div>
+              <p className="text-base font-bold text-[var(--color-text)] text-center truncate max-w-full">
+                {merchantProfile.name || "Shop"}
+              </p>
+              <p className="text-xs text-[var(--color-text-muted)] mt-0.5 font-mono">
+                {merchantProfile.phone || ""}
+              </p>
+              {merchantProfile.business_name && (
+                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  {merchantProfile.business_name}
+                </p>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 space-y-2">
+              <a
+                href="/merchant/settings"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+              >
+                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a17.933 17.933 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+                Edit Profile
+              </a>
+
+              {smsBalance !== null && (
+                <a
+                  href="/merchant/billing"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                >
+                  <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
+                  </svg>
+                  SMS Balance: {smsBalance} credits
+                </a>
+              )}
+
+              <button
+                onClick={async () => {
+                  setShowProfileMenu(false);
+                  await signOut();
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
