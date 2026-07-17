@@ -67,7 +67,7 @@ export async function initiateEsewaPayment(
 
   // Generate signature
   const signature = generateEsewaSignature(totalAmount, transactionUuid, ESEWA_PRODUCT_CODE);
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sajilokhata.com";
 
   const formParams: Record<string, string> = {
     amt: String(pkg.amount),
@@ -261,7 +261,7 @@ export async function createManualSmsRequest(
   if (!transactionId?.trim()) return { success: false, error: "Transaction ID is required" };
   if (!screenshotBase64) return { success: false, error: "Screenshot is required" };
 
-  // Decode and upload screenshot
+  // Decode and upload screenshot to public app_assets bucket
   let screenshotUrl: string;
   try {
     const matches = screenshotBase64.match(/^data:(image\/\w+);base64,(.+)$/);
@@ -270,10 +270,10 @@ export async function createManualSmsRequest(
     const mimeType = matches[1];
     const ext = mimeType.split("/")[1];
     const buffer = Buffer.from(matches[2], "base64");
-    const fileName = `${merchantId}/${crypto.randomUUID()}.${ext}`;
+    const fileName = `payment-proofs/${merchantId}/${crypto.randomUUID()}.${ext}`;
 
-    const { data: uploadData, error: uploadError } = await (admin.storage
-      .from("payment-proofs") as any).upload(fileName, buffer, {
+    const { error: uploadError } = await (admin.storage
+      .from("app_assets") as any).upload(fileName, buffer, {
       contentType: mimeType,
       upsert: false,
     });
@@ -283,9 +283,9 @@ export async function createManualSmsRequest(
       return { success: false, error: "Failed to upload screenshot" };
     }
 
-    // Get public URL (bucket is not public, but service role can generate signed URL)
+    // Get public URL from public bucket
     const { data: urlData } = await (admin.storage
-      .from("payment-proofs") as any).getPublicUrl(fileName);
+      .from("app_assets") as any).getPublicUrl(fileName);
     screenshotUrl = urlData?.publicUrl || fileName;
   } catch (err) {
     console.error("[SMS-BILLING] Screenshot processing error:", err);

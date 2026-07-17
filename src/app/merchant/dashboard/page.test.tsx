@@ -122,7 +122,7 @@ describe("MerchantDashboard", () => {
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("QR Hisab")).toBeInTheDocument();
+      expect(screen.getByText("SajiloKhata")).toBeInTheDocument();
     });
 
     expect(screen.getByText("Outstanding")).toBeInTheDocument();
@@ -137,7 +137,7 @@ describe("MerchantDashboard", () => {
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("QR Hisab")).toBeInTheDocument();
+      expect(screen.getByText("SajiloKhata")).toBeInTheDocument();
     });
 
     const scanLink = screen.getByText("Scan QR").closest("a");

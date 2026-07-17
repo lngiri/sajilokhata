@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
         </div>
 
         <p className="text-center text-xs text-slate-400 dark:text-gray-600 mt-6">
-          QR Hisab — Self-Service Admin
+          SajiloKhata — Self-Service Admin
         </p>
       </div>
     </div>

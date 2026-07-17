@@ -316,6 +316,14 @@ export async function registerNewUser(
     const normalizedPhone = normalizePhone(cleanPhone);
     const admin = getAdminClient();
 
+    // Duplicate phone guard — check both tables before creating
+    if (admin) {
+      const { merchant: existingMerchant, customer: existingCustomer } = await findUserByPhone(normalizedPhone);
+      if (existingMerchant || existingCustomer) {
+        return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
+      }
+    }
+
     if (!admin) {
       // Dev mode fallback
       const localId = `local_${cleanPhone}`;

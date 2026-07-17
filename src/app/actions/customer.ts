@@ -1,5 +1,6 @@
 "use server";
 
+import crypto from "crypto";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
@@ -61,7 +62,7 @@ export async function sendOnboardingSMS(
     return { success: false, error: "Invalid phone" };
   }
 
-  const message = "Welcome to QRHisab! You have been added. Track your ledger and transaction history at qrhisab.com.";
+  const message = "Welcome to SajiloKhata! You have been added. Track your ledger and transaction history at sajilokhata.com.";
 
   return sendTransactionSMS(cleanPhone, message);
 }
@@ -149,6 +150,77 @@ export async function addCustomerForMerchant(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Customer] addCustomerForMerchant error:", msg);
+    return { success: false, error: msg };
+  }
+}
+
+export async function getCustomerProfile(
+  phone: string
+): Promise<{ id: string; name: string | null; phone: string; avatar_url: string | null } | null> {
+  const admin = getAdminClient();
+  if (!admin) return null;
+
+  const normalized = normalizePhone(phone);
+  const { data } = await (admin.from("customers") as any)
+    .select("id, name, phone, avatar_url")
+    .eq("phone", normalized)
+    .maybeSingle();
+
+  return data || null;
+}
+
+export async function updateCustomerAvatar(
+  phone: string,
+  avatarBase64: string
+): Promise<{ success: boolean; error?: string; avatarUrl?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const normalized = normalizePhone(phone);
+    const { data: customer } = await (admin.from("customers") as any)
+      .select("id")
+      .eq("phone", normalized)
+      .maybeSingle();
+
+    if (!customer) return { success: false, error: "Customer not found" };
+
+    const matches = avatarBase64.match(/^data:(image\/\w+);base64,(.+)$/);
+    if (!matches) return { success: false, error: "Invalid image data" };
+
+    const mimeType = matches[1];
+    const ext = mimeType.split("/")[1];
+    const buffer = Buffer.from(matches[2], "base64");
+    const fileName = `customer-avatars/${customer.id}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await (admin.storage
+      .from("app_assets") as any).upload(fileName, buffer, {
+      contentType: mimeType,
+      upsert: false,
+    });
+
+    if (uploadError) {
+      console.error("[Customer] Avatar upload failed:", uploadError);
+      return { success: false, error: "Failed to upload avatar" };
+    }
+
+    const { data: urlData } = await (admin.storage
+      .from("app_assets") as any).getPublicUrl(fileName);
+    const publicUrl = urlData?.publicUrl || fileName;
+
+    const { error: updateError } = await (admin.from("customers") as any)
+      .update({ avatar_url: publicUrl })
+      .eq("id", customer.id);
+
+    if (updateError) {
+      console.error("[Customer] Avatar DB update failed:", updateError);
+      return { success: false, error: "Failed to save avatar URL" };
+    }
+
+    return { success: true, avatarUrl: publicUrl };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[Customer] updateCustomerAvatar error:", msg);
     return { success: false, error: msg };
   }
 }

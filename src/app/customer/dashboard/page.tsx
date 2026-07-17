@@ -21,6 +21,7 @@ import {
   getCustomerStats,
 } from "@/lib/actions";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
+import { getCustomerProfile, updateCustomerAvatar } from "@/app/actions/customer";
 
 function maskPhone(phone: string): string {
   if (phone.length < 8) return phone;
@@ -61,6 +62,10 @@ export default function CustomerDashboard() {
   const [entryType, setEntryType] = useState<"debit" | "credit">("debit");
   const [saving, setSaving] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
+
+  // Customer avatar
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Edit profile modal
   const [showEditProfile, setShowEditProfile] = useState(false);
@@ -135,6 +140,7 @@ export default function CustomerDashboard() {
         if (session.phone) {
           setCustomerPhone(session.phone);
           setCustomerName(session.name || "");
+          setAvatarUrl(session.avatar_url || null);
         }
       }
     } catch {
@@ -153,10 +159,23 @@ export default function CustomerDashboard() {
     };
   }, []);
 
-  // Load stats when phone is available
+  // Load stats + profile when phone is available
   useEffect(() => {
     if (initialized && customerPhone) {
       loadStats();
+      getCustomerProfile(customerPhone).then((profile) => {
+        if (profile && mountedRef.current) {
+          setAvatarUrl(profile.avatar_url);
+          setCustomerName(profile.name || customerName);
+          try {
+            const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+            const session = raw ? JSON.parse(raw) : {};
+            session.avatar_url = profile.avatar_url || undefined;
+            session.name = profile.name || session.name;
+            localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
+          } catch {}
+        }
+      }).catch(() => {});
     }
   }, [initialized, customerPhone]);
 
@@ -390,6 +409,7 @@ export default function CustomerDashboard() {
 
   const handleSignOut = () => {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+    localStorage.removeItem("customer_pin_unlocked");
     window.location.replace("/scan");
   };
 
@@ -404,10 +424,10 @@ export default function CustomerDashboard() {
               <span className="text-sm font-bold text-white tracking-tight">QR</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-[var(--color-text)]">QRHisab Customer</h1>
+              <h1 className="text-base font-bold text-[var(--color-text)]">SajiloKhata Customer</h1>
               <p className="text-[10px] text-emerald-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                qrhisab.com &middot; Active
+                sajilokhata.com &middot; Active
               </p>
             </div>
           </div>
@@ -430,9 +450,13 @@ export default function CustomerDashboard() {
             {customerPhone && (
               <button
                 onClick={() => setShowProfileMenu(true)}
-                className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform"
+                className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden"
               >
-                {(customerName || customerPhone).charAt(0).toUpperCase()}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (customerName || customerPhone).charAt(0).toUpperCase()
+                )}
               </button>
             )}
           </div>
@@ -514,7 +538,11 @@ export default function CustomerDashboard() {
             {/* Avatar + name header */}
             <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
-                {(customerName || customerPhone).charAt(0).toUpperCase()}
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (customerName || customerPhone).charAt(0).toUpperCase()
+                )}
               </div>
               <p className="text-base font-bold text-[var(--color-text)] text-center truncate max-w-full">
                 {customerName || "Customer"}
@@ -898,6 +926,67 @@ export default function CustomerDashboard() {
               </button>
             </div>
             <div className="space-y-4">
+              {/* Avatar upload */}
+              <div className="flex flex-col items-center">
+                <label className="relative cursor-pointer group">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      (customerName || customerPhone || "?").charAt(0).toUpperCase()
+                    )}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file || !mountedRef.current) return;
+                      setAvatarUploading(true);
+                      try {
+                        const compressed = await resizeImage(file, 512);
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                          const base64 = reader.result as string;
+                          if (!mountedRef.current) return;
+                          const result = await updateCustomerAvatar(customerPhone, base64);
+                          if (result.success && result.avatarUrl && mountedRef.current) {
+                            setAvatarUrl(result.avatarUrl);
+                            try {
+                              const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+                              const session = raw ? JSON.parse(raw) : {};
+                              session.avatar_url = result.avatarUrl;
+                              localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
+                            } catch {}
+                            addToast("Avatar updated!", "success");
+                          } else {
+                            addToast(result.error || "Failed to upload avatar", "error");
+                          }
+                          if (mountedRef.current) setAvatarUploading(false);
+                        };
+                        reader.readAsDataURL(compressed);
+                      } catch {
+                        if (mountedRef.current) setAvatarUploading(false);
+                        addToast("Failed to process image", "error");
+                      }
+                    }}
+                  />
+                </label>
+                {avatarUploading && (
+                  <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                    <div className="w-3 h-3 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+                    Uploading...
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Name</label>
                 <input
@@ -924,17 +1013,22 @@ export default function CustomerDashboard() {
                   if (editName) {
                     setCustomerName(editName);
                     try {
-                      localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name: editName, phone: customerPhone }));
+                      const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+                      const session = raw ? JSON.parse(raw) : {};
+                      session.name = editName;
+                      session.phone = customerPhone;
+                      if (avatarUrl) session.avatar_url = avatarUrl;
+                      localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
                     } catch { /* ignore */ }
                     setShowEditProfile(false);
                     addToast("Profile updated!", "success");
                     loadStats();
                   }
                 }}
-                disabled={!editName}
+                disabled={!editName || avatarUploading}
                 className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                Save
+                {avatarUploading ? "Uploading..." : "Save"}
               </button>
             </div>
           </div>
@@ -1018,12 +1112,13 @@ export default function CustomerDashboard() {
               <button
                 onClick={async () => {
                   if (!voucherMerchant || !voucherAmount || !voucherFile) return;
+                  if (!mountedRef.current) return;
                   setVoucherUploading(true);
                   try {
                     const customer = await findOrCreateCustomer(customerPhone, customerName || undefined);
                     if (!customer?.id) {
-                      addToast("Customer lookup failed", "error");
-                      setVoucherUploading(false);
+                      if (mountedRef.current) addToast("Customer lookup failed", "error");
+                      if (mountedRef.current) setVoucherUploading(false);
                       return;
                     }
                     const compressed = await resizeImage(voucherFile, 1024);
@@ -1034,16 +1129,16 @@ export default function CustomerDashboard() {
                       compressed
                     );
                     if (result.success) {
-                      addToast("Voucher submitted! Awaiting merchant approval.", "success");
-                      setShowVoucherModal(false);
+                      if (mountedRef.current) addToast("Voucher submitted! Awaiting merchant approval.", "success");
+                      if (mountedRef.current) setShowVoucherModal(false);
                       loadStats();
                     } else {
-                      addToast(result.error || "Failed to submit", "error");
+                      if (mountedRef.current) addToast(result.error || "Failed to submit", "error");
                     }
                   } catch {
-                    addToast("Failed to submit voucher", "error");
+                    if (mountedRef.current) addToast("Failed to submit voucher", "error");
                   } finally {
-                    setVoucherUploading(false);
+                    if (mountedRef.current) setVoucherUploading(false);
                   }
                 }}
                 disabled={voucherUploading || !voucherAmount || !voucherFile}

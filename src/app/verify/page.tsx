@@ -162,14 +162,14 @@ export default function VerifyPage() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-lg p-6 space-y-5 animate-fade-in">
 
-        {/* QR Hisab platform bar */}
+        {/* SajiloKhata platform bar */}
         <div className="flex items-center justify-center gap-1.5 pb-3 border-b border-gray-100 mb-3">
           <div className="w-5 h-5 rounded bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center flex-shrink-0">
             <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
           </div>
-          <span className="text-[11px] font-bold text-[var(--color-primary)] tracking-wider uppercase">QR Hisab</span>
+          <span className="text-[11px] font-bold text-[var(--color-primary)] tracking-wider uppercase">SajiloKhata</span>
         </div>
 
         {/* Bill header */}

@@ -89,19 +89,23 @@ export async function getMerchantStats(merchantId: string): Promise<{
     throw new Error("Not logged in");
   }
 
-  const { data: customers } = await (admin.from("merchant_customers") as any)
-    .select("credit_limit")
-    .eq("merchant_id", merchantId);
+  const [customersResult, pendingResult, approvedResult] = await Promise.all([
+    (admin.from("merchant_customers") as any)
+      .select("credit_limit")
+      .eq("merchant_id", merchantId),
+    (admin.from("credit_logs") as any)
+      .select("id, amount")
+      .eq("merchant_id", merchantId)
+      .eq("status", "pending"),
+    (admin.from("credit_logs") as any)
+      .select("amount, type, created_at")
+      .eq("merchant_id", merchantId)
+      .eq("status", "approved"),
+  ]);
 
-  const { data: pendingLogs } = await (admin.from("credit_logs") as any)
-    .select("id, amount")
-    .eq("merchant_id", merchantId)
-    .eq("status", "pending");
-
-  const { data: allApprovedLogs } = await (admin.from("credit_logs") as any)
-    .select("amount, type, created_at")
-    .eq("merchant_id", merchantId)
-    .eq("status", "approved");
+  const customers = customersResult?.data;
+  const pendingLogs = pendingResult?.data;
+  const allApprovedLogs = approvedResult?.data;
 
   const today = new Date().toISOString().split("T")[0];
   const rows = allApprovedLogs || [];
@@ -932,7 +936,7 @@ export async function sendPaymentReminder(
         return m.label || m.method_type;
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sajilokhata.com";
       const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
       const paymentLink = `${baseUrl}/customer/payment-methods?merchantId=${merchantId}`;
 

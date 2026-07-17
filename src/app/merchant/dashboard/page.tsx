@@ -368,7 +368,7 @@ export default function MerchantDashboard() {
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
-                  {merchantProfile?.name || "QR Hisab"}
+                  {merchantProfile?.name || "SajiloKhata"}
                 </h1>
                 <p className="text-[10px] text-emerald-600 truncate leading-tight flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
@@ -616,7 +616,7 @@ export default function MerchantDashboard() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-blue-900">
-                    Please update your business name from &apos;Shop&apos; to your actual shop name so your customers recognize you on QRHisab!
+                    Please update your business name from &apos;Shop&apos; to your actual shop name so your customers recognize you on SajiloKhata!
                   </p>
                   <a
                     href="/merchant/settings"

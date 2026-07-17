@@ -95,7 +95,7 @@ export default function PWAInstallBanner() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-[var(--color-text)] text-sm">
-              Install QR Hisab App
+              Install SajiloKhata App
             </h3>
             <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">
               {isIOS ? (

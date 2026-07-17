@@ -41,7 +41,7 @@ export default function ReferModal({ open, onClose }: Props) {
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "QR Hisab", text: "Join me on QR Hisab!", url: link });
+        await navigator.share({ title: "SajiloKhata", text: "Join me on SajiloKhata!", url: link });
       } catch {
         // user cancelled
       }

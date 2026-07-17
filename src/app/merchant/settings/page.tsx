@@ -1226,7 +1226,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <p className="font-extrabold text-[var(--color-primary)]">
-                  QR Hisab
+                  SajiloKhata
                 </p>
                 <p className="text-xs text-[var(--color-text-muted)]">
                   Version 1.0.0
