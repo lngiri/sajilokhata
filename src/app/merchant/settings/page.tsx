@@ -626,6 +626,7 @@ export default function SettingsPage() {
                   checked={paymentEnabled}
                   disabled={togglingPaymentOption}
                   onChange={async (e) => {
+                    if (!merchantId) return;
                     const newValue = e.target.checked;
                     const prevValue = paymentEnabled;
                     setPaymentEnabled(newValue);
