@@ -52,7 +52,7 @@ export async function sendRegistrationOtp(
     });
 
     // Send SMS
-    const message = `Your SajiloKhata OTP is ${code}. Use this to complete your registration on SajiloKhata.`;
+    const message = `Your QR Hisab OTP is ${code}. Use this to complete your registration on QR Hisab.`;
     console.log("[OTP] Sending SMS to", cleanPhone, "with message:", message);
     const smsResult = await sendTransactionSMS(cleanPhone, message);
     console.log("[OTP] SMS result:", JSON.stringify(smsResult));

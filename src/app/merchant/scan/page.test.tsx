@@ -8,7 +8,7 @@ vi.mock("@/components/QRCode", () => ({
     <div data-testid="qr-scanner">
       <button
         data-testid="mock-scan-valid"
-        onClick={() => onScan("sajilokhata:customer:9841234567")}
+        onClick={() => onScan("QR Hisab:customer:9841234567")}
       >
         Valid
       </button>

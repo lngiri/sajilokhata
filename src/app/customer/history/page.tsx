@@ -120,7 +120,7 @@ export default function CustomerHistoryPage() {
   // Handle clear session — removes localStorage, cookies, SW caches
   const handleSignOut = () => {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-    window.location.replace("/scan");
+    window.location.replace("/");
   };
 
   // Prevent flash while checking localStorage

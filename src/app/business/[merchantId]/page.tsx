@@ -112,7 +112,7 @@ export default async function BusinessProfilePage({ params }: Props) {
         {/* Powered by */}
         <div className="text-center pt-4 pb-8">
           <p className="text-xs text-[var(--color-text-muted)]">
-            Powered by <span className="font-semibold text-[var(--color-primary)]">SajiloKhata</span>
+            Powered by <span className="font-semibold text-[var(--color-primary)]">QR Hisab</span>
           </p>
         </div>
       </div>

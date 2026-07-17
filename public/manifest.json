@@ -1,6 +1,6 @@
 {
-  "name": "SajiloKhata",
-  "short_name": "SajiloKhata",
+  "name": "QR Hisab",
+  "short_name": "QR Hisab",
   "description": "Digital Credit Ledger & Delivery Diary",
   "start_url": "/",
   "display": "standalone",

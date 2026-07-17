@@ -24,7 +24,7 @@ import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 type Step = "scan" | "enter" | "confirm" | "success";
 
 /** Prefix that identifies a customer identity QR */
-const CUSTOMER_QR_PREFIX = "sajilokhata:customer:";
+const CUSTOMER_QR_PREFIX = "QR Hisab:customer:";
 
 export default function MerchantScanPage() {
   const { addToast } = useToast();
@@ -654,7 +654,7 @@ export default function MerchantScanPage() {
                       <a
                         href={`https://wa.me/${sanitizePhoneForUrl(customerPhone)}?text=${encodeURIComponent(
                           (() => {
-                            const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sajilokhata.vercel.app';
+                            const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://qrhisab.vercel.app';
                             const shareLink = `${baseUrl}/verify?token=${verificationToken}`;
                             return `Dear customer, Rs. ${Number(amount).toLocaleString()} has been added to your account. Please verify using this link: ${shareLink}`;
                           })()
@@ -670,7 +670,7 @@ export default function MerchantScanPage() {
                       </a>
                       <button
                         onClick={async () => {
-                          const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sajilokhata.vercel.app';
+                          const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://qrhisab.vercel.app';
                           const link = `${baseUrl}/verify?token=${verificationToken}`;
                           try {
                             await navigator.clipboard.writeText(link);

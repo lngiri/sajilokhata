@@ -126,7 +126,7 @@ export default function OnboardPage() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-primary)]">SajiloKhata</h1>
+        <h1 className="text-2xl font-extrabold text-[var(--color-primary)]">QR Hisab</h1>
         <p className="text-sm text-[var(--color-text-muted)]">Customer Onboarding</p>
 
         {sendingOtp && (
@@ -201,7 +201,7 @@ export default function OnboardPage() {
 
         {step === "done" && (
           <div className="space-y-4">
-            <p className="text-lg font-bold text-[var(--color-text)]">Welcome to SajiloKhata!</p>
+            <p className="text-lg font-bold text-[var(--color-text)]">Welcome to QR Hisab!</p>
             <p className="text-sm text-[var(--color-text-muted)]">
               Your account has been created. You can now view and manage your transactions.
             </p>

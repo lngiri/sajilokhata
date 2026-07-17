@@ -9,7 +9,7 @@ import type {
 } from "@/lib/types/database";
 
 // IndexedDB Schema
-interface SajiloKhataDB extends DBSchema {
+interface QRHisabDB extends DBSchema {
   pendingLogs: {
     key: string;
     value: {
@@ -69,7 +69,7 @@ interface SajiloKhataDB extends DBSchema {
   };
 }
 
-let dbPromise: Promise<IDBPDatabase<SajiloKhataDB>> | null = null;
+let dbPromise: Promise<IDBPDatabase<QRHisabDB>> | null = null;
 
 /**
  * Delete the entire IndexedDB database.
@@ -85,7 +85,7 @@ export async function clearIndexedDB() {
   } catch {
     // indexedDB.databases() may not be available in all browsers
     try {
-      indexedDB.deleteDatabase("sajilokhata");
+      indexedDB.deleteDatabase("QR Hisab");
     } catch {
       // Ignore
     }
@@ -94,7 +94,7 @@ export async function clearIndexedDB() {
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<SajiloKhataDB>("sajilokhata", 2, {
+    dbPromise = openDB<QRHisabDB>("QR Hisab", 2, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           // Pending credit logs

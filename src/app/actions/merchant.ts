@@ -936,7 +936,7 @@ export async function sendPaymentReminder(
         return m.label || m.method_type;
       });
 
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sajilokhata.com";
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
       const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
       const paymentLink = `${baseUrl}/customer/payment-methods?merchantId=${merchantId}`;
 

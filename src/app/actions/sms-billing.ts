@@ -67,7 +67,7 @@ export async function initiateEsewaPayment(
 
   // Generate signature
   const signature = generateEsewaSignature(totalAmount, transactionUuid, ESEWA_PRODUCT_CODE);
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.sajilokhata.com";
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
 
   const formParams: Record<string, string> = {
     amt: String(pkg.amount),

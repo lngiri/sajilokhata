@@ -75,9 +75,8 @@ export default function CustomerSettings() {
   const handleSignOut = () => {
     setSigningOut(true);
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-    localStorage.removeItem("sajilo_customer_session");
-    document.cookie = "customer_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0";
-    window.location.replace("/login");
+    localStorage.removeItem("customer_pin_unlocked");
+    window.location.replace("/");
   };
 
   const maskPhone = (phone: string): string => {
@@ -100,7 +99,7 @@ export default function CustomerSettings() {
             <h1 className="text-base font-bold text-[var(--color-text)]">Settings</h1>
             <p className="text-[10px] text-emerald-600 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              sajilokhata.com
+              qrhisab.com
             </p>
           </div>
         </div>

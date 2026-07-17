@@ -62,7 +62,7 @@ export async function sendOnboardingSMS(
     return { success: false, error: "Invalid phone" };
   }
 
-  const message = "Welcome to SajiloKhata! You have been added. Track your ledger and transaction history at sajilokhata.com.";
+  const message = "Welcome to QR Hisab! You have been added. Track your ledger and transaction history at qrhisab.com.";
 
   return sendTransactionSMS(cleanPhone, message);
 }

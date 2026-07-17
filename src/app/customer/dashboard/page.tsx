@@ -410,7 +410,7 @@ export default function CustomerDashboard() {
   const handleSignOut = () => {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
     localStorage.removeItem("customer_pin_unlocked");
-    window.location.replace("/scan");
+    window.location.replace("/");
   };
 
   return (
@@ -424,10 +424,10 @@ export default function CustomerDashboard() {
               <span className="text-sm font-bold text-white tracking-tight">QR</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-[var(--color-text)]">SajiloKhata Customer</h1>
+              <h1 className="text-base font-bold text-[var(--color-text)]">QR Hisab Customer</h1>
               <p className="text-[10px] text-emerald-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                sajilokhata.com &middot; Active
+                qrhisab.com &middot; Active
               </p>
             </div>
           </div>
@@ -567,10 +567,9 @@ export default function CustomerDashboard() {
               <button
                 onClick={async () => {
                   setShowProfileMenu(false);
-                  try {
-                    localStorage.removeItem("sajilo_customer_session");
-                    window.location.href = "/scan";
-                  } catch {}
+                  localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+                  localStorage.removeItem("customer_pin_unlocked");
+                  window.location.replace("/");
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
               >

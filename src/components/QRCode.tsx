@@ -50,7 +50,7 @@ interface CustomerQRProps {
 
 export function CustomerQR({ customerId }: CustomerQRProps) {
   // Simple format: no merchant ID, no amount — just the customer's phone
-  const qrData = `sajilokhata:customer:${customerId}`;
+  const qrData = `QR Hisab:customer:${customerId}`;
 
   return (
     <div className="flex flex-col items-center p-6 bg-[var(--color-primary)]/5 rounded-2xl">

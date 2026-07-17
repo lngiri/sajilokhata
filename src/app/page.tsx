@@ -71,7 +71,7 @@ export default function LandingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span className="font-bold text-gray-900">SajiloKhata</span>
+              <span className="font-bold text-gray-900">QR Hisab</span>
             </div>
             <a
               href={ctaHref}
@@ -152,11 +152,11 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ── WHY SajiloKhata ── */}
+        {/* ── WHY QR Hisab ── */}
         <section className="py-20 sm:py-28 lg:py-32 bg-gray-50">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 xl:px-8">
             <motion.div {...fadeInView} className="text-center mb-14 lg:mb-16">
-              <SectionHeading>Why SajiloKhata?</SectionHeading>
+              <SectionHeading>Why QR Hisab?</SectionHeading>
               <SectionSub>
                 Built for the way Nepali shops actually work — fast, offline-first,
                 and dead simple.
@@ -322,7 +322,7 @@ export default function LandingPage() {
                 Ready to go digital?
               </SectionHeading>
               <SectionSub>
-                Join 500+ shops already using SajiloKhata. Free to start, takes
+                Join 500+ shops already using QR Hisab. Free to start, takes
                 2 minutes to set up.
               </SectionSub>
             </motion.div>
@@ -354,10 +354,10 @@ export default function LandingPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
-              <span>SajiloKhata — Digital Diary, Not Debt Tracker</span>
+              <span>QR Hisab — Digital Diary, Not Debt Tracker</span>
             </div>
             <p className="text-xs text-gray-400">
-              &copy; {new Date().getFullYear()} SajiloKhata. All rights reserved.
+              &copy; {new Date().getFullYear()} QR Hisab. All rights reserved.
             </p>
           </div>
         </footer>
