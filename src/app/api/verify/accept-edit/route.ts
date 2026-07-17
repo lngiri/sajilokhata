@@ -78,13 +78,6 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    await supabase.from("audit_logs").insert({
-      credit_log_id: log.id,
-      action: "edit_accepted",
-      actor_type: "merchant",
-      previous_values: { original_amount: log.amount, new_amount: log.proposed_amount },
-    });
-
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Failed to accept edit" }, { status: 500 });

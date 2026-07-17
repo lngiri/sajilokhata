@@ -397,17 +397,6 @@ export async function resetCustomerPin(
     return { success: false, error: "Failed to reset PIN" };
   }
 
-  const { error: auditError } = await (admin.from("audit_logs") as any).insert({
-    credit_log_id: null,
-    action: "pin_reset",
-    actor_type: "merchant",
-    actor_id: merchantId,
-  });
-
-  if (auditError) {
-    console.error("Audit log insert failed:", auditError);
-  }
-
   return { success: true };
 }
 
@@ -664,13 +653,12 @@ export async function getAuditLogsForCreditLog(
   creditLogId: string
 ): Promise<Array<{
   id: string;
-  action: string;
-  actor_type: string | null;
-  actor_id: string | null;
-  ip_address: string | null;
-  device_info: string | null;
-  previous_values: unknown;
-  created_at: string;
+  action_type: string;
+  actor_type: string;
+  actor_id: string;
+  old_data: unknown;
+  new_data: unknown;
+  inserted_at: string;
 }>> {
   const admin = getAdminClient();
   if (!admin) return [];
@@ -679,9 +667,10 @@ export async function getAuditLogsForCreditLog(
   if (!sessionUserId) return [];
 
   const { data } = await (admin.from("audit_logs") as any)
-    .select("id, action, actor_type, actor_id, ip_address, device_info, previous_values, created_at")
-    .eq("credit_log_id", creditLogId)
-    .order("created_at", { ascending: true });
+    .select("id, action_type, actor_type, actor_id, old_data, new_data, inserted_at")
+    .eq("record_id", creditLogId)
+    .eq("table_name", "credit_logs")
+    .order("inserted_at", { ascending: true });
 
   if (!data) return [];
   return data;

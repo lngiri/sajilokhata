@@ -73,7 +73,7 @@ export default function CustomerDetailPage() {
   const [flagNotes, setFlagNotes] = useState("");
   const [flagging, setFlagging] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
-  const [auditLogs, setAuditLogs] = useState<Array<{id: string; action: string; actor_type: string | null; created_at: string}>>([]);
+  const [auditLogs, setAuditLogs] = useState<Array<{id: string; action_type: string; actor_type: string; actor_id: string; old_data: unknown; new_data: unknown; inserted_at: string}>>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(false);
@@ -585,20 +585,20 @@ export default function CustomerDetailPage() {
                 {auditLogs.map((log) => (
                   <div key={log.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                     <div className={`w-2 h-2 rounded-full mt-1.5 ${
-                      log.action === "approved" ? "bg-green-500" :
-                      log.action === "rejected" ? "bg-red-500" :
-                      log.action === "disputed" ? "bg-red-400" :
-                      log.action === "edit_requested" ? "bg-indigo-500" :
-                      log.action === "edit_accepted" ? "bg-green-400" :
-                      log.action === "edit_rejected" ? "bg-orange-500" :
+                      log.action_type === "approved" ? "bg-green-500" :
+                      log.action_type === "rejected" ? "bg-red-500" :
+                      log.action_type === "disputed" ? "bg-red-400" :
+                      log.action_type === "edit_requested" ? "bg-indigo-500" :
+                      log.action_type === "edit_accepted" ? "bg-green-400" :
+                      log.action_type === "edit_rejected" ? "bg-orange-500" :
                       "bg-gray-400"
                     }`} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-[var(--color-text)] capitalize">{log.action.replace(/_/g, " ")}</p>
+                      <p className="text-sm font-medium text-[var(--color-text)] capitalize">{log.action_type.replace(/_/g, " ")}</p>
                       <p className="text-xs text-[var(--color-text-muted)]">
                         by {log.actor_type || "system"}
                         {" · "}
-                        {new Date(log.created_at).toLocaleString("en-US", {
+                        {new Date(log.inserted_at).toLocaleString("en-US", {
                           month: "short", day: "numeric",
                           hour: "2-digit", minute: "2-digit",
                           timeZone: "Asia/Kathmandu",

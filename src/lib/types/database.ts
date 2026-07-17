@@ -209,36 +209,39 @@ export interface Database {
       audit_logs: {
         Row: {
           id: string;
-          credit_log_id: string | null;
-          action: AuditAction;
-          actor_id: string | null;
-          actor_type: ActorType | null;
-          ip_address: string | null;
-          device_info: string | null;
-          previous_values: Json | null;
-          created_at: string;
+          inserted_at: string;
+          merchant_id: string | null;
+          actor_id: string;
+          actor_type: string;
+          action_type: string;
+          table_name: string;
+          record_id: string;
+          old_data: Json | null;
+          new_data: Json | null;
         };
         Insert: {
           id?: string;
-          credit_log_id?: string | null;
-          action: AuditAction;
-          actor_id?: string | null;
-          actor_type?: ActorType | null;
-          ip_address?: string | null;
-          device_info?: string | null;
-          previous_values?: Json | null;
-          created_at?: string;
+          inserted_at?: string;
+          merchant_id?: string | null;
+          actor_id: string;
+          actor_type: string;
+          action_type: string;
+          table_name: string;
+          record_id: string;
+          old_data?: Json | null;
+          new_data?: Json | null;
         };
         Update: {
           id?: string;
-          credit_log_id?: string | null;
-          action?: AuditAction;
-          actor_id?: string | null;
-          actor_type?: ActorType | null;
-          ip_address?: string | null;
-          device_info?: string | null;
-          previous_values?: Json | null;
-          created_at?: string;
+          inserted_at?: string;
+          merchant_id?: string | null;
+          actor_id?: string;
+          actor_type?: string;
+          action_type?: string;
+          table_name?: string;
+          record_id?: string;
+          old_data?: Json | null;
+          new_data?: Json | null;
         };
       };
       sessions: {

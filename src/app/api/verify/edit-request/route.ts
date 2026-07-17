@@ -40,13 +40,6 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    await (admin.from("audit_logs") as any).insert({
-      credit_log_id: log.id,
-      action: "edit_requested",
-      actor_type: "customer",
-      previous_values: { original_amount: log.amount, proposed_amount: proposedAmount },
-    });
-
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Failed to submit edit request" }, { status: 500 });

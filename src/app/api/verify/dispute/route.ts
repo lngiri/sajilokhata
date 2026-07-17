@@ -37,12 +37,6 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    await (admin.from("audit_logs") as any).insert({
-      credit_log_id: log.id,
-      action: "disputed",
-      actor_type: "customer",
-    });
-
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Failed to dispute" }, { status: 500 });

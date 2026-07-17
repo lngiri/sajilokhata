@@ -252,16 +252,6 @@ export async function updateCreditLogStatus(
 
   if (error) throw error;
 
-  const { data: userData } = await getClient().auth.getUser();
-  const actorId = userData?.user?.id || null;
-
-  await getClient().from("audit_logs").insert({
-    credit_log_id: logId,
-    action: status,
-    actor_type: actorType || "merchant",
-    actor_id: actorId,
-  });
-
   return data;
 }
 
