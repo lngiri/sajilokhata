@@ -66,6 +66,37 @@ export async function sendOnboardingSMS(
   return sendTransactionSMS(cleanPhone, message);
 }
 
+export async function updateCustomerProfile(
+  phone: string,
+  data: { name: string }
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  const name = data.name?.trim();
+  if (!name) return { success: false, error: "Name cannot be empty" };
+
+  try {
+    const normalized = normalizePhone(phone);
+    const { data: customer } = await (admin.from("customers") as any)
+      .select("id")
+      .eq("phone", normalized)
+      .maybeSingle();
+
+    if (!customer) return { success: false, error: "Customer not found" };
+
+    const { error } = await (admin.from("customers") as any)
+      .update({ name })
+      .eq("id", customer.id);
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
 export async function addCustomerForMerchant(
   merchantId: string,
   phone: string,
