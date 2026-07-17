@@ -120,6 +120,7 @@ export default function CustomerHistoryPage() {
   // Handle clear session — removes localStorage, cookies, SW caches
   const handleSignOut = () => {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
+    localStorage.removeItem("qr_hisab_auth_" + customerPhone);
     window.location.replace("/");
   };
 

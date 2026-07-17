@@ -75,7 +75,7 @@ export default function CustomerSettings() {
   const handleSignOut = () => {
     setSigningOut(true);
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-    localStorage.removeItem("customer_pin_unlocked");
+    localStorage.removeItem("qr_hisab_auth_" + customerPhone);
     window.location.replace("/");
   };
 

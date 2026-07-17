@@ -1,10 +1,12 @@
 "use server";
 
-import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { getAdminClient } from "@/lib/supabase/admin";
 
-function hashPin(pin: string): string {
-  return crypto.createHash("sha256").update(pin).digest("hex");
+const PIN_ROUNDS = 10;
+
+async function hashPin(pin: string): Promise<string> {
+  return bcrypt.hash(pin, PIN_ROUNDS);
 }
 
 export async function checkCustomerHasPin(
@@ -41,8 +43,8 @@ export async function verifyCustomerPin(
     return { success: false, error: "No PIN set" };
   }
 
-  const hashed = hashPin(pin);
-  if (hashed !== data.pin_hash) {
+  const match = await bcrypt.compare(pin, data.pin_hash);
+  if (!match) {
     return { success: false, error: "Incorrect PIN" };
   }
 
@@ -60,7 +62,7 @@ export async function setCustomerPin(
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Server config" };
 
-  const hashed = hashPin(pin);
+  const hashed = await hashPin(pin);
   const { error } = await (admin.from("customers") as any)
     .update({ pin_hash: hashed })
     .eq("phone", phone);

@@ -3,6 +3,34 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { checkCustomerHasPin, verifyCustomerPin, setCustomerPin } from "@/app/actions/customer-pin";
 
+const PIN_UNLOCKED_PREFIX = "qr_hisab_auth_";
+const PIN_UNLOCKED_TTL = 24 * 60 * 60 * 1000;
+
+function getPinKey(phone: string): string {
+  return `${PIN_UNLOCKED_PREFIX}${phone}`;
+}
+
+function getStoredTimestamp(phone: string): number | null {
+  try {
+    const raw = localStorage.getItem(getPinKey(phone));
+    if (!raw) return null;
+    const ts = Number(raw);
+    return isNaN(ts) ? null : ts;
+  } catch {
+    return null;
+  }
+}
+
+function isPinUnlocked(phone: string): boolean {
+  const ts = getStoredTimestamp(phone);
+  if (!ts) return false;
+  if (Date.now() - ts > PIN_UNLOCKED_TTL) {
+    localStorage.removeItem(getPinKey(phone));
+    return false;
+  }
+  return true;
+}
+
 interface Props {
   phone: string;
   /**
@@ -33,8 +61,8 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
   useEffect(() => {
     if (!phone) return;
 
-    // Skip PIN if already unlocked (persists across refreshes & tabs)
-    if (localStorage.getItem("customer_pin_unlocked")) {
+    // Skip PIN only if phone-scoped key exists and is within 24h TTL
+    if (isPinUnlocked(phone)) {
       setStep("unlocked");
       return;
     }
@@ -97,7 +125,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
       setLoading(false);
       return;
     }
-    localStorage.setItem("customer_pin_unlocked", "1");
+    localStorage.setItem(getPinKey(phone), String(Date.now()));
     setStep("unlocked");
   };
 
@@ -115,12 +143,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
       setLoading(false);
       return;
     }
-    localStorage.setItem("customer_pin_unlocked", "1");
-    setStep("unlocked");
-  };
-
-  const handleSkip = () => {
-    localStorage.setItem("customer_pin_unlocked", "1");
+    localStorage.setItem(getPinKey(phone), String(Date.now()));
     setStep("unlocked");
   };
 
@@ -201,9 +224,6 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : "Set PIN"}
-            </button>
-            <button onClick={handleSkip} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)]">
-              Skip for now
             </button>
           </>
         )}
