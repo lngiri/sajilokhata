@@ -50,11 +50,16 @@ export async function sendTransactionSMS(
   console.log("[SMS] Payload (redacted auth):", payloadStr.replace(authToken, "***"));
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
     const res = await fetch("https://sms.aakashsms.com/sms/v3/send", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: payloadStr,
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     const body = await res.text();
     console.log(`[SMS] HTTP ${res.status} response:`, body);
@@ -64,19 +69,25 @@ export async function sendTransactionSMS(
     try {
       parsed = JSON.parse(body);
     } catch {
-      // Response is not JSON — treat as error
       console.error("[SMS] Non-JSON response:", body);
-      return { success: false, error: `Non-JSON response: ${body}` };
+      return { success: false, error: `SMS gateway returned an unexpected response.` };
     }
 
     if (parsed?.error === true) {
       console.error("[SMS] Aakash API error:", parsed.message);
-      return { success: false, error: parsed.message || "Aakash API returned error" };
+      return { success: false, error: parsed.message || "SMS gateway error" };
+    }
+
+    // Check for invalid recipient (API returns error:false even for invalid numbers)
+    if (parsed?.data?.invalid?.length > 0) {
+      const rejected = parsed.data.invalid.map((r: any) => r.mobile).join(", ");
+      console.error("[SMS] Recipient number rejected by gateway:", rejected);
+      return { success: false, error: "Could not send SMS to this number. Please check and try again." };
     }
 
     if (!res.ok) {
       console.error("[SMS] Non-OK response:", res.status, body);
-      return { success: false, error: `HTTP ${res.status}: ${body}` };
+      return { success: false, error: `SMS gateway error (HTTP ${res.status})` };
     }
 
     console.log("[SMS] Sent successfully:", body);

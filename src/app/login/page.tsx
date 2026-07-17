@@ -111,15 +111,33 @@ export default function LoginPage() {
 
     const cleanPhone = digitsOnly.slice(-10);
     console.log("[Login] Phone submit, checking existence for:", cleanPhone);
-    const { exists, users } = await checkUserExists(cleanPhone);
-    console.log("[Login] checkUserExists result:", { exists, users });
+    let exists = false;
+    let users: Awaited<ReturnType<typeof checkUserExists>>["users"] = [];
+    try {
+      const result = await checkUserExists(cleanPhone);
+      exists = result.exists;
+      users = result.users;
+      console.log("[Login] checkUserExists result:", { exists, users });
+    } catch (e) {
+      console.error("[Login] Phone submit error:", e);
+      setError("Network error. Please try again.");
+      setLoading(false);
+      return;
+    }
 
     if (!exists) {
       console.log("[Login] New user → sending OTP");
-      const result = await sendRegistrationOtp(cleanPhone);
-      if (!result.success) {
-        console.log("[Login] OTP send failed:", result.error);
-        setError(result.error || "Failed to send OTP");
+      try {
+        const otpResult = await sendRegistrationOtp(cleanPhone);
+        if (!otpResult.success) {
+          console.log("[Login] OTP send failed:", otpResult.error);
+          setError(otpResult.error || "Failed to send OTP");
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.error("[Login] OTP send error:", e);
+        setError("Network error. Please try again.");
         setLoading(false);
         return;
       }
@@ -393,15 +411,20 @@ export default function LoginPage() {
     if (!phone || phone.length < 10) return;
     setLoading(true);
     setError("");
-    console.log("[Login] Forgot PIN: sending OTP to", phone);
-    const result = await forgotPinSendOtp(phone);
-    console.log("[Login] Forgot PIN OTP result:", JSON.stringify(result));
-    if (!result.success) {
-      setError(result.error || "Failed to send OTP");
-      setLoading(false);
-      return;
+    try {
+      console.log("[Login] Forgot PIN: sending OTP to", phone);
+      const result = await forgotPinSendOtp(phone);
+      console.log("[Login] Forgot PIN OTP result:", JSON.stringify(result));
+      if (!result.success) {
+        setError(result.error || "Failed to send OTP");
+        setLoading(false);
+        return;
+      }
+      setStep("forgot_otp");
+    } catch (e) {
+      console.error("[Login] Forgot PIN submit error:", e);
+      setError("Network error. Please try again.");
     }
-    setStep("forgot_otp");
     setLoading(false);
   };
 

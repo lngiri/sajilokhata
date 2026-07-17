@@ -1,8 +1,7 @@
 "use server";
 
-import { cookies, headers } from "next/headers";
+import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { normalizePhone } from "@/lib/phone";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 import { findUserByPhone } from "./pin";
 
