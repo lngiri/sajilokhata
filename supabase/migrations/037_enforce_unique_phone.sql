@@ -14,6 +14,8 @@ WHERE a.id <> b.id
 DROP INDEX IF EXISTS idx_customers_phone_unique;
 
 -- Add UNIQUE constraint at table level (proper constraint, not just index)
+-- Drop first to make re-runs safe
+ALTER TABLE customers DROP CONSTRAINT IF EXISTS customers_phone_key;
 ALTER TABLE customers
 ADD CONSTRAINT customers_phone_key UNIQUE (phone);
 
