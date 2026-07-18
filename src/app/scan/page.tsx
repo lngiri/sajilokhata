@@ -232,57 +232,10 @@ export default function ScanPage() {
             </svg>
           </a>
           <h1 className="text-lg font-bold text-[var(--color-text)]">
-            {step === "phone" ? "Enter Phone" : step === "scan" ? "Scan QR" : step === "enter" ? "Log Entry" : step === "reverse" ? "Show QR" : "Done!"}
+            {step === "scan" ? "Scan QR" : step === "enter" ? "Log Entry" : step === "reverse" ? "Show QR" : "Done!"}
           </h1>
         </div>
       </div>
-
-      {/* Step 1: Phone Entry */}
-
-      {step === "phone" && (
-        <div className="px-6 py-12 space-y-6 animate-fade-in">
-          <div className="text-center mb-8">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center">
-              <svg className="w-10 h-10 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 1.5H8.25A2.25 2.25 0 006 3.75v16.5a2.25 2.25 0 002.25 2.25h7.5A2.25 2.25 0 0018 20.25V3.75a2.25 2.25 0 00-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 18.75h3" />
-              </svg>
-            </div>
-            <p className="text-sm text-[var(--color-text-muted)]">
-              Enter your phone number to get started (one-time)
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <label className="sr-only" htmlFor="scan-phone">Phone Number</label>
-            <input
-              id="scan-phone"
-              type="tel"
-              placeholder="e.g. 9841234567"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              className="w-full px-4 py-4 bg-white rounded-2xl text-lg font-mono border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none text-center"
-              maxLength={10}
-            />
-            <label className="sr-only" htmlFor="scan-name">Your Name</label>
-            <input
-              id="scan-name"
-              type="text"
-              placeholder="Your name (optional)"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-4 py-3 bg-white rounded-2xl border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none text-center"
-            />
-          </div>
-
-          <button
-            onClick={handlePhoneSubmit}
-            disabled={phone.length < 10}
-            className="w-full py-4 bg-[var(--color-primary)] text-white rounded-2xl font-semibold text-lg active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            Continue
-          </button>
-        </div>
-      )}
 
       {/* Step 2: Scan QR */}
       {step === "scan" && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, startTransition } from "react";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
 import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp, registerNewUser } from "@/app/actions/pin";
 
@@ -40,7 +40,9 @@ export default function LoginPage() {
     let label = "";
     if (type === "merchant") label = "merchant";
     else if (type === "customer") label = "customer";
-    setRedirectingTo({ target, label });
+    startTransition(() => {
+      setRedirectingTo({ target, label });
+    });
     setTimeout(() => { window.location.replace(target); }, 80);
   }, []);
 
