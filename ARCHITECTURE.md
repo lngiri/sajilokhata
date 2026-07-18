@@ -256,6 +256,84 @@ The `/merchant/settings` page enforces per-method validation before a merchant c
 
 ---
 
+## Onboarding Gates & Infinite Render Loop Prevention
+
+Three onboarding gates check profile completeness and show a non-dismissible modal if data is missing. Each uses a **`useRef` short-circuit guard** to prevent React error #310 (maximum update depth exceeded).
+
+### Gate Locations
+
+| Page | Trigger Condition | Modal |
+|------|------------------|-------|
+| `/merchant/dashboard` | `!name \|\| !address \|\| !business_type` | `MerchantOnboardingModal` |
+| `/customer/dashboard` | `!name \|\| !address` | `CustomerOnboardingModal` |
+| `/verify` | `!customers.name \|\| !customers.address` | `CustomerOnboardingModal` |
+
+### Guard Pattern
+
+```tsx
+const ref = useRef(false);
+
+useEffect(() => {
+  if (ref.current) return;    // ← top-level short-circuit
+  ref.current = true;         // ← set immediately
+  // ... fetch data, check completeness
+}, [deps]);
+```
+
+The ref is set to `true` *before* the completeness check to prevent re-entry. The completion callback only sets `ref.current = true` and closes the modal — it **never re-fetches** the profile from the server (which would read stale DB data and trigger the modal again).
+
+### Showing Missing Fields Only
+
+`MerchantOnboardingModal` dynamically renders only missing fields as editable inputs. Fields with existing values are displayed as read-only with a checkmark:
+
+```
+If name="Shop", address="", business_type=null:
+  ✅ Business Name: Shop          (read-only)
+  ⬜ Business Address * _____     (editable input)
+  ⬜ Business Type * [select]     (editable input)
+```
+
+### History
+
+A production crash (React error #310) occurred because the `handleOnboardingComplete` callback re-fetched the merchant profile, which returned stale DB data, which re-triggered the modal, creating a loop. The fix applied to all three gates:
+
+1. Added `useRef` short-circuit at the top of every profile-fetch effect
+2. Removed re-fetch calls from completion callbacks
+3. Added `onboardingCompletedRef` / `onboardedRef` / `sessionCheckedRef` guards
+
+Full audit: `docs/infinite-render-loop-audit.md`
+
+---
+
+## Role-Based Redirect Flow
+
+After authentication, users are redirected based on their roles (fetched from `/api/auth/session`):
+
+```
+Merchant only  → /merchant/dashboard   (label: "Redirecting to merchant dashboard...")
+Customer only  → /customer/dashboard   (label: "Redirecting to customer dashboard...")
+Both roles     → /select-role           (label: "Loading your account...")
+No role        → stay on current page
+```
+
+Two locations implement this:
+
+### Landing Page (`/`)
+- `useEffect` fetches `/api/auth/session` on mount
+- Reads `data.roles` array to determine redirect target
+- Shows a full-screen spinner with role label (via `setTimeout` to allow render before navigat)
+- Has `sessionCheckedRef` guard to prevent double-execution
+
+### Login Page (`/login`)
+- Same redirect logic on mount (silent session check)
+- After PIN/OTP verification, `doDelayedRedirect(target, type)` shows overlay
+- Overlay shows: "Redirecting to merchant dashboard..." / "Redirecting to customer dashboard..."
+- PIN entry screen shows role badge ("Merchant" or "Customer") after phone lookup
+
+The `/select-role` page handles dual-role users with a "Choose your view" UI.
+
+---
+
 ## Key Environment Variables
 
 | Variable | Purpose |

@@ -34,7 +34,14 @@ export default function MerchantOnboardingModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const valid = name.trim().length > 0 && address.trim().length > 0 && businessType.length > 0;
+  const nameSet = currentName.trim().length > 0;
+  const addressSet = (currentAddress || "").trim().length > 0;
+  const businessTypeSet = currentBusinessType.trim().length > 0;
+
+  const valid =
+    (nameSet || name.trim().length > 0) &&
+    (addressSet || address.trim().length > 0) &&
+    (businessTypeSet || businessType.trim().length > 0);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -72,6 +79,18 @@ export default function MerchantOnboardingModal({
     }
   }, [valid, saving, merchantId, name, address, businessType, onComplete]);
 
+  const missingFields = [];
+  if (!nameSet) missingFields.push("business name");
+  if (!addressSet) missingFields.push("address");
+  if (!businessTypeSet) missingFields.push("business type");
+
+  let subtitle = "Please fill in your business details to continue.";
+  if (missingFields.length === 1) {
+    subtitle = `Just enter your ${missingFields[0]} to finish.`;
+  } else if (missingFields.length === 2) {
+    subtitle = `Just enter your ${missingFields.join(" and ")} to finish.`;
+  }
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl bg-slate-900/50 p-4">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6 space-y-5 animate-scale-up">
@@ -82,46 +101,84 @@ export default function MerchantOnboardingModal({
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900">Complete Your Profile</h2>
-          <p className="text-sm text-gray-500 mt-1">Please fill in your business details to continue.</p>
+          <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Name *</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Kirana Shop"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
-              autoFocus
-            />
-          </div>
+          {nameSet ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+              <div className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{currentName}</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Name *</label>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Kirana Shop"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
+                autoFocus={!nameSet}
+              />
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Address *</label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g. Kathmandu, New Road"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
-            />
-          </div>
+          {addressSet ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
+              <div className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{currentAddress}</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Address *</label>
+              <input
+                type="text"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="e.g. Kathmandu, New Road"
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
+                autoFocus={nameSet && !addressSet}
+              />
+            </div>
+          )}
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Business Type *</label>
-            <select
-              value={businessType}
-              onChange={(e) => setBusinessType(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition appearance-none bg-white"
-            >
-              <option value="">Select business type</option>
-              {BUSINESS_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-          </div>
+          {businessTypeSet ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
+              <div className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>{BUSINESS_TYPES.find((t) => t.value === currentBusinessType)?.label || currentBusinessType}</span>
+              </div>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Business Type *</label>
+              <select
+                value={businessType}
+                onChange={(e) => setBusinessType(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition appearance-none bg-white"
+                autoFocus={nameSet && addressSet && !businessTypeSet}
+              >
+                <option value="">Select business type</option>
+                {BUSINESS_TYPES.map((t) => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         {error && (

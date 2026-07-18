@@ -34,6 +34,15 @@ export default function LoginPage() {
   const [selectRoleMode, setSelectRoleMode] = useState<SelectRoleMode>("register");
   const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
   const [registerName, setRegisterName] = useState("");
+  const [redirectingTo, setRedirectingTo] = useState<{ target: string; label: string } | null>(null);
+
+  const doDelayedRedirect = useCallback((target: string, type?: string) => {
+    let label = "";
+    if (type === "merchant") label = "merchant";
+    else if (type === "customer") label = "customer";
+    setRedirectingTo({ target, label });
+    setTimeout(() => { window.location.replace(target); }, 80);
+  }, []);
 
   const focusPinInput = useCallback((refs: React.MutableRefObject<(HTMLInputElement | null)[]>, idx: number) => {
     if (idx >= 0 && idx < 4) refs.current[idx]?.focus();
@@ -89,11 +98,11 @@ export default function LoginPage() {
           if (data.roles.length === 1) {
             const target = data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
             console.log("[Login] Single role, redirecting to", target);
-            window.location.replace(target);
+            doDelayedRedirect(target, data.roles[0]);
             return;
           }
           console.log("[Login] Both roles, redirecting to /select-role");
-          window.location.replace("/select-role");
+          doDelayedRedirect("/select-role");
           return;
         }
       } catch (e) { console.log("[Login] Session check failed:", e); }
@@ -195,7 +204,7 @@ export default function LoginPage() {
     if (phone) localStorage.setItem("merchant_phone", phone);
 
     console.log("[Login] PIN verified, redirecting to", result.redirect);
-    window.location.replace(result.redirect || "/merchant/dashboard");
+    doDelayedRedirect(result.redirect || "/merchant/dashboard", info.userType);
   };
 
   // ── Set PIN (legacy user or after OTP) ──
@@ -229,7 +238,7 @@ export default function LoginPage() {
 
     const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
     console.log("[Login] PIN set successfully, redirecting to", target);
-    window.location.replace(target);
+    doDelayedRedirect(target, info.userType);
   };
 
   const handleSkipPin = () => {
@@ -243,7 +252,7 @@ export default function LoginPage() {
       : info?.userType === "both" ? "/select-role"
       : "/merchant/dashboard";
     console.log("[Login] Skipping PIN, redirecting to", target);
-    window.location.replace(target);
+    doDelayedRedirect(target, info?.userType);
   };
 
   // ── OTP Verify (new user registration) ──
@@ -321,7 +330,7 @@ export default function LoginPage() {
     if (hasPin) {
       const target = userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
       console.log("[Login] PIN already set, redirecting to", target);
-      window.location.replace(target);
+      doDelayedRedirect(target, userType);
     } else {
       console.log("[Login] No PIN set, transitioning to set_pin step");
       setStep("set_pin");
@@ -447,10 +456,26 @@ export default function LoginPage() {
     if (result.userId) localStorage.setItem("merchant_id", result.userId);
     if (phone) localStorage.setItem("merchant_phone", phone);
     console.log("[Login] PIN reset, redirecting to", result.redirect);
-    window.location.replace(result.redirect || "/merchant/dashboard");
+    const forgotType = result.redirect?.includes("merchant") ? "merchant" : result.redirect?.includes("customer") ? "customer" : undefined;
+    doDelayedRedirect(result.redirect || "/merchant/dashboard", forgotType);
   };
 
   const backToPhone = () => { setStep("phone"); setError(""); };
+
+  if (redirectingTo) {
+    return (
+      <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
+        <div className="text-center space-y-4">
+          <div className="w-10 h-10 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-sm text-[var(--color-text-muted)] font-medium">
+            {redirectingTo.label
+              ? `Redirecting to ${redirectingTo.label} dashboard...`
+              : "Loading your account..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "loading") {
     return (
@@ -498,6 +523,26 @@ export default function LoginPage() {
         </div>
         <h1 className="text-2xl font-extrabold text-[var(--color-primary)]">QR Hisab</h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">Digital Diary</p>
+        {(step === "pin" || step === "set_pin") && userInfoRef.current?.userType && (
+          <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+            userInfoRef.current.userType === "merchant" || userInfoRef.current.userType === "both"
+              ? "bg-blue-100 text-blue-700"
+              : "bg-emerald-100 text-emerald-700"
+          }`}>
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {userInfoRef.current.userType === "customer" ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+              )}
+            </svg>
+            <span>
+              {userInfoRef.current.userType === "both" ? "Merchant & Customer"
+                : userInfoRef.current.userType === "merchant" ? "Merchant"
+                : "Customer"}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* ── PIN Entry ── */}

@@ -52,52 +52,31 @@ self.addEventListener("fetch", (event) => {
   if (url.hostname.includes("formspree")) return;
   if (AUTH_ROUTES.some((p) => url.pathname === p || url.pathname.startsWith(p))) return;
 
-  if (request.mode === "navigate") {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((r) => r || caches.match("/"))
-        )
-    );
-    return;
-  }
-
-  if (
-    url.pathname.startsWith("/_next/static/") ||
-    url.pathname.endsWith(".js") ||
-    url.pathname.endsWith(".css") ||
-    url.pathname.endsWith(".svg") ||
-    url.pathname.endsWith(".woff2")
-  ) {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() =>
-          caches.match(request).then((r) => r || caches.match("/"))
-        )
-    );
-    return;
-  }
-
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+    (async () => {
+      try {
+        const response = await fetch(request);
+        // Only cache valid responses (prevent caching 404s)
+        if (response.ok || response.type === "opaque") {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
         return response;
-      })
-      .catch(() =>
-        caches.match(request).then((r) => r || caches.match("/"))
-      )
+      } catch (err) {
+        // Network failed (offline or blocked)
+        const cached = await caches.match(request);
+        if (cached) return cached;
+
+        // Fallback to offline page ONLY for navigation requests
+        if (request.mode === "navigate") {
+          const fallback = await caches.match("/");
+          if (fallback) return fallback;
+        }
+
+        // Return a generic error response instead of undefined to prevent TypeError crashes
+        return Response.error();
+      }
+    })()
   );
 });
 

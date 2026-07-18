@@ -73,10 +73,17 @@ export default function SessionGuard() {
 
           // Force logout — wipe immediately without retry
           if (data.forceLogout) {
-            localStorage.setItem("logout_reason", "Your session was terminated by an administrator.");
-            console.log("[SessionGuard] Force logout — wiping immediately");
+            // Preserve essential app config
+            const swVersion = localStorage.getItem("sw_version");
+            const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+
             localStorage.clear();
             sessionStorage.clear();
+
+            // Restore app config and set logout reason
+            if (swVersion) localStorage.setItem("sw_version", swVersion);
+            if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
+            localStorage.setItem("logout_reason", "Your session was terminated by an administrator.");
             await clearIndexedDB();
             document.cookie.split(";").forEach((c) => {
               const name = c.trim().split("=")[0];
@@ -106,8 +113,17 @@ export default function SessionGuard() {
           }
 
           console.log("[SessionGuard] Wiping state after retry", { reason, path });
+          
+          // Preserve essential app config
+          const swVersion = localStorage.getItem("sw_version");
+          const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+
           localStorage.clear();
           sessionStorage.clear();
+
+          // Restore app config
+          if (swVersion) localStorage.setItem("sw_version", swVersion);
+          if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
           await clearIndexedDB();
           document.cookie.split(";").forEach((c) => {
             const name = c.trim().split("=")[0];

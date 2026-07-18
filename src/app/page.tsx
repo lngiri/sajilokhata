@@ -28,6 +28,7 @@ function SectionSub({ children }: { children: React.ReactNode }) {
 export default function LandingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [redirectLabel, setRedirectLabel] = useState<string | null>(null);
   const sessionCheckedRef = useRef(false);
 
   useEffect(() => {
@@ -37,21 +38,53 @@ export default function LandingPage() {
     (async () => {
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
-        const data: { userId: string | null } = await res.json();
+        const data: { userId: string | null; roles: string[] } = await res.json();
         if (cancelled) return;
         if (data.userId) {
-          window.location.replace("/merchant/dashboard");
+          const roles = data.roles || [];
+          let target = "/merchant/dashboard";
+          let label = "merchant";
+          if (roles.includes("merchant") && roles.includes("customer")) {
+            target = "/select-role";
+            label = "";
+          } else if (roles.includes("merchant")) {
+            target = "/merchant/dashboard";
+            label = "merchant";
+          } else if (roles.includes("customer")) {
+            target = "/customer/dashboard";
+            label = "customer";
+          } else {
+            setLoggedIn(false);
+            setChecking(false);
+            return;
+          }
+          setRedirectLabel(label);
+          setTimeout(() => { window.location.replace(target); }, 50);
           return;
         }
         setLoggedIn(false);
       } catch {
-        // offline — show "Get Started"
       } finally {
-        if (!cancelled) setChecking(false);
+        if (!cancelled && !redirectLabel) setChecking(false);
       }
     })();
     return () => { cancelled = true; };
   }, []);
+
+  if (redirectLabel !== null) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-[100]">
+        <div className="text-center space-y-4 px-6">
+          <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-gray-600 font-medium">
+            {redirectLabel
+              ? `Redirecting to ${redirectLabel} dashboard...`
+              : "Loading your account..."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   const ctaText = checking ? "Loading…" : "Get Started Free";
   const ctaHref = "/login";

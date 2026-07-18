@@ -80,9 +80,17 @@ export async function signOut() {
   }
   clearCachedClient();
 
+  // Preserve essential app config
+  const swVersion = localStorage.getItem("sw_version");
+  const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+
   // Wipe all client-side storage
   localStorage.clear();
   sessionStorage.clear();
+
+  // Restore app config
+  if (swVersion) localStorage.setItem("sw_version", swVersion);
+  if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
   await clearIndexedDB();
 
   // Clear client-accessible cookies

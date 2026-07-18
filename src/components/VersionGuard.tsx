@@ -36,8 +36,17 @@ export default function VersionGuard() {
 
     // ── Version mismatch → deep clean ──
     (async () => {
+      // Preserve essential app config
+      const swVersion = localStorage.getItem("sw_version");
+      const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+
       localStorage.clear();
       sessionStorage.clear();
+
+      // Restore app config
+      if (swVersion) localStorage.setItem("sw_version", swVersion);
+      if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
+
       await clearIndexedDB();
 
       document.cookie.split(";").forEach((c) => {
