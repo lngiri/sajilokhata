@@ -252,7 +252,7 @@ test.describe("Phase 7: Ledger", () => {
     await setupAuth(page);
     await goto(page, "/merchant/logs");
     await waitLoaded(page);
-    const filters = page.locator("button").filter({ hasText: /All|Pending|Approved|Disputed/ });
+    const filters = page.locator("button").filter({ hasText: /all|pending|approved|disputed/i });
     const count = await filters.count();
     console.log(`[L] Filter buttons: ${count}`);
     expect(count).toBeGreaterThanOrEqual(1);
@@ -262,8 +262,8 @@ test.describe("Phase 7: Ledger", () => {
     await setupAuth(page);
     await goto(page, "/merchant/logs");
     await waitLoaded(page);
-    for (const label of ["All", "Pending", "Approved"]) {
-      const btn = page.locator("button").filter({ hasText: new RegExp(`^${label}$`) }).first();
+    for (const label of ["all", "pending", "approved"]) {
+      const btn = page.locator("button").filter({ hasText: new RegExp(`^${label}$`, "i") }).first();
       if (await btn.isVisible({ timeout: 2000 }).catch(() => false)) {
         await btn.click();
         await page.waitForTimeout(500);
