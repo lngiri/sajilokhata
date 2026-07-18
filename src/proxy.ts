@@ -6,9 +6,14 @@ import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE } from "@/lib/admin-sessi
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── Landing page is now at qrhisab.com — redirect root ──
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("https://qrhisab.com", request.url));
+  }
+
   // ── PUBLIC ROUTES — always pass through, no auth processing ──
   const PUBLIC_ROUTES = [
-    "/", "/login", "/select-role", "/scan", "/onboard", "/delivery",
+    "/login", "/select-role", "/scan", "/onboard", "/delivery",
     "/verify", "/_not-found",
   ];
   if (PUBLIC_ROUTES.includes(pathname)) {
