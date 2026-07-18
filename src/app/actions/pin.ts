@@ -17,8 +17,8 @@ export async function hashPin(pin: string): Promise<string> {
  * Returns the user record(s) found.
  */
 export async function findUserByPhone(phone: string): Promise<{
-  merchant?: { id: string; pin_hash: string | null };
-  customer?: { id: string; pin_hash: string | null };
+  merchant?: { id: string; pin_hash: string | null; name: string | null };
+  customer?: { id: string; pin_hash: string | null; name: string | null };
 }> {
   const admin = getAdminClient();
   if (!admin) return {};
@@ -26,11 +26,11 @@ export async function findUserByPhone(phone: string): Promise<{
   const np = normalizePhone(phone);
   const [mRes, cRes] = await Promise.all([
     (admin.from("merchants") as any)
-      .select("id, pin_hash")
+      .select("id, pin_hash, name")
       .eq("phone", np)
       .maybeSingle(),
     (admin.from("customers") as any)
-      .select("id, pin_hash")
+      .select("id, pin_hash, name")
       .eq("phone", np)
       .maybeSingle(),
   ]);
@@ -45,6 +45,7 @@ export interface UserInfo {
   userId: string;
   hasPin: boolean;
   userType: "merchant" | "customer" | "both";
+  name?: string;
 }
 
 /**
@@ -62,6 +63,7 @@ export async function checkUserExists(phone: string): Promise<{
       userId: merchant.id,
       hasPin: !!merchant.pin_hash,
       userType: "merchant",
+      name: merchant.name || undefined,
     });
   }
   if (customer) {
@@ -70,11 +72,15 @@ export async function checkUserExists(phone: string): Promise<{
     if (existing) {
       existing.userType = "both";
       existing.hasPin = existing.hasPin || !!customer.pin_hash;
+      if (!existing.name) {
+        existing.name = customer.name || undefined;
+      }
     } else {
       users.push({
         userId: customer.id,
         hasPin: !!customer.pin_hash,
         userType: "customer",
+        name: customer.name || undefined,
       });
     }
   }
@@ -356,7 +362,7 @@ export async function registerNewUser(
       const { error: insertError } = await (admin.from("customers") as any).insert({
         id: userId,
         phone: normalizedPhone,
-        name: "Customer",
+        name: name || "Customer",
       });
       if (insertError) {
         console.error("[registerNewUser] Failed to create customer:", insertError);

@@ -30,7 +30,7 @@ export default function LoginPage() {
   const confirmPinRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
   const otpRef = useRef<HTMLInputElement>(null);
   // Track user info after lookup
-  const userInfoRef = useRef<{ userId: string; userType: "merchant" | "customer" | "both" } | null>(null);
+  const userInfoRef = useRef<{ userId: string; userType: "merchant" | "customer" | "both"; name?: string } | null>(null);
   const [selectRoleMode, setSelectRoleMode] = useState<SelectRoleMode>("register");
   const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
   const [registerName, setRegisterName] = useState("");
@@ -167,7 +167,7 @@ export default function LoginPage() {
     }
 
     const user = users[0];
-    userInfoRef.current = { userId: user.userId, userType: user.userType };
+    userInfoRef.current = { userId: user.userId, userType: user.userType, name: user.name };
     console.log("[Login] Existing user:", userInfoRef.current);
 
     if (user.hasPin) {
@@ -201,7 +201,13 @@ export default function LoginPage() {
     }
 
     localStorage.setItem("merchant_id", info.userId);
-    if (phone) localStorage.setItem("merchant_phone", phone);
+    if (phone) {
+      localStorage.setItem("merchant_phone", phone);
+      if (info.userType === "customer") {
+        localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+        document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      }
+    }
 
     console.log("[Login] PIN verified, redirecting to", result.redirect);
     doDelayedRedirect(result.redirect || "/merchant/dashboard", info.userType);
@@ -234,7 +240,13 @@ export default function LoginPage() {
     }
 
     localStorage.setItem("merchant_id", info.userId);
-    if (phone) localStorage.setItem("merchant_phone", phone);
+    if (phone) {
+      localStorage.setItem("merchant_phone", phone);
+      if (info.userType === "customer") {
+        localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+        document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      }
+    }
 
     const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
     console.log("[Login] PIN set successfully, redirecting to", target);
@@ -245,7 +257,13 @@ export default function LoginPage() {
     const info = userInfoRef.current;
     if (info?.userId) {
       localStorage.setItem("merchant_id", info.userId);
-      if (phone) localStorage.setItem("merchant_phone", phone);
+      if (phone) {
+        localStorage.setItem("merchant_phone", phone);
+        if (info.userType === "customer") {
+          localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+      }
     }
     const target = info?.userType === "customer" ? "/customer/dashboard"
       : info?.userType === "merchant" ? "/merchant/dashboard"
@@ -283,18 +301,28 @@ export default function LoginPage() {
     }
 
     // Existing user
-    // Wipe previous state (preserve customer session)
+    // Wipe previous state safely (preserve app config and customer session)
+    const swVersion = localStorage.getItem("sw_version");
+    const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
     const savedCustomerSession = localStorage.getItem("sajilo_customer_session");
+    
     localStorage.clear();
     sessionStorage.clear();
+    
+    if (swVersion) localStorage.setItem("sw_version", swVersion);
+    if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
     if (savedCustomerSession) localStorage.setItem("sajilo_customer_session", savedCustomerSession);
+    
     try {
       const { clearIndexedDB } = await import("@/lib/offline/db");
       await clearIndexedDB();
     } catch { /* ignore */ }
+    
     document.cookie.split(";").forEach((c) => {
       const name = c.trim().split("=")[0];
-      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+      if (name !== "customer_session") {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+      }
     });
     if ("caches" in window) {
       try {
@@ -312,7 +340,7 @@ export default function LoginPage() {
     }
 
     const userType = result.userType || "merchant";
-    userInfoRef.current = { userId: result.userId!, userType };
+    userInfoRef.current = { userId: result.userId!, userType, name: result.name };
     console.log("[Login] OTP verified for existing user:", userInfoRef.current);
 
     // Check if PIN already set
@@ -345,7 +373,7 @@ export default function LoginPage() {
 
     if (selectRoleMode === "register") {
       // New user — create account with chosen role
-      const shopName = role === "merchant" ? registerName.trim() || undefined : undefined;
+      const shopName = registerName.trim() || undefined;
       console.log("[Login] Creating new", role, "account for phone:", phone, "name:", shopName);
       const regResult = await registerNewUser(phone, role, shopName);
       console.log("[Login] registerNewUser result:", JSON.stringify(regResult));
@@ -355,18 +383,28 @@ export default function LoginPage() {
         return;
       }
 
-      // Wipe previous state before setting new (preserve customer session)
+      // Wipe previous state safely before setting new
+      const swVersion = localStorage.getItem("sw_version");
+      const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
       const savedCustomerSession = localStorage.getItem("sajilo_customer_session");
+
       localStorage.clear();
       sessionStorage.clear();
+
+      if (swVersion) localStorage.setItem("sw_version", swVersion);
+      if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
       if (savedCustomerSession) localStorage.setItem("sajilo_customer_session", savedCustomerSession);
+
       try {
         const { clearIndexedDB } = await import("@/lib/offline/db");
         await clearIndexedDB();
       } catch { /* ignore */ }
+
       document.cookie.split(";").forEach((c) => {
         const name = c.trim().split("=")[0];
-        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+        if (name !== "customer_session") {
+          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+        }
       });
       if ("caches" in window) {
         try {
@@ -380,9 +418,13 @@ export default function LoginPage() {
       }
       if (regResult.phone) {
         localStorage.setItem("merchant_phone", regResult.phone);
+        if (role === "customer") {
+          localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: regResult.phone, name: registerName.trim() }));
+          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone: regResult.phone, name: registerName.trim() }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
       }
 
-      userInfoRef.current = { userId: regResult.userId!, userType: role };
+      userInfoRef.current = { userId: regResult.userId!, userType: role, name: registerName.trim() };
       console.log("[Login] New user created, proceeding to PIN setup");
       setStep("set_pin");
       setLoading(false);
@@ -454,7 +496,13 @@ export default function LoginPage() {
       return;
     }
     if (result.userId) localStorage.setItem("merchant_id", result.userId);
-    if (phone) localStorage.setItem("merchant_phone", phone);
+    if (phone) {
+      localStorage.setItem("merchant_phone", phone);
+      if (forgotType === "customer") {
+        localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
+        document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      }
+    }
     console.log("[Login] PIN reset, redirecting to", result.redirect);
     const forgotType = result.redirect?.includes("merchant") ? "merchant" : result.redirect?.includes("customer") ? "customer" : undefined;
     doDelayedRedirect(result.redirect || "/merchant/dashboard", forgotType);
@@ -607,7 +655,7 @@ export default function LoginPage() {
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
           {selectRoleMode === "register" && (
             <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Shop Name *</label>
+              <label className="text-sm font-medium text-[var(--color-text)]">Full Name or Shop Name *</label>
               <input
                 type="text"
                 value={registerName}

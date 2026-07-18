@@ -169,7 +169,7 @@ export default function CustomerDashboard() {
         if (profile && mountedRef.current) {
           setAvatarUrl(profile.avatar_url);
           setCustomerName(profile.name || customerName);
-          if (!profile.name || !profile.address) {
+          if (!profile.name || profile.name === "Customer") {
             setShowOnboarding(true);
           }
           try {
