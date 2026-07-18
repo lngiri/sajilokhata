@@ -34,16 +34,11 @@ export default function LoginPage() {
   const [selectRoleMode, setSelectRoleMode] = useState<SelectRoleMode>("register");
   const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
   const [registerName, setRegisterName] = useState("");
-  const [redirectingTo, setRedirectingTo] = useState<{ target: string; label: string } | null>(null);
 
   const doDelayedRedirect = useCallback((target: string, type?: string) => {
-    let label = "";
-    if (type === "merchant") label = "merchant";
-    else if (type === "customer") label = "customer";
-    startTransition(() => {
-      setRedirectingTo({ target, label });
-    });
-    setTimeout(() => { window.location.replace(target); }, 80);
+    // Avoid updating React state during unmount to prevent Error 310
+    // The UI is already showing a loading spinner on the button.
+    setTimeout(() => { window.location.assign(target); }, 50);
   }, []);
 
   const focusPinInput = useCallback((refs: React.MutableRefObject<(HTMLInputElement | null)[]>, idx: number) => {
@@ -528,21 +523,6 @@ export default function LoginPage() {
   };
 
   const backToPhone = () => { setStep("phone"); setError(""); };
-
-  if (redirectingTo) {
-    return (
-      <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
-        <div className="text-center space-y-4">
-          <div className="w-10 h-10 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-[var(--color-text-muted)] font-medium">
-            {redirectingTo.label
-              ? `Redirecting to ${redirectingTo.label} dashboard...`
-              : "Loading your account..."}
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (step === "loading") {
     return (
