@@ -81,17 +81,46 @@ export default function ScanPage() {
     return p.slice(0, 4) + "****" + p.slice(-2);
   }
 
-  // On mount, restore customer session from localStorage
+  // On mount, restore customer session from localStorage (with cookie fallback)
   useEffect(() => {
-    const session = loadCustomerSession();
-    if (session) {
-      setPhone(session.phone);
-      setName(session.name);
+    // 1. Try localStorage first
+    const fromStorage = loadCustomerSession();
+    if (fromStorage) {
+      setPhone(fromStorage.phone);
+      setName(fromStorage.name);
       setStep("scan");
-      // Re-sync the cookie so middleware doesn't block /customer/* routes
-      document.cookie = `customer_session=${encodeURIComponent(JSON.stringify(session))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      // Re-sync the cookie so middleware can verify the session server-side
+      document.cookie = `customer_session=${encodeURIComponent(JSON.stringify(fromStorage))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      setInitialized(true);
+      return;
     }
-    setInitialized(true);
+
+    // 2. Fallback: try reading the customer_session cookie
+    try {
+      const match = document.cookie
+        .split("; ")
+        .find((c) => c.startsWith("customer_session="));
+      if (match) {
+        const val = decodeURIComponent(match.split("=").slice(1).join("="));
+        const session = JSON.parse(val) as CustomerSession;
+        if (session.phone && session.phone.length >= 10) {
+          setPhone(session.phone);
+          setName(session.name || "");
+          setStep("scan");
+          // Persist back to localStorage for future reads
+          try {
+            localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
+          } catch {}
+          setInitialized(true);
+          return;
+        }
+      }
+    } catch {
+      // Ignore corrupted cookie
+    }
+
+    // 3. No session at all — send to login
+    window.location.replace("/login");
   }, []);
 
   const handlePhoneSubmit = async () => {
