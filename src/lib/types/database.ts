@@ -87,6 +87,7 @@ export interface Database {
           flagged_by_merchant_id: string | null;
           flagged_at: string | null;
           avatar_url: string | null;
+          address: string;
           created_at: string;
         };
         Insert: {
@@ -100,6 +101,7 @@ export interface Database {
           flagged_by_merchant_id?: string | null;
           flagged_at?: string | null;
           avatar_url?: string | null;
+          address?: string;
           created_at?: string;
         };
         Update: {
@@ -113,6 +115,7 @@ export interface Database {
           flagged_by_merchant_id?: string | null;
           flagged_at?: string | null;
           avatar_url?: string | null;
+          address?: string;
           created_at?: string;
         };
         Relationships: [];

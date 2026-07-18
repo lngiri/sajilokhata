@@ -79,13 +79,14 @@ export async function sendOnboardingSMS(
 
 export async function updateCustomerProfile(
   phone: string,
-  data: { name: string }
+  data: { name?: string; address?: string }
 ): Promise<{ success: boolean; error?: string }> {
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Server config" };
 
   const name = data.name?.trim();
-  if (!name) return { success: false, error: "Name cannot be empty" };
+  const address = data.address?.trim();
+  if (!name && !address) return { success: false, error: "Nothing to update" };
 
   try {
     const normalized = normalizePhone(phone);
@@ -97,8 +98,12 @@ export async function updateCustomerProfile(
 
     if (!customer) return { success: false, error: "Customer not found" };
 
+    const updatePayload: Record<string, string> = {};
+    if (name) updatePayload.name = name;
+    if (address) updatePayload.address = address;
+
     const { error } = await admin.from("customers")
-      .update({ name })
+      .update(updatePayload)
       .eq("id", customer.id);
 
     if (error) return { success: false, error: error.message };
@@ -169,18 +174,19 @@ export async function addCustomerForMerchant(
 
 export async function getCustomerProfile(
   phone: string
-): Promise<{ id: string; name: string | null; phone: string; avatar_url: string | null } | null> {
+): Promise<{ id: string; name: string | null; phone: string; avatar_url: string | null; address: string } | null> {
   const admin = getAdminClient();
   if (!admin) return null;
 
   const normalized = normalizePhone(phone);
   const { data } = await admin.from("customers")
-    .select("id, name, phone, avatar_url")
+    .select("id, name, phone, avatar_url, address")
     .eq("phone", normalized)
     .maybeSingle();
 
-  const profile = data as Pick<CustomerRow, "id" | "name" | "phone" | "avatar_url"> | null;
-  return profile;
+  const profile = data as Pick<CustomerRow, "id" | "name" | "phone" | "avatar_url" | "address"> | null;
+  if (!profile) return null;
+  return { ...profile, address: profile.address || "" };
 }
 
 export async function updateCustomerAvatar(

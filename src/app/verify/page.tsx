@@ -8,8 +8,9 @@ import {
   disputeByToken,
   requestAmountEdit,
 } from "@/lib/actions";
+import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
 
-type Step = "loading" | "invalid" | "action" | "done";
+type Step = "loading" | "invalid" | "action" | "onboard" | "done";
 
 export default function VerifyPage() {
   const searchParams = useSearchParams();
@@ -41,7 +42,11 @@ export default function VerifyPage() {
           return;
         }
         setLog(data);
-        setStep("action");
+        if (!data.customers?.name || !data.customers?.address) {
+          setStep("onboard");
+        } else {
+          setStep("action");
+        }
       })
       .catch(() => setStep("invalid"));
   }, [token]);
@@ -158,8 +163,19 @@ export default function VerifyPage() {
     window.location.replace("/customer/dashboard");
   };
 
+  const handleCustomerOnboarded = () => {
+    setStep("action");
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <>
+      {step === "onboard" && log?.customers?.phone && (
+        <CustomerOnboardingModal
+          phone={log.customers.phone}
+          onComplete={handleCustomerOnboarded}
+        />
+      )}
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-lg p-6 space-y-5 animate-fade-in">
 
         {/* QR Hisab platform bar */}
@@ -370,5 +386,6 @@ export default function VerifyPage() {
         )}
       </div>
     </div>
+    </>
   );
 }

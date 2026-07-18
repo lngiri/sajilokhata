@@ -5,6 +5,7 @@ import BottomNav from "@/components/BottomNav";
 import SyncStatus from "@/components/SyncStatus";
 import SmsReminderModal from "@/components/SmsReminderModal";
 import PullToRefresh from "@/components/PullToRefresh";
+import MerchantOnboardingModal from "@/components/MerchantOnboardingModal";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
@@ -97,6 +98,7 @@ export default function MerchantDashboard() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [topReceivables, setTopReceivables] = useState<Array<{
     customer_id: string;
@@ -166,6 +168,9 @@ export default function MerchantDashboard() {
         setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
         setRecentActivity(activityData as typeof recentActivity);
         setMerchantProfile(profileData);
+        if (profileData && (!profileData.name || !profileData.address || !profileData.business_type)) {
+          setShowOnboarding(true);
+        }
         setTopReceivables(
           ((customersData as any[]) || [])
             .filter(c => (c.current_balance || 0) > 0)
@@ -353,8 +358,26 @@ export default function MerchantDashboard() {
     }
   };
 
+  const handleOnboardingComplete = useCallback(async () => {
+    setShowOnboarding(false);
+    if (merchantId) {
+      const profile = await getMerchantProfile(merchantId, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null);
+      setMerchantProfile(profile);
+    }
+  }, [merchantId]);
+
   return (
-    <div className="pb-20">
+    <>
+      {showOnboarding && merchantProfile && (
+        <MerchantOnboardingModal
+          merchantId={merchantProfile.id}
+          currentName={merchantProfile.name || ""}
+          currentAddress={merchantProfile.address ?? null}
+          currentBusinessType={merchantProfile.business_type || ""}
+          onComplete={handleOnboardingComplete}
+        />
+      )}
+      <div className="pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3">
@@ -1100,5 +1123,6 @@ export default function MerchantDashboard() {
       <BottomNav />
       <OtherRolePrompt currentRole="merchant" />
     </div>
+    </>
   );
 }

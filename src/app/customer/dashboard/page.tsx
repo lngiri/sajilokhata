@@ -20,6 +20,7 @@ import {
 } from "@/lib/actions";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
 import { getCustomerProfile, updateCustomerAvatar, submitCustomerEntry } from "@/app/actions/customer";
+import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
 
 function maskPhone(phone: string): string {
   if (phone.length < 8) return phone;
@@ -36,6 +37,7 @@ export default function CustomerDashboard() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   // Stats
   const [stats, setStats] = useState<{
@@ -165,6 +167,9 @@ export default function CustomerDashboard() {
         if (profile && mountedRef.current) {
           setAvatarUrl(profile.avatar_url);
           setCustomerName(profile.name || customerName);
+          if (!profile.name || !profile.address) {
+            setShowOnboarding(true);
+          }
           try {
             const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
             const session = raw ? JSON.parse(raw) : {};
@@ -410,8 +415,22 @@ export default function CustomerDashboard() {
     window.location.replace("/");
   };
 
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+    if (customerPhone) {
+      getCustomerProfile(customerPhone).then((profile) => {
+        if (profile) {
+          setCustomerName(profile.name || customerName);
+        }
+      }).catch(() => {});
+    }
+  }, [customerPhone, customerName]);
+
   return (
     <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={handleSignOut}>
+    {showOnboarding && customerPhone && (
+      <CustomerOnboardingModal phone={customerPhone} onComplete={handleOnboardingComplete} />
+    )}
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">

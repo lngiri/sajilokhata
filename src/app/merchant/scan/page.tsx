@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import AmountSuggestions from "@/components/AmountSuggestions";
 import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { getMerchantProfile } from "@/app/actions/merchant";
 import { saveEntry } from "@/app/actions/entry";
 import {
   getMerchantCustomerBalance,
@@ -27,6 +29,7 @@ type Step = "scan" | "enter" | "confirm" | "success";
 const CUSTOMER_QR_PREFIX = "QR Hisab:customer:";
 
 export default function MerchantScanPage() {
+  const router = useRouter();
   const { addToast } = useToast();
   const searchParams = useSearchParams();
   const [isMounted, setIsMounted] = useState(false);
@@ -66,8 +69,25 @@ export default function MerchantScanPage() {
 
   // Load merchant ID and customer list on mount
   useEffect(() => {
-    getCurrentMerchantId().then(setMerchantId);
+    getCurrentMerchantId().then((id) => {
+      setMerchantId(id);
+      if (!id) {
+        router.replace("/login?redirect=/merchant/scan");
+      }
+    });
   }, []);
+
+  // Check merchant profile completeness
+  useEffect(() => {
+    if (merchantId) {
+      getMerchantProfile(merchantId, "name, address, business_type").then((profile: any) => {
+        if (profile && (!profile.name || !profile.address || !profile.business_type)) {
+          addToast("Please complete your business profile first", "warning");
+          router.replace("/merchant/dashboard");
+        }
+      }).catch(() => {});
+    }
+  }, [merchantId]);
 
   useEffect(() => {
     if (isManual && step === "scan") {
