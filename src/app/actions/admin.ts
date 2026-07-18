@@ -8,6 +8,7 @@ import {
   createAdminSessionToken,
   verifyAdminSessionToken,
   ADMIN_SESSION_COOKIE,
+  ADMIN_SESSION_COOKIE_OPTIONS,
 } from "@/lib/admin-session";
 
 type AdminRow = Database["public"]["Tables"]["admins"]["Row"];
@@ -76,13 +77,7 @@ export async function adminLogin(
 
     const { token, maxAge } = await createAdminSessionToken(row.id);
     const cookieStore = await cookies();
-    cookieStore.set(ADMIN_SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge,
-      path: "/",
-    });
+    cookieStore.set(ADMIN_SESSION_COOKIE, token, { ...ADMIN_SESSION_COOKIE_OPTIONS, maxAge });
 
     return { success: true, name: row.name || "Admin" };
   } catch (err) {

@@ -51,4 +51,14 @@ export async function verifyAdminSessionToken(
   return adminId;
 }
 
-export { ADMIN_SESSION_COOKIE, ADMIN_SESSION_DURATION };
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
+const ADMIN_SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+};
+
+export { ADMIN_SESSION_COOKIE, ADMIN_SESSION_DURATION, ADMIN_SESSION_COOKIE_OPTIONS };

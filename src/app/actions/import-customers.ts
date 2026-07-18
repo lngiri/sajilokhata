@@ -96,10 +96,11 @@ export async function importCustomersAction(
   }
 
   // ── Step 2: Compute SMS texts & parts ──
+  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com").hostname;
   let totalSmsParts = 0;
   const smsTexts: string[] = [];
   for (const r of smsRows) {
-    const text = buildSmsText(r.name, merchantName, r.amount, r.short_code);
+    const text = buildSmsText(r.name, merchantName, r.amount, r.short_code, domain);
     smsTexts.push(text);
     totalSmsParts += calculateParts(text);
   }

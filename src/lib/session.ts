@@ -88,4 +88,14 @@ export async function verifySessionToken(
   return null;
 }
 
-export { SESSION_COOKIE, SESSION_DURATION };
+const COOKIE_DOMAIN = process.env.COOKIE_DOMAIN || undefined;
+
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+};
+
+export { SESSION_COOKIE, SESSION_DURATION, SESSION_COOKIE_OPTIONS, COOKIE_DOMAIN };

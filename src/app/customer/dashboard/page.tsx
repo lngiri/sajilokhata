@@ -438,15 +438,6 @@ export default function CustomerDashboard() {
     }, 200);
   };
 
-  // Prevent flash while reading localStorage
-  if (!initialized) {
-    return (
-      <div className="min-h-dvh bg-[var(--color-bg)] flex items-center justify-center">
-        <div role="status" className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
   const handleSignOut = () => {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
     localStorage.removeItem("qr_hisab_auth_" + customerPhone);
@@ -457,6 +448,15 @@ export default function CustomerDashboard() {
     onboardingCompletedRef.current = true;
     setShowOnboarding(false);
   }, []);
+
+  // Prevent flash while reading localStorage
+  if (!initialized) {
+    return (
+      <div className="min-h-dvh bg-[var(--color-bg)] flex items-center justify-center">
+        <div role="status" className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={handleSignOut}>

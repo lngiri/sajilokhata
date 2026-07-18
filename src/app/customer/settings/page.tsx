@@ -99,7 +99,7 @@ export default function CustomerSettings() {
             <h1 className="text-base font-bold text-[var(--color-text)]">Settings</h1>
             <p className="text-[10px] text-emerald-600 flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              qrhisab.com
+              QR Hisab
             </p>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
-import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/session";
 
 const PIN_ROUNDS = 10;
 
@@ -165,13 +165,7 @@ export async function loginWithPin(
     // Create session cookie
     console.log("[loginWithPin] Creating session for user:", userId);
     const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge,
-      path: "/",
-    });
+    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
     console.log("[loginWithPin] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
     const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
     console.log("[loginWithPin] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
@@ -248,13 +242,7 @@ export async function setPin(
   try {
     const cookieStore = await cookies();
     const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge,
-      path: "/",
-    });
+    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
     console.log("[setPin] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
 
     // Verify cookie was written by reading it back
@@ -335,9 +323,7 @@ export async function registerNewUser(
       const localId = `local_${cleanPhone}`;
       const cookieStore = await cookies();
       const { token, maxAge } = await createSessionToken(localId);
-      cookieStore.set(SESSION_COOKIE, token, {
-        httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge, path: "/",
-      });
+      cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
       return { success: true, userId: localId, phone: cleanPhone, userType: role };
     }
 
@@ -373,9 +359,7 @@ export async function registerNewUser(
     // Set session cookie
     const cookieStore = await cookies();
     const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, {
-      httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", maxAge, path: "/",
-    });
+    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
     console.log("[registerNewUser] Session cookie set for", role, "userId:", userId);
 
     // Verify cookie was written

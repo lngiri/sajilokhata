@@ -1,4 +1,4 @@
-const CACHE_NAME = "qrhisab-v5";
+const CACHE_NAME = "qrhisab-v6";
 const STATIC_ASSETS = [
   "/",
   "/login",

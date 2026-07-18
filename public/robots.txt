@@ -4,4 +4,4 @@ Disallow: /merchant/
 Disallow: /delivery/
 Disallow: /scan/
 
-Sitemap: https://qrhisab.com/sitemap.xml
+Sitemap: https://app.qrhisab.com/sitemap.xml

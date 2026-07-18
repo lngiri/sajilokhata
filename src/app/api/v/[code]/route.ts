@@ -27,7 +27,7 @@ export async function GET(
     return new NextResponse("Not Found", { status: 404 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://qrhisab.com";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL!;
   const destination = new URL(link.destination_url, baseUrl);
 
   return NextResponse.redirect(destination, { status: 308 });

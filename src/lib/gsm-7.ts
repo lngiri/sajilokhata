@@ -43,17 +43,28 @@ export function calculateParts(text: string): number {
   return Math.ceil(text.length / 67);
 }
 
+function resolveDomain(domain?: string): string {
+  if (domain) return domain;
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname;
+  }
+  return "app.qrhisab.com";
+}
+
 export function buildSmsText(
   customerName: string,
   merchantName: string,
   amount: number,
-  shortCode: string
+  shortCode: string,
+  domain?: string
 ): string {
-  return `Hello ${customerName}, ${merchantName} added opening balance Rs.${amount}. Verify: qrhisab.com/v/${shortCode}`;
+  const host = resolveDomain(domain);
+  return `Hello ${customerName}, ${merchantName} added opening balance Rs.${amount}. Verify: ${host}/v/${shortCode}`;
 }
 
 export function computeTotalSmsParts(
-  rows: { name: string; merchantName: string; amount: number; shortCode: string }[]
+  rows: { name: string; merchantName: string; amount: number; shortCode: string }[],
+  domain?: string
 ): number {
-  return rows.reduce((sum, r) => sum + calculateParts(buildSmsText(r.name, r.merchantName, r.amount, r.shortCode)), 0);
+  return rows.reduce((sum, r) => sum + calculateParts(buildSmsText(r.name, r.merchantName, r.amount, r.shortCode, domain)), 0);
 }

@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
+import { ADMIN_SESSION_COOKIE, ADMIN_SESSION_COOKIE_OPTIONS } from "@/lib/admin-session";
 
 export async function GET() {
   // Use relative redirect so it works in dev (localhost) and production
-  const response = NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"));
+  const response = NextResponse.redirect(new URL("/", process.env.NEXT_PUBLIC_SITE_URL!));
 
   response.cookies.set(ADMIN_SESSION_COOKIE, "", {
-    path: "/",
+    ...ADMIN_SESSION_COOKIE_OPTIONS,
     expires: new Date(0),
     maxAge: 0,
   });

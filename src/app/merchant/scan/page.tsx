@@ -709,7 +709,7 @@ export default function MerchantScanPage() {
                       <a
                         href={`https://wa.me/${sanitizePhoneForUrl(customerPhone)}?text=${encodeURIComponent(
                           (() => {
-                            const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://qrhisab.vercel.app';
+                            const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || '');
                             const shareLink = `${baseUrl}/verify?token=${verificationToken}`;
                             return `Dear customer, Rs. ${Number(amount).toLocaleString()} has been added to your account. Please verify using this link: ${shareLink}`;
                           })()
@@ -725,7 +725,7 @@ export default function MerchantScanPage() {
                       </a>
                       <button
                         onClick={async () => {
-                          const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://qrhisab.vercel.app';
+                          const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || '');
                           const link = `${baseUrl}/verify?token=${verificationToken}`;
                           try {
                             await navigator.clipboard.writeText(link);
