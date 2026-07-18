@@ -107,6 +107,7 @@ export default function CustomerDashboard() {
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
   const closeModalTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined!);
+  const onboardingCompletedRef = useRef(false);
   const loadStatsRef = useRef<() => Promise<void>>(undefined!);
 
   const resizeImage = (file: File, maxDim: number): Promise<Blob> =>
@@ -168,7 +169,9 @@ export default function CustomerDashboard() {
           setAvatarUrl(profile.avatar_url);
           setCustomerName(profile.name || customerName);
           if (!profile.name || !profile.address) {
-            setShowOnboarding(true);
+            if (!onboardingCompletedRef.current) {
+              setShowOnboarding(true);
+            }
           }
           try {
             const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -416,15 +419,9 @@ export default function CustomerDashboard() {
   };
 
   const handleOnboardingComplete = useCallback(() => {
+    onboardingCompletedRef.current = true;
     setShowOnboarding(false);
-    if (customerPhone) {
-      getCustomerProfile(customerPhone).then((profile) => {
-        if (profile) {
-          setCustomerName(profile.name || customerName);
-        }
-      }).catch(() => {});
-    }
-  }, [customerPhone, customerName]);
+  }, []);
 
   return (
     <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={handleSignOut}>
