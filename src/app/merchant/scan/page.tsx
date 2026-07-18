@@ -64,6 +64,7 @@ export default function MerchantScanPage() {
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
   const [attachmentUploading, setAttachmentUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const profileCheckedRef = useRef(false);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
 
@@ -79,13 +80,15 @@ export default function MerchantScanPage() {
 
   // Check merchant profile completeness
   useEffect(() => {
+    if (profileCheckedRef.current) return;
     if (merchantId) {
       getMerchantProfile(merchantId, "name, address, business_type").then((profile: any) => {
+        profileCheckedRef.current = true;
         if (profile && (!profile.name || !profile.address || !profile.business_type)) {
           addToast("Please complete your business profile first", "warning");
           router.replace("/merchant/dashboard");
         }
-      }).catch(() => {});
+      }).catch(() => { profileCheckedRef.current = true; });
     }
   }, [merchantId]);
 

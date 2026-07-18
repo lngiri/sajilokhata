@@ -123,6 +123,7 @@ export default function MerchantDashboard() {
   const router = useRouter();
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
+  const onboardedRef = useRef(false);
 
   const topPendingLogs = useMemo(() => pendingLogs.slice(0, 3), [pendingLogs]);
   const topActivity = useMemo(() => recentActivity.slice(0, 3), [recentActivity]);
@@ -168,7 +169,7 @@ export default function MerchantDashboard() {
         setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
         setRecentActivity(activityData as typeof recentActivity);
         setMerchantProfile(profileData);
-        if (profileData && (!profileData.name || !profileData.address || !profileData.business_type)) {
+        if (profileData && !onboardedRef.current && (!profileData.name || !profileData.address || !profileData.business_type)) {
           setShowOnboarding(true);
         }
         setTopReceivables(
@@ -358,13 +359,10 @@ export default function MerchantDashboard() {
     }
   };
 
-  const handleOnboardingComplete = useCallback(async () => {
+  const handleOnboardingComplete = useCallback(() => {
+    onboardedRef.current = true;
     setShowOnboarding(false);
-    if (merchantId) {
-      const profile = await getMerchantProfile(merchantId, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null);
-      setMerchantProfile(profile);
-    }
-  }, [merchantId]);
+  }, []);
 
   return (
     <>

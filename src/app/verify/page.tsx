@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getCreditLogByToken,
@@ -29,8 +29,10 @@ export default function VerifyPage() {
   } | null>(null);
   const [showEditInput, setShowEditInput] = useState(false);
   const [proposedAmount, setProposedAmount] = useState("");
+  const onboardedRef = useRef(false);
 
   useEffect(() => {
+    if (onboardedRef.current) return;
     if (!token) {
       setStep("invalid");
       return;
@@ -42,6 +44,7 @@ export default function VerifyPage() {
           return;
         }
         setLog(data);
+        onboardedRef.current = true;
         if (!data.customers?.name || !data.customers?.address) {
           setStep("onboard");
         } else {
@@ -164,6 +167,7 @@ export default function VerifyPage() {
   };
 
   const handleCustomerOnboarded = () => {
+    onboardedRef.current = true;
     setStep("action");
   };
 
