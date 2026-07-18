@@ -35,11 +35,7 @@ export default function LoginPage() {
   const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
   const [registerName, setRegisterName] = useState("");
 
-  const doDelayedRedirect = useCallback((target: string, type?: string) => {
-    // Avoid updating React state during unmount to prevent Error 310
-    // The UI is already showing a loading spinner on the button.
-    setTimeout(() => { window.location.assign(target); }, 50);
-  }, []);
+
 
   const focusPinInput = useCallback((refs: React.MutableRefObject<(HTMLInputElement | null)[]>, idx: number) => {
     if (idx >= 0 && idx < 4) refs.current[idx]?.focus();
@@ -203,28 +199,30 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    console.log("[Login] Verifying PIN for user:", info.userId);
-    const result = await loginWithPin(info.userId, pinStr, info.userType);
-    console.log("[Login] loginWithPin result:", JSON.stringify(result));
-    if (!result.success) {
-      setError(result.error || "Incorrect PIN");
-      setPin(["", "", "", ""]);
-      focusPinInput(pinRefs, 0);
-      setLoading(false);
-      return;
-    }
-
-    localStorage.setItem("merchant_id", info.userId);
-    if (phone) {
-      localStorage.setItem("merchant_phone", phone);
-      if (info.userType === "customer") {
-        localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-        document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+    startTransition(async () => {
+      console.log("[Login] Verifying PIN for user:", info.userId);
+      const result = await loginWithPin(info.userId, pinStr, info.userType);
+      console.log("[Login] loginWithPin result:", JSON.stringify(result));
+      if (!result.success) {
+        setError(result.error || "Incorrect PIN");
+        setPin(["", "", "", ""]);
+        focusPinInput(pinRefs, 0);
+        setLoading(false);
+        return;
       }
-    }
 
-    console.log("[Login] PIN verified, redirecting to", result.redirect);
-    doDelayedRedirect(result.redirect || "/merchant/dashboard", info.userType);
+      localStorage.setItem("merchant_id", info.userId);
+      if (phone) {
+        localStorage.setItem("merchant_phone", phone);
+        if (info.userType === "customer") {
+          localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+      }
+
+      console.log("[Login] PIN verified, redirecting to", result.redirect);
+      window.location.assign(result.redirect || "/merchant/dashboard");
+    });
   };
 
   // ── Set PIN (legacy user or after OTP) ──
@@ -244,27 +242,29 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    console.log("[Login] Setting PIN for user:", info.userId, "type:", info.userType);
-    const result = await setMerchantPin(info.userId, newPinStr);
-    console.log("[Login] setPin result:", JSON.stringify(result));
-    if (!result.success) {
-      setError(result.error || "Failed to set PIN");
-      setLoading(false);
-      return;
-    }
-
-    localStorage.setItem("merchant_id", info.userId);
-    if (phone) {
-      localStorage.setItem("merchant_phone", phone);
-      if (info.userType === "customer") {
-        localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-        document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+    startTransition(async () => {
+      console.log("[Login] Setting PIN for user:", info.userId, "type:", info.userType);
+      const result = await setMerchantPin(info.userId, newPinStr);
+      console.log("[Login] setPin result:", JSON.stringify(result));
+      if (!result.success) {
+        setError(result.error || "Failed to set PIN");
+        setLoading(false);
+        return;
       }
-    }
 
-    const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
-    console.log("[Login] PIN set successfully, redirecting to", target);
-    doDelayedRedirect(target, info.userType);
+      localStorage.setItem("merchant_id", info.userId);
+      if (phone) {
+        localStorage.setItem("merchant_phone", phone);
+        if (info.userType === "customer") {
+          localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+      }
+
+      const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
+      console.log("[Login] PIN set successfully, redirecting to", target);
+      window.location.assign(target);
+    });
   };
 
   const handleSkipPin = () => {
@@ -284,7 +284,7 @@ export default function LoginPage() {
       : info?.userType === "both" ? "/select-role"
       : "/merchant/dashboard";
     console.log("[Login] Skipping PIN, redirecting to", target);
-    doDelayedRedirect(target, info?.userType);
+    window.location.assign(target);
   };
 
   // ── OTP Verify (new user registration) ──
@@ -293,91 +293,93 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    console.log("[Login] Verifying OTP for phone:", phone);
-    const result = await verifyRegistrationOtp(phone, otp);
-    console.log("[Login] verifyRegistrationOtp result:", JSON.stringify(result));
-    if (!result.success) {
-      setError(result.error || "Invalid OTP");
-      setLoading(false);
-      return;
-    }
+    startTransition(async () => {
+      console.log("[Login] Verifying OTP for phone:", phone);
+      const result = await verifyRegistrationOtp(phone, otp);
+      console.log("[Login] verifyRegistrationOtp result:", JSON.stringify(result));
+      if (!result.success) {
+        setError(result.error || "Invalid OTP");
+        setLoading(false);
+        return;
+      }
 
-    if (!result.exists) {
-      // New user — need role selection before creating account
-      console.log("[Login] New user, no existing account → role selection");
-      setSelectRoleMode("register");
-      setAvailableRoles(["merchant", "customer"]);
-      // Store phone in userInfoRef for use after role selection
-      userInfoRef.current = null;
-      setStep("select_role");
-      setLoading(false);
-      return;
-    }
+      if (!result.exists) {
+        // New user — need role selection before creating account
+        console.log("[Login] New user, no existing account → role selection");
+        setSelectRoleMode("register");
+        setAvailableRoles(["merchant", "customer"]);
+        // Store phone in userInfoRef for use after role selection
+        userInfoRef.current = null;
+        setStep("select_role");
+        setLoading(false);
+        return;
+      }
 
-    // Existing user
-    // Wipe previous state safely (preserve app config and customer session)
-    const swVersion = localStorage.getItem("sw_version");
-    const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
-    const savedCustomerSession = localStorage.getItem("sajilo_customer_session");
-    
-    localStorage.clear();
-    sessionStorage.clear();
-    
-    if (swVersion) localStorage.setItem("sw_version", swVersion);
-    if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
-    if (savedCustomerSession) localStorage.setItem("sajilo_customer_session", savedCustomerSession);
-    
-    try {
-      const { clearIndexedDB } = await import("@/lib/offline/db");
-      await clearIndexedDB();
-    } catch { /* ignore */ }
-    
-    document.cookie.split(";").forEach((c) => {
-      const name = c.trim().split("=")[0];
-      if (name !== "customer_session") {
-        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+      // Existing user
+      // Wipe previous state safely (preserve app config and customer session)
+      const swVersion = localStorage.getItem("sw_version");
+      const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+      const savedCustomerSession = localStorage.getItem("sajilo_customer_session");
+      
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      if (swVersion) localStorage.setItem("sw_version", swVersion);
+      if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
+      if (savedCustomerSession) localStorage.setItem("sajilo_customer_session", savedCustomerSession);
+      
+      try {
+        const { clearIndexedDB } = await import("@/lib/offline/db");
+        await clearIndexedDB();
+      } catch { /* ignore */ }
+      
+      document.cookie.split(";").forEach((c) => {
+        const name = c.trim().split("=")[0];
+        if (name !== "customer_session") {
+          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+        }
+      });
+      if ("caches" in window) {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch { /* ignore */ }
+      }
+
+      if (result.userId) {
+        localStorage.setItem("merchant_id", result.userId);
+        console.log("[Login] Stored merchant_id in localStorage:", result.userId);
+      }
+      if (result.phone) {
+        localStorage.setItem("merchant_phone", result.phone);
+      }
+
+      const userType = result.userType || "merchant";
+      userInfoRef.current = { userId: result.userId!, userType, name: result.name };
+      console.log("[Login] OTP verified for existing user:", userInfoRef.current);
+
+      // Check if PIN already set
+      const hasPin = result.hasPin;
+      console.log("[Login] PIN check after OTP:", { hasPin, userType });
+      if (userType === "both") {
+        // Multi-role existing user — let them choose
+        console.log("[Login] Multi-role after OTP → role selection");
+        setSelectRoleMode("login");
+        setAvailableRoles(["merchant", "customer"]);
+        setStep("select_role");
+        setLoading(false);
+        return;
+      }
+      if (hasPin) {
+        const target = userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
+        console.log("[Login] PIN already set, redirecting to", target);
+        window.location.assign(target);
+      } else {
+        console.log("[Login] No PIN set, transitioning to set_pin step");
+        setStep("set_pin");
+        setLoading(false);
       }
     });
-    if ("caches" in window) {
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      } catch { /* ignore */ }
-    }
-
-    if (result.userId) {
-      localStorage.setItem("merchant_id", result.userId);
-      console.log("[Login] Stored merchant_id in localStorage:", result.userId);
-    }
-    if (result.phone) {
-      localStorage.setItem("merchant_phone", result.phone);
-    }
-
-    const userType = result.userType || "merchant";
-    userInfoRef.current = { userId: result.userId!, userType, name: result.name };
-    console.log("[Login] OTP verified for existing user:", userInfoRef.current);
-
-    // Check if PIN already set
-    const hasPin = result.hasPin;
-    console.log("[Login] PIN check after OTP:", { hasPin, userType });
-    if (userType === "both") {
-      // Multi-role existing user — let them choose
-      console.log("[Login] Multi-role after OTP → role selection");
-      setSelectRoleMode("login");
-      setAvailableRoles(["merchant", "customer"]);
-      setStep("select_role");
-      setLoading(false);
-      return;
-    }
-    if (hasPin) {
-      const target = userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
-      console.log("[Login] PIN already set, redirecting to", target);
-      doDelayedRedirect(target, userType);
-    } else {
-      console.log("[Login] No PIN set, transitioning to set_pin step");
-      setStep("set_pin");
-      setLoading(false);
-    }
   };
 
   // ── Role Selection (new user or multi-role existing) ──
@@ -501,25 +503,27 @@ export default function LoginPage() {
     if (newPinStr !== confirmStr) { setError("PINs do not match"); return; }
     setLoading(true);
     setError("");
-    console.log("[Login] Forgot PIN: verifying OTP and resetting PIN");
-    const result = await forgotPinVerifyOtp(phone, otp, newPinStr);
-    console.log("[Login] Forgot PIN result:", JSON.stringify(result));
-    if (!result.success) {
-      setError(result.error || "Verification failed");
-      setLoading(false);
-      return;
-    }
-    if (result.userId) localStorage.setItem("merchant_id", result.userId);
-    const forgotType = result.redirect?.includes("merchant") ? "merchant" : result.redirect?.includes("customer") ? "customer" : undefined;
-    if (phone) {
-      localStorage.setItem("merchant_phone", phone);
-      if (forgotType === "customer") {
-        localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
-        document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+    startTransition(async () => {
+      console.log("[Login] Forgot PIN: verifying OTP and resetting PIN");
+      const result = await forgotPinVerifyOtp(phone, otp, newPinStr);
+      console.log("[Login] Forgot PIN result:", JSON.stringify(result));
+      if (!result.success) {
+        setError(result.error || "Verification failed");
+        setLoading(false);
+        return;
       }
-    }
-    console.log("[Login] PIN reset, redirecting to", result.redirect);
-    doDelayedRedirect(result.redirect || "/merchant/dashboard", forgotType);
+      if (result.userId) localStorage.setItem("merchant_id", result.userId);
+      const forgotType = result.redirect?.includes("merchant") ? "merchant" : result.redirect?.includes("customer") ? "customer" : undefined;
+      if (phone) {
+        localStorage.setItem("merchant_phone", phone);
+        if (forgotType === "customer") {
+          localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
+          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+      }
+      console.log("[Login] PIN reset, redirecting to", result.redirect);
+      window.location.assign(result.redirect || "/merchant/dashboard");
+    });
   };
 
   const backToPhone = () => { setStep("phone"); setError(""); };
