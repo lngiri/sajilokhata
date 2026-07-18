@@ -185,34 +185,58 @@ export default function CustomerDashboard() {
     };
   }, []);
 
+  // ── Define loadStats before the effect that calls it ──
+  const loadStats = useCallback(async () => {
+    if (!customerPhone) return;
+    if (!mountedRef.current) return;
+    setStatsLoading(true);
+    try {
+      const data = await getCustomerStats(customerPhone);
+      if (mountedRef.current) setStats(data);
+    } catch {
+      // No data yet
+    } finally {
+      if (mountedRef.current) setStatsLoading(false);
+    }
+  }, [customerPhone]);
+
+  // Keep loadStatsRef current for the realtime channel callback
+  useEffect(() => {
+    loadStatsRef.current = loadStats;
+  }, [loadStats]);
+
   // Load stats + profile when phone is available
   useEffect(() => {
     if (onboardingCompletedRef.current) return;
-    if (initialized && customerPhone) {
-      loadStats();
-      getCustomerProfile(customerPhone).then((profile) => {
-        if (profile && mountedRef.current) {
-          setAvatarUrl(profile.avatar_url);
-          const profileName = profile.name || "";
-          setCustomerName(profileName || customerName);
-          // Only show onboarding if name is genuinely missing or is placeholder
-          const nameIsMissing = !profileName || profileName.trim() === "" || profileName === "Customer";
-          if (nameIsMissing) {
-            setShowOnboarding(true);
-          }
-          try {
-            const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
-            const session = raw ? JSON.parse(raw) : {};
-            session.avatar_url = profile.avatar_url || undefined;
-            if (profileName && profileName !== "Customer") {
-              session.name = profileName;
-            }
-            localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
-          } catch {}
+    if (!initialized || !customerPhone) return;
+    let cancelled = false;
+
+    loadStats();
+
+    getCustomerProfile(customerPhone).then((profile) => {
+      if (cancelled || !profile || !mountedRef.current) return;
+      setAvatarUrl(profile.avatar_url);
+      const profileName = profile.name || "";
+      if (profileName) {
+        setCustomerName(profileName);
+      }
+      const nameIsMissing = !profileName || profileName.trim() === "" || profileName === "Customer";
+      if (nameIsMissing) {
+        setShowOnboarding(true);
+      }
+      try {
+        const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+        const session = raw ? JSON.parse(raw) : {};
+        session.avatar_url = profile.avatar_url || undefined;
+        if (profileName && profileName !== "Customer") {
+          session.name = profileName;
         }
-      }).catch(() => {});
-    }
-  }, [initialized, customerPhone]);
+        localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
+      } catch {}
+    }).catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [initialized, customerPhone, loadStats]);
 
   // If no customer phone after full init (both localStorage + cookie checked), redirect to login
   useEffect(() => {
@@ -330,25 +354,6 @@ export default function CustomerDashboard() {
       window.removeEventListener("keydown", escHandler);
     };
   }, [showProfileMenu]);
-
-  const loadStats = useCallback(async () => {
-    if (!customerPhone) return;
-    if (!mountedRef.current) return;
-    setStatsLoading(true);
-    try {
-      const data = await getCustomerStats(customerPhone);
-      if (mountedRef.current) setStats(data);
-    } catch {
-      // No data yet
-    } finally {
-      if (mountedRef.current) setStatsLoading(false);
-    }
-  }, [customerPhone]);
-
-  // Keep loadStatsRef current for the realtime channel callback
-  useEffect(() => {
-    loadStatsRef.current = loadStats;
-  }, [loadStats]);
 
   // Scan QR handler — moves modal to "enter" step
   const handleQRScan = useCallback(
@@ -470,7 +475,7 @@ export default function CustomerDashboard() {
               <h1 className="text-base font-bold text-[var(--color-text)]">QR Hisab Customer</h1>
               <p className="text-[10px] text-emerald-600 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-                qrhisab.com &middot; Active
+                QR Hisab &middot; Active
               </p>
             </div>
           </div>

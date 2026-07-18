@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReferModal from "./ReferModal";
 import FeedbackModal from "./FeedbackModal";
@@ -48,16 +48,19 @@ export default function ActionHub() {
   const [referOpen, setReferOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
+  const posRef = useRef({ x: 0, y: 0 });
   const dragRef = useRef({ startX: 0, startY: 0, elX: 0, elY: 0, moved: false, dismissed: false });
   const ignoreClickRef = useRef(false);
   const fabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      setPos({
+      const p = {
         x: window.innerWidth - FAB_SIZE - 24,
         y: window.innerHeight - FAB_SIZE - 24,
-      });
+      };
+      posRef.current = p;
+      setPos(p);
       setMounted(true);
     }
   }, []);
@@ -66,15 +69,16 @@ export default function ActionHub() {
     const el = fabRef.current;
     if (!el) return;
     el.setPointerCapture(e.pointerId);
+    const p = posRef.current;
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
-      elX: pos.x,
-      elY: pos.y,
+      elX: p.x,
+      elY: p.y,
       moved: false,
       dismissed: false,
     };
-  }, [pos]);
+  }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const dx = e.clientX - dragRef.current.startX;
@@ -85,10 +89,12 @@ export default function ActionHub() {
     if (dragRef.current.moved) {
       const newY = Math.max(0, Math.min(window.innerHeight - FAB_SIZE, dragRef.current.elY + dy));
       dragRef.current.dismissed = (window.innerHeight - newY) <= DISMISS_THRESHOLD;
-      setPos({
+      const newPos = {
         x: Math.max(0, Math.min(window.innerWidth - FAB_SIZE, dragRef.current.elX + dx)),
         y: newY,
-      });
+      };
+      posRef.current = newPos;
+      setPos(newPos);
     }
   }, []);
 
@@ -126,18 +132,36 @@ export default function ActionHub() {
     }
   };
 
-  if (!mounted) return null;
+  const menuAbove = useMemo(() => pos.y > (typeof window !== "undefined" ? window.innerHeight / 2 : 0), [pos.y]);
 
-  const menuAbove = pos.y > window.innerHeight / 2;
+  const overlayStyle = useMemo(() => ({ opacity: 0 } as const), []);
+  const menuStyle = useMemo(() => ({
+    left: pos.x,
+    ...(menuAbove
+      ? { bottom: (typeof window !== "undefined" ? window.innerHeight : 0) - pos.y + 8 }
+      : { top: pos.y + FAB_SIZE + 8 }),
+  }), [pos.x, pos.y, menuAbove]);
+
+  const fabStyle = useMemo(() => ({
+    left: pos.x,
+    top: pos.y,
+    touchAction: "none" as const,
+    position: "fixed" as const,
+    zIndex: 50,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+  }), [pos.x, pos.y]);
+
+  if (!mounted) return null;
 
   return (
     <>
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={overlayStyle}
+            animate={overlayStyle}
+            exit={overlayStyle}
             className="fixed inset-0 z-40"
             onClick={() => setOpen(false)}
           />
@@ -152,12 +176,7 @@ export default function ActionHub() {
             animate="visible"
             exit="hidden"
             className="fixed z-50 flex flex-col gap-2"
-            style={{
-              left: pos.x,
-              ...(menuAbove
-                ? { bottom: window.innerHeight - pos.y + 8 }
-                : { top: pos.y + FAB_SIZE + 8 }),
-            }}
+            style={menuStyle}
           >
             {ITEMS.map((item) => (
               <motion.button
@@ -186,15 +205,7 @@ export default function ActionHub() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onClick={handleFabClick}
-        style={{
-          left: pos.x,
-          top: pos.y,
-          touchAction: "none",
-          position: "fixed",
-          zIndex: 50,
-          width: FAB_SIZE,
-          height: FAB_SIZE,
-        }}
+        style={fabStyle}
         className={`rounded-full shadow-xl flex items-center justify-center backdrop-blur-sm will-change-transform transition-colors ${
           open
             ? "bg-red-500/90 hover:bg-red-500 text-white"

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const ROLE_KEY = "active_role";
 
@@ -16,10 +15,10 @@ type Role = "merchant" | "customer";
  * - On switch: hard-navigates (full page reload)
  */
 export default function RoleSwitcher() {
-  const pathname = usePathname();
   const [hasDualRole, setHasDualRole] = useState(false);
   const [currentRole, setCurrentRole] = useState<Role>("merchant");
   const [switching, setSwitching] = useState(false);
+  const checkedRef = useRef(false);
 
   const checkRoles = useCallback(async () => {
     try {
@@ -42,8 +41,10 @@ export default function RoleSwitcher() {
   }, []);
 
   useEffect(() => {
+    if (checkedRef.current) return;
+    checkedRef.current = true;
     checkRoles();
-  }, [checkRoles, pathname]);
+  }, [checkRoles]);
 
   const handleSwitch = () => {
     if (switching) return;
