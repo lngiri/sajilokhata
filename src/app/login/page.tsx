@@ -115,11 +115,11 @@ export default function LoginPage() {
           if (data.roles.length === 1) {
             const target = data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
             console.log("[Login] Single role, redirecting to", target);
-            doDelayedRedirect(target, data.roles[0]);
+            window.location.replace(target);
             return;
           }
           console.log("[Login] Both roles, redirecting to /select-role");
-          doDelayedRedirect("/select-role");
+          window.location.replace("/select-role");
           return;
         }
       } catch (e) { console.log("[Login] Session check failed:", e); }
