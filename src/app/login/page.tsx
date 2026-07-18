@@ -86,10 +86,27 @@ export default function LoginPage() {
     (async () => {
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
-        const data: { userId: string | null; roles: string[] } = await res.json();
+        const data: { 
+          userId: string | null; 
+          roles: string[]; 
+          merchantPhone?: string; 
+          merchantName?: string; 
+          customerPhone?: string; 
+          customerName?: string; 
+        } = await res.json();
         console.log("[Login] Mount session check:", JSON.stringify(data));
         if (cancelled) return;
         if (data.userId) {
+          // Re-establish client-side state so dashboards don't bounce the user back
+          if (data.merchantPhone) {
+            localStorage.setItem("merchant_id", data.userId);
+            localStorage.setItem("merchant_phone", data.merchantPhone);
+          }
+          if (data.customerPhone) {
+            localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: data.customerPhone, name: data.customerName || "" }));
+            document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone: data.customerPhone, name: data.customerName || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+          }
+
           if (data.roles.length === 0) {
             console.log("[Login] Session exists but no roles → showing phone");
             if (!cancelled) setStep("phone");

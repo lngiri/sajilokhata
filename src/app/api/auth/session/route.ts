@@ -31,11 +31,11 @@ export async function GET() {
     if (admin) {
       const [mRes, cRes] = await Promise.all([
         (admin.from("merchants") as any)
-          .select("id, force_logout_at")
+          .select("id, force_logout_at, phone, name")
           .eq("id", userId)
           .maybeSingle(),
         (admin.from("customers") as any)
-          .select("id")
+          .select("id, phone, name")
           .eq("id", userId)
           .maybeSingle(),
       ]);
@@ -93,7 +93,15 @@ export async function GET() {
       if (isCustomer) roles.push("customer");
 
       console.log("[API::session] OK — returning userId:", userId, "roles:", roles);
-      return NextResponse.json({ userId, forceLogout: false, roles });
+      return NextResponse.json({ 
+        userId, 
+        forceLogout: false, 
+        roles,
+        merchantPhone: merchantData?.phone,
+        merchantName: merchantData?.name,
+        customerPhone: customerData?.phone,
+        customerName: customerData?.name
+      });
     }
   } catch (err) {
     // DB unavailable — rely on cookie auth alone (fail open)
