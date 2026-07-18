@@ -1,14 +1,19 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Database } from "@/lib/types/database";
 
 /**
- * Supabase admin client (server-side only).
- * Uses the SERVICE_ROLE key to bypass RLS and manage users.
- * Only import and call this from Server Components, Route Handlers, or Server Actions.
+ * Admin Supabase client using service-role key (bypasses RLS).
+ * Returns `any`-typed client to avoid supabase-js v2.110 type inference
+ * bugs (the PostgrestQueryBuilder `update`/`insert`/`upsert` methods
+ * resolve to `never` with both typed and untyped clients).
+ * 
+ * Result types are explicitly annotated with Database["public"]["Tables"]
+ * types at each call site for type safety.
  */
 let adminClient: ReturnType<typeof createClient> | null = null;
 
 export function getAdminClient() {
-  if (adminClient) return adminClient;
+  if (adminClient) return adminClient as any;
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -24,5 +29,5 @@ export function getAdminClient() {
     },
   });
 
-  return adminClient;
+  return adminClient as any;
 }

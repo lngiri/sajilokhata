@@ -349,17 +349,12 @@ export async function getMerchantCustomerBalance(merchantId: string, customerId:
 
   const creditLimit = mc?.credit_limit || 0;
 
-  const { data: logs } = await (admin.from("credit_logs") as any)
-    .select("amount, type")
-    .eq("merchant_id", merchantId)
-    .eq("customer_id", customerId)
-    .eq("status", "approved")
-    .neq("type", "cash");
+  const { data: balanceData } = await (admin.rpc as any)("get_customer_balance", {
+    p_merchant_id: merchantId,
+    p_customer_id: customerId,
+  });
 
-  const balance = (logs || []).reduce((sum: number, l: any) => {
-    return sum + (l.type === "debit" ? l.amount : -l.amount);
-  }, 0);
-
+  const balance = Number(balanceData) || 0;
   return { balance, creditLimit };
 }
 

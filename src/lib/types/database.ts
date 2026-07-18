@@ -73,6 +73,7 @@ export interface Database {
           sms_balance?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       customers: {
         Row: {
@@ -85,6 +86,7 @@ export interface Database {
           trust_notes: string | null;
           flagged_by_merchant_id: string | null;
           flagged_at: string | null;
+          avatar_url: string | null;
           created_at: string;
         };
         Insert: {
@@ -97,6 +99,7 @@ export interface Database {
           trust_notes?: string | null;
           flagged_by_merchant_id?: string | null;
           flagged_at?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
         Update: {
@@ -109,8 +112,10 @@ export interface Database {
           trust_notes?: string | null;
           flagged_by_merchant_id?: string | null;
           flagged_at?: string | null;
+          avatar_url?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       merchant_customers: {
         Row: {
@@ -118,6 +123,7 @@ export interface Database {
           merchant_id: string;
           customer_id: string;
           credit_limit: number;
+          nickname: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -126,6 +132,7 @@ export interface Database {
           merchant_id: string;
           customer_id: string;
           credit_limit?: number;
+          nickname?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -134,9 +141,11 @@ export interface Database {
           merchant_id?: string;
           customer_id?: string;
           credit_limit?: number;
+          nickname?: string | null;
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       credit_logs: {
         Row: {
@@ -205,6 +214,7 @@ export interface Database {
           approved_at?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       audit_logs: {
         Row: {
@@ -243,6 +253,7 @@ export interface Database {
           old_data?: Json | null;
           new_data?: Json | null;
         };
+        Relationships: [];
       };
       sessions: {
         Row: {
@@ -269,26 +280,31 @@ export interface Database {
           last_active?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       admins: {
         Row: {
           id: string;
           email: string;
           name: string;
+          password_hash: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           email: string;
           name?: string;
+          password_hash?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           email?: string;
           name?: string;
+          password_hash?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       app_settings: {
         Row: {
@@ -306,6 +322,7 @@ export interface Database {
           value?: Json;
           updated_at?: string;
         };
+        Relationships: [];
       };
       merchant_payment_methods: {
         Row: {
@@ -350,6 +367,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       merchant_reminder_settings: {
         Row: {
@@ -382,6 +400,7 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       payment_reminder_logs: {
         Row: {
@@ -417,6 +436,7 @@ export interface Database {
           status?: string;
           error_message?: string | null;
         };
+        Relationships: [];
       };
       sms_recharge_logs: {
         Row: {
@@ -449,6 +469,58 @@ export interface Database {
           esewa_ref_id?: string | null;
           created_at?: string;
         };
+        Relationships: [];
+      };
+      short_links: {
+        Row: {
+          id: string;
+          code: string;
+          destination_url: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          code: string;
+          destination_url: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          code?: string;
+          destination_url?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      merchant_ai_usage: {
+        Row: {
+          id: string;
+          merchant_id: string;
+          model_name: string;
+          input_tokens: number;
+          output_tokens: number;
+          parse_count: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          merchant_id: string;
+          model_name?: string;
+          input_tokens?: number;
+          output_tokens?: number;
+          parse_count?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          merchant_id?: string;
+          model_name?: string;
+          input_tokens?: number;
+          output_tokens?: number;
+          parse_count?: number;
+          created_at?: string;
+        };
+        Relationships: [];
       };
     };
   };
@@ -473,6 +545,8 @@ export type MerchantPaymentMethod = Database["public"]["Tables"]["merchant_payme
 export type MerchantReminderSetting = Database["public"]["Tables"]["merchant_reminder_settings"]["Row"];
 export type PaymentReminderLog = Database["public"]["Tables"]["payment_reminder_logs"]["Row"];
 export type SmsRechargeLog = Database["public"]["Tables"]["sms_recharge_logs"]["Row"];
+export type ShortLink = Database["public"]["Tables"]["short_links"]["Row"];
+export type MerchantAiUsage = Database["public"]["Tables"]["merchant_ai_usage"]["Row"];
 
 // Customer Summary (from materialized view)
 export interface CustomerSummary {

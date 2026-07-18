@@ -1,12 +1,24 @@
 "use server";
 
 import { cookies } from "next/headers";
+import bcrypt from "bcryptjs";
 import { getAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/lib/types/database";
 import {
   createAdminSessionToken,
   verifyAdminSessionToken,
   ADMIN_SESSION_COOKIE,
 } from "@/lib/admin-session";
+
+type AdminRow = Database["public"]["Tables"]["admins"]["Row"];
+type AdminInsert = Database["public"]["Tables"]["admins"]["Insert"];
+type AdminUpdate = Database["public"]["Tables"]["admins"]["Update"];
+type MerchantRow = Database["public"]["Tables"]["merchants"]["Row"];
+type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
+type CreditLogRow = Database["public"]["Tables"]["credit_logs"]["Row"];
+type MerchantCustomerRow = Database["public"]["Tables"]["merchant_customers"]["Row"];
+type SessionRow = Database["public"]["Tables"]["sessions"]["Row"];
+type AppSettingRow = Database["public"]["Tables"]["app_settings"]["Row"];
 
 // ── Helper: verify admin session before any DB operation ──
 export async function requireAdmin(): Promise<string> {
@@ -20,11 +32,12 @@ export async function requireAdmin(): Promise<string> {
   // DB-level check
   const admin = getAdminClient();
   if (admin) {
-    const { data } = await (admin.from("admins") as any)
+    const { data } = await admin.from("admins")
       .select("id")
       .eq("id", adminId)
       .maybeSingle();
-    if (!data) throw new Error("Admin not found");
+    const row = data as Pick<AdminRow, "id"> | null;
+    if (!row) throw new Error("Admin not found");
   }
 
   return adminId;
@@ -35,23 +48,33 @@ export async function requireAdmin(): Promise<string> {
 // ──────────────────────────────────────────────
 
 export async function adminLogin(
-  email: string
+  email: string,
+  password: string
 ): Promise<{ success: boolean; error?: string; name?: string }> {
   const normalized = email.toLowerCase().trim();
   if (!normalized) return { success: false, error: "Email is required" };
+  if (!password) return { success: false, error: "Password is required" };
 
   try {
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server configuration error" };
 
-    const { data } = await (admin.from("admins") as any)
-      .select("id, name, email")
+    const { data } = await admin.from("admins")
+      .select("*")
       .eq("email", normalized)
       .maybeSingle();
 
-    if (!data) return { success: false, error: "Unauthorized email" };
+    const row = data as AdminRow | null;
+    if (!row) return { success: false, error: "Invalid credentials" };
 
-    const { token, maxAge } = await createAdminSessionToken(data.id);
+    if (!row.password_hash) {
+      return { success: false, error: "Account not fully configured. Contact support." };
+    }
+
+    const valid = await bcrypt.compare(password, row.password_hash);
+    if (!valid) return { success: false, error: "Invalid credentials" };
+
+    const { token, maxAge } = await createAdminSessionToken(row.id);
     const cookieStore = await cookies();
     cookieStore.set(ADMIN_SESSION_COOKIE, token, {
       httpOnly: true,
@@ -61,7 +84,7 @@ export async function adminLogin(
       path: "/",
     });
 
-    return { success: true, name: data.name || "Admin" };
+    return { success: true, name: row.name || "Admin" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[AdminLogin]", msg);
@@ -88,11 +111,12 @@ export async function getAdminSession(): Promise<{
 
     const admin = getAdminClient();
     if (admin) {
-      const { data } = await (admin.from("admins") as any)
+      const { data } = await admin.from("admins")
         .select("id, name")
         .eq("id", adminId)
         .maybeSingle();
-      if (data) return { id: data.id, name: data.name };
+      const row = data as Pick<AdminRow, "id" | "name"> | null;
+      if (row) return { id: row.id, name: row.name };
     }
 
     return { id: adminId };
@@ -116,10 +140,10 @@ export async function getAdminStats(): Promise<{
     if (!admin) return { totalMerchants: 0, totalCustomers: 0, activeTransactions: 0 };
 
     const [mRes, cRes, tRes] = await Promise.all([
-      (admin.from("merchants") as any).select("id", { count: "exact", head: true }),
-      (admin.from("customers") as any).select("id", { count: "exact", head: true }),
-      (admin.from("credit_logs") as any)
-        .select("id", { count: "exact", head: true })
+      admin.from("merchants").select("*", { count: "exact", head: true }),
+      admin.from("customers").select("*", { count: "exact", head: true }),
+      admin.from("credit_logs")
+        .select("*", { count: "exact", head: true })
         .in("status", ["pending", "unverified"]),
     ]);
 
@@ -149,26 +173,26 @@ export async function getAdminAlerts(): Promise<
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { data: recent } = await (admin.from("credit_logs") as any)
+    const { data } = await admin.from("credit_logs")
       .select("merchant_id")
       .gte("created_at", today.toISOString())
       .limit(2000);
+    const recent = (data || []) as Pick<CreditLogRow, "merchant_id">[];
 
     const counts: Record<string, number> = {};
-    if (recent) {
-      for (const row of recent) {
-        counts[row.merchant_id] = (counts[row.merchant_id] || 0) + 1;
-      }
+    for (const row of recent) {
+      counts[row.merchant_id] = (counts[row.merchant_id] || 0) + 1;
     }
 
     const alerts: any[] = [];
 
     for (const [mId, count] of Object.entries(counts)) {
       if (count < 20) continue;
-      const { data: m } = await (admin.from("merchants") as any)
+      const { data: mData } = await admin.from("merchants")
         .select("name, business_name")
         .eq("id", mId)
         .maybeSingle();
+      const m = mData as Pick<MerchantRow, "name" | "business_name"> | null;
 
       alerts.push({
         id: `vol_${mId}`,
@@ -180,18 +204,20 @@ export async function getAdminAlerts(): Promise<
       });
     }
 
-    const { data: disputes } = await (admin.from("credit_logs") as any)
+    const { data: disputesData } = await admin.from("credit_logs")
       .select("id, merchant_id, disputed_reason, created_at")
       .eq("status", "disputed")
       .order("created_at", { ascending: false })
       .limit(10);
+    const disputes = (disputesData || []) as Pick<CreditLogRow, "id" | "merchant_id" | "disputed_reason" | "created_at">[];
 
     if (disputes) {
       for (const d of disputes) {
-        const { data: m } = await (admin.from("merchants") as any)
+        const { data } = await admin.from("merchants")
           .select("name, business_name")
           .eq("id", d.merchant_id)
           .maybeSingle();
+        const m = data as Pick<MerchantRow, "name" | "business_name"> | null;
 
         alerts.push({
           id: `dis_${d.id}`,
@@ -223,20 +249,23 @@ export async function getAdminDisputes(): Promise<
     const admin = getAdminClient();
     if (!admin) return [];
 
-    const { data: logs } = await (admin.from("credit_logs") as any)
+    const { data } = await admin.from("credit_logs")
       .select("id, merchant_id, customer_id, amount, description, disputed_reason, status, created_at")
       .in("status", ["disputed", "edit_requested"])
       .order("created_at", { ascending: false })
       .limit(50);
+    const logs = (data || []) as Pick<CreditLogRow, "id" | "merchant_id" | "customer_id" | "amount" | "description" | "disputed_reason" | "status" | "created_at">[];
 
     if (!logs) return [];
 
     return await Promise.all(
       logs.map(async (log: any) => {
-        const [mRes, cRes] = await Promise.all([
-          (admin.from("merchants") as any).select("name, business_name, phone").eq("id", log.merchant_id).maybeSingle(),
-          (admin.from("customers") as any).select("name, phone").eq("id", log.customer_id).maybeSingle(),
+        const [{ data: mData }, { data: cData }] = await Promise.all([
+          admin.from("merchants").select("name, business_name, phone").eq("id", log.merchant_id).maybeSingle(),
+          admin.from("customers").select("name, phone").eq("id", log.customer_id).maybeSingle(),
         ]);
+        const mRes = mData as Pick<MerchantRow, "name" | "business_name" | "phone"> | null;
+        const cRes = cData as Pick<CustomerRow, "name" | "phone"> | null;
         return {
           id: log.id,
           merchantName: mRes?.business_name || mRes?.name || log.merchant_id,
@@ -261,8 +290,8 @@ export async function resolveDispute(logId: string): Promise<{ success: boolean;
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server config error" };
 
-    await (admin.from("credit_logs") as any)
-      .update({ status: "approved", disputed_reason: null })
+    await admin.from("credit_logs")
+      .update({ status: "approved", disputed_reason: null } as never)
       .eq("id", logId)
       .in("status", ["disputed", "edit_requested"]);
 
@@ -309,8 +338,9 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
 
     // Try SQL RPC first (JOIN-based role detection)
     try {
-      const { data: rows, error } = await (admin.rpc("get_user_directory_safe") as any);
-      if (!error && Array.isArray(rows) && rows.length > 0) {
+      const { data: _rows, error } = await admin.rpc("get_user_directory_safe");
+      const rows = (_rows || []) as any[];
+      if (!error && rows.length > 0) {
         console.log("[getAdminUserDirectory] RPC returned", rows.length, "rows");
         if (rows.length > 0) console.log("[getAdminUserDirectory] First row:", JSON.stringify(rows[0]));
         results = rows.map((r: any) => ({
@@ -335,11 +365,11 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
       console.log("[getAdminUserDirectory] Using JS fallback");
 
       const [mRes, cRes] = await Promise.all([
-        (admin.from("merchants") as any)
+        admin.from("merchants")
           .select("id, name, business_name, phone, created_at")
           .limit(500)
           .order("created_at", { ascending: false }),
-        (admin.from("customers") as any)
+        admin.from("customers")
           .select("id, name, phone, created_at")
           .limit(500)
           .order("created_at", { ascending: false }),
@@ -405,9 +435,10 @@ export async function getAdminUserDirectory(search?: string): Promise<DirectoryU
 
     if (merchantIds.length > 0) {
       try {
-        const { data: txCounts } = await (admin.from("credit_logs") as any)
+        const { data } = await admin.from("credit_logs")
           .select("merchant_id, id")
           .in("merchant_id", merchantIds);
+        const txCounts = (data || []) as Pick<CreditLogRow, "merchant_id" | "id">[];
 
         if (txCounts) {
           const countMap: Record<string, number> = {};
@@ -489,7 +520,7 @@ export async function getAdminMerchants(search?: string): Promise<
     const admin = getAdminClient();
     if (!admin) return [];
 
-    let query = (admin.from("merchants") as any)
+    let query = admin.from("merchants")
       .select("id, name, business_name, phone, created_at, status")
       .limit(200)
       .order("created_at", { ascending: false });
@@ -498,15 +529,16 @@ export async function getAdminMerchants(search?: string): Promise<
       query = query.or(`name.ilike.%${search}%,business_name.ilike.%${search}%,phone.ilike.%${search}%`);
     }
 
-    const { data } = await query;
-    if (!data) return [];
+    const { data: _data } = await query;
+    const data = (_data || []) as Pick<MerchantRow, "id" | "name" | "business_name" | "phone" | "created_at" | "status">[];
+    if (!data.length) return [];
 
     const results: any[] = [];
     for (const m of data) {
       let count = 0;
       try {
-        const r = await (admin.from("credit_logs") as any)
-          .select("id", { count: "exact", head: true })
+        const r = await admin.from("credit_logs")
+          .select("*", { count: "exact", head: true })
           .eq("merchant_id", m.id);
         count = r?.count ?? 0;
       } catch (e) {
@@ -546,7 +578,7 @@ export async function toggleMerchantStatus(
       updates.suspended_at = null;
     }
 
-    await (admin.from("merchants") as any).update(updates).eq("id", merchantId);
+    await admin.from("merchants").update(updates as never).eq("id", merchantId);
     return { success: true, newStatus };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -572,8 +604,8 @@ export async function bulkSuspendMerchants(
       suspended_at: new Date().toISOString(),
     };
 
-    const { error } = await (admin.from("merchants") as any)
-      .update(updates)
+    const { error } = await admin.from("merchants")
+      .update(updates as never)
       .in("id", merchantIds);
 
     if (error) {
@@ -618,8 +650,9 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
 
     // Try RPC first
     try {
-      const { data: rows, error } = await (admin.rpc("get_user_directory_safe") as any);
-      if (!error && Array.isArray(rows)) {
+      const { data: _rows, error } = await admin.rpc("get_user_directory_safe");
+      const rows = (_rows || []) as any[];
+      if (!error && rows.length > 0) {
         m = rows.find((r: any) => r.id === merchantId) || null;
         if (m) console.log("[getAdminMerchantDetail] Found via RPC:", JSON.stringify(m));
       }
@@ -630,11 +663,11 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
     // Fallback: direct merchant query
     if (!m) {
       console.log("[getAdminMerchantDetail] Falling back to direct query");
-      const { data: merchant } = await (admin.from("merchants") as any)
+      const { data } = await admin.from("merchants")
         .select("*")
         .eq("id", merchantId)
         .maybeSingle();
-      m = merchant;
+      m = data as MerchantRow | null;
       console.log("[getAdminMerchantDetail] Direct query result:", JSON.stringify(m));
     }
 
@@ -646,16 +679,16 @@ export async function getAdminMerchantDetail(merchantId: string): Promise<{
     // Get counts with individual try-catch
     let txCount = 0, custCount = 0;
     try {
-      const r = await (admin.from("credit_logs") as any)
-        .select("id", { count: "exact", head: true })
-        .eq("merchant_id", m.id);
+        const r = await admin.from("credit_logs")
+          .select("*", { count: "exact", head: true })
+          .eq("merchant_id", m.id);
       txCount = r?.count ?? 0;
     } catch (e) {
       console.error("[getAdminMerchantDetail] tx count failed:", e);
     }
     try {
-      const r = await (admin.from("merchant_customers") as any)
-        .select("id", { count: "exact", head: true })
+      const r = await admin.from("merchant_customers")
+        .select("*", { count: "exact", head: true })
         .eq("merchant_id", m.id);
       custCount = r?.count ?? 0;
     } catch (e) {
@@ -695,10 +728,11 @@ export async function getMerchantStorageUsage(): Promise<
     const admin = getAdminClient();
     if (!admin) return [];
 
-    const { data: merchants } = await (admin.from("merchants") as any)
+    const { data } = await admin.from("merchants")
       .select("id, name, business_name, phone")
       .limit(200)
       .order("created_at", { ascending: false });
+    const merchants = (data || []) as Pick<MerchantRow, "id" | "name" | "business_name" | "phone">[];
 
     if (!merchants) return [];
 
@@ -706,18 +740,18 @@ export async function getMerchantStorageUsage(): Promise<
     for (const m of merchants) {
       let txCount = 0, custCount = 0;
       try {
-        const r = await (admin.from("credit_logs") as any)
-          .select("id", { count: "exact", head: true })
-          .eq("merchant_id", m.id);
-        txCount = r?.count ?? 0;
+      const r = await admin.from("credit_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("merchant_id", m.id);
+      txCount = r?.count ?? 0;
       } catch (e) {
         console.error("[getMerchantStorageUsage] tx count failed for", m.id, e);
       }
       try {
-        const r = await (admin.from("merchant_customers") as any)
-          .select("id", { count: "exact", head: true })
-          .eq("merchant_id", m.id);
-        custCount = r?.count ?? 0;
+        const r = await admin.from("merchant_customers")
+          .select("*", { count: "exact", head: true })
+          .eq("merchant_id", m.id)
+          custCount = r?.count ?? 0;
       } catch (e) {
         console.error("[getMerchantStorageUsage] cust count failed for", m.id, e);
       }
@@ -750,9 +784,10 @@ export async function getMerchantAnalytics(): Promise<
     const admin = getAdminClient();
     if (!admin) return [];
 
-    const { data: merchants } = await (admin.from("merchants") as any)
+    const { data } = await admin.from("merchants")
       .select("id, name, business_name, phone")
       .limit(200);
+    const merchants = (data || []) as Pick<MerchantRow, "id" | "name" | "business_name" | "phone">[];
 
     if (!merchants) return [];
 
@@ -760,28 +795,29 @@ export async function getMerchantAnalytics(): Promise<
     for (const m of merchants) {
       let txCount = 0, custCount = 0, lastActiveDate: string | null = null;
       try {
-        const r = await (admin.from("credit_logs") as any)
-          .select("id", { count: "exact", head: true })
-          .eq("merchant_id", m.id);
-        txCount = r?.count ?? 0;
+      const r = await admin.from("credit_logs")
+        .select("*", { count: "exact", head: true })
+        .eq("merchant_id", m.id);
+      txCount = r?.count ?? 0;
       } catch (e) {
         console.error("[getMerchantAnalytics] tx count failed for", m.id, e);
       }
       try {
-        const r = await (admin.from("merchant_customers") as any)
-          .select("id", { count: "exact", head: true })
-          .eq("merchant_id", m.id);
-        custCount = r?.count ?? 0;
+        const r = await admin.from("merchant_customers")
+          .select("*", { count: "exact", head: true })
+          .eq("merchant_id", m.id)
+          custCount = r?.count ?? 0;
       } catch (e) {
         console.error("[getMerchantAnalytics] cust count failed for", m.id, e);
       }
       try {
-        const { data: lastTx } = await (admin.from("credit_logs") as any)
+        const { data } = await admin.from("credit_logs")
           .select("created_at")
           .eq("merchant_id", m.id)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        const lastTx = data as Pick<CreditLogRow, "created_at"> | null;
         lastActiveDate = lastTx?.created_at ?? null;
       } catch (e) {
         console.error("[getMerchantAnalytics] last tx query failed for", m.id, e);
@@ -827,7 +863,7 @@ export async function getSystemHealth(): Promise<{
     if (!admin) {
       checks.push({ label: "Supabase Admin Client", ok: false, detail: "Missing SUPABASE_SERVICE_ROLE_KEY" });
     } else {
-      await (admin.from("merchants") as any).select("id").limit(1);
+      await admin.from("merchants").select("id").limit(1);
       checks.push({ label: "Database Connection", ok: true });
     }
   } catch (err) {
@@ -927,93 +963,89 @@ export async function searchMerchantSession(
 
     // 1a. Search merchants by normalized phone
     if (np.length >= 6) {
-      const { data } = await (admin.from("merchants") as any)
+      const { data } = await admin.from("merchants")
         .select("id, name, business_name, phone, status, force_logout_at")
         .or(`phone.ilike.%${np}%`)
         .limit(20);
-      if (data) {
-        for (const m of data) {
-          userIds.add(m.id);
-          userMap.set(m.id, {
-            name: m.name || "",
-            businessName: m.business_name || "",
-            phone: m.phone || "",
-            status: m.status || "active",
-            forceLogoutAt: m.force_logout_at || null,
-            isMerchant: true,
-            isCustomer: false,
-          });
-        }
+      const rows = (data || []) as Pick<MerchantRow, "id" | "name" | "business_name" | "phone" | "status" | "force_logout_at">[];
+      for (const m of rows) {
+        userIds.add(m.id);
+        userMap.set(m.id, {
+          name: m.name || "",
+          businessName: m.business_name || "",
+          phone: m.phone || "",
+          status: m.status || "active",
+          forceLogoutAt: m.force_logout_at || null,
+          isMerchant: true,
+          isCustomer: false,
+        });
       }
     }
 
     // 1b. If no merchants found by phone, try name/business_name
     if (userIds.size === 0) {
-      const { data } = await (admin.from("merchants") as any)
+      const { data } = await admin.from("merchants")
         .select("id, name, business_name, phone, status, force_logout_at")
         .or(`name.ilike.%${clean}%,business_name.ilike.%${clean}%`)
         .limit(20);
-      if (data) {
-        for (const m of data) {
-          userIds.add(m.id);
-          userMap.set(m.id, {
-            name: m.name || "",
-            businessName: m.business_name || "",
-            phone: m.phone || "",
-            status: m.status || "active",
-            forceLogoutAt: m.force_logout_at || null,
-            isMerchant: true,
-            isCustomer: false,
-          });
-        }
+      const rows = (data || []) as Pick<MerchantRow, "id" | "name" | "business_name" | "phone" | "status" | "force_logout_at">[];
+      for (const m of rows) {
+        userIds.add(m.id);
+        userMap.set(m.id, {
+          name: m.name || "",
+          businessName: m.business_name || "",
+          phone: m.phone || "",
+          status: m.status || "active",
+          forceLogoutAt: m.force_logout_at || null,
+          isMerchant: true,
+          isCustomer: false,
+        });
       }
     }
 
     // 2. Also search customers by phone or name
     if (np.length >= 6) {
-      const { data } = await (admin.from("customers") as any)
+      const { data } = await admin.from("customers")
         .select("id, name, phone")
         .or(`phone.ilike.%${np}%`)
         .limit(20);
-      if (data) {
-        for (const c of data) {
-          if (userMap.has(c.id)) {
-            userMap.get(c.id)!.isCustomer = true;
-          } else {
-            userIds.add(c.id);
-            userMap.set(c.id, {
-              name: c.name || "",
-              businessName: "",
-              phone: c.phone || "",
-              status: "active",
-              forceLogoutAt: null,
-              isMerchant: false,
-              isCustomer: true,
-            });
-          }
+      const cRows = (data || []) as Pick<CustomerRow, "id" | "name" | "phone">[];
+      for (const c of cRows) {
+        if (userMap.has(c.id)) {
+          userMap.get(c.id)!.isCustomer = true;
+        } else {
+          userIds.add(c.id);
+          userMap.set(c.id, {
+            name: c.name || "",
+            businessName: "",
+            phone: c.phone || "",
+            status: "active",
+            forceLogoutAt: null,
+            isMerchant: false,
+            isCustomer: true,
+          });
         }
       }
     }
 
     if (userIds.size === 0 && np.length >= 6) {
-      const { data } = await (admin.from("customers") as any)
+      const { data } = await admin.from("customers")
         .select("id, name, phone")
         .or(`name.ilike.%${clean}%`)
         .limit(20);
-      if (data) {
-        for (const c of data) {
-          if (!userMap.has(c.id)) {
-            userIds.add(c.id);
-            userMap.set(c.id, {
-              name: c.name || "",
-              businessName: "",
-              phone: c.phone || "",
-              status: "active",
-              forceLogoutAt: null,
-              isMerchant: false,
-              isCustomer: true,
-            });
-          }
+      const cRows = (data || []) as Pick<CustomerRow, "id" | "name" | "phone">[];
+      for (const c of cRows) {
+        if (!userMap.has(c.id)) {
+          userIds.add(c.id);
+          userMap.set(c.id, {
+            name: c.name || "",
+            businessName: "",
+            phone: c.phone || "",
+            status: "active",
+            forceLogoutAt: null,
+            isMerchant: false,
+            isCustomer: true,
+          });
         }
       }
     }
@@ -1024,10 +1056,11 @@ export async function searchMerchantSession(
     const merchantIds = Array.from(userIds);
     const sessionMap = new Map<string, SessionRecord[]>();
     try {
-      const { data: sessions } = await (admin.from("sessions") as any)
+      const { data } = await admin.from("sessions")
         .select("id, merchant_id, device_info, ip_address, created_at, last_active")
         .in("merchant_id", merchantIds)
         .order("created_at", { ascending: false });
+      const sessions = (data || []) as Pick<SessionRow, "id" | "merchant_id" | "device_info" | "ip_address" | "created_at" | "last_active">[];
       if (sessions) {
         for (const s of sessions) {
           const mid = s.merchant_id;
@@ -1084,13 +1117,13 @@ export async function forceMerchantLogout(
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server config" };
 
-    await (admin.from("merchants") as any)
-      .update({ force_logout_at: new Date().toISOString() })
+    await admin.from("merchants")
+      .update({ force_logout_at: new Date().toISOString() } as never)
       .eq("id", merchantId);
 
     // Also delete their sessions
     try {
-      await (admin.from("sessions") as any)
+      await admin.from("sessions")
         .delete()
         .eq("merchant_id", merchantId);
     } catch (e) {
@@ -1115,8 +1148,8 @@ export async function clearForceLogout(
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server config" };
 
-    await (admin.from("merchants") as any)
-      .update({ force_logout_at: null })
+    await admin.from("merchants")
+      .update({ force_logout_at: null } as never)
       .eq("id", merchantId);
 
     return { success: true };
@@ -1138,7 +1171,7 @@ export async function terminateSession(
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server config" };
 
-    await (admin.from("sessions") as any)
+    await admin.from("sessions")
       .delete()
       .eq("id", sessionId)
       .eq("merchant_id", merchantId); // safety check
@@ -1160,12 +1193,12 @@ export async function getAppSetting(key: string): Promise<any> {
     const admin = getAdminClient();
     if (!admin) return null;
 
-    const { data } = await (admin.from("app_settings") as any)
+    const { data } = await admin.from("app_settings")
       .select("value")
       .eq("key", key)
       .maybeSingle();
-
-    return data?.value ?? null;
+    const row = data as Pick<AppSettingRow, "value"> | null;
+    return row?.value ?? null;
   } catch {
     return null;
   }
@@ -1177,8 +1210,8 @@ export async function setAppSetting(key: string, value: any): Promise<{ success:
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Server config" };
 
-    await (admin.from("app_settings") as any).upsert(
-      { key, value, updated_at: new Date().toISOString() },
+    await admin.from("app_settings").upsert(
+      { key, value, updated_at: new Date().toISOString() } as never,
       { onConflict: "key" }
     );
 

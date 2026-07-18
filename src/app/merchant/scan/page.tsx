@@ -180,6 +180,7 @@ export default function MerchantScanPage() {
             quantity: quantity ? Number(quantity) : null,
             unit: (unit || null) as any,
             attachment_url: attachmentUrl,
+            idempotency_key: crypto.randomUUID(),
           });
 
           if (!result.success) {
@@ -238,6 +239,7 @@ export default function MerchantScanPage() {
           amount: Number(amount),
           description: description || null,
           type: entryType,
+          idempotency_key: crypto.randomUUID(),
         });
 
         if (!result.success) {
@@ -457,8 +459,38 @@ export default function MerchantScanPage() {
               </div>
 
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
-                <div>
+                <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
+                  <button type="button" onClick={() => document.getElementById("ai-bill-input")?.click()}
+                    className="text-xs text-blue-600 underline hover:text-blue-800 transition">
+                    Scan Bill with AI
+                  </button>
+                </div>
+                <input type="file" id="ai-bill-input" accept="image/*" capture="environment" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const reader = new FileReader();
+                      reader.readAsDataURL(file);
+                      await new Promise((resolve) => { reader.onload = resolve; });
+                      const base64 = reader.result as string;
+                      const res = await fetch("/api/ai/parse-bill", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ image: base64, merchantId }),
+                      });
+                      const data = await res.json();
+                      if (data.amount > 0) setAmount(String(data.amount));
+                      if (data.items_summary && data.items_summary !== "Could not read bill" && data.items_summary !== "AI service error") {
+                        setDescription(data.items_summary);
+                      }
+                      addToast("Bill parsed successfully!", "success");
+                    } catch {
+                      addToast("Failed to parse bill", "error");
+                    }
+                  }} />
+                <div>
                   <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
                     className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
                   <AmountSuggestions onSelect={(v) => setAmount(String(v))} />

@@ -2,6 +2,12 @@
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import type { Database } from "@/lib/types/database";
+
+type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
+type CreditLogRow = Database["public"]["Tables"]["credit_logs"]["Row"];
+type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Insert"];
+type MerchantCustomerRow = Database["public"]["Tables"]["merchant_customers"]["Row"];
 
 // ──────────────────────────────────────────────
 // Helper: find or create a customer row (admin client bypasses RLS)
@@ -15,16 +21,16 @@ async function findOrCreateCustomerAdmin(
 
   const normalized = normalizePhone(phone);
 
-  let { data: customer } = await (admin.from("customers") as any)
+  let { data: customer } = await (admin.from("customers")
     .select("id, name")
     .eq("phone", normalized)
-    .maybeSingle();
+    .maybeSingle() as Promise<{ data: Pick<CustomerRow, "id" | "name"> | null; error: any }>);
 
   if (!customer) {
-    const { data: inserted, error } = await (admin.from("customers") as any)
+    const { data: inserted, error } = await (admin.from("customers")
       .insert({ phone: normalized, name: name || null })
       .select("id, name")
-      .single();
+      .single() as Promise<{ data: Pick<CustomerRow, "id" | "name">; error: any }>);
     if (error) {
       console.error("[Entry] Customer insert error:", error);
       throw new Error(`Failed to create customer: ${error.message}`);
@@ -46,15 +52,15 @@ async function linkCustomerToMerchantAdmin(
   const admin = getAdminClient();
   if (!admin) throw new Error("Admin client unavailable");
 
-  const { data: existing } = await (admin.from("merchant_customers") as any)
+  const { data: existing } = await (admin.from("merchant_customers")
     .select("id")
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
-    .maybeSingle();
+    .maybeSingle() as Promise<{ data: Pick<MerchantCustomerRow, "id"> | null; error: any }>);
 
   if (existing) return; // already linked
 
-  const { error } = await (admin.from("merchant_customers") as any)
+  const { error } = await admin.from("merchant_customers")
     .insert({ merchant_id: merchantId, customer_id: customerId, credit_limit: creditLimit });
 
   if (error) {
@@ -77,6 +83,7 @@ export async function saveEntry(params: {
   quantity?: number | null;
   unit?: "liter" | "jar" | "kg" | "piece" | "npr" | null;
   attachment_url?: string | null;
+  idempotency_key?: string;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -132,7 +139,27 @@ export async function saveEntry(params: {
       return { success: false, error: "Customer is required for debit/credit transactions" };
     }
 
-    // ── Step 2: Insert credit_log entry ──
+    // ── Step 2: Idempotency check ──
+    if (params.idempotency_key) {
+      const { data: existingLog } = await (admin.from("credit_logs")
+        .select("id, status, verification_token")
+        .eq("merchant_id", params.merchant_id)
+        .eq("idempotency_key", params.idempotency_key)
+        .maybeSingle() as Promise<{ data: { id: string; status: string; verification_token: string | null } | null; error: any }>);
+
+      if (existingLog) {
+        return {
+          success: true,
+          entry: {
+            id: existingLog.id,
+            verification_token: existingLog.verification_token,
+            status: existingLog.status,
+          },
+        };
+      }
+    }
+
+    // ── Step 3: Insert credit_log entry ──
     const insertData: Record<string, unknown> = {
       merchant_id: params.merchant_id,
       customer_id: isCash ? null : resolvedCustomerId,
@@ -148,15 +175,18 @@ export async function saveEntry(params: {
     if (params.unit) {
       insertData.unit = params.unit;
     }
+    if (params.idempotency_key) {
+      insertData.idempotency_key = params.idempotency_key;
+    }
     // Only include attachment_url if it has a value — avoids 42703 crash
     // when the column has not been deployed yet (migration 024).
     if (params.attachment_url) {
       insertData.attachment_url = params.attachment_url;
     }
-    const { data, error } = await (admin.from("credit_logs") as any)
+    const { data, error } = await (admin.from("credit_logs")
       .insert(insertData)
       .select()
-      .single();
+      .single() as Promise<{ data: CreditLogRow; error: any }>);
 
     if (error) {
       console.error("[Entry] DB insert error — full payload:", JSON.stringify(error));
@@ -195,7 +225,7 @@ export async function updateEntryAttachment(
     }
 
     const updateData: Record<string, unknown> = { attachment_url: attachmentUrl };
-    const { error } = await (admin.from("credit_logs") as any)
+    const { error } = await admin.from("credit_logs")
       .update(updateData)
       .eq("id", entryId);
 

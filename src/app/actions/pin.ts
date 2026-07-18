@@ -344,6 +344,7 @@ export async function registerNewUser(
           phone: normalizedPhone,
           name: name || "Shop",
           business_type: "kirana",
+          sms_balance: 10,
         },
         { onConflict: "id" }
       );

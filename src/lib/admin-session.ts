@@ -2,9 +2,13 @@ const ADMIN_SESSION_COOKIE = "admin_session";
 const ADMIN_SESSION_DURATION = 2 * 60 * 60; // 2 hours (shorter than merchant sessions)
 
 function getHmacKey(): string {
-  const key = process.env.SESSION_HMAC_SECRET
-    || process.env.SUPABASE_SERVICE_ROLE_KEY
-    || "admin-session-secret-fallback";
+  const key = process.env.SESSION_HMAC_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    throw new Error(
+      "CRITICAL_SECURITY_ERROR: Secure HMAC secret key is missing. "
+      + "Set SESSION_HMAC_SECRET (or SUPABASE_SERVICE_ROLE_KEY) in your environment."
+    );
+  }
   return key;
 }
 

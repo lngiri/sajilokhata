@@ -488,19 +488,21 @@ export async function getCustomerStats(
 
   if (error) throw error;
 
-  // Compute actual balance from approved credit_logs (source of truth)
+  // Compute balance from approved or pending-Opening-Balance credit_logs
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: approvedLogs } = await getClient()
+  const { data: balanceLogs } = await getClient()
     .from("credit_logs")
-    .select("merchant_id, amount, type")
+    .select("merchant_id, amount, type, status, description")
     .in("customer_id", customerIds)
-    .eq("status", "approved")
-    .neq("type", "cash") as unknown as { data: any[] | null };
+    .neq("type", "cash")
+    .not("status", "in", '("rejected","disputed")') as unknown as { data: any[] | null };
 
   const balanceByMerchant: Record<string, number> = {};
-  for (const log of approvedLogs || []) {
-    const sign = log.type === "debit" ? 1 : -1;
-    balanceByMerchant[log.merchant_id] = (balanceByMerchant[log.merchant_id] || 0) + sign * log.amount;
+  for (const log of balanceLogs || []) {
+    if (log.status === "approved" || (log.status === "pending" && (log.description as string)?.startsWith("Opening Balance"))) {
+      const sign = log.type === "debit" ? 1 : -1;
+      balanceByMerchant[log.merchant_id] = (balanceByMerchant[log.merchant_id] || 0) + sign * log.amount;
+    }
   }
 
   const totalOutstanding = Object.values(balanceByMerchant).reduce((sum, b) => sum + b, 0);

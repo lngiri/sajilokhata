@@ -18,7 +18,7 @@ interface UserMatch {
  */
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const { allowed, retryAfter } = checkRateLimit(`bypass:${ip}`);
+  const { allowed, retryAfter } = await checkRateLimit(`bypass:${ip}`);
   if (!allowed) {
     return NextResponse.json(
       { error: `Too many requests. Try again in ${retryAfter}s.` },
@@ -51,9 +51,7 @@ export async function POST(request: Request) {
     const bypassPassword = `sajilo-bypass-${crypto.randomUUID().slice(0, 12)}`;
 
     async function ensureMerchantRow(userId: string, userPhone: string) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: upsertError } = await (adminClient!.from("merchants") as any)
-        .upsert(
+      const { error: upsertError } = await adminClient!.from("merchants").upsert(
           {
             id: userId,
             phone: userPhone,
@@ -111,7 +109,7 @@ export async function POST(request: Request) {
 
       if (!pageData?.users) break;
 
-      const match = pageData.users.find((u) => u.phone === phone);
+      const match = pageData.users.find((u: any) => u.phone === phone);
       if (match) {
         foundUser = {
           id: match.id,

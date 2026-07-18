@@ -261,6 +261,19 @@ export async function createManualSmsRequest(
   if (!transactionId?.trim()) return { success: false, error: "Transaction ID is required" };
   if (!screenshotBase64) return { success: false, error: "Screenshot is required" };
 
+  // ── Idempotency check ──
+  const idempotencyKey = `sms:${merchantId}:${transactionId.trim()}`;
+  const { data: existingReq } = await (admin
+    .from("sms_requests")
+    .select("id")
+    .eq("merchant_id", merchantId)
+    .eq("idempotency_key", idempotencyKey)
+    .maybeSingle() as Promise<{ data: { id: string } | null; error: any }>);
+
+  if (existingReq) {
+    return { success: true, requestId: existingReq.id };
+  }
+
   // Decode and upload screenshot to public app_assets bucket
   let screenshotUrl: string;
   try {
@@ -302,6 +315,7 @@ export async function createManualSmsRequest(
       transaction_id: transactionId.trim(),
       screenshot_url: screenshotUrl,
       status: "pending",
+      idempotency_key: idempotencyKey,
     })
     .select("id")
     .single();

@@ -5,6 +5,14 @@ import { cookies } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import type { Database } from "@/lib/types/database";
+
+type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
+type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
+type MerchantCustomerRow = Database["public"]["Tables"]["merchant_customers"]["Row"];
+type MerchantCustomerInsert = Database["public"]["Tables"]["merchant_customers"]["Insert"];
+type CreditLogRow = Database["public"]["Tables"]["credit_logs"]["Row"];
+type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Insert"];
 
 /**
  * Lookup a customer by phone number.
@@ -19,13 +27,14 @@ export async function checkCustomerByPhone(
     if (!admin) return { exists: false };
 
     const normalized = normalizePhone(phone);
-    const { data } = await (admin.from("customers") as any)
+    const { data } = await admin.from("customers")
       .select("id, name, phone")
       .eq("phone", normalized)
       .maybeSingle();
 
-    if (data) {
-      return { exists: true, customer: { id: data.id, name: data.name, phone: data.phone } };
+    const row = data as Pick<CustomerRow, "id" | "name" | "phone"> | null;
+    if (row) {
+      return { exists: true, customer: { id: row.id, name: row.name, phone: row.phone } };
     }
     return { exists: false };
   } catch (err) {
@@ -80,14 +89,15 @@ export async function updateCustomerProfile(
 
   try {
     const normalized = normalizePhone(phone);
-    const { data: customer } = await (admin.from("customers") as any)
+    const { data: rawCustomer } = await admin.from("customers")
       .select("id")
       .eq("phone", normalized)
       .maybeSingle();
+    const customer = rawCustomer as Pick<CustomerRow, "id"> | null;
 
     if (!customer) return { success: false, error: "Customer not found" };
 
-    const { error } = await (admin.from("customers") as any)
+    const { error } = await admin.from("customers")
       .update({ name })
       .eq("id", customer.id);
 
@@ -111,13 +121,14 @@ export async function addCustomerForMerchant(
     const normalized = normalizePhone(phone);
 
     // Find or create customer
-    let { data: customer } = await (admin.from("customers") as any)
+    const { data: rawCustomer } = await admin.from("customers")
       .select("id, name, phone")
       .eq("phone", normalized)
       .maybeSingle();
+    let customer = rawCustomer as Pick<CustomerRow, "id" | "name" | "phone"> | null;
 
     if (!customer) {
-      const { data: inserted, error } = await (admin.from("customers") as any)
+      const { data: inserted, error } = await admin.from("customers")
         .insert({ phone: normalized, name: name || null })
         .select("id, name, phone")
         .single();
@@ -125,21 +136,22 @@ export async function addCustomerForMerchant(
         console.error("[Customer] addCustomerForMerchant insert error:", error);
         return { success: false, error: `DB error: ${error.message}` };
       }
-      customer = inserted;
+      customer = inserted as Pick<CustomerRow, "id" | "name" | "phone">;
 
       // Non-blocking onboarding SMS — fire-and-forget, don't block the response
       sendOnboardingSMS(normalized, name).catch(() => {});
     }
 
     // Link to merchant
-    const { data: existing } = await (admin.from("merchant_customers") as any)
+    const { data: rawExisting } = await admin.from("merchant_customers")
       .select("id")
       .eq("merchant_id", merchantId)
       .eq("customer_id", customer.id)
       .maybeSingle();
+    const existing = rawExisting as Pick<MerchantCustomerRow, "id"> | null;
 
     if (!existing) {
-      const { error } = await (admin.from("merchant_customers") as any)
+      const { error } = await admin.from("merchant_customers")
         .insert({ merchant_id: merchantId, customer_id: customer.id, credit_limit: 5000 });
       if (error) {
         console.error("[Customer] addCustomerForMerchant link error:", error);
@@ -162,12 +174,13 @@ export async function getCustomerProfile(
   if (!admin) return null;
 
   const normalized = normalizePhone(phone);
-  const { data } = await (admin.from("customers") as any)
+  const { data } = await admin.from("customers")
     .select("id, name, phone, avatar_url")
     .eq("phone", normalized)
     .maybeSingle();
 
-  return data || null;
+  const profile = data as Pick<CustomerRow, "id" | "name" | "phone" | "avatar_url"> | null;
+  return profile;
 }
 
 export async function updateCustomerAvatar(
@@ -179,10 +192,11 @@ export async function updateCustomerAvatar(
 
   try {
     const normalized = normalizePhone(phone);
-    const { data: customer } = await (admin.from("customers") as any)
+    const { data: rawCustomer } = await admin.from("customers")
       .select("id")
       .eq("phone", normalized)
       .maybeSingle();
+    const customer = rawCustomer as Pick<CustomerRow, "id"> | null;
 
     if (!customer) return { success: false, error: "Customer not found" };
 
@@ -209,7 +223,7 @@ export async function updateCustomerAvatar(
       .from("app_assets") as any).getPublicUrl(fileName);
     const publicUrl = urlData?.publicUrl || fileName;
 
-    const { error: updateError } = await (admin.from("customers") as any)
+    const { error: updateError } = await admin.from("customers")
       .update({ avatar_url: publicUrl })
       .eq("id", customer.id);
 
@@ -264,33 +278,35 @@ export async function submitCustomerEntry(
 
     // Find or create customer
     let customerId: string;
-    const { data: existing } = await (admin.from("customers") as any)
+    const { data: rawExisting } = await admin.from("customers")
       .select("id")
       .eq("phone", normalized)
       .maybeSingle();
+    const existing = rawExisting as Pick<CustomerRow, "id"> | null;
 
     if (existing) {
       customerId = existing.id;
     } else {
-      const { data: inserted, error: insertErr } = await (admin.from("customers") as any)
+      const { data: inserted, error: insertErr } = await admin.from("customers")
         .insert({ phone: normalized, name: session.name || null })
         .select("id")
         .single();
       if (insertErr) {
         return { success: false, error: "Failed to create customer" };
       }
-      customerId = inserted.id;
+      customerId = (inserted as Pick<CustomerRow, "id">).id;
     }
 
     // Link to merchant if not already linked
-    const { data: link } = await (admin.from("merchant_customers") as any)
+    const { data: rawLink } = await admin.from("merchant_customers")
       .select("id")
       .eq("merchant_id", merchantId)
       .eq("customer_id", customerId)
       .maybeSingle();
+    const link = rawLink as Pick<MerchantCustomerRow, "id"> | null;
 
     if (!link) {
-      const { error: linkErr } = await (admin.from("merchant_customers") as any)
+      const { error: linkErr } = await admin.from("merchant_customers")
         .insert({ merchant_id: merchantId, customer_id: customerId, credit_limit: 5000 });
       if (linkErr) {
         return { success: false, error: "Failed to link to merchant" };
@@ -298,7 +314,7 @@ export async function submitCustomerEntry(
     }
 
     // Create the credit log
-    const { data: log, error: logErr } = await (admin.from("credit_logs") as any)
+    const { data: rawLog, error: logErr } = await admin.from("credit_logs")
       .insert({
         merchant_id: merchantId,
         customer_id: customerId,
@@ -316,6 +332,7 @@ export async function submitCustomerEntry(
       return { success: false, error: "Failed to create entry" };
     }
 
+    const log = rawLog as Pick<CreditLogRow, "id">;
     return { success: true, logId: log.id };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

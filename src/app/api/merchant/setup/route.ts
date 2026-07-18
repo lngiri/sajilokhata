@@ -5,7 +5,7 @@ import { normalizePhone } from "@/lib/phone";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  const { allowed, retryAfter } = checkRateLimit(`setup:${ip}`);
+  const { allowed, retryAfter } = await checkRateLimit(`setup:${ip}`);
   if (!allowed) {
     return NextResponse.json(
       { error: `Too many requests. Try again in ${retryAfter}s.` },

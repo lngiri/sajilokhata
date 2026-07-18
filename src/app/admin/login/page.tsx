@@ -4,11 +4,12 @@ import { useState } from "react";
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = async () => {
-    if (!email) return;
+    if (!email || !password) return;
     setLoading(true);
     setError("");
 
@@ -16,7 +17,10 @@ export default function AdminLoginPage() {
       const res = await fetch("/api/admin/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.toLowerCase().trim() }),
+        body: JSON.stringify({
+          email: email.toLowerCase().trim(),
+          password,
+        }),
       });
 
       const data = await res.json();
@@ -48,27 +52,40 @@ export default function AdminLoginPage() {
           <p className="text-sm text-slate-500 dark:text-gray-400 mt-1">Authorized access only</p>
         </div>
 
-        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-slate-200 dark:border-gray-800">
-          <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Admin Email</label>
-          <input
-            type="email"
-            placeholder="admin@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-            className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
-          />
+        <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 border border-slate-200 dark:border-gray-800 space-y-4">
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Admin Email</label>
+            <input
+              type="email"
+              placeholder="admin@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-gray-300">Password</label>
+            <input
+              type="password"
+              placeholder="Enter password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+            />
+          </div>
 
           {error && (
-            <div className="mt-3 bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl border border-red-200 dark:border-red-800/50">
+            <div className="bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl border border-red-200 dark:border-red-800/50">
               {error}
             </div>
           )}
 
           <button
             onClick={handleSubmit}
-            disabled={!email || loading}
-            className="w-full mt-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold active:scale-[0.98] transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            disabled={!email || !password || loading}
+            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold active:scale-[0.98] transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
