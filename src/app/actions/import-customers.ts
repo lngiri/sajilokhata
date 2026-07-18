@@ -31,6 +31,11 @@ interface ImportPayload {
   short_code: string | null;
 }
 
+export interface SmsChunk {
+  texts: string[];
+  phones: string[];
+}
+
 function validateNepaliPhone(raw: string): string | null {
   const cleaned = raw.replace(/[\s\-\(\)]/g, "").replace(/^\+977/, "").slice(-10);
   if (!/^9[876]\d{8}$/.test(cleaned)) return null;
@@ -53,20 +58,16 @@ export async function importCustomersAction(
 ): Promise<{
   success: boolean;
   error?: string;
-  imported?: number;
-  smsSent?: number;
-  smsFailed?: number;
-  results?: { phone: string; success: boolean; error?: string }[];
+  imported: number;
+  smsChunks: SmsChunk[] | null;
 }> {
   const sessionUserId = await requireMerchant().catch(() => null);
   if (!sessionUserId || sessionUserId !== merchantId) {
-    return { success: false, error: "Not authenticated" };
+    return { success: false, error: "Not authenticated", imported: 0, smsChunks: null };
   }
 
   const admin = getAdminClient();
-  if (!admin) return { success: false, error: "Server configuration error" };
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://qrhisab.com";
+  if (!admin) return { success: false, error: "Server configuration error", imported: 0, smsChunks: null };
 
   // ── Step 1: Validate & normalize ──
   const validRows: { name: string; phone: string; amount: number; short_code: string | null }[] = [];
@@ -91,10 +92,10 @@ export async function importCustomersAction(
   }
 
   if (validRows.length === 0) {
-    return { success: false, error: "No valid rows to import" };
+    return { success: false, error: "No valid rows to import", imported: 0, smsChunks: null };
   }
 
-  // ── Step 2: Compute total SMS parts ──
+  // ── Step 2: Compute SMS texts & parts ──
   let totalSmsParts = 0;
   const smsTexts: string[] = [];
   for (const r of smsRows) {
@@ -114,6 +115,8 @@ export async function importCustomersAction(
     if (balance < totalSmsParts) {
       return {
         success: false,
+        imported: 0,
+        smsChunks: null,
         error: `Insufficient SMS credit. Required: ${totalSmsParts} parts, Available: ${balance}.`,
       };
     }
@@ -135,11 +138,10 @@ export async function importCustomersAction(
 
   if (dbError) {
     console.error("[Import] DB transaction failed:", dbError);
-    return { success: false, error: "Database error during import" };
+    return { success: false, error: "Database error during import", imported: 0, smsChunks: null };
   }
 
-  const results = (dbResult as { phone: string; customer_id: string; log_id: string }[]) || [];
-  const imported = results.length;
+  const imported = ((dbResult as { phone: string }[]) || []).length;
 
   // ── Step 5: Deduct SMS balance ──
   if (totalSmsParts > 0) {
@@ -152,38 +154,44 @@ export async function importCustomersAction(
     }
   }
 
-  // ── Step 6: Batch SMS dispatch (chunks of 5) ──
-  let smsSent = 0;
-  let smsFailed = 0;
+  // ── Step 6: Build SMS chunks for client-side dispatch ──
   const CHUNK_SIZE = 5;
-
+  const smsChunks: SmsChunk[] = [];
   for (let i = 0; i < smsRows.length; i += CHUNK_SIZE) {
     const chunk = smsRows.slice(i, i + CHUNK_SIZE);
-    const smsPromises = chunk.map((row, idx) =>
-      sendTransactionSMS(row.phone, smsTexts[i + idx], merchantId)
-        .then((res) => ({ phone: row.phone, success: res.success, error: res.error }))
-        .catch(() => ({ phone: row.phone, success: false, error: "Network error" }))
-    );
-
-    const chunkResults = await Promise.all(smsPromises);
-    for (const r of chunkResults) {
-      if (r.success) smsSent++;
-      else smsFailed++;
-    }
-
-    if (i + CHUNK_SIZE < smsRows.length) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
+    smsChunks.push({
+      phones: chunk.map((r) => r.phone),
+      texts: chunk.map((_, idx) => smsTexts[i + idx]),
+    });
   }
 
-  return {
-    success: true,
-    imported,
-    smsSent,
-    smsFailed,
-    results: results.map((r) => ({
-      phone: r.phone,
-      success: true,
-    })),
-  };
+  return { success: true, imported, smsChunks: smsChunks.length > 0 ? smsChunks : null };
+}
+
+/**
+ * Send a single chunk of SMS messages (max 5).
+ * Called repeatedly by the client to enable per-chunk progress UI.
+ * Does NOT decrement balance — that was already done in importCustomersAction.
+ */
+export async function sendSmsChunkAction(
+  chunk: SmsChunk
+): Promise<{ sent: number; failed: number; errors: string[] }> {
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  const promises = chunk.phones.map((phone, idx) =>
+    sendTransactionSMS(phone, chunk.texts[idx])
+      .then((res) => {
+        if (res.success) sent++;
+        else {
+          failed++;
+          errors.push(res.error || "Unknown error");
+        }
+      })
+      .catch(() => { failed++; errors.push("Network error"); })
+  );
+
+  await Promise.all(promises);
+  return { sent, failed, errors };
 }

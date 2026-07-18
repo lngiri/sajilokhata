@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { getMerchantProfile } from "@/app/actions/merchant";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
-import { importCustomersAction, ImportRow } from "@/app/actions/import-customers";
+import { importCustomersAction, sendSmsChunkAction, ImportRow, SmsChunk } from "@/app/actions/import-customers";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/components/Toast";
 
@@ -32,6 +32,9 @@ export default function ImportPage() {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ imported: number; smsSent: number; smsFailed: number } | null>(null);
 
+  const [phase, setPhase] = useState<"idle" | "db" | "sms" | "done">("idle");
+  const [smsProgress, setSmsProgress] = useState({ sent: 0, failed: 0, total: 0 });
+
   const selectedSmsCount = rows.filter((r) => r.valid && r.sendSms).length;
   const smsExceedsBalance = selectedSmsCount > smsBalance;
   const hasValidRows = rows.some((r) => r.valid);
@@ -56,17 +59,18 @@ export default function ImportPage() {
     setResult(null);
 
     try {
-      const text = await file.text();
       const ext = file.name.split(".").pop()?.toLowerCase();
       let parsed: Record<string, string>[] = [];
 
       if (ext === "csv") {
+        const text = await file.text();
         const Papa = await import("papaparse");
         const result = Papa.default.parse(text, { header: true, skipEmptyLines: true });
         parsed = result.data as Record<string, string>[];
       } else if (ext === "xlsx" || ext === "xls") {
+        const buffer = await file.arrayBuffer();
         const XLSX = await import("xlsx");
-        const wb = XLSX.read(text, { type: "string" });
+        const wb = XLSX.read(buffer, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const data = XLSX.utils.sheet_to_json<Record<string, string>>(ws);
         parsed = data;
@@ -121,15 +125,52 @@ export default function ImportPage() {
         sendSms: r.sendSms,
       }));
 
+    // ── Phase A: DB import ──
+    setPhase("db");
     const res = await importCustomersAction(merchantId, payload, merchantName);
-    if (res.success) {
-      setResult({ imported: res.imported || 0, smsSent: res.smsSent || 0, smsFailed: res.smsFailed || 0 });
-      addToast(`Imported ${res.imported} customers${res.smsSent ? `, sent ${res.smsSent} SMS` : ""}`, "success");
-    } else {
+
+    if (!res.success) {
       addToast(res.error || "Import failed", "error");
+      setImporting(false);
+      setPhase("idle");
+      return;
     }
+
+    setResult({ imported: res.imported, smsSent: 0, smsFailed: 0 });
+
+    // ── Phase B: SMS dispatch with per-chunk progress ──
+    if (res.smsChunks && res.smsChunks.length > 0) {
+      setPhase("sms");
+      setSmsProgress({ sent: 0, failed: 0, total: res.smsChunks.length });
+
+      let totalSent = 0;
+      let totalFailed = 0;
+
+      for (let i = 0; i < res.smsChunks.length; i++) {
+        const chunkResult = await sendSmsChunkAction(res.smsChunks[i]);
+        totalSent += chunkResult.sent;
+        totalFailed += chunkResult.failed;
+        setSmsProgress((prev) => ({ ...prev, sent: totalSent, failed: totalFailed }));
+
+        if (i < res.smsChunks.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+
+      setResult({ imported: res.imported, smsSent: totalSent, smsFailed: totalFailed });
+    }
+
+    setPhase("done");
     setImporting(false);
+
+    addToast(
+      `Imported ${res.imported} customers` +
+      (res.smsChunks ? `, sent ${smsProgress.sent} SMS` + (smsProgress.failed > 0 ? `, ${smsProgress.failed} failed` : "") : ""),
+      "success"
+    );
   };
+
+  const isProcessing = importing || phase === "db" || phase === "sms";
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -176,6 +217,7 @@ export default function ImportPage() {
               </span>
               <button
                 className="text-sm text-blue-600 underline"
+                disabled={isProcessing}
                 onClick={() => { setRows([]); setResult(null); }}
               >
                 Clear
@@ -207,7 +249,7 @@ export default function ImportPage() {
                         <input
                           type="checkbox"
                           checked={row.sendSms}
-                          disabled={!row.valid}
+                          disabled={!row.valid || isProcessing}
                           onChange={() => toggleSms(row.id)}
                           className="w-4 h-4 text-blue-600 cursor-pointer"
                         />
@@ -218,16 +260,35 @@ export default function ImportPage() {
               </table>
             </div>
 
-            <button
-              onClick={handleImport}
-              disabled={!hasValidRows || smsExceedsBalance || importing}
-              className="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
-            >
-              {importing ? "Importing..." : `Import ${rows.filter((r) => r.valid).length} Customers`}
-            </button>
+            {/* Progress indicator */}
+            {phase === "db" && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm">
+                <p className="font-semibold text-blue-700">Saving customers to database...</p>
+                <div className="mt-2 h-2 bg-blue-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full animate-pulse w-full" />
+                </div>
+              </div>
+            )}
 
-            {result && (
-              <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-sm">
+            {phase === "sms" && (
+              <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-xl text-sm">
+                <p className="font-semibold text-purple-700">
+                  Sending SMS: {smsProgress.sent + smsProgress.failed} of {smsProgress.total} batches completed
+                </p>
+                <p className="text-purple-600 text-xs mt-0.5">
+                  {smsProgress.sent} sent · {smsProgress.failed} failed
+                </p>
+                <div className="mt-2 h-2 bg-purple-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-purple-500 rounded-full transition-all duration-300"
+                    style={{ width: `${((smsProgress.sent + smsProgress.failed) / smsProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {phase === "done" && result && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl text-sm">
                 <p className="font-semibold text-green-700">Import complete</p>
                 <p className="text-green-600">
                   {result.imported} customers imported · {result.smsSent} SMS sent
@@ -235,6 +296,20 @@ export default function ImportPage() {
                 </p>
               </div>
             )}
+
+            <button
+              onClick={handleImport}
+              disabled={!hasValidRows || smsExceedsBalance || isProcessing}
+              className="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+            >
+              {phase === "db"
+                ? "Saving to database..."
+                : phase === "sms"
+                  ? `Sending SMS (${smsProgress.sent + smsProgress.failed}/${smsProgress.total})...`
+                  : phase === "done"
+                    ? "Import Complete ✓"
+                    : `Import ${rows.filter((r) => r.valid).length} Customers`}
+            </button>
           </>
         )}
       </div>
