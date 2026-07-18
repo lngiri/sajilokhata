@@ -162,6 +162,7 @@ export default function CustomerDashboard() {
 
   // Load stats + profile when phone is available
   useEffect(() => {
+    if (onboardingCompletedRef.current) return;
     if (initialized && customerPhone) {
       loadStats();
       getCustomerProfile(customerPhone).then((profile) => {
@@ -169,9 +170,7 @@ export default function CustomerDashboard() {
           setAvatarUrl(profile.avatar_url);
           setCustomerName(profile.name || customerName);
           if (!profile.name || !profile.address) {
-            if (!onboardingCompletedRef.current) {
-              setShowOnboarding(true);
-            }
+            setShowOnboarding(true);
           }
           try {
             const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
