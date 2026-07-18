@@ -84,6 +84,7 @@ export async function verifyRegistrationOtp(
   userType?: "merchant" | "customer" | "both";
   exists: boolean;
   hasPin?: boolean;
+  name?: string;
 }> {
   console.log("[OTP] verifyRegistrationOtp called for phone:", phone);
 
@@ -129,7 +130,8 @@ export async function verifyRegistrationOtp(
 
     if (existing.merchant && existing.customer) {
       const hasPin = !!(existing.merchant.pin_hash || existing.customer.pin_hash);
-      return { success: true, exists: true, phone: cleanPhone, userType: "both", userId: existing.merchant.id, hasPin };
+      const name = existing.merchant.name || existing.customer.name || undefined;
+      return { success: true, exists: true, phone: cleanPhone, userType: "both", userId: existing.merchant.id, hasPin, name };
     }
 
     if (existing.merchant) {
@@ -140,6 +142,7 @@ export async function verifyRegistrationOtp(
         phone: cleanPhone,
         userType: "merchant",
         hasPin: !!existing.merchant.pin_hash,
+        name: existing.merchant.name || undefined,
       };
     }
 
@@ -151,6 +154,7 @@ export async function verifyRegistrationOtp(
         phone: cleanPhone,
         userType: "customer",
         hasPin: !!existing.customer.pin_hash,
+        name: existing.customer.name || undefined,
       };
     }
 

@@ -496,6 +496,7 @@ export default function LoginPage() {
       return;
     }
     if (result.userId) localStorage.setItem("merchant_id", result.userId);
+    const forgotType = result.redirect?.includes("merchant") ? "merchant" : result.redirect?.includes("customer") ? "customer" : undefined;
     if (phone) {
       localStorage.setItem("merchant_phone", phone);
       if (forgotType === "customer") {
@@ -504,7 +505,6 @@ export default function LoginPage() {
       }
     }
     console.log("[Login] PIN reset, redirecting to", result.redirect);
-    const forgotType = result.redirect?.includes("merchant") ? "merchant" : result.redirect?.includes("customer") ? "customer" : undefined;
     doDelayedRedirect(result.redirect || "/merchant/dashboard", forgotType);
   };
 

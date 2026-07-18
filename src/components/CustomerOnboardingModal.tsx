@@ -8,13 +8,30 @@ interface Props {
   onComplete: () => void;
 }
 
+const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
+
 export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const valid = name.trim().length > 0 && address.trim().length > 0;
+  // Pre-populate name from localStorage if available
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+      if (raw) {
+        const session = JSON.parse(raw);
+        if (session.name && session.name !== "Customer") {
+          setName(session.name);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const valid = name.trim().length > 0; // address is optional
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -31,12 +48,19 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
     try {
       const result = await updateCustomerProfile(phone, {
         name: name.trim(),
-        address: address.trim(),
+        address: address.trim() || undefined,
       });
       if (!result.success) {
         setError(result.error || "Failed to save");
         return;
       }
+      // Persist name to localStorage so it's available on next mount
+      try {
+        const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
+        const session = raw ? JSON.parse(raw) : { phone };
+        session.name = name.trim();
+        localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
+      } catch {}
       onComplete();
     } catch {
       setError("Network error. Please try again.");
@@ -55,7 +79,7 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-gray-900">Complete Your Profile</h2>
-          <p className="text-sm text-gray-500 mt-1">Please provide your name and address to continue.</p>
+          <p className="text-sm text-gray-500 mt-1">Tell us your name so shops can recognise you.</p>
         </div>
 
         <div className="space-y-4">
@@ -72,7 +96,7 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Current Address *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address <span className="text-gray-400 font-normal">(optional)</span></label>
             <input
               type="text"
               value={address}
@@ -87,20 +111,28 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
           <p className="text-sm text-red-500 text-center">{error}</p>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={!valid || saving}
-          className="w-full py-3 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
-        >
-          {saving ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Saving...
-            </>
-          ) : (
-            "Save & Continue"
-          )}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={onComplete}
+            className="flex-1 py-3 rounded-xl font-medium text-gray-500 bg-gray-100 hover:bg-gray-200 transition"
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!valid || saving}
+            className="flex-1 py-3 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save & Continue"
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

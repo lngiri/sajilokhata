@@ -132,7 +132,7 @@ export default function CustomerDashboard() {
       img.src = objectUrl;
     });
 
-  // On mount, restore customer session from localStorage
+  // On mount, restore customer session from localStorage (with cookie fallback)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -142,13 +142,38 @@ export default function CustomerDashboard() {
           setCustomerPhone(session.phone);
           setCustomerName(session.name || "");
           setAvatarUrl(session.avatar_url || null);
+          setInitialized(true);
+          return;
+        }
+      }
+    } catch {
+      // Corrupted localStorage — fall through to cookie
+    }
+
+    // Fallback: try to read session from cookie
+    try {
+      const match = document.cookie
+        .split("; ")
+        .find((c) => c.startsWith("customer_session="));
+      if (match) {
+        const val = decodeURIComponent(match.split("=").slice(1).join("="));
+        const session = JSON.parse(val);
+        if (session.phone) {
+          setCustomerPhone(session.phone);
+          setCustomerName(session.name || "");
+          // Persist back to localStorage so future reads work
+          try {
+            localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone: session.phone, name: session.name || "" }));
+          } catch {}
+          setInitialized(true);
+          return;
         }
       }
     } catch {
       // Ignore
-    } finally {
-      setInitialized(true);
     }
+
+    setInitialized(true);
   }, []);
 
   // Mounted ref + cleanup
@@ -168,15 +193,20 @@ export default function CustomerDashboard() {
       getCustomerProfile(customerPhone).then((profile) => {
         if (profile && mountedRef.current) {
           setAvatarUrl(profile.avatar_url);
-          setCustomerName(profile.name || customerName);
-          if (!profile.name || profile.name === "Customer") {
+          const profileName = profile.name || "";
+          setCustomerName(profileName || customerName);
+          // Only show onboarding if name is genuinely missing or is placeholder
+          const nameIsMissing = !profileName || profileName.trim() === "" || profileName === "Customer";
+          if (nameIsMissing) {
             setShowOnboarding(true);
           }
           try {
             const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
             const session = raw ? JSON.parse(raw) : {};
             session.avatar_url = profile.avatar_url || undefined;
-            session.name = profile.name || session.name;
+            if (profileName && profileName !== "Customer") {
+              session.name = profileName;
+            }
             localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
           } catch {}
         }
@@ -184,10 +214,11 @@ export default function CustomerDashboard() {
     }
   }, [initialized, customerPhone]);
 
-  // If no customer phone, redirect to scan page to set it up
+  // If no customer phone after full init (both localStorage + cookie checked), redirect to login
   useEffect(() => {
     if (initialized && !customerPhone) {
-      window.location.href = "/scan";
+      // Send them to login instead of /scan — the login flow will set up the session properly
+      window.location.replace("/login");
     }
   }, [initialized, customerPhone]);
 
