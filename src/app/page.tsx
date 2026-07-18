@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 
 const fadeInView = {
@@ -28,8 +28,11 @@ function SectionSub({ children }: { children: React.ReactNode }) {
 export default function LandingPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [checking, setChecking] = useState(true);
+  const sessionCheckedRef = useRef(false);
 
   useEffect(() => {
+    if (sessionCheckedRef.current) return;
+    sessionCheckedRef.current = true;
     let cancelled = false;
     (async () => {
       try {
