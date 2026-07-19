@@ -73,47 +73,48 @@ export async function getCurrentUserPhone(): Promise<string | null> {
  */
 export async function signOut() {
   try {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-  } catch {
-    // Ignore errors
-  }
-  clearCachedClient();
-
-  // Preserve essential app config
-  const swVersion = localStorage.getItem("sw_version");
-  const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
-
-  // Wipe all client-side storage
-  localStorage.clear();
-  sessionStorage.clear();
-
-  // Restore app config
-  if (swVersion) localStorage.setItem("sw_version", swVersion);
-  if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
-  await clearIndexedDB();
-
-  // Clear client-accessible cookies
-  document.cookie.split(";").forEach((c) => {
-    const name = c.trim().split("=")[0];
-    document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
-  });
-
-  // Attempt to clear Service Worker caches
-  if ("caches" in window) {
+    // 1. Supabase signout (fire-and-forget — must not block redirect)
     try {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((k) => caches.delete(k)));
+      const supabase = createClient();
+      supabase.auth.signOut().catch(() => {});
     } catch {
       // Ignore
     }
+    clearCachedClient();
+
+    // 2. Preserve essential app config
+    const swVersion = localStorage.getItem("sw_version");
+    const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+
+    // 3. Wipe all client-side storage
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 4. Restore app config
+    if (swVersion) localStorage.setItem("sw_version", swVersion);
+    if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
+    // Fire-and-forget: don't await — redirect must not be blocked
+    clearIndexedDB().catch(() => {});
+
+    // 5. Clear client-accessible cookies
+    document.cookie.split(";").forEach((c) => {
+      const name = c.trim().split("=")[0];
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; max-age=0`;
+    });
+
+    // 6. Attempt to clear Service Worker caches (fire-and-forget)
+    if ("caches" in window) {
+      caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k)))).catch(() => {});
+    }
+
+    // 7. Notify SW to skip waiting
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
+    }
+  } catch {
+    // Ignore — proceed to redirect regardless
   }
 
-  // Notify SW to skip waiting (if it's waiting for activation)
-  if (navigator.serviceWorker?.controller) {
-    navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
-  }
-
-  // Force hard navigation to sign-out endpoint which clears server-side cookies
+  // 8. LAST: Redirect to server-side signout which clears httpOnly session cookie
   window.location.replace("/api/auth/signout");
 }

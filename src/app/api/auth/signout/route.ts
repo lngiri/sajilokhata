@@ -1,25 +1,35 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { COOKIE_DOMAIN } from "@/lib/session";
+import { SESSION_COOKIE } from "@/lib/session";
+import { ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
 
 export async function GET() {
-  const response = NextResponse.redirect(
-    new URL("/", process.env.NEXT_PUBLIC_SITE_URL!)
-  );
+  // Redirect to /login with signedOut flag
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
+  const response = NextResponse.redirect(new URL("/login?signedOut=1", siteUrl));
 
   const pastDate = new Date(0);
-  const clearOptions: Record<string, unknown> = {
-    path: "/",
-    expires: pastDate,
-    maxAge: 0,
-  };
-  if (COOKIE_DOMAIN) clearOptions.domain = COOKIE_DOMAIN;
+  const cookieDomain = process.env.COOKIE_DOMAIN;
+  console.log("[Signout] Clearing cookies. COOKIE_DOMAIN:", cookieDomain);
 
-  // Clear EVERY cookie — wipes Supabase SSR tokens, custom session, bypass, etc.
-  const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
-  for (const c of allCookies) {
-    response.cookies.set(c.name, "", clearOptions);
+  // Known cookies to clear — explicit names ensure the browser removes them
+  const cookiesToClear = [SESSION_COOKIE, ADMIN_SESSION_COOKIE, "auth_bypass", "auth_bypass_phone", "customer_session"];
+
+  for (const name of cookiesToClear) {
+    // Clear without domain (matches cookies set on the exact hostname)
+    response.cookies.set(name, "", {
+      path: "/",
+      expires: pastDate,
+      maxAge: 0,
+    });
+    // Clear with COOKIE_DOMAIN (matches cookies set with .qrhisab.com)
+    if (cookieDomain) {
+      response.cookies.set(name, "", {
+        path: "/",
+        expires: pastDate,
+        maxAge: 0,
+        domain: cookieDomain,
+      });
+    }
   }
 
   return response;

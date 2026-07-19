@@ -47,13 +47,21 @@ export default function LoginPage() {
     pinArr: string[],
     setter: (v: string[]) => void,
     refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
+    autoSubmit?: () => void,
   ) => {
     if (!/^\d*$/.test(value)) return;
     const digit = value.slice(-1);
     const next = [...pinArr];
     next[idx] = digit;
     setter(next);
-    if (digit && idx < 3) focusPinInput(refs, idx + 1);
+    if (digit && idx < 3) {
+      focusPinInput(refs, idx + 1);
+    } else if (digit && idx === 3) {
+      // All 4 digits entered — auto-submit after a brief delay for visual feedback
+      if (autoSubmit) {
+        setTimeout(() => autoSubmit(), 150);
+      }
+    }
   };
 
   const handlePinKeyDown = (
@@ -77,6 +85,14 @@ export default function LoginPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // Skip session check if user just signed out — show phone input immediately
+      if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("signedOut")) {
+        // Clean the URL without triggering a reload
+        window.history.replaceState({}, "", window.location.pathname);
+        if (!cancelled) setStep("phone");
+        return;
+      }
+
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
         const data: { 
@@ -542,6 +558,7 @@ export default function LoginPage() {
     setter: (v: string[]) => void,
     refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
     label: string,
+    autoSubmit?: () => void,
   ) => (
     <div>
       <label className="block text-sm font-medium text-[var(--color-text)] mb-3 text-center">{label}</label>
@@ -554,7 +571,7 @@ export default function LoginPage() {
             inputMode="numeric"
             maxLength={1}
             value={d}
-            onChange={(e) => handlePinDigit(e.target.value, i, pinArr, setter, refs)}
+            onChange={(e) => handlePinDigit(e.target.value, i, pinArr, setter, refs, autoSubmit)}
             onKeyDown={(e) => handlePinKeyDown(e, i, pinArr, setter, refs)}
             onFocus={(e) => e.target.select()}
             className="w-14 h-14 text-center text-2xl font-bold bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
@@ -599,7 +616,7 @@ export default function LoginPage() {
       {/* ── PIN Entry ── */}
       {step === "pin" && (
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
-          {renderPinDots(pin, setPin, pinRefs, "Enter your PIN")}
+          {renderPinDots(pin, setPin, pinRefs, "Enter your PIN", handlePinSubmit)}
 
           {error && (
             <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
