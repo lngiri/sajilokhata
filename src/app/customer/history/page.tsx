@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/lib/actions";
 import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { normalizePhone } from "@/lib/phone";
+import { playSuccessSound } from "@/lib/sound";
 import CustomerPinGate from "@/components/CustomerPinGate";
 
 /** Key used to persist customer session in localStorage */
@@ -58,6 +61,10 @@ export default function CustomerHistoryPage() {
   const [filter, setFilter] = useState<"all" | "unverified" | "pending" | "approved" | "rejected">("all");
   const [stats, setStats] = useState({ total: 0, pending: 0, unverified: 0, approved: 0, rejected: 0 });
   const [editModal, setEditModal] = useState<{ id: string; amount: number; description: string } | null>(null);
+  const mountedRef = useRef(true);
+  const realtimeChannelRef = useRef<any>(null);
+  const realtimeSetupRef = useRef(false);
+  const loadLogsRef = useRef<() => Promise<void>>(undefined!);
 
   // On mount, restore customer session
   useEffect(() => {
@@ -90,7 +97,89 @@ export default function CustomerHistoryPage() {
     }
   }, [customerPhone, filter, merchantIdParam]);
 
-  const loadLogs = async () => {
+  // Supabase Realtime — listen for INSERT + UPDATE on credit_logs
+  useEffect(() => {
+    if (!customerPhone || realtimeSetupRef.current) return;
+    realtimeSetupRef.current = true;
+
+    const supabase = createClient();
+
+    const setupRealtime = async () => {
+      const np = normalizePhone(customerPhone);
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("phone", np);
+
+      if (!realtimeSetupRef.current) return;
+      if (!customers || customers.length === 0) return;
+
+      const customerIds = customers.map((c: any) => c.id);
+
+      realtimeChannelRef.current = supabase
+        .channel("customer-history-realtime")
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "credit_logs",
+            filter: `customer_id=in.(${customerIds.join(",")})`,
+          },
+          (payload: any) => {
+            if (!mountedRef.current) return;
+            const oldStatus = payload.old?.status;
+            const newStatus = payload.new?.status;
+            if (oldStatus && newStatus && oldStatus !== newStatus) {
+              if (newStatus === "approved") {
+                playSuccessSound();
+              }
+              const verb =
+                newStatus === "approved"
+                  ? "Approved!"
+                  : newStatus === "rejected"
+                    ? "Rejected"
+                    : newStatus;
+              addToast(
+                `${verb} Rs. ${Number(payload.new?.amount || 0).toLocaleString()} request`,
+                newStatus === "approved" ? "success" : "warning"
+              );
+              loadLogsRef.current?.();
+            }
+          }
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "credit_logs",
+            filter: `customer_id=in.(${customerIds.join(",")})`,
+          },
+          (payload: any) => {
+            if (!mountedRef.current) return;
+            addToast(
+              `New ${payload.new?.type || "transaction"} of Rs. ${Number(payload.new?.amount || 0).toLocaleString()} added`,
+              "info"
+            );
+            loadLogsRef.current?.();
+          }
+        )
+        .subscribe();
+    };
+
+    setupRealtime();
+
+    return () => {
+      realtimeSetupRef.current = false;
+      if (realtimeChannelRef.current) {
+        supabase.removeChannel(realtimeChannelRef.current);
+        realtimeChannelRef.current = null;
+      }
+    };
+  }, [customerPhone, addToast]);
+
+  const loadLogs = useCallback(async () => {
     if (!customerPhone) return;
     setLoading(true);
     try {
@@ -99,6 +188,7 @@ export default function CustomerHistoryPage() {
         merchant_id: merchantIdParam || undefined,
         limit: 100,
       });
+      if (!mountedRef.current) return;
       setLogs(data as HistoryEntry[]);
 
       // Calculate status counts
@@ -111,11 +201,22 @@ export default function CustomerHistoryPage() {
       });
       setStats(counts);
     } catch {
-      addToast("Failed to load transaction history.", "error");
+      if (mountedRef.current) addToast("Failed to load transaction history.", "error");
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
-  };
+  }, [customerPhone, filter, merchantIdParam, addToast]);
+
+  // Keep loadLogsRef current for the realtime channel callback
+  useEffect(() => {
+    loadLogsRef.current = loadLogs;
+  }, [loadLogs]);
+
+  // Mounted ref + cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Handle clear session — removes localStorage, cookies, SW caches
   const handleSignOut = () => {
