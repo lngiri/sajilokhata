@@ -4,8 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { QRDisplay } from "@/components/QRCode";
-import { createClient } from "@/lib/supabase/client";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { getMerchantProfile } from "@/app/actions/merchant";
 
 interface NavItem {
   href: string;
@@ -85,42 +85,20 @@ export default function BottomNav() {
       const id = await getCurrentMerchantId();
       console.log("[BottomNav-QR] getCurrentMerchantId returned:", id);
 
-      const supabase = createClient();
-
-      // Try 1: Lookup by merchant ID (from localStorage or auth)
       if (id) {
-        const { data, error } = await supabase
-          .from("merchants")
-          .select("id, name, business_type, business_name")
-          .eq("id", id)
-          .maybeSingle();
-        console.log("[BottomNav-QR] Lookup by ID:", id, "→ data:", data, "error:", error);
-        if (data) {
-          setMerchantProfile(data);
-          setQrLoading(false);
-          return;
+        try {
+          const profile = await getMerchantProfile(id, "id, name, business_type, business_name");
+          if (profile) {
+            setMerchantProfile(profile);
+            setQrLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.warn("[BottomNav-QR] getMerchantProfile failed:", err);
         }
       }
 
-      // Try 2: Fallback — lookup by phone (in case ID is stale or RLS blocks ID-based query)
-      const phone = localStorage.getItem("merchant_phone");
-      console.log("[BottomNav-QR] Fallback — phone from localStorage:", phone);
-      if (phone) {
-        const { data, error } = await supabase
-          .from("merchants")
-          .select("id, name, business_type, business_name")
-          .eq("phone", phone)
-          .maybeSingle();
-        console.log("[BottomNav-QR] Lookup by phone:", phone, "→ data:", data, "error:", error);
-        if (data) {
-          localStorage.setItem("merchant_id", data.id);
-          setMerchantProfile(data);
-          setQrLoading(false);
-          return;
-        }
-      }
-
-      // Try 3: If we have an ID but DB queries fail, create a minimal profile from localStorage
+      // Fallback: minimal profile from localStorage
       if (id) {
         console.log("[BottomNav-QR] Using fallback profile from localStorage with id:", id);
         setMerchantProfile({ id, name: "My Shop", business_type: "general", business_name: null });
@@ -200,8 +178,13 @@ export default function BottomNav() {
               <>
                 <div className="text-center mb-2">
                   <h2 className="text-lg font-bold text-[var(--color-text)]">
-                    {merchantProfile.name}
+                    {merchantProfile.business_name?.trim() || merchantProfile.name || "Shop"}
                   </h2>
+                  {merchantProfile.business_name && merchantProfile.business_name !== merchantProfile.name && (
+                    <p className="text-xs text-[var(--color-text-muted)]">
+                      {merchantProfile.name}
+                    </p>
+                  )}
                   <p className="text-sm text-[var(--color-text-muted)] capitalize">
                     {merchantProfile.business_type} Shop
                   </p>
@@ -209,7 +192,7 @@ export default function BottomNav() {
 
                 <QRDisplay
                   merchantId={merchantProfile.id}
-                  merchantName={merchantProfile.name}
+                  merchantName={merchantProfile.business_name?.trim() || merchantProfile.name || "Shop"}
                   businessType={merchantProfile.business_type}
                 />
 
