@@ -51,14 +51,8 @@ export default function OtherRolePrompt({ currentRole }: Props) {
   const handleRegister = () => {
     sessionStorage.setItem(`other_role_prompt_dismissed_${currentRole}`, "1");
     setDismissed(true);
-
-    if (currentRole === "merchant") {
-      // Register as customer — hard-nav to /customer/register
-      window.location.replace("/customer/register");
-    } else {
-      // Register as merchant — hard-nav to /register
-      window.location.replace("/register");
-    }
+    // Both roles register via /login flow (phone → OTP → select role → set PIN)
+    window.location.replace("/login");
   };
 
   if (!show) return null;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "qrhisab-v6";
+const CACHE_NAME = "qrhisab-v7";
 const STATIC_ASSETS = [
   "/",
   "/login",
@@ -48,6 +48,7 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
 
   if (request.method !== "GET") return;
+  if (url.protocol !== "http:" && url.protocol !== "https:") return;
   if (url.hostname.includes("supabase")) return;
   if (url.hostname.includes("formspree")) return;
   if (AUTH_ROUTES.some((p) => url.pathname === p || url.pathname.startsWith(p))) return;

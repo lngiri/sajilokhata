@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { normalizePhone } from "@/lib/phone";
 
 const PIN_ROUNDS = 10;
 
@@ -15,9 +16,10 @@ export async function checkCustomerHasPin(
   const admin = getAdminClient();
   if (!admin) return { hasPin: false };
 
+  const np = normalizePhone(phone);
   const { data } = await (admin.from("customers") as any)
     .select("id, pin_hash")
-    .eq("phone", phone)
+    .eq("phone", np)
     .maybeSingle();
 
   return { hasPin: !!data?.pin_hash, customerId: data?.id };
@@ -34,9 +36,10 @@ export async function verifyCustomerPin(
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Server config" };
 
+  const np = normalizePhone(phone);
   const { data } = await (admin.from("customers") as any)
     .select("pin_hash")
-    .eq("phone", phone)
+    .eq("phone", np)
     .maybeSingle();
 
   if (!data?.pin_hash) {
@@ -62,10 +65,11 @@ export async function setCustomerPin(
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Server config" };
 
+  const np = normalizePhone(phone);
   const hashed = await hashPin(pin);
   const { error } = await (admin.from("customers") as any)
     .update({ pin_hash: hashed })
-    .eq("phone", phone);
+    .eq("phone", np);
 
   if (error) {
     return { success: false, error: "Failed to save PIN" };
