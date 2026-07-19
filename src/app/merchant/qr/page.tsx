@@ -11,6 +11,7 @@ interface MerchantData {
   id: string;
   name: string;
   business_type: string;
+  business_name: string | null;
 }
 
 export default function MerchantQRPage() {
@@ -26,8 +27,8 @@ export default function MerchantQRPage() {
     try {
       const id = await getCurrentMerchantId();
       if (id) {
-        const profile = await getMerchantProfile(id).catch(() => null);
-        setMerchant(profile || { id, name: "My Shop", business_type: "kirana" });
+        const profile = await getMerchantProfile(id, "id, name, business_type, business_name").catch(() => null);
+        setMerchant(profile || { id, name: "My Shop", business_type: "kirana", business_name: null });
       }
     } catch {
       addToast("Failed to load QR code data.", "error");
@@ -48,7 +49,11 @@ export default function MerchantQRPage() {
     id: "unknown",
     name: "My Shop",
     business_type: "kirana",
+    business_name: null,
   };
+
+  // Prefer business_name over name (same logic as dashboard)
+  const displayName = merchantData.business_name?.trim() || merchantData.name || "My Shop";
 
   return (
     <div className="pb-20">
@@ -75,8 +80,13 @@ export default function MerchantQRPage() {
             </svg>
           </div>
           <h2 className="text-xl font-bold text-[var(--color-text)]">
-            {merchantData.name}
+            {displayName}
           </h2>
+          {merchantData.business_name && merchantData.business_name !== merchantData.name && (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              {merchantData.name}
+            </p>
+          )}
           <p className="text-sm text-[var(--color-text-muted)] capitalize">
             {merchantData.business_type} Shop
           </p>
@@ -86,7 +96,7 @@ export default function MerchantQRPage() {
         <div className="bg-white rounded-3xl p-4 shadow-sm border border-gray-50">
           <QRDisplay
             merchantId={merchantData.id}
-            merchantName={merchantData.name}
+            merchantName={displayName}
             businessType={merchantData.business_type}
           />
         </div>
