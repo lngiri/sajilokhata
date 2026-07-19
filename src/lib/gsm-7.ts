@@ -48,6 +48,7 @@ function resolveDomain(domain?: string): string {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return new URL(process.env.NEXT_PUBLIC_SITE_URL).hostname;
   }
+  // Default to app subdomain for SMS links (app is the primary app domain)
   return "app.qrhisab.com";
 }
 

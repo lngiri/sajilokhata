@@ -46,7 +46,7 @@ export default function BillingPage() {
   useEffect(() => {
     const init = async () => {
       const mid = await getCurrentMerchantId();
-      if (!mid) return;
+      if (!mid) { setLoading(false); return; }
       setMerchantId(mid);
       const [balance, history, reminders] = await Promise.all([
         getMerchantSmsBalance(mid),

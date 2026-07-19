@@ -22,7 +22,7 @@ export async function createMerchant(page: Page, phone = MERCHANT_PHONE): Promis
   const body = await res.json();
   expect(body.user_id).toBeTruthy();
 
-  // Set auth_bypass cookie (middleware checks this on deployed env)
+  // Set auth_bypass cookie — use the playwright baseURL domain for consistency
   await page.context().addCookies([
     { name: "auth_bypass", value: "true", domain: "app.qrhisab.com", path: "/", httpOnly: false, secure: true, sameSite: "Lax" },
   ]);
@@ -47,6 +47,7 @@ export async function setupAuth(page: Page): Promise<string> {
   if (!_bypassUserId) {
     return await createMerchant(page, MERCHANT_PHONE);
   }
+  // Set auth_bypass cookie — use the playwright baseURL domain for consistency
   await page.context().addCookies([
     { name: "auth_bypass", value: "true", domain: "app.qrhisab.com", path: "/", httpOnly: false, secure: true, sameSite: "Lax" },
   ]);

@@ -72,7 +72,7 @@ export async function sendOnboardingSMS(
     return { success: false, error: "Invalid phone" };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
   const domain = new URL(siteUrl).hostname;
   const message = `Welcome to QR Hisab! You have been added. Track your ledger and transaction history at ${domain}.`;
 

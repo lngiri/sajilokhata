@@ -96,7 +96,8 @@ export async function importCustomersAction(
   }
 
   // ── Step 2: Compute SMS texts & parts ──
-  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://www.qrhisab.com").hostname;
+  // Use app.qrhisab.com as the default domain for SMS verification links
+  const domain = new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com").hostname;
   let totalSmsParts = 0;
   const smsTexts: string[] = [];
   for (const r of smsRows) {

@@ -12,11 +12,11 @@ let merchantId = "";
 // ================================================================
 test.describe("Phase 1: Auth & Redirects", () => {
 
-  test("A-01: Root redirects to landing page", async ({ page }) => {
+  test("A-01: Root redirects to login on app domain", async ({ page }) => {
     const res = await page.request.get("https://app.qrhisab.com/", { maxRedirects: 0 });
     expect(res.status()).toBe(307);
     const loc = res.headers()["location"] || "";
-    expect(loc).toContain("qrhisab.com");
+    expect(loc).toContain("/login");
     console.log(`[A] Root → 307 → ${loc}`);
   });
 
