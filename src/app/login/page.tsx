@@ -93,6 +93,15 @@ export default function LoginPage() {
         return;
       }
 
+      // Also skip session check if user has no local session data
+      // (means they explicitly navigated to /login, not redirected from middleware)
+      const hasLocalSession = localStorage.getItem("merchant_id") || localStorage.getItem("sajilo_customer_session");
+      if (!hasLocalSession) {
+        console.log("[Login] No local session data → showing phone input");
+        if (!cancelled) setStep("phone");
+        return;
+      }
+
       try {
         const res = await fetch("/api/auth/session", { cache: "no-store" });
         const data: { 

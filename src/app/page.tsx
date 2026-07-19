@@ -222,10 +222,10 @@ export default function LandingPage() {
             <span className="text-lg font-bold text-gray-900">QR Hisab</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors hidden sm:block">
+            <Link href="/login?signedOut=1" className="text-sm font-medium text-gray-600 hover:text-emerald-600 transition-colors hidden sm:block">
               Log in
             </Link>
-            <Link href="/login" className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all active:scale-[0.97] shadow-sm">
+            <Link href="/login?signedOut=1" className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold hover:bg-emerald-700 transition-all active:scale-[0.97] shadow-sm">
               Get Started Free
             </Link>
           </div>
@@ -262,7 +262,7 @@ export default function LandingPage() {
             {/* CTA Buttons */}
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-entrance-delay-2">
               <Link
-                href="/login"
+                href="/login?signedOut=1"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 text-white rounded-2xl font-semibold text-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 hover:shadow-xl hover:shadow-emerald-300 active:scale-[0.98]"
               >
                 Start Free — No Credit Card
@@ -605,12 +605,11 @@ export default function LandingPage() {
             Join thousands of merchants who have transformed their business with QR Hisab.
             Start in under 60 seconds.
           </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-emerald-700 rounded-2xl font-bold text-lg hover:bg-emerald-50 transition-all shadow-xl active:scale-[0.98]"
-            >
-              Start Using QR Hisab — It&apos;s Free
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">              <Link
+                href="/login?signedOut=1"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-emerald-700 rounded-2xl font-bold text-lg hover:bg-emerald-50 transition-all shadow-xl active:scale-[0.98]"
+              >
+                Start Using QR Hisab — It&apos;s Free
               {Icons.arrow}
             </Link>
           </div>
@@ -643,8 +642,8 @@ export default function LandingPage() {
               <h4 className="font-semibold text-gray-900 mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><a href="#how-it-works" className="hover:text-emerald-600 transition-colors">How It Works</a></li>
-                <li><Link href="/login" className="hover:text-emerald-600 transition-colors">Get Started</Link></li>
-                <li><Link href="/login" className="hover:text-emerald-600 transition-colors">Login</Link></li>
+                <li><Link href="/login?signedOut=1" className="hover:text-emerald-600 transition-colors">Get Started</Link></li>
+                <li><Link href="/login?signedOut=1" className="hover:text-emerald-600 transition-colors">Login</Link></li>
               </ul>
             </div>
 
