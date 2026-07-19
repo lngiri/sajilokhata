@@ -63,8 +63,7 @@ export async function POST(request: Request) {
     const { data, error } = await (admin.from("merchants") as any)
       .update(updatePayload)
       .eq("id", resolvedId)
-      .select()
-      .single();
+      .select();
 
     if (error) {
       console.error("[Profile] Update error:", error);
@@ -89,8 +88,7 @@ export async function POST(request: Request) {
         const { data: retryData, error: retryErr } = await (admin.from("merchants") as any)
           .update(retryPayload)
           .eq("id", resolvedId)
-          .select()
-          .single();
+          .select();
         if (retryErr) {
           console.error("[Profile] Retry update still failed:", retryErr);
           return NextResponse.json(
@@ -99,7 +97,7 @@ export async function POST(request: Request) {
           );
         }
         console.log("[Profile] Profile saved successfully (after 42703 retry)");
-        return NextResponse.json({ success: true, profile: retryData, merchant_id: resolvedId });
+        return NextResponse.json({ success: true, profile: Array.isArray(retryData) ? retryData[0] : retryData, merchant_id: resolvedId });
       }
       return NextResponse.json(
         { error: `Database error: ${error.message}` },
@@ -108,7 +106,7 @@ export async function POST(request: Request) {
     }
 
     console.log("[Profile] Profile saved successfully for merchant:", resolvedId);
-    return NextResponse.json({ success: true, profile: data, merchant_id: resolvedId });
+    return NextResponse.json({ success: true, profile: Array.isArray(data) ? data[0] : data, merchant_id: resolvedId });
   } catch (err) {
     console.error("[Profile] Unexpected error:", err);
     return NextResponse.json(

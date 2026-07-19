@@ -33,6 +33,9 @@ export default function SettingsPage() {
   const [merchantName, setMerchantName] = useState("");
   const [businessType, setBusinessType] = useState("kirana");
   const [address, setAddress] = useState("");
+  const [initialMerchantName, setInitialMerchantName] = useState("");
+  const [initialBusinessType, setInitialBusinessType] = useState("kirana");
+  const [initialAddress, setInitialAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [authPhone, setAuthPhone] = useState<string | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -150,9 +153,15 @@ export default function SettingsPage() {
 
       if (id) {
         const profile = await getMerchantProfile(id);
-        setMerchantName(profile.name || profile.business_name || "");
-        setBusinessType(profile.business_type || "kirana");
-        setAddress(profile.address || "");
+        const loadedName = profile.name || profile.business_name || "";
+        const loadedType = profile.business_type || "kirana";
+        const loadedAddress = profile.address || "";
+        setMerchantName(loadedName);
+        setBusinessType(loadedType);
+        setAddress(loadedAddress);
+        setInitialMerchantName(loadedName);
+        setInitialBusinessType(loadedType);
+        setInitialAddress(loadedAddress);
         setPhone(profile.phone || "");
         setPhotoUrl(profile.photo_url || null);
         setPaymentEnabled(profile.payment_enabled !== false);
@@ -579,7 +588,7 @@ export default function SettingsPage() {
           {/* Save Button */}
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || (merchantName.trim() === initialMerchantName && businessType === initialBusinessType && address.trim() === initialAddress)}
             className="w-full mt-4 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving ? (
