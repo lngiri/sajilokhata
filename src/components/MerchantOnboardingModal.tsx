@@ -18,7 +18,7 @@ interface Props {
   currentName: string;
   currentAddress: string | null;
   currentBusinessType: string;
-  onComplete: () => void;
+  onComplete: (data?: { name: string; address: string; business_type: string }) => void;
 }
 
 export default function MerchantOnboardingModal({
@@ -71,7 +71,7 @@ export default function MerchantOnboardingModal({
         setError(data.error || "Failed to save");
         return;
       }
-      onComplete();
+      onComplete({ name: name.trim(), address: address.trim(), business_type: businessType });
     } catch {
       setError("Network error. Please try again.");
     } finally {

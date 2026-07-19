@@ -169,8 +169,17 @@ export default function MerchantDashboard() {
         setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
         setRecentActivity(activityData as typeof recentActivity);
         setMerchantProfile(profileData);
-        if (profileData && !onboardedRef.current && (!profileData.name || !profileData.address || !profileData.business_type)) {
-          setShowOnboarding(true);
+        if (profileData) {
+          const nameOk = !!profileData.name?.trim();
+          const addrOk = !!profileData.address?.trim();
+          const typeOk = !!profileData.business_type?.trim();
+          const isComplete = nameOk && addrOk && typeOk;
+          // Check localStorage persistence to avoid re-prompting after remount
+          let dismissed = false;
+          try { dismissed = localStorage.getItem(`merchant_onboarded_${id}`) === "1"; } catch { /* ignore */ }
+          if (!isComplete && !dismissed && !onboardedRef.current) {
+            setShowOnboarding(true);
+          }
         }
         setTopReceivables(
           ((customersData as any[]) || [])
@@ -359,10 +368,19 @@ export default function MerchantDashboard() {
     }
   };
 
-  const handleOnboardingComplete = useCallback(() => {
+  const handleOnboardingComplete = useCallback((data?: { name: string; address: string; business_type: string }) => {
     onboardedRef.current = true;
     setShowOnboarding(false);
-  }, []);
+    // Persist onboarded state so remounts don't re-trigger the modal
+    try {
+      const mid = merchantIdRef.current || merchantId;
+      if (mid) localStorage.setItem(`merchant_onboarded_${mid}`, "1");
+    } catch { /* ignore */ }
+    // Immediately update profile state so the completeness check passes
+    if (data) {
+      setMerchantProfile(prev => prev ? { ...prev, ...data } : prev);
+    }
+  }, [merchantId]);
 
   return (
     <>
