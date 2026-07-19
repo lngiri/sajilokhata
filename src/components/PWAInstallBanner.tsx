@@ -37,7 +37,9 @@ export default function PWAInstallBanner() {
     setIsIOS(ios);
 
     // For Android/Chrome: capture beforeinstallprompt
+    // e.preventDefault() suppresses Chrome's native mini-infobar so we only show our custom banner
     const handler = (e: Event) => {
+      e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setTimeout(() => setShowBanner(true), 2000);
     };
