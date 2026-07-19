@@ -243,6 +243,10 @@ export default function LoginPage() {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
           document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
+        // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
+        if (info.userType === "customer" || info.userType === "both") {
+          localStorage.setItem("qr_hisab_auth_" + phone, String(Date.now()));
+        }
       }
 
       console.log("[Login] PIN verified, redirecting to", result.redirect);
@@ -283,6 +287,10 @@ export default function LoginPage() {
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
           document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+        // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
+        if (info.userType === "customer" || info.userType === "both") {
+          localStorage.setItem("qr_hisab_auth_" + phone, String(Date.now()));
         }
       }
 
@@ -544,6 +552,10 @@ export default function LoginPage() {
         if (forgotType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
           document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+        }
+        // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
+        if (forgotType === "customer") {
+          localStorage.setItem("qr_hisab_auth_" + phone, String(Date.now()));
         }
       }
       console.log("[Login] PIN reset, redirecting to", result.redirect);
