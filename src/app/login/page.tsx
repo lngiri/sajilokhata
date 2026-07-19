@@ -310,6 +310,11 @@ export default function LoginPage() {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
           document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
+        // Mark as unlocked so CustomerPinGate shows dashboard directly
+        // (user can set PIN later in profile settings)
+        if (info.userType === "customer" || info.userType === "both") {
+          localStorage.setItem("qr_hisab_auth_" + phone, String(Date.now()));
+        }
       }
     }
     const target = info?.userType === "customer" ? "/customer/dashboard"
