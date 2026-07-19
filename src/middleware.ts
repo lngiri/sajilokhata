@@ -3,12 +3,22 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
 
-export async function proxy(request: NextRequest) {
+export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const host = request.nextUrl.hostname;
 
-  // ── Landing page is now at qrhisab.com — redirect root ──
+  // ── Domain-aware root routing ──
   if (pathname === "/") {
-    return NextResponse.redirect(new URL("https://qrhisab.com", request.url));
+    // Both qrhisab.com and app.qrhisab.com serve the landing page
+    return NextResponse.next();
+  }
+
+  // ── On qrhisab.com: only allow root (landing page), redirect everything else to app ──
+  if (host === "qrhisab.com") {
+    // Allow the landing page and static assets, redirect all app routes to app.qrhisab.com
+    if (pathname !== "/" && !pathname.startsWith("/_next") && !pathname.startsWith("/api") && !pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/)) {
+      return NextResponse.redirect(new URL(`https://app.qrhisab.com${pathname}${request.nextUrl.search}`, request.url));
+    }
   }
 
   // ── PUBLIC ROUTES — always pass through, no auth processing ──
@@ -33,7 +43,7 @@ export async function proxy(request: NextRequest) {
     anonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   };
 
-  console.log("[Proxy] ENV check:", JSON.stringify(envCheck), "| path:", pathname);
+  console.log("[Middleware] ENV check:", JSON.stringify(envCheck), "| path:", pathname);
 
   // 1. Supabase Auth (with timeout so slow startup doesn't block navigation)
   try {
@@ -74,15 +84,15 @@ export async function proxy(request: NextRequest) {
     if (authResult !== "TIMEOUT") {
       user = (authResult as any).data?.user;
     }
-    console.log("[Proxy] Supabase auth result:", user?.id ? `user=${user.id}` : "no-user");
+    console.log("[Middleware] Supabase auth result:", user?.id ? `user=${user.id}` : "no-user");
   } catch (err) {
-    console.warn("[Proxy] Supabase auth check failed (continuing):", err);
+    console.warn("[Middleware] Supabase auth check failed (continuing):", err);
   }
 
   // 2. Custom session cookie — fully independent from Supabase above
   const rawSession = request.cookies.get(SESSION_COOKIE)?.value;
   let sessionIat: number | null = null;
-  console.log("[Proxy] Session cookie present:", !!rawSession, "| cookie name:", SESSION_COOKIE);
+  console.log("[Middleware] Session cookie present:", !!rawSession, "| cookie name:", SESSION_COOKIE);
   try {
     if (rawSession) {
       const start = Date.now();
@@ -90,17 +100,17 @@ export async function proxy(request: NextRequest) {
       validUserId = session?.userId ?? null;
       sessionIat = session?.iat ?? null;
       const elapsed = Date.now() - start;
-      console.log("[Proxy] Session token verified:", validUserId ? `userId=${validUserId}` : "INVALID-TOKEN", "| elapsed:", elapsed, "ms", "| token prefix:", rawSession.slice(0, 20));
+      console.log("[Middleware] Session token verified:", validUserId ? `userId=${validUserId}` : "INVALID-TOKEN", "| elapsed:", elapsed, "ms", "| token prefix:", rawSession.slice(0, 20));
     }
   } catch (err) {
-    console.warn("[Proxy] Session cookie verify threw exception:", err instanceof Error ? err.message : String(err));
+    console.warn("[Middleware] Session cookie verify threw exception:", err instanceof Error ? err.message : String(err));
   }
 
   const bypassCookie = request.cookies.get("auth_bypass");
   const isBypassed = bypassCookie?.value === "true";
 
   const isAuthenticated = !!user || !!validUserId || isBypassed;
-  console.log("[Proxy] Auth state:", { isAuthenticated, hasSupabaseUser: !!user, hasSessionUser: !!validUserId, isBypassed });
+  console.log("[Middleware] Auth state:", { isAuthenticated, hasSupabaseUser: !!user, hasSessionUser: !!validUserId, isBypassed });
 
   // ── Determine user roles from DB for session-based users ──
   let userRoles: ("merchant" | "customer")[] = [];
@@ -126,7 +136,7 @@ export async function proxy(request: NextRequest) {
 
         // Gracefully handle missing column (e.g. force_logout_at not deployed yet)
         if (mRes?.error && !mRes?.data?.id) {
-          console.warn("[Proxy] Merchants query error — retrying without force_logout_at:", mRes.error.message || mRes.error);
+          console.warn("[Middleware] Merchants query error — retrying without force_logout_at:", mRes.error.message || mRes.error);
           const fb = await (admin.from("merchants") as any)
             .select("id")
             .eq("id", validUserId)
@@ -141,13 +151,13 @@ export async function proxy(request: NextRequest) {
         const merchantErr = mRes?.error && !merchantData ? mRes.error : null;
         const customerData = cRes?.data ?? null;
 
-        console.log("[Proxy] DB lookup for userId:", validUserId, "| merchant:", !!merchantData?.id, "| customer:", !!customerData?.id, "| force_logout_at:", merchantData?.force_logout_at, "| mErr:", !!merchantErr, "| cErr:", !!cRes?.error);
+        console.log("[Middleware] DB lookup for userId:", validUserId, "| merchant:", !!merchantData?.id, "| customer:", !!customerData?.id, "| force_logout_at:", merchantData?.force_logout_at, "| mErr:", !!merchantErr, "| cErr:", !!cRes?.error);
 
         // Force-logout check: compare session iat vs force_logout_at
         if (sessionIat !== null && merchantData?.force_logout_at) {
           const forceLogoutAt = new Date(merchantData.force_logout_at).getTime();
           if (sessionIat < forceLogoutAt) {
-            console.log("[Proxy] FORCE LOGOUT — session issued before force_logout_at:", { sessionIat, forceLogoutAt });
+            console.log("[Middleware] FORCE LOGOUT — session issued before force_logout_at:", { sessionIat, forceLogoutAt });
             const res = NextResponse.redirect(new URL("/login?forceLogout=1", request.url));
             res.cookies.delete(SESSION_COOKIE);
             return res;
@@ -158,14 +168,14 @@ export async function proxy(request: NextRequest) {
         if (merchantData?.id) userRoles.push("merchant");
         if (customerData?.id) userRoles.push("customer");
       } else {
-        console.warn("[Proxy] Missing DB creds (url or service key) — skipping role lookup");
+        console.warn("[Middleware] Missing DB creds (url or service key) — skipping role lookup");
       }
     } catch (err) {
-      console.warn("[Proxy] Role lookup failed — allowing access:", err);
+      console.warn("[Middleware] Role lookup failed — allowing access:", err);
     }
   }
 
-  console.log("[Proxy] Final decision:", { pathname, isAuthenticated, userRoles, action: "continue" });
+  console.log("[Middleware] Final decision:", { pathname, isAuthenticated, userRoles, action: "continue" });
 
   // === Merchant / Delivery Protection ===
   const isMerchantPath = request.nextUrl.pathname.startsWith("/merchant");
@@ -173,7 +183,7 @@ export async function proxy(request: NextRequest) {
   if (!isAuthenticated) {
     if (isMerchantPath || request.nextUrl.pathname.startsWith("/delivery")) {
       console.log(
-        "[Proxy] REDIRECT TO /login — unauthenticated protected route.",
+        "[Middleware] REDIRECT TO /login — unauthenticated protected route.",
         JSON.stringify({
           pathname,
           reason: !rawSession
@@ -196,7 +206,7 @@ export async function proxy(request: NextRequest) {
     // Role-based route protection for session users
     if (isMerchantPath && validUserId && !userRoles.includes("merchant")) {
       console.log(
-        "[Proxy] REDIRECT — merchant path but user is not a merchant.",
+        "[Middleware] REDIRECT — merchant path but user is not a merchant.",
         JSON.stringify({ pathname, validUserId, userRoles, hasSessionUser: !!validUserId })
       );
       // Customer-only user trying to access merchant pages
@@ -206,7 +216,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(url);
       }
       console.log(
-        "[Proxy] REDIRECT TO /login — merchant path, no valid roles.",
+        "[Middleware] REDIRECT TO /login — merchant path, no valid roles.",
         JSON.stringify({ pathname, validUserId, userRoles, rawCookiePrefix: rawSession?.slice(0, 20) })
       );
       const url = request.nextUrl.clone();
@@ -232,7 +242,7 @@ export async function proxy(request: NextRequest) {
           }
         }
       } catch {
-        console.warn("[Proxy] Admin session check on /admin/login failed");
+        console.warn("[Middleware] Admin session check on /admin/login failed");
       }
       return supabaseResponse;
     }
@@ -248,7 +258,7 @@ export async function proxy(request: NextRequest) {
         return NextResponse.redirect(url);
       }
     } catch {
-      console.warn("[Proxy] Admin session verification failed — redirecting to login");
+      console.warn("[Middleware] Admin session verification failed — redirecting to login");
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       return NextResponse.redirect(url);
