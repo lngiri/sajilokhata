@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { normalizePhone } from "@/lib/phone";
 
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
@@ -75,16 +76,17 @@ export async function findOrCreateCustomer(
   phone: string,
   name?: string
 ): Promise<any> {
+  const np = normalizePhone(phone);
   let { data: customer } = await getClient()
     .from("customers")
     .select("*")
-    .eq("phone", phone)
+    .eq("phone", np)
     .maybeSingle();
 
   if (!customer) {
     const { data: newCustomer, error } = await getClient()
       .from("customers")
-      .insert({ phone, name: name || null })
+      .insert({ phone: np, name: name || null })
       .select()
       .single();
 
@@ -445,10 +447,11 @@ export async function updateCustomerCreditLimit(
 export async function getMerchantByPhone(
   phone: string
 ): Promise<{ id: string; name: string; business_name: string | null; business_type: string; phone: string } | null> {
+  const np = normalizePhone(phone);
   const { data, error } = await getClient()
     .from("merchants")
     .select("id, name, business_name, business_type, phone")
-    .eq("phone", phone)
+    .eq("phone", np)
     .maybeSingle();
 
   if (error) throw error;
@@ -470,10 +473,11 @@ export async function getCustomerStats(
   relationships: any[];
 } | null> {
   // First find the customer record(s) by phone
+  const np = normalizePhone(customerPhone);
   const { data: customers } = await getClient()
     .from("customers")
     .select("id")
-    .eq("phone", customerPhone);
+    .eq("phone", np);
 
   if (!customers || customers.length === 0) return null;
 
@@ -537,10 +541,11 @@ export async function getCustomerCreditLogs(
   }
 ): Promise<any[]> {
   // First find the customer record(s) by phone
+  const np = normalizePhone(customerPhone);
   const { data: customers } = await getClient()
     .from("customers")
     .select("id, name")
-    .eq("phone", customerPhone);
+    .eq("phone", np);
 
   if (!customers || customers.length === 0) return [];
 

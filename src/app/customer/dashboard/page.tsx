@@ -13,6 +13,7 @@ import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
 import CustomerPinGate from "@/components/CustomerPinGate";
 import { createClient } from "@/lib/supabase/client";
+import { normalizePhone } from "@/lib/phone";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
@@ -259,10 +260,11 @@ export default function CustomerDashboard() {
     const supabase = realtimeClientRef.current;
 
     const setupRealtime = async () => {
+      const np = normalizePhone(customerPhone);
       const { data: customers } = await supabase
         .from("customers")
         .select("id")
-        .eq("phone", customerPhone);
+        .eq("phone", np);
 
       if (!realtimeSetupStartedRef.current) return;
       if (!customers || customers.length === 0) return;
