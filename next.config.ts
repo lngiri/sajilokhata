@@ -9,9 +9,33 @@ const nextConfig: NextConfig = {
       || process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
 
-  // PWA support + cache control
+  // PWA support + cache control + CORS for cross-domain RSC
   async headers() {
     return [
+      // CORS headers for cross-domain navigation between qrhisab.com ↔ app.qrhisab.com
+      // Next.js sends RSC headers during client-side navigation; both domains must allow them.
+      {
+        source: "/(.*)",
+        has: [{ type: "header", key: "origin", value: "https://qrhisab.com" }],
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "https://qrhisab.com" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "RSC, Next-Router-State-Tree, Next-Url, Next-Router-Prefetch, Accept, Content-Type" },
+          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Access-Control-Max-Age", value: "86400" },
+        ],
+      },
+      {
+        source: "/(.*)",
+        has: [{ type: "header", key: "origin", value: "https://app.qrhisab.com" }],
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "https://app.qrhisab.com" },
+          { key: "Access-Control-Allow-Methods", value: "GET, POST, OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "RSC, Next-Router-State-Tree, Next-Url, Next-Router-Prefetch, Accept, Content-Type" },
+          { key: "Access-Control-Allow-Credentials", value: "true" },
+          { key: "Access-Control-Max-Age", value: "86400" },
+        ],
+      },
       {
         source: "/sw.js",
         headers: [
@@ -37,6 +61,8 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+
+
 };
 
 export default nextConfig;
