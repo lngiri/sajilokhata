@@ -260,16 +260,14 @@ export default function CustomerDashboard() {
     const supabase = realtimeClientRef.current;
 
     const setupRealtime = async () => {
-      const np = normalizePhone(customerPhone);
-      const { data: customers } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("phone", np);
-
       if (!realtimeSetupStartedRef.current) return;
-      if (!customers || customers.length === 0) return;
 
-      const customerIds = customers.map((c: any) => c.id);
+      // Use the customer ID directly from localStorage (set during login)
+      // This avoids an RLS-blocked client-side query on the customers table.
+      const customerId = localStorage.getItem("merchant_id");
+      if (!customerId) return;
+
+      const customerIds = [customerId];
 
       realtimeChannelRef.current = supabase
         .channel("customer-dashboard-realtime")
