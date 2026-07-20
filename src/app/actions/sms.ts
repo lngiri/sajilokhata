@@ -6,7 +6,7 @@ export async function sendTransactionSMS(
   to: string,
   message: string,
   merchantId?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; providerResponse?: any }> {
   const authToken = process.env.AAKASH_SMS_TOKEN || "";
 
   console.log("[SMS] Starting send...");
@@ -100,7 +100,7 @@ export async function sendTransactionSMS(
       }
     }
 
-    return { success: true };
+    return { success: true, providerResponse: parsed };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[SMS] Network/fetch error:", msg);

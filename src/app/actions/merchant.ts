@@ -894,13 +894,24 @@ export async function sendPaymentReminder(
       const { sendTransactionSMS } = await import("./sms");
       const smsResult = await sendTransactionSMS(customerPhone, message, merchantId);
 
+      // ─── DIAGNOSTIC: Log full provider response for debugging ──
+      console.log("[sendPaymentReminder] SMS result:", JSON.stringify({
+        phone: customerPhone,
+        cleanPhone: customerPhone.replace(/\D/g, "").slice(-10),
+        merchantId,
+        customerId,
+        success: smsResult.success,
+        error: smsResult.error,
+        providerResponse: smsResult.providerResponse,
+      }));
+
       await (admin.from("payment_reminder_logs") as any).insert({
         merchant_id: merchantId,
         customer_id: customerId,
         type: "sms",
         message,
         status: smsResult.success ? "sent" : "failed",
-        error_message: smsResult.error || null,
+        error_message: smsResult.error || (smsResult.providerResponse ? JSON.stringify(smsResult.providerResponse) : null),
       });
 
       if (!smsResult.success) {
