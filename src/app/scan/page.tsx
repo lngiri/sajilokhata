@@ -327,7 +327,7 @@ export default function ScanPage() {
 
           <div className="space-y-3">
             <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
+              <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
               <input
                 type="number"
                 min="1"

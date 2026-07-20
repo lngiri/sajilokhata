@@ -230,7 +230,7 @@ export default function ImportPage() {
                   <tr>
                     <th className="p-2 text-left">Name</th>
                     <th className="p-2 text-left">Phone</th>
-                    <th className="p-2 text-right">Balance (Rs.)</th>
+                    <th className="p-2 text-right">Balance</th>
                     <th className="p-2 text-center">Send SMS</th>
                   </tr>
                 </thead>

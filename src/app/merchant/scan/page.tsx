@@ -483,7 +483,7 @@ export default function MerchantScanPage() {
 
               <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
                 <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
                   <button type="button" onClick={() => document.getElementById("ai-bill-input")?.click()}
                     className="text-xs text-blue-600 underline hover:text-blue-800 transition">
                     Scan Bill with AI
@@ -811,7 +811,7 @@ export default function MerchantScanPage() {
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
               <div>
-                <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
+                <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
                 <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
                   className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
                 <AmountSuggestions onSelect={(v) => setAmount(String(v))} />

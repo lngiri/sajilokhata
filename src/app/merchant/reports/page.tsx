@@ -125,7 +125,7 @@ function TopCustomersChart({ data }: { data: { name: string; balance: number }[]
           <XAxis type="number" tick={{ fontSize: 10 }} />
           <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={80} />
           <Tooltip />
-          <Bar dataKey="balance" fill="#dc2626" radius={[0, 4, 4, 0]} name="Outstanding (Rs.)" />
+          <Bar dataKey="balance" fill="#dc2626" radius={[0, 4, 4, 0]} name="Outstanding" />
         </BarChart>
       </ResponsiveContainer>
     </div>

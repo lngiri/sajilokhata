@@ -505,7 +505,7 @@ export default function CustomerHistoryPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-[var(--color-text)] mb-4">Edit Entry</h2>
-            <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
+            <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
             <input
               type="number"
               min="1"

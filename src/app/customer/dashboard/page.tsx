@@ -879,7 +879,7 @@ export default function CustomerDashboard() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Amount (Rs.)</label>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
                   <input
                     type="number"
                     min="1"
@@ -1106,7 +1106,7 @@ export default function CustomerDashboard() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Amount Paid (Rs.)</label>
+                <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Amount Paid</label>
                 <input
                   type="number"
                   min="1"

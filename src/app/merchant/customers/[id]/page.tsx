@@ -81,6 +81,7 @@ export default function CustomerDetailPage() {
   const [merchantName, setMerchantName] = useState("");
   const [merchantIdState, setMerchantIdState] = useState<string | null>(null);
   const [smsBalance, setSmsBalance] = useState<number>(0);
+  const txSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!showCreditLimitModal) return;
@@ -242,8 +243,23 @@ export default function CustomerDetailPage() {
       </div>
 
       <div className="px-4 py-4 space-y-4">
-        {/* Customer Info Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50">
+        {/* Customer Info Card — clickable, scrolls to transaction history */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            // Don't scroll if a nested button was clicked
+            if ((e.target as HTMLElement).closest("button")) return;
+            txSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              txSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }}
+          className="w-full text-left bg-white rounded-2xl p-5 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform cursor-pointer"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
@@ -256,7 +272,7 @@ export default function CustomerDetailPage() {
                 <p className="text-sm text-[var(--color-text-muted)]">{customer.phone}</p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               {customer.trust_status === "good" ? (
                 <button
                   onClick={() => { setFlagStatus("warning"); setFlagNotes(""); setShowFlagModal(true); }}
@@ -296,6 +312,9 @@ export default function CustomerDetailPage() {
                   Remind
                 </button>
               )}
+              <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
             </div>
           </div>
         </div>
@@ -384,7 +403,7 @@ export default function CustomerDetailPage() {
         </div>
 
         {/* Transaction History */}
-        <div>
+        <div ref={txSectionRef}>
           <h3 className="font-semibold text-[var(--color-text)] mb-3">Recent Transactions</h3>
           <div className="space-y-2">
             {customer.transactions.length === 0 ? (
@@ -462,7 +481,7 @@ export default function CustomerDetailPage() {
               </button>
             </div>
             <div className="mb-4">
-              <label className="text-sm font-medium text-[var(--color-text)]">Credit Limit (Rs.)</label>
+              <label className="text-sm font-medium text-[var(--color-text)]">Credit Limit</label>
               <input
                 type="number"
                 min="0"
