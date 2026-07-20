@@ -162,9 +162,25 @@ export default function LoginPage() {
       exists = result.exists;
       users = result.users;
       console.log("[Login] checkUserExists result:", { exists, users });
-    } catch (e) {
-      console.error("[Login] Phone submit error:", e);
-      setError("Network error. Please try again.");
+    } catch (e: any) {
+      const errorDetail = {
+        name: e?.name,
+        message: e?.message,
+        stack: e?.stack?.split('\n').slice(0, 5).join('\n'),
+        cause: e?.cause,
+        type: typeof e,
+        isTypeError: e instanceof TypeError,
+        isAbortError: e instanceof DOMException && e.name === 'AbortError',
+        isNetworkError: e?.message?.includes('Failed to fetch') || e?.message?.includes('NetworkError'),
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        online: navigator.onLine,
+        serviceWorkerReady: 'serviceWorker' in navigator,
+      };
+      console.error("[Login] Phone submit error:", JSON.stringify(errorDetail, null, 2));
+      console.error("[Login] Original error object:", e);
+      setError(`Network error. Please try again. (${e?.name || 'Unknown'}: ${e?.message?.slice(0, 50) || 'No message'})`);
       setLoading(false);
       return;
     }

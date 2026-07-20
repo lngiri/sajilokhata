@@ -55,37 +55,51 @@ export async function checkUserExists(phone: string): Promise<{
   exists: boolean;
   users: UserInfo[];
 }> {
-  const { merchant, customer } = await findUserByPhone(phone);
-  const users: UserInfo[] = [];
+  console.log("[checkUserExists] Looking up phone:", phone);
+  try {
+    const { merchant, customer } = await findUserByPhone(phone);
+    const users: UserInfo[] = [];
 
-  if (merchant) {
-    users.push({
-      userId: merchant.id,
-      hasPin: !!merchant.pin_hash,
-      userType: "merchant",
-      name: merchant.name || undefined,
-    });
-  }
-  if (customer) {
-    // If same ID as merchant → already added as 'both'
-    const existing = users.find((u) => u.userId === customer.id);
-    if (existing) {
-      existing.userType = "both";
-      existing.hasPin = existing.hasPin || !!customer.pin_hash;
-      if (!existing.name) {
-        existing.name = customer.name || undefined;
-      }
-    } else {
+    if (merchant) {
       users.push({
-        userId: customer.id,
-        hasPin: !!customer.pin_hash,
-        userType: "customer",
-        name: customer.name || undefined,
+        userId: merchant.id,
+        hasPin: !!merchant.pin_hash,
+        userType: "merchant",
+        name: merchant.name || undefined,
       });
     }
-  }
+    if (customer) {
+      // If same ID as merchant → already added as 'both'
+      const existing = users.find((u) => u.userId === customer.id);
+      if (existing) {
+        existing.userType = "both";
+        existing.hasPin = existing.hasPin || !!customer.pin_hash;
+        if (!existing.name) {
+          existing.name = customer.name || undefined;
+        }
+      } else {
+        users.push({
+          userId: customer.id,
+          hasPin: !!customer.pin_hash,
+          userType: "customer",
+          name: customer.name || undefined,
+        });
+      }
+    }
 
-  return { exists: users.length > 0, users };
+    console.log("[checkUserExists] Result:", { exists: users.length > 0, users });
+    return { exists: users.length > 0, users };
+  } catch (e: any) {
+    const errorDetail = {
+      name: e?.name,
+      message: e?.message,
+      stack: e?.stack?.split('\n').slice(0, 3).join('\n'),
+      phone,
+      timestamp: new Date().toISOString(),
+    };
+    console.error("[checkUserExists] Error:", JSON.stringify(errorDetail, null, 2));
+    throw e;
+  }
 }
 
 export async function checkHasPin(userId: string): Promise<{ hasPin: boolean }> {
