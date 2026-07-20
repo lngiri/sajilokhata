@@ -645,8 +645,13 @@ export default function CustomerDashboard() {
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-[var(--color-text)] truncate">{customerName || maskPhone(customerPhone)}</p>
-            {customerName && (
+            <p className="font-medium text-[var(--color-text)] truncate flex items-center gap-1.5">
+              {customerName || maskPhone(customerPhone)}
+              {profileLoading && (
+                <div className="w-3 h-3 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+              )}
+            </p>
+            {customerName && (!profileLoading) && (
               <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
                 <span>{showFullPhone ? customerPhone : maskPhone(customerPhone)}</span>
                 <button
