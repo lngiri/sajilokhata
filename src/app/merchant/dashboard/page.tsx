@@ -100,7 +100,6 @@ export default function MerchantDashboard() {
   const [logsLoading, setLogsLoading] = useState(true);
   const [customersLoading, setCustomersLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const loading = profileLoading || statsLoading || logsLoading || customersLoading;
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -151,7 +150,6 @@ export default function MerchantDashboard() {
 
   // ─── Progressive loading: each track runs independently ───
   const loadProfile = useCallback(async (id: string) => {
-    setProfileLoading(true);
     try {
       const profileData = await getMerchantProfile(id, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null);
       if (!mountedRef.current) return;
@@ -173,7 +171,6 @@ export default function MerchantDashboard() {
   }, []);
 
   const loadStats = useCallback(async (id: string) => {
-    setStatsLoading(true);
     try {
       const statsData = await getMerchantStats(id);
       if (!mountedRef.current) return;
@@ -187,7 +184,6 @@ export default function MerchantDashboard() {
   }, []);
 
   const loadLogs = useCallback(async (id: string) => {
-    setLogsLoading(true);
     try {
       const [pendingData, editRequestedData, activityData] = await Promise.all([
         getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, attachment_url, customer_id, customers(name, phone)" }),
@@ -204,7 +200,6 @@ export default function MerchantDashboard() {
   }, []);
 
   const loadCustomers = useCallback(async (id: string) => {
-    setCustomersLoading(true);
     try {
       const customersData = await getMerchantCustomers(id).catch(() => []);
       if (!mountedRef.current) return;
