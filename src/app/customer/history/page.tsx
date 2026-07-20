@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
-import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/lib/actions";
+import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/app/actions/customer";
 import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";

@@ -348,3 +348,290 @@ export async function submitCustomerEntry(
     return { success: false, error: msg };
   }
 }
+
+// ============================================================
+// Cookie-validated customer identity helper
+// Every transaction-history server action calls this first.
+// The browser-supplied customerPhone parameter is NEVER used
+// for identity — only the httpOnly customer_session cookie.
+// ============================================================
+
+async function getAuthenticatedCustomer(): Promise<
+  | { id: string; name: string | null; phone: string }
+  | null
+> {
+  try {
+    const cookieStore = await cookies();
+    const rawCookie = cookieStore.get("customer_session")?.value;
+    if (!rawCookie) return null;
+
+    let session: { phone?: string; name?: string };
+    try {
+      session = JSON.parse(decodeURIComponent(rawCookie));
+    } catch {
+      return null;
+    }
+
+    const phone = session.phone;
+    if (!phone || String(phone).replace(/\D/g, "").length < 10) return null;
+
+    const admin = getAdminClient();
+    if (!admin) return null;
+
+    const normalized = normalizePhone(phone);
+    const { data } = await admin
+      .from("customers")
+      .select("id, name, phone")
+      .eq("phone", normalized)
+      .maybeSingle();
+
+    return (data as Pick<CustomerRow, "id" | "name" | "phone">) || null;
+  } catch (err) {
+    console.warn("[Customer] getAuthenticatedCustomer error:", err);
+    return null;
+  }
+}
+
+// ============================================================
+// Transaction History — Server actions
+// All functions derive identity from the customer_session cookie.
+// The browser-supplied phone parameter is accepted for API
+// compatibility but IGNORED for authorization.
+// ============================================================
+
+/**
+ * Get credit logs for the authenticated customer.
+ * @param _browserPhone Ignored — identity comes from cookie.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCustomerCreditLogs(
+  _browserPhone: string,
+  options?: {
+    status?: string;
+    limit?: number;
+    offset?: number;
+    merchant_id?: string;
+  }
+): Promise<any[]> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) return [];
+
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  let query = admin
+    .from("credit_logs")
+    .select("*, customers(name, phone), merchants!inner(id, name, business_name)")
+    .eq("customer_id", customer.id)
+    .order("created_at", { ascending: false });
+
+  if (options?.status) {
+    query = query.eq("status", options.status);
+  }
+  if (options?.merchant_id) {
+    query = query.eq("merchant_id", options.merchant_id);
+  }
+  if (options?.limit) {
+    query = query.range(
+      options.offset || 0,
+      (options.offset || 0) + options.limit - 1
+    );
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Get balance stats for the authenticated customer.
+ * @param _browserPhone Ignored — identity comes from cookie.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function getCustomerStats(
+  _browserPhone: string
+): Promise<{
+  totalOutstanding: number;
+  shopsCount: number;
+  totalCreditLimit: number;
+  relationships: any[];
+} | null> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) return null;
+
+  const admin = getAdminClient();
+  if (!admin) return null;
+
+  const customerIds = [customer.id];
+
+  const { data: relationships, error: relError } = (await admin
+    .from("merchant_customers")
+    .select("credit_limit, merchants(id, name, business_name)")
+    .in("customer_id", customerIds)) as any;
+
+  if (relError) throw relError;
+
+  const { data: balanceLogs } = await admin
+    .from("credit_logs")
+    .select("merchant_id, amount, type, status, description")
+    .in("customer_id", customerIds)
+    .neq("type", "cash")
+    .not("status", "in", '("rejected","disputed")') as unknown as {
+    data: any[] | null;
+  };
+
+  const balanceByMerchant: Record<string, number> = {};
+  for (const log of balanceLogs || []) {
+    if (
+      log.status === "approved" ||
+      (log.status === "pending" &&
+        (log.description as string)?.startsWith("Opening Balance"))
+    ) {
+      const sign = log.type === "debit" ? 1 : -1;
+      balanceByMerchant[log.merchant_id] =
+        (balanceByMerchant[log.merchant_id] || 0) + sign * log.amount;
+    }
+  }
+
+  const totalOutstanding = Object.values(balanceByMerchant).reduce(
+    (sum, b) => sum + b,
+    0
+  );
+  const totalCreditLimit =
+    relationships?.reduce(
+      (sum: number, r: any) => sum + (r.credit_limit || 0),
+      0
+    ) || 0;
+
+  const relationshipsWithBalance = (relationships || []).map((r: any) => ({
+    ...r,
+    current_balance: balanceByMerchant[r.merchants?.id] || 0,
+  }));
+
+  return {
+    totalOutstanding,
+    shopsCount: relationships?.length || 0,
+    totalCreditLimit,
+    relationships: relationshipsWithBalance,
+  };
+}
+
+/**
+ * Update a pending credit log entry for the authenticated customer.
+ * Only affects entries owned by the authenticated customer.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function updateCreditLog(
+  logId: string,
+  updates: { amount?: number; description?: string }
+): Promise<any> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) throw new Error("Not authenticated");
+
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  const payload: Record<string, unknown> = {};
+  if (updates.amount !== undefined) payload.amount = updates.amount;
+  if (updates.description !== undefined) payload.description = updates.description;
+
+  const { data, error } = await admin
+    .from("credit_logs")
+    .update(payload)
+    .eq("id", logId)
+    .eq("customer_id", customer.id)
+    .eq("status", "pending")
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Cancel (reject) a credit log entry for the authenticated customer.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function cancelCreditLog(logId: string): Promise<any> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) throw new Error("Not authenticated");
+
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  const { data, error } = await admin
+    .from("credit_logs")
+    .update({ status: "rejected" })
+    .eq("id", logId)
+    .eq("customer_id", customer.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Confirm (approve) an unverified credit log entry for the authenticated customer.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function confirmCustomerEntry(logId: string): Promise<any> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) throw new Error("Not authenticated");
+
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  const { data, error } = await admin
+    .from("credit_logs")
+    .update({
+      status: "approved",
+      approved_at: new Date().toISOString(),
+    })
+    .eq("id", logId)
+    .eq("customer_id", customer.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Dispute an unverified credit log entry for the authenticated customer.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function disputeEntry(logId: string): Promise<any> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) throw new Error("Not authenticated");
+
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  const { data, error } = await admin
+    .from("credit_logs")
+    .update({ status: "disputed" })
+    .eq("id", logId)
+    .eq("customer_id", customer.id)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Find or create a customer record for the authenticated customer.
+ * Used by the voucher submission flow on the dashboard.
+ * @param _browserPhone Ignored — identity comes from cookie.
+ * @param _browserName Ignored — identity comes from cookie.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function findOrCreateCustomer(
+  _browserPhone: string,
+  _browserName?: string
+): Promise<any> {
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) throw new Error("Not authenticated");
+  return customer;
+}

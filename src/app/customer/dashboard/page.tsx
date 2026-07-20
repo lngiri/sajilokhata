@@ -18,7 +18,7 @@ import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
   getCustomerStats,
-} from "@/lib/actions";
+} from "@/app/actions/customer";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
 import { getCustomerProfile, updateCustomerAvatar, submitCustomerEntry } from "@/app/actions/customer";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
