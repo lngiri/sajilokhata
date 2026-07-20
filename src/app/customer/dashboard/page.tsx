@@ -52,7 +52,7 @@ export default function CustomerDashboard() {
     }>;
   } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   // Modal scan flow
   const [showScanner, setShowScanner] = useState(false);
@@ -215,6 +215,7 @@ export default function CustomerDashboard() {
 
     loadStats();
 
+    setProfileLoading(true);
     getCustomerProfile(customerPhone).then((profile) => {
       if (cancelled || !profile || !mountedRef.current) return;
       setAvatarUrl(profile.avatar_url);
