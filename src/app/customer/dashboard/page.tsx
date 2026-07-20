@@ -348,7 +348,10 @@ export default function CustomerDashboard() {
   useEffect(() => {
     if (!qrPreviewUrl) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setQrPreviewUrl(null);
+      if (e.key === "Escape") {
+        setQrPreviewUrl(null);
+        setQrPreviewLabel("");
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -1357,16 +1360,17 @@ export default function CustomerDashboard() {
       {qrPreviewUrl && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in"
-          onClick={() => setQrPreviewUrl(null)}
+          onClick={() => { setQrPreviewUrl(null); setQrPreviewLabel(""); }}
           role="dialog"
           aria-modal="true"
           aria-label={`QR code preview: ${qrPreviewLabel}`}
         >
           {/* Close button */}
           <button
-            onClick={() => setQrPreviewUrl(null)}
+            onClick={() => { setQrPreviewUrl(null); setQrPreviewLabel(""); }}
             className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white active:scale-90 transition-transform"
             aria-label="Close QR preview"
+            autoFocus
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1383,7 +1387,6 @@ export default function CustomerDashboard() {
               src={qrPreviewUrl}
               alt={`${qrPreviewLabel} QR code - full size`}
               className="max-w-full max-h-[65vh] object-contain rounded-lg"
-              style={{ imageRendering: "auto" }}
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = "none";
                 const fallback = (e.target as HTMLImageElement).nextElementSibling;
