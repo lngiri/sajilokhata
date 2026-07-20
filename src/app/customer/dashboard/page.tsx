@@ -52,6 +52,7 @@ export default function CustomerDashboard() {
     }>;
   } | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
 
   // Modal scan flow
   const [showScanner, setShowScanner] = useState(false);
@@ -234,7 +235,9 @@ export default function CustomerDashboard() {
         }
         localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
       } catch {}
-    }).catch(() => {});
+    }).catch(() => {}).finally(() => {
+      if (mountedRef.current) setProfileLoading(false);
+    });
 
     return () => { cancelled = true; };
   }, [initialized, customerPhone, loadStats]);
