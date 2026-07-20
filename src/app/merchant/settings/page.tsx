@@ -690,10 +690,14 @@ export default function SettingsPage() {
                               return;
                             }
                             setSavingPaymentMethod(pt.key);
+                            const prevActive = method?.is_active ?? false;
                             try {
-                              await upsertMerchantPaymentMethod(merchantId, pt.key, {
+                              const result = await upsertMerchantPaymentMethod(merchantId, pt.key, {
                                 is_active: e.target.checked,
                               });
+                              if (!result.success) {
+                                throw new Error(result.error || "Failed to update payment method");
+                              }
                               const updated = { ...paymentMethods };
                               if (!updated[pt.key]) {
                                 updated[pt.key] = {
@@ -706,8 +710,14 @@ export default function SettingsPage() {
                               }
                               setPaymentMethods(updated);
                               addToast(`${pt.label} ${e.target.checked ? "enabled" : "disabled"}`, "success");
-                            } catch {
-                              addToast(`Failed to update ${pt.label}`, "error");
+                            } catch (err: any) {
+                              // Rollback local state on failure
+                              const rolledBack = { ...paymentMethods };
+                              if (rolledBack[pt.key]) {
+                                rolledBack[pt.key] = { ...rolledBack[pt.key], is_active: prevActive };
+                                setPaymentMethods(rolledBack);
+                              }
+                              addToast(err.message || `Failed to update ${pt.label}`, "error");
                             } finally {
                               setSavingPaymentMethod(null);
                             }
@@ -889,7 +899,7 @@ export default function SettingsPage() {
                           setSavingPaymentMethod(pt.key);
                           try {
                             const m = paymentMethods[pt.key];
-                            await upsertMerchantPaymentMethod(merchantId, pt.key, {
+                            const result = await upsertMerchantPaymentMethod(merchantId, pt.key, {
                               label: m?.label || null,
                               qr_url: m?.qr_url || null,
                               account_holder: m?.account_holder || null,
@@ -898,9 +908,12 @@ export default function SettingsPage() {
                               is_active: m?.is_active ?? false,
                               sort_order: m?.sort_order ?? 0,
                             });
+                            if (!result.success) {
+                              throw new Error(result.error || "Failed to save payment method");
+                            }
                             addToast(`${pt.label} saved!`, "success");
-                          } catch {
-                            addToast(`Failed to save ${pt.label}`, "error");
+                          } catch (err: any) {
+                            addToast(err.message || `Failed to save ${pt.label}`, "error");
                           } finally {
                             setSavingPaymentMethod(null);
                           }
