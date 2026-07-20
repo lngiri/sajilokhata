@@ -484,7 +484,7 @@ export default function MerchantDashboard() {
               topPendingLogs.map((log) => (
                 <a
                   key={log.id}
-                  href="/merchant/ledger"
+                  href="/merchant/logs"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
@@ -504,7 +504,7 @@ export default function MerchantDashboard() {
               topActivity.map((log) => (
                 <a
                   key={log.id}
-                  href="/merchant/ledger"
+                  href="/merchant/logs"
                   className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
@@ -529,7 +529,7 @@ export default function MerchantDashboard() {
             )}
           </div>
           <a
-            href="/merchant/ledger"
+            href="/merchant/logs"
             className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
           >
             View All
