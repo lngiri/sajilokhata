@@ -1,7 +1,6 @@
-const CACHE_NAME = "qrhisab-v7";
+const CACHE_NAME = "qrhisab-v8";
 const STATIC_ASSETS = [
   "/",
-  "/login",
   "/scan",
   "/delivery",
   "/merchant/dashboard",
@@ -53,28 +52,45 @@ self.addEventListener("fetch", (event) => {
   if (url.hostname.includes("formspree")) return;
   if (AUTH_ROUTES.some((p) => url.pathname === p || url.pathname.startsWith(p))) return;
 
+  // Network-first for _next/static (JS/CSS bundles) — prevents stale bundles
+  if (url.pathname.startsWith("/_next/")) {
+    event.respondWith(
+      (async () => {
+        try {
+          const response = await fetch(request);
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        } catch {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          return Response.error();
+        }
+      })()
+    );
+    return;
+  }
+
   event.respondWith(
     (async () => {
       try {
         const response = await fetch(request);
-        // Only cache valid responses (prevent caching 404s)
         if (response.ok || response.type === "opaque") {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
         return response;
       } catch (err) {
-        // Network failed (offline or blocked)
         const cached = await caches.match(request);
         if (cached) return cached;
 
-        // Fallback to offline page ONLY for navigation requests
         if (request.mode === "navigate") {
           const fallback = await caches.match("/");
           if (fallback) return fallback;
         }
 
-        // Return a generic error response instead of undefined to prevent TypeError crashes
         return Response.error();
       }
     })()
