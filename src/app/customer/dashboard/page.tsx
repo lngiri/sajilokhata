@@ -651,7 +651,7 @@ export default function CustomerDashboard() {
                 <div className="w-3 h-3 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
               )}
             </p>
-            {customerName && (!profileLoading) && (
+            {customerName && (
               <p className="text-xs text-[var(--color-text-muted)] flex items-center gap-1">
                 <span>{showFullPhone ? customerPhone : maskPhone(customerPhone)}</span>
                 <button
