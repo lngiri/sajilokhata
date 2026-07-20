@@ -28,8 +28,12 @@ CREATE TABLE IF NOT EXISTS merchant_ai_usage (
   output_tokens INTEGER NOT NULL DEFAULT 0,
   parse_count INTEGER NOT NULL DEFAULT 1,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(merchant_id, created_at::date, model_name)
+  -- Daily uniqueness enforced via unique index below (PostgreSQL doesn't support ::date in UNIQUE constraints)
 );
+
+-- Daily uniqueness: one AI usage record per merchant per day per model
+CREATE UNIQUE INDEX IF NOT EXISTS idx_merchant_ai_usage_daily
+  ON merchant_ai_usage (merchant_id, model_name, (created_at::date));
 
 ALTER TABLE merchant_ai_usage ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "service_role_all" ON merchant_ai_usage FOR ALL TO service_role USING (true) WITH CHECK (true);

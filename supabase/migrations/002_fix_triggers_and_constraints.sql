@@ -49,11 +49,13 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Fix 2: Fire credit limit check on INSERT too (not just UPDATE of status)
+-- Note: PostgreSQL INSERT triggers cannot reference OLD in WHEN clause,
+-- so we fire on all INSERT + UPDATE OF status and let the function handle the check.
 DROP TRIGGER IF EXISTS trg_check_credit_limit ON credit_logs;
 CREATE TRIGGER trg_check_credit_limit
   BEFORE INSERT OR UPDATE OF status ON credit_logs
   FOR EACH ROW
-  WHEN (NEW.status = 'approved' AND (OLD IS NULL OR OLD.status = 'pending'))
+  WHEN (NEW.status = 'approved')
   EXECUTE FUNCTION check_credit_limit();
 
 -- Fix 3: Add UNIQUE constraint on customers(phone) to prevent duplicates
