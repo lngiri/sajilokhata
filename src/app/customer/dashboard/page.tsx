@@ -93,6 +93,10 @@ export default function CustomerDashboard() {
     is_active: boolean;
   }>>([]);
   const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+
+  // QR preview lightbox
+  const [qrPreviewUrl, setQrPreviewUrl] = useState<string | null>(null);
+  const [qrPreviewLabel, setQrPreviewLabel] = useState("");
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
@@ -339,6 +343,33 @@ export default function CustomerDashboard() {
       window.removeEventListener("keydown", escHandler);
     };
   }, [showNotifications]);
+
+  // Close QR preview lightbox on Escape
+  useEffect(() => {
+    if (!qrPreviewUrl) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setQrPreviewUrl(null);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [qrPreviewUrl]);
+
+  // Prevent background scrolling while QR preview is open
+  useEffect(() => {
+    if (!qrPreviewUrl) return;
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      document.documentElement.style.overflow = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, [qrPreviewUrl]);
 
   // Close profile menu on click outside + Escape
   useEffect(() => {
@@ -1261,13 +1292,36 @@ export default function CustomerDashboard() {
                     </div>
 
                     {pm.qr_url && (
-                      <div className="flex justify-center mb-2">
-                        <img
-                          src={pm.qr_url}
-                          alt={pm.label || pm.method_type}
-                          className="w-32 h-32 object-contain rounded-lg border border-gray-200 bg-white"
-                        />
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setQrPreviewUrl(pm.qr_url);
+                          setQrPreviewLabel(pm.label || pm.method_type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()));
+                        }}
+                        className="flex justify-center mb-2 group cursor-zoom-in"
+                        aria-label={`View ${pm.label || pm.method_type} QR code full size`}
+                      >
+                        <div className="relative">
+                          <img
+                            src={pm.qr_url}
+                            alt={`${pm.label || pm.method_type} QR code - tap to enlarge`}
+                            className="w-32 h-32 object-contain rounded-lg border border-gray-200 bg-white group-hover:border-[var(--color-primary)]/40 group-hover:shadow-md transition-all"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                              const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                              if (fallback) (fallback as HTMLElement).style.display = "flex";
+                            }}
+                          />
+                          <div className="hidden w-32 h-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                            <span className="text-xs text-[var(--color-text-muted)]">Image unavailable</span>
+                          </div>
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg">
+                            <span className="text-[10px] font-medium text-white bg-black/60 px-2 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                              Tap to enlarge
+                            </span>
+                          </div>
+                        </div>
+                      </button>
                     )}
 
                     {pm.method_type === "bank_deposit" && (
@@ -1296,6 +1350,54 @@ export default function CustomerDashboard() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* ===== QR PREVIEW LIGHTBOX ===== */}
+      {qrPreviewUrl && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fade-in"
+          onClick={() => setQrPreviewUrl(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`QR code preview: ${qrPreviewLabel}`}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setQrPreviewUrl(null)}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white active:scale-90 transition-transform"
+            aria-label="Close QR preview"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {/* QR code container */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-[90vw] max-h-[85vh] bg-white rounded-2xl shadow-2xl p-4 animate-scale-up flex flex-col items-center"
+          >
+            <p className="text-sm font-semibold text-gray-700 mb-3 text-center">{qrPreviewLabel}</p>
+            <img
+              src={qrPreviewUrl}
+              alt={`${qrPreviewLabel} QR code - full size`}
+              className="max-w-full max-h-[65vh] object-contain rounded-lg"
+              style={{ imageRendering: "auto" }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = "none";
+                const fallback = (e.target as HTMLImageElement).nextElementSibling;
+                if (fallback) (fallback as HTMLElement).style.display = "flex";
+              }}
+            />
+            <div className="hidden w-48 h-48 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
+              <span className="text-sm text-gray-400">Failed to load QR image</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-center">Scan this code with another device to pay</p>
+          </div>
+
+          {/* Keyboard hint */}
+          <p className="absolute bottom-6 text-xs text-white/50 hidden sm:block">Press ESC to close</p>
         </div>
       )}
 
