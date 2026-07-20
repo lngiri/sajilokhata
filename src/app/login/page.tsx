@@ -180,7 +180,7 @@ export default function LoginPage() {
       };
       console.error("[Login] Phone submit error:", JSON.stringify(errorDetail, null, 2));
       console.error("[Login] Original error object:", e);
-      setError(`Network error. Please try again. (${e?.name || 'Unknown'}: ${e?.message?.slice(0, 50) || 'No message'})`);
+      setError("Network error. Please try again.");
       setLoading(false);
       return;
     }
