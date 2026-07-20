@@ -95,8 +95,12 @@ export default function MerchantDashboard() {
       customers: { name: string | null; phone: string } | null;
     }[]
   >([]);
-  const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [logsLoading, setLogsLoading] = useState(true);
+  const [customersLoading, setCustomersLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const loading = profileLoading || statsLoading || logsLoading || customersLoading;
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -145,6 +149,89 @@ export default function MerchantDashboard() {
 
   const supabase = useRef(createClient()).current;
 
+  // ─── Progressive loading: each track runs independently ───
+  const loadProfile = useCallback(async (id: string) => {
+    setProfileLoading(true);
+    try {
+      const profileData = await getMerchantProfile(id, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null);
+      if (!mountedRef.current) return;
+      setMerchantProfile(profileData);
+      if (profileData) {
+        const nameOk = !!profileData.name?.trim();
+        const addrOk = !!profileData.address?.trim();
+        const typeOk = !!profileData.business_type?.trim();
+        const isComplete = nameOk && addrOk && typeOk;
+        let dismissed = false;
+        try { dismissed = localStorage.getItem(`merchant_onboarded_${id}`) === "1"; } catch { /* ignore */ }
+        if (!isComplete && !dismissed && !onboardedRef.current) {
+          setShowOnboarding(true);
+        }
+      }
+    } catch { /* silent */ } finally {
+      if (mountedRef.current) setProfileLoading(false);
+    }
+  }, []);
+
+  const loadStats = useCallback(async (id: string) => {
+    setStatsLoading(true);
+    try {
+      const statsData = await getMerchantStats(id);
+      if (!mountedRef.current) return;
+      setStats(statsData);
+      setLoadError(false);
+    } catch {
+      if (mountedRef.current) setLoadError(true);
+    } finally {
+      if (mountedRef.current) setStatsLoading(false);
+    }
+  }, []);
+
+  const loadLogs = useCallback(async (id: string) => {
+    setLogsLoading(true);
+    try {
+      const [pendingData, editRequestedData, activityData] = await Promise.all([
+        getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, attachment_url, customer_id, customers(name, phone)" }),
+        getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
+        getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
+      ]);
+      if (!mountedRef.current) return;
+      setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
+      setRecentActivity(activityData as typeof recentActivity);
+      setLastRefreshed(new Date());
+    } catch { /* silent */ } finally {
+      if (mountedRef.current) setLogsLoading(false);
+    }
+  }, []);
+
+  const loadCustomers = useCallback(async (id: string) => {
+    setCustomersLoading(true);
+    try {
+      const customersData = await getMerchantCustomers(id).catch(() => []);
+      if (!mountedRef.current) return;
+      setTopReceivables(
+        ((customersData as any[]) || [])
+          .filter(c => (c.current_balance || 0) > 0)
+          .sort((a, b) => (b.current_balance || 0) - (a.current_balance || 0))
+          .slice(0, 5)
+          .map(c => ({
+            customer_id: c.customer_id,
+            customer_name: c.customers?.name || null,
+            customer_phone: c.customers?.phone || "",
+            current_balance: c.current_balance || 0,
+          }))
+      );
+    } catch { /* silent */ } finally {
+      if (mountedRef.current) setCustomersLoading(false);
+    }
+  }, []);
+
+  // Fire-and-forget non-critical loads
+  const loadBackground = useCallback((id: string) => {
+    getMerchantSmsBalance(id).then(setSmsBalance).catch(() => {});
+    checkAndSendAutoReminders(id).catch(() => {});
+  }, []);
+
+  /** Load all data with progressive rendering — profile first, then stats, then logs/customers */
   const loadData = useCallback(async () => {
     const id = merchantIdRef.current || (await getCurrentMerchantId());
     if (!mountedRef.current) return;
@@ -154,67 +241,20 @@ export default function MerchantDashboard() {
       setMerchantId(id);
     }
 
-      if (id) {
-        try {
-          const [statsData, pendingData, editRequestedData, activityData, profileData, customersData] = await Promise.all([
-            getMerchantStats(id),
-            getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, attachment_url, customer_id, customers(name, phone)" }),
-            getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
-            getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
-            getMerchantProfile(id, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null),
-            getMerchantCustomers(id).catch(() => []),
-          ]);
-        if (!mountedRef.current) return;
-        setStats(statsData);
-        setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
-        setRecentActivity(activityData as typeof recentActivity);
-        setMerchantProfile(profileData);
-        if (profileData) {
-          const nameOk = !!profileData.name?.trim();
-          const addrOk = !!profileData.address?.trim();
-          const typeOk = !!profileData.business_type?.trim();
-          const isComplete = nameOk && addrOk && typeOk;
-          // Check localStorage persistence to avoid re-prompting after remount
-          let dismissed = false;
-          try { dismissed = localStorage.getItem(`merchant_onboarded_${id}`) === "1"; } catch { /* ignore */ }
-          if (!isComplete && !dismissed && !onboardedRef.current) {
-            setShowOnboarding(true);
-          }
-        }
-        setTopReceivables(
-          ((customersData as any[]) || [])
-            .filter(c => (c.current_balance || 0) > 0)
-            .sort((a, b) => (b.current_balance || 0) - (a.current_balance || 0))
-            .slice(0, 5)
-            .map(c => ({
-              customer_id: c.customer_id,
-              customer_name: c.customers?.name || null,
-              customer_phone: c.customers?.phone || "",
-              current_balance: c.current_balance || 0,
-            }))
-        );
-        setLastRefreshed(new Date());
-        setLoadError(false);
+    if (!id) return;
 
-        // Load SMS balance silently
-        getMerchantSmsBalance(id).then(setSmsBalance).catch(() => {});
-
-        // Check auto reminders silently
-        checkAndSendAutoReminders(id).catch(() => {});
-      } catch {
-        setLoadError(true);
-        addToast("Failed to load dashboard data.", "error");
-      }
-    }
-  }, []);
+    // Track 1+2: Profile and stats load in parallel (fast queries)
+    await Promise.all([loadProfile(id), loadStats(id)]);
+    // Track 3+4: Logs and customers load in parallel (heavier queries)
+    await Promise.all([loadLogs(id), loadCustomers(id)]);
+    // Track 5: Fire-and-forget non-critical data
+    loadBackground(id);
+  }, [loadProfile, loadStats, loadLogs, loadCustomers, loadBackground]);
 
   // Initial load + polling
   useEffect(() => {
     mountedRef.current = true;
-
-    loadData().finally(() => {
-      if (mountedRef.current) setLoading(false);
-    });
+    loadData();
 
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
@@ -620,7 +660,7 @@ export default function MerchantDashboard() {
       )}
 
       {/* Pending banner */}
-      {!loading && pendingLogs.length > 0 && (
+      {!logsLoading && pendingLogs.length > 0 && (
         <a
           href="/merchant/logs"
           className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100 active:bg-amber-100 transition-colors"
@@ -640,7 +680,7 @@ export default function MerchantDashboard() {
       )}
 
       {/* Business Name Prompt */}
-      {!loading && merchantProfile && (
+      {!profileLoading && merchantProfile && (
         (() => {
           const name = merchantProfile.name?.trim();
           const needsUpdate = !name || name.toLowerCase() === "shop";
@@ -673,7 +713,7 @@ export default function MerchantDashboard() {
         })()
       )}
 
-      {loadError && !loading && (
+      {loadError && !statsLoading && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-50 flex items-center justify-center">
             <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -697,7 +737,7 @@ export default function MerchantDashboard() {
       <PullToRefresh onRefresh={handlePullRefresh}>
         <div className="px-4 py-4 space-y-4">
           {/* Stats Cards */}
-          {loading ? (
+          {statsLoading ? (
             <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map((i) => (
                 <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
@@ -729,7 +769,7 @@ export default function MerchantDashboard() {
               </a>
             </div>
           )}
-          {loading ? (
+          {statsLoading ? (
             <div className="grid grid-cols-2 gap-3">
               {[1, 2].map((i) => (
                 <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
