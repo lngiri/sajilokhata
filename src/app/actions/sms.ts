@@ -6,7 +6,7 @@ export async function sendTransactionSMS(
   to: string,
   message: string,
   merchantId?: string
-): Promise<{ success: boolean; error?: string; providerResponse?: any }> {
+): Promise<{ success: boolean; error?: string }> {
   const authToken = process.env.AAKASH_SMS_TOKEN || "";
 
   console.log("[SMS] Starting send...");
@@ -85,6 +85,12 @@ export async function sendTransactionSMS(
       return { success: false, error: "Could not send SMS to this number. Please check and try again." };
     }
 
+    // Safety: verify at least one valid recipient exists
+    if (!parsed?.data?.valid || parsed.data.valid.length === 0) {
+      console.error("[SMS] No valid recipients in response:", body);
+      return { success: false, error: "SMS gateway did not accept any recipients" };
+    }
+
     if (!res.ok) {
       console.error("[SMS] Non-OK response:", res.status, body);
       return { success: false, error: `SMS gateway error (HTTP ${res.status})` };
@@ -100,7 +106,7 @@ export async function sendTransactionSMS(
       }
     }
 
-    return { success: true, providerResponse: parsed };
+    return { success: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[SMS] Network/fetch error:", msg);
