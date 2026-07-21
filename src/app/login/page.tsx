@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback, startTransition } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
 import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp, registerNewUser } from "@/app/actions/pin";
 
@@ -38,6 +38,8 @@ export default function LoginPage() {
   const [registerName, setRegisterName] = useState("");
   const [authMode, setAuthMode] = useState<"signin" | "register" | null>(null);
   const [phoneErrorAction, setPhoneErrorAction] = useState<"signin" | "register" | null>(null);
+  const [addRoleTarget, setAddRoleTarget] = useState<"merchant" | "customer" | null>(null);
+  const mountedRef = useRef(true);
 
 
 
@@ -87,7 +89,16 @@ export default function LoginPage() {
 
   // ── Silent session check on mount ──
   useEffect(() => {
+    mountedRef.current = true;
     let cancelled = false;
+
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted && mountedRef.current) {
+        setLoading(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+
     (async () => {
       if (typeof window === "undefined") return;
 
@@ -117,6 +128,17 @@ export default function LoginPage() {
       if (new URLSearchParams(window.location.search).has("signedOut")) {
         window.history.replaceState({}, "", window.location.pathname);
         if (!cancelled) setStep("welcome");
+        return;
+      }
+
+      // 2b. Add-role flow: user is already logged in and wants to register the other role
+      const addRoleParam = new URLSearchParams(window.location.search).get("addRole");
+      if (addRoleParam === "merchant" || addRoleParam === "customer") {
+        window.history.replaceState({}, "", window.location.pathname);
+        setAddRoleTarget(addRoleParam);
+        const merchantPhone = localStorage.getItem("merchant_phone");
+        if (merchantPhone) setPhone(merchantPhone);
+        if (!cancelled) { setStep("phone"); setLoading(false); }
         return;
       }
 
@@ -170,7 +192,11 @@ export default function LoginPage() {
       } catch (e) { console.log("[Login] Session check failed:", e); }
       if (!cancelled) setStep("welcome");
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      mountedRef.current = false;
+      window.removeEventListener("pageshow", handlePageShow);
+    };
   }, []);
 
   // ── Phone Submit ──
@@ -186,10 +212,12 @@ export default function LoginPage() {
     let users: Awaited<ReturnType<typeof checkUserExists>>["users"] = [];
     try {
       const result = await checkUserExists(cleanPhone);
+      if (!mountedRef.current) return;
       exists = result.exists;
       users = result.users;
       console.log("[Login] checkUserExists result:", { exists, users });
     } catch (e: any) {
+      if (!mountedRef.current) return;
       const errorDetail = {
         name: e?.name,
         message: e?.message,
@@ -226,10 +254,33 @@ export default function LoginPage() {
       return;
     }
 
+    // Add-role flow: always send OTP regardless of whether user exists in one table
+    if (addRoleTarget) {
+      try {
+        const otpResult = await sendRegistrationOtp(cleanPhone);
+        if (!mountedRef.current) return;
+        if (!otpResult.success) {
+          setError(otpResult.error || "Failed to send OTP");
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        if (!mountedRef.current) return;
+        console.error("[Login] Add-role OTP send error:", e);
+        setError("Network error. Please try again.");
+        setLoading(false);
+        return;
+      }
+      setStep("otp");
+      setLoading(false);
+      return;
+    }
+
     if (!exists) {
       console.log("[Login] New user → sending OTP");
       try {
         const otpResult = await sendRegistrationOtp(cleanPhone);
+        if (!mountedRef.current) return;
         if (!otpResult.success) {
           console.log("[Login] OTP send failed:", otpResult.error);
           setError(otpResult.error || "Failed to send OTP");
@@ -237,6 +288,7 @@ export default function LoginPage() {
           return;
         }
       } catch (e) {
+        if (!mountedRef.current) return;
         console.error("[Login] OTP send error:", e);
         setError("Network error. Please try again.");
         setLoading(false);
@@ -251,7 +303,8 @@ export default function LoginPage() {
     // Existing user — check for multi-role
     if (users.length > 1 || users[0]?.userType === "both") {
       console.log("[Login] Multi-role user → showing role selector");
-      setAvailableRoles(users.map((u) => u.userType as "merchant" | "customer"));
+      userInfoRef.current = { userId: users[0].userId, userType: users[0].userType, name: users[0].name };
+      setAvailableRoles(["merchant", "customer"]);
       setSelectRoleMode("login");
       setStep("select_role");
       setLoading(false);
@@ -281,11 +334,12 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    startTransition(async () => {
+    try {
       console.log("[Login] Verifying PIN for user:", info.userId);
       const result = await loginWithPin(info.userId, pinStr, info.userType);
       console.log("[Login] loginWithPin result:", JSON.stringify(result));
       if (!result.success) {
+        if (!mountedRef.current) return;
         setError(result.error || "Incorrect PIN");
         setPin(["", "", "", ""]);
         focusPinInput(pinRefs, 0);
@@ -308,7 +362,12 @@ export default function LoginPage() {
 
       console.log("[Login] PIN verified, redirecting to", result.redirect);
       window.location.assign(result.redirect || "/merchant/dashboard");
-    });
+    } catch (e) {
+      if (!mountedRef.current) return;
+      console.error("[Login] PIN submit error:", e);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   // ── Set PIN (legacy user or after OTP) ──
@@ -328,11 +387,12 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    startTransition(async () => {
+    try {
       console.log("[Login] Setting PIN for user:", info.userId, "type:", info.userType);
       const result = await setMerchantPin(info.userId, newPinStr);
       console.log("[Login] setPin result:", JSON.stringify(result));
       if (!result.success) {
+        if (!mountedRef.current) return;
         setError(result.error || "Failed to set PIN");
         setLoading(false);
         return;
@@ -354,7 +414,12 @@ export default function LoginPage() {
       const target = info.userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
       console.log("[Login] PIN set successfully, redirecting to", target);
       window.location.assign(target);
-    });
+    } catch (e) {
+      if (!mountedRef.current) return;
+      console.error("[Login] Set PIN error:", e);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   const handleSkipPin = () => {
@@ -388,12 +453,50 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
-    startTransition(async () => {
+    try {
       console.log("[Login] Verifying OTP for phone:", phone);
       const result = await verifyRegistrationOtp(phone, otp);
       console.log("[Login] verifyRegistrationOtp result:", JSON.stringify(result));
       if (!result.success) {
+        if (!mountedRef.current) return;
         setError(result.error || "Invalid OTP");
+        setLoading(false);
+        return;
+      }
+
+      // Add-role flow: user verified their phone, now create the missing role
+      if (addRoleTarget) {
+        if (!mountedRef.current) return;
+
+        // Guard: user already has this role
+        if (result.userType === addRoleTarget || result.userType === "both") {
+          setError("You already have this role.");
+          setLoading(false);
+          return;
+        }
+
+        const regResult = await registerNewUser(phone, addRoleTarget, registerName.trim() || undefined);
+        if (!regResult.success) {
+          if (!mountedRef.current) return;
+          setError(regResult.error || "Failed to create account");
+          setLoading(false);
+          return;
+        }
+
+        // Preserve existing session data — do NOT wipe localStorage
+        if (regResult.userId) {
+          localStorage.setItem("merchant_id", regResult.userId);
+        }
+        if (regResult.phone) {
+          localStorage.setItem("merchant_phone", regResult.phone);
+          if (addRoleTarget === "customer") {
+            localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: regResult.phone, name: registerName.trim() || "" }));
+            document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone: regResult.phone, name: registerName.trim() || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+          }
+        }
+        userInfoRef.current = { userId: regResult.userId!, userType: addRoleTarget, name: registerName.trim() || "" };
+        console.log("[Login] Add-role: created", addRoleTarget, "account, proceeding to PIN setup");
+        setStep("set_pin");
         setLoading(false);
         return;
       }
@@ -401,6 +504,7 @@ export default function LoginPage() {
       if (!result.exists) {
         // New user — need role selection before creating account
         console.log("[Login] New user, no existing account → role selection");
+        if (!mountedRef.current) return;
         setSelectRoleMode("register");
         setAvailableRoles(["merchant", "customer"]);
         // Store phone in userInfoRef for use after role selection
@@ -456,6 +560,7 @@ export default function LoginPage() {
       // Check if PIN already set
       const hasPin = result.hasPin;
       console.log("[Login] PIN check after OTP:", { hasPin, userType });
+      if (!mountedRef.current) return;
       if (userType === "both") {
         // Multi-role existing user — let them choose
         console.log("[Login] Multi-role after OTP → role selection");
@@ -474,7 +579,12 @@ export default function LoginPage() {
         setStep("set_pin");
         setLoading(false);
       }
-    });
+    } catch (e) {
+      if (!mountedRef.current) return;
+      console.error("[Login] OTP submit error:", e);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   // ── Role Selection (new user or multi-role existing) ──
@@ -487,6 +597,7 @@ export default function LoginPage() {
       const shopName = registerName.trim() || undefined;
       console.log("[Login] Creating new", role, "account for phone:", phone, "name:", shopName);
       const regResult = await registerNewUser(phone, role, shopName);
+      if (!mountedRef.current) return;
       console.log("[Login] registerNewUser result:", JSON.stringify(regResult));
       if (!regResult.success) {
         setError(regResult.error || "Failed to create account");
@@ -555,6 +666,7 @@ export default function LoginPage() {
 
     // Check if this role has a PIN set
     const checkResult = await checkUserExists(phone);
+    if (!mountedRef.current) return;
     const userForRole = checkResult.users.find((u) => u.userType === role || u.userType === "both");
     const hasPin = userForRole?.hasPin ?? false;
 
@@ -583,6 +695,7 @@ export default function LoginPage() {
       localStorage.removeItem("qr_hisab_last_session");
       setPhone(lastPhone);
       const result = await checkUserExists(lastPhone);
+      if (!mountedRef.current) return;
       const user = result.users.find((u) => u.userType === role || u.userType === "both");
       if (!user) {
         setError("Account not found. Please sign in again.");
@@ -619,6 +732,7 @@ export default function LoginPage() {
     try {
       console.log("[Login] Forgot PIN: sending OTP to", phone);
       const result = await forgotPinSendOtp(phone);
+      if (!mountedRef.current) return;
       console.log("[Login] Forgot PIN OTP result:", JSON.stringify(result));
       if (!result.success) {
         setError(result.error || "Failed to send OTP");
@@ -641,11 +755,12 @@ export default function LoginPage() {
     if (newPinStr !== confirmStr) { setError("PINs do not match"); return; }
     setLoading(true);
     setError("");
-    startTransition(async () => {
+    try {
       console.log("[Login] Forgot PIN: verifying OTP and resetting PIN");
       const result = await forgotPinVerifyOtp(phone, otp, newPinStr);
       console.log("[Login] Forgot PIN result:", JSON.stringify(result));
       if (!result.success) {
+        if (!mountedRef.current) return;
         setError(result.error || "Verification failed");
         setLoading(false);
         return;
@@ -665,7 +780,12 @@ export default function LoginPage() {
       }
       console.log("[Login] PIN reset, redirecting to", result.redirect);
       window.location.assign(result.redirect || "/merchant/dashboard");
-    });
+    } catch (e) {
+      if (!mountedRef.current) return;
+      console.error("[Login] Forgot PIN verify error:", e);
+      setError("Something went wrong. Please try again.");
+      setLoading(false);
+    }
   };
 
   const backToPhone = () => { setStep("phone"); setError(""); };

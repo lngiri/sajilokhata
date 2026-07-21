@@ -325,11 +325,28 @@ export async function registerNewUser(
     const admin = getAdminClient();
 
     // Duplicate phone guard — check both tables before creating
+    let existingUserId: string | null = null;
     if (admin) {
       const { merchant: existingMerchant, customer: existingCustomer } = await findUserByPhone(normalizedPhone);
-      if (existingMerchant || existingCustomer) {
+
+      if (existingMerchant && existingCustomer) {
+        // Both roles exist — cannot register again
         return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
       }
+
+      if (role === "merchant" && existingMerchant) {
+        // Already a merchant — cannot register as merchant again
+        return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
+      }
+
+      if (role === "customer" && existingCustomer) {
+        // Already a customer — cannot register as customer again
+        return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
+      }
+
+      // Phone exists in the OTHER table — adding the missing role
+      if (existingMerchant) existingUserId = existingMerchant.id;
+      if (existingCustomer) existingUserId = existingCustomer.id;
     }
 
     if (!admin) {
@@ -341,7 +358,8 @@ export async function registerNewUser(
       return { success: true, userId: localId, phone: cleanPhone, userType: role };
     }
 
-    const userId = crypto.randomUUID();
+    // Reuse existing userId when adding a second role; generate new one for fresh registrations
+    const userId = existingUserId || crypto.randomUUID();
 
     if (role === "merchant") {
       const { error: upsertError } = await (admin.from("merchants") as any).upsert(

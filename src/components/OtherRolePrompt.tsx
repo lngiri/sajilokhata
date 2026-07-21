@@ -51,8 +51,7 @@ export default function OtherRolePrompt({ currentRole }: Props) {
   const handleRegister = () => {
     sessionStorage.setItem(`other_role_prompt_dismissed_${currentRole}`, "1");
     setDismissed(true);
-    // Both roles register via /login flow (phone → OTP → select role → set PIN)
-    window.location.replace("/login");
+    window.location.replace(`/login?addRole=${otherRole}`);
   };
 
   if (!show) return null;
