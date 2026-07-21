@@ -365,20 +365,21 @@ export default function MerchantScanPage() {
                 </label>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-sm font-medium text-gray-500">+977</span>
-                  <input
-                    type="tel"
-                    placeholder="98XXXXXXXX"
-                    value={searchQuery}
-                    onChange={async (e) => {
-                      const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                      setSearchQuery(val);
-                      setCustomerLookup("idle");
-                      setSmsSent(false);
-                      if (val.length === 10) {
-                        setCustomerLookup("looking");
-                        try {
-                          const result = await checkCustomerByPhone(val);
-                          if (result.exists && result.customer) {
+                    <input
+                      type="tel"
+                      placeholder="98XXXXXXXX"
+                      value={searchQuery}
+                      disabled={entryType === "cash"}
+                      onChange={async (e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setSearchQuery(val);
+                        setCustomerLookup("idle");
+                        setSmsSent(false);
+                        if (val.length === 10 && entryType !== "cash") {
+                          setCustomerLookup("looking");
+                          try {
+                            const result = await checkCustomerByPhone(val);
+                            if (result.exists && result.customer) {
                             setCustomerId(result.customer.id);
                             setCustomerPhone(result.customer.phone);
                             setCustomerName(result.customer.name);
@@ -406,15 +407,15 @@ export default function MerchantScanPage() {
                         setCustomerBalance(null);
                       }
                     }}
-                    className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
+                    className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
                   />
-                  {customerLookup === "looking" && (
+                  {customerLookup === "looking" && entryType !== "cash" && (
                     <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
                   )}
                 </div>
 
                 {/* Lookup result */}
-                {customerLookup === "found" && (
+                {entryType !== "cash" && customerLookup === "found" && (
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg text-sm font-medium text-green-700">
                       <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -430,7 +431,7 @@ export default function MerchantScanPage() {
                   </div>
                 )}
 
-                {customerLookup === "not_found" && (
+                {entryType !== "cash" && customerLookup === "not_found" && (
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg text-sm font-medium text-amber-700">
                       <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -500,7 +501,14 @@ export default function MerchantScanPage() {
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
                     Amount Received
                   </button>
-                  <button onClick={() => setEntryType("cash")}
+                  <button onClick={() => {
+                      setEntryType("cash");
+                      setCustomerId(null);
+                      setCustomerPhone("");
+                      setCustomerName(null);
+                      setCustomerLookup("idle");
+                      setCustomerBalance(null);
+                    }}
                     className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
                     Cash Sale
                   </button>
