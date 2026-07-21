@@ -65,18 +65,40 @@ export async function checkCustomerOnboarded(
 
 export async function sendOnboardingSMS(
   phone: string,
-  _customerName?: string
-): Promise<{ success: boolean; error?: string }> {
+  _customerName?: string,
+  customerId?: string,
+  merchantId?: string
+): Promise<{ success: boolean; error?: string; otp?: string }> {
   const cleanPhone = phone.replace(/\D/g, "").slice(-10);
   if (cleanPhone.length !== 10) {
     return { success: false, error: "Invalid phone" };
   }
 
+  // Generate 6-digit OTP
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
   const domain = new URL(siteUrl).hostname;
-  const message = `Welcome to QR Hisab! You have been added. Track your ledger and transaction history at ${domain}.`;
+  const message = `Welcome to QR Hisab! Your verification code is: ${otp}. Register now at ${domain} to track your ledger and transaction history.`;
 
-  return sendTransactionSMS(cleanPhone, message);
+  // Send SMS first — only store invite after SMS succeeds
+  const result = await sendTransactionSMS(cleanPhone, message);
+
+  if (result.success && customerId && merchantId) {
+    const admin = getAdminClient();
+    if (admin) {
+      await (admin.from("customer_invites") as any).insert({
+        customer_id: customerId,
+        merchant_id: merchantId,
+        phone: cleanPhone,
+        otp,
+        expires_at: expiresAt,
+      });
+    }
+  }
+
+  return { ...result, otp };
 }
 
 export async function updateCustomerProfile(
@@ -120,12 +142,13 @@ export async function addCustomerForMerchant(
   merchantId: string,
   phone: string,
   name?: string
-): Promise<{ success: boolean; error?: string; customer?: { id: string; name: string | null; phone: string } }> {
+): Promise<{ success: boolean; error?: string; customer?: { id: string; name: string | null; phone: string }; smsSent?: boolean; smsError?: string }> {
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Admin client unavailable" };
 
   try {
     const normalized = normalizePhone(phone);
+    let isNewCustomer = false;
 
     // Find or create customer
     const { data: rawCustomer } = await admin.from("customers")
@@ -135,8 +158,9 @@ export async function addCustomerForMerchant(
     let customer = rawCustomer as Pick<CustomerRow, "id" | "name" | "phone"> | null;
 
     if (!customer) {
+      isNewCustomer = true;
       const { data: inserted, error } = await admin.from("customers")
-        .insert({ phone: normalized, name: name || null })
+        .insert({ phone: normalized, name: name || null, registration_status: "invited" })
         .select("id, name, phone")
         .single();
       if (error) {
@@ -144,9 +168,6 @@ export async function addCustomerForMerchant(
         return { success: false, error: `DB error: ${error.message}` };
       }
       customer = inserted as Pick<CustomerRow, "id" | "name" | "phone">;
-
-      // Non-blocking onboarding SMS — fire-and-forget, don't block the response
-      sendOnboardingSMS(normalized, name).catch(() => {});
     }
 
     // Link to merchant
@@ -166,7 +187,29 @@ export async function addCustomerForMerchant(
       }
     }
 
-    return { success: true, customer: { id: customer.id, name: customer.name, phone: normalized } };
+    // Send onboarding SMS (registration link with OTP) — track delivery status
+    let smsSent = false;
+    let smsError: string | undefined;
+    if (isNewCustomer) {
+      try {
+        const smsResult = await sendOnboardingSMS(normalized, name, customer.id, merchantId);
+        smsSent = smsResult.success;
+        smsError = smsResult.error;
+        if (!smsResult.success) {
+          console.warn("[Customer] Onboarding SMS failed:", smsResult.error);
+        }
+      } catch (err) {
+        smsError = err instanceof Error ? err.message : "SMS delivery failed";
+        console.error("[Customer] Onboarding SMS exception:", err);
+      }
+    }
+
+    return {
+      success: true,
+      customer: { id: customer.id, name: customer.name, phone: normalized },
+      smsSent,
+      smsError,
+    };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[Customer] addCustomerForMerchant error:", msg);

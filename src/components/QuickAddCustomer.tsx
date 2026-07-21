@@ -5,7 +5,6 @@ import { useToast } from "@/components/Toast";
 import {
   addCustomerForMerchant,
   checkCustomerByPhone,
-  checkCustomerOnboarded,
 } from "@/app/actions/customer";
 
 interface QuickAddCustomerProps {
@@ -85,15 +84,19 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
 
       const customer = result.customer!;
 
-      if (!sentRef.current) {
-        sentRef.current = true;
-        checkCustomerOnboarded(trimmedPhone).then(({ onboarded }) => {
-          if (!onboarded) {
-          }
-        });
+      if (exists) {
+        addToast(`${customer.name || trimmedName} is already a customer`, "success");
+      } else {
+        // New customer added — show SMS delivery status
+        if (result.smsSent) {
+          addToast(`${customer.name || trimmedName} added! Registration SMS sent.`, "success");
+        } else {
+          addToast(
+            `${customer.name || trimmedName} added, but SMS could not be sent. ${result.smsError || "Please check the phone number."}`,
+            result.smsError ? "warning" : "error"
+          );
+        }
       }
-
-      addToast(exists ? `${customer.name || trimmedName} is already a customer` : `${customer.name || trimmedName} added as a customer!`, "success");
       onCustomerAdded({ id: customer.id, name: customer.name || trimmedName, phone: trimmedPhone });
       onClose();
     } catch {
