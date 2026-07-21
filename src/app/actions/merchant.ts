@@ -4,6 +4,10 @@ import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { createNotification } from "@/app/actions/notifications";
+import { normalizePhone } from "@/lib/phone";
+
+const SEARCH_RESULT_LIMIT = 50;
+const SEARCH_MIN_LENGTH = 2;
 
 /**
  * Require a valid merchant session before allowing data access.
@@ -290,7 +294,7 @@ export async function getMerchantAnalytics(
 // Customers
 // ──────────────────────────────────────────────
 
-export async function getMerchantCustomers(merchantId: string) {
+export async function getMerchantCustomers(merchantId: string, search?: string) {
   const admin = getAdminClient();
   if (!admin) throw new Error("Server config");
 
@@ -299,28 +303,142 @@ export async function getMerchantCustomers(merchantId: string) {
     throw new Error("Not logged in");
   }
 
-  const { data } = await (admin.from("merchant_customers") as any)
-    .select("*, customers(id, name, phone)")
-    .eq("merchant_id", merchantId);
+  // ── No search: existing full-list behaviour ──
+  if (!search || search.length < SEARCH_MIN_LENGTH) {
+    const { data } = await (admin.from("merchant_customers") as any)
+      .select("*, customers(id, name, phone)")
+      .eq("merchant_id", merchantId);
 
-  const rows = data || [];
-  if (rows.length === 0) return [];
+    const rows = data || [];
+    if (rows.length === 0) return [];
 
-  const seen = new Set<string>();
-  const deduped = rows.filter((r: any) => {
-    if (seen.has(r.customer_id)) return false;
-    seen.add(r.customer_id);
-    return true;
-  });
+    const seen = new Set<string>();
+    const deduped = rows.filter((r: any) => {
+      if (seen.has(r.customer_id)) return false;
+      seen.add(r.customer_id);
+      return true;
+    });
 
-  const customerIds = deduped.map((r: any) => r.customer_id);
+    const customerIds = deduped.map((r: any) => r.customer_id);
 
+    const { data: approvedLogs } = await (admin.from("credit_logs") as any)
+      .select("customer_id, amount, type")
+      .eq("merchant_id", merchantId)
+      .eq("status", "approved")
+      .neq("type", "cash")
+      .in("customer_id", customerIds);
+
+    const balanceMap: Record<string, number> = {};
+    for (const log of approvedLogs || []) {
+      const sign = log.type === "debit" ? 1 : -1;
+      balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
+    }
+
+    return deduped
+      .map((r: any) => ({ ...r, current_balance: balanceMap[r.customer_id] || 0 }))
+      .sort((a: any, b: any) => b.current_balance - a.current_balance);
+  }
+
+  // ── Search mode ──
+  const isNumeric = /^\d+$/.test(search);
+  const rankMap = new Map<string, number>();
+  const matchedIds: string[] = [];
+
+  if (isNumeric) {
+    // Numeric query: search phone only
+    const normalized = normalizePhone(search);
+
+    // 1. Exact phone
+    const { data: exact } = await (admin.from("customers") as any)
+      .select("id")
+      .eq("phone", normalized);
+
+    const exactRows = (exact || []) as { id: string }[];
+    for (const r of exactRows) {
+      if (!rankMap.has(r.id)) {
+        rankMap.set(r.id, 100);
+        matchedIds.push(r.id);
+      }
+    }
+
+    // 2. Prefix phone (only if exact found nothing)
+    if (matchedIds.length === 0) {
+      const { data: prefix } = await (admin.from("customers") as any)
+        .select("id")
+        .or(`phone.ilike.${normalized}%`);
+
+      const prefixRows = (prefix || []) as { id: string }[];
+      for (const r of prefixRows) {
+        if (!rankMap.has(r.id)) {
+          rankMap.set(r.id, 90);
+          matchedIds.push(r.id);
+          if (matchedIds.length >= SEARCH_RESULT_LIMIT) break;
+        }
+      }
+    }
+  } else {
+    // Text query: search name with full phrase (no word splitting)
+
+    // 1. Prefix name
+    const { data: prefix } = await (admin.from("customers") as any)
+      .select("id")
+      .or(`name.ilike.${search}%`);
+
+    const prefixRows = (prefix || []) as { id: string }[];
+    for (const r of prefixRows) {
+      if (!rankMap.has(r.id)) {
+        rankMap.set(r.id, 80);
+        matchedIds.push(r.id);
+        if (matchedIds.length >= SEARCH_RESULT_LIMIT) break;
+      }
+    }
+
+    // 2. Substring name (only if prefix results are below limit)
+    if (matchedIds.length < SEARCH_RESULT_LIMIT) {
+      const { data: substr } = await (admin.from("customers") as any)
+        .select("id")
+        .or(`name.ilike.%${search}%`);
+
+      const substrRows = (substr || []) as { id: string }[];
+      for (const r of substrRows) {
+        if (!rankMap.has(r.id)) {
+          rankMap.set(r.id, 50);
+          matchedIds.push(r.id);
+          if (matchedIds.length >= SEARCH_RESULT_LIMIT) break;
+        }
+      }
+    }
+  }
+
+  if (matchedIds.length === 0) return [];
+
+  // Fetch merchant_customers rows for matched customer IDs
+  const { data: mcRows } = await (admin.from("merchant_customers") as any)
+    .select("*, customers!inner(id, name, phone)")
+    .eq("merchant_id", merchantId)
+    .in("customer_id", matchedIds);
+
+  const raw = (mcRows || []) as any[];
+
+  // Deduplicate (keep highest rank first)
+  const seenMc = new Set<string>();
+  const dedupedMc: { row: any; score: number }[] = [];
+  for (const r of raw) {
+    if (seenMc.has(r.customer_id)) continue;
+    seenMc.add(r.customer_id);
+    dedupedMc.push({ row: r, score: rankMap.get(r.customer_id) ?? 0 });
+  }
+
+  const searchCustomerIds = dedupedMc.map((d) => d.row.customer_id);
+  if (searchCustomerIds.length === 0) return [];
+
+  // Balance (reuse existing logic, only for matched customers)
   const { data: approvedLogs } = await (admin.from("credit_logs") as any)
     .select("customer_id, amount, type")
     .eq("merchant_id", merchantId)
     .eq("status", "approved")
     .neq("type", "cash")
-    .in("customer_id", customerIds);
+    .in("customer_id", searchCustomerIds);
 
   const balanceMap: Record<string, number> = {};
   for (const log of approvedLogs || []) {
@@ -328,9 +446,59 @@ export async function getMerchantCustomers(merchantId: string) {
     balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
   }
 
-  return deduped
-    .map((r: any) => ({ ...r, current_balance: balanceMap[r.customer_id] || 0 }))
-    .sort((a: any, b: any) => b.current_balance - a.current_balance);
+  return dedupedMc
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const aBal = balanceMap[a.row.customer_id] || 0;
+      const bBal = balanceMap[b.row.customer_id] || 0;
+      return bBal - aBal;
+    })
+    .map(({ row }) => ({
+      ...row,
+      current_balance: balanceMap[row.customer_id] || 0,
+    }));
+}
+
+export async function lookupPhoneAccountStatus(
+  merchantId: string,
+  phone: string
+): Promise<{ type: "customer" | "merchant" | "both" } | null> {
+  const admin = getAdminClient();
+  if (!admin) return null;
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return null;
+  }
+
+  const normalized = normalizePhone(phone);
+
+  // Exclude own phone
+  const { data: ownMerchant } = await (admin.from("merchants") as any)
+    .select("phone")
+    .eq("id", merchantId)
+    .maybeSingle();
+
+  if (ownMerchant?.phone === normalized) return null;
+
+  const { data: custRow } = await (admin.from("customers") as any)
+    .select("id")
+    .eq("phone", normalized)
+    .maybeSingle();
+
+  const { data: merchRow } = await (admin.from("merchants") as any)
+    .select("id")
+    .eq("phone", normalized)
+    .maybeSingle();
+
+  const isCustomer = !!custRow;
+  const isMerchant = !!merchRow && merchRow.id !== merchantId;
+
+  if (isCustomer && isMerchant) return { type: "both" };
+  if (isCustomer) return { type: "customer" };
+  if (isMerchant) return { type: "merchant" };
+
+  return null;
 }
 
 export async function getMerchantCustomerBalance(merchantId: string, customerId: string): Promise<{ balance: number; creditLimit: number }> {

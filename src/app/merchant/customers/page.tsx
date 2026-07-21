@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import BottomNav from "@/components/BottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
-import { getMerchantCustomers } from "@/app/actions/merchant";
+import { getMerchantCustomers, lookupPhoneAccountStatus } from "@/app/actions/merchant";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useToast } from "@/components/Toast";
 
@@ -24,9 +24,11 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [phoneAccountStatus, setPhoneAccountStatus] = useState<{ type: "customer" | "merchant" | "both" } | null>(null);
+  const lastSearchedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 200);
+    const timer = setTimeout(() => setDebouncedQuery(searchQuery), 250);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
@@ -34,8 +36,18 @@ export default function CustomersPage() {
     loadCustomers();
   }, []);
 
+  useEffect(() => {
+    if (debouncedQuery.length >= 2) {
+      searchCustomers(debouncedQuery);
+    } else {
+      loadCustomers();
+    }
+  }, [debouncedQuery]);
+
   const loadCustomers = async () => {
     try {
+      setLoading(true);
+      setPhoneAccountStatus(null);
       const id = await getCurrentMerchantId();
       if (id) {
         const data = await getMerchantCustomers(id);
@@ -48,14 +60,36 @@ export default function CustomersPage() {
     }
   };
 
-  const filtered = customers.filter((c) => {
-    if (!debouncedQuery) return true;
-    const q = debouncedQuery.toLowerCase();
-    return (
-      c.customers?.name?.toLowerCase().includes(q) ||
-      c.customers?.phone.includes(q)
-    );
-  });
+  const searchCustomers = async (query: string) => {
+    try {
+      setLoading(true);
+      setPhoneAccountStatus(null);
+      const id = await getCurrentMerchantId();
+      if (id) {
+        const data = await getMerchantCustomers(id, query);
+        setCustomers(data as CustomerRow[]);
+
+        // Secondary lookup: only when zero linked results + numeric phone >= 6 digits
+        if (data.length === 0 && /^\d{6,}$/.test(query)) {
+          // Cache hit: skip if same query was already searched
+          if (query === lastSearchedRef.current) return;
+
+          lastSearchedRef.current = query;
+          const status = await lookupPhoneAccountStatus(id, query);
+          // Stale response guard: ignore if search changed while lookup was running
+          if (lastSearchedRef.current === query) {
+            setPhoneAccountStatus(status);
+          }
+        } else {
+          lastSearchedRef.current = null;
+        }
+      }
+    } catch {
+      addToast("Search failed.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="pb-20">
@@ -100,26 +134,48 @@ export default function CustomersPage() {
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-12 text-[var(--color-text-muted)]">
-            <svg className="w-16 h-16 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-            </svg>
-            <p className="font-medium">No customers found</p>
-            <p className="text-sm mt-1">Customers will appear here after they scan your QR</p>
-            <a
-              href="/merchant/qr"
-              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+        ) : customers.length === 0 ? (
+          debouncedQuery.length >= 2 ? (
+            <div className="py-12 text-[var(--color-text-muted)]">
+              <div className="text-center">
+                <p className="font-medium">No customers match &ldquo;{debouncedQuery}&rdquo;</p>
+                <p className="text-sm mt-1">Try a different search term</p>
+              </div>
+              {phoneAccountStatus && (
+                <div className="mt-4 mx-1 px-4 py-3 bg-blue-50 rounded-xl text-sm text-blue-700 flex items-center gap-2">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                  </svg>
+                  <span>
+                    This phone has a QR Hisab account (
+                    {phoneAccountStatus.type === "merchant" ? "Merchant" :
+                     phoneAccountStatus.type === "both" ? "Merchant & Customer" :
+                     "Customer"}).
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-[var(--color-text-muted)]">
+              <svg className="w-16 h-16 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
               </svg>
-              Show My QR
-            </a>
-          </div>
+              <p className="font-medium">No customers found</p>
+              <p className="text-sm mt-1">Customers will appear here after they scan your QR</p>
+              <a
+                href="/merchant/qr"
+                className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                </svg>
+                Show My QR
+              </a>
+            </div>
+          )
         ) : (
           <div className="space-y-2">
-            {filtered.map((mc) => (
+            {customers.map((mc) => (
               <a
                 key={mc.id}
                 href={mc.customers?.id ? `/merchant/customers/${mc.customers.id}` : "#"}
