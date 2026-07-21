@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCustomerDetail, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile } from "@/app/actions/merchant";
+import { getMerchantCustomerDetail, updateCustomerCreditLimit, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile } from "@/app/actions/merchant";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import TransactionIcon from "@/components/TransactionIcon";
 import SmsReminderModal from "@/components/SmsReminderModal";
@@ -65,8 +65,6 @@ export default function CustomerDetailPage() {
   const [showCreditLimitModal, setShowCreditLimitModal] = useState(false);
   const [newLimit, setNewLimit] = useState("");
   const [savingLimit, setSavingLimit] = useState(false);
-  const [showResetPinModal, setShowResetPinModal] = useState(false);
-  const [resettingPin, setResettingPin] = useState(false);
   const [showFlagModal, setShowFlagModal] = useState(false);
   const [flagStatus, setFlagStatus] = useState<"warning" | "defaulter">("warning");
   const [flagNotes, setFlagNotes] = useState("");
@@ -90,15 +88,6 @@ export default function CustomerDetailPage() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [showCreditLimitModal]);
-
-  useEffect(() => {
-    if (!showResetPinModal) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowResetPinModal(false);
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [showResetPinModal]);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,25 +126,6 @@ export default function CustomerDetailPage() {
     loadCustomer();
     return () => { cancelled = true; };
   }, [customerId]);
-
-  const handleResetPin = async () => {
-    setResettingPin(true);
-    try {
-      const merchantId = await getCurrentMerchantId();
-      if (!merchantId) return;
-      const result = await resetCustomerPin(merchantId, customerId);
-      if (result.success) {
-        addToast("Customer PIN has been reset. They will be prompted to set a new PIN on next login.", "success");
-        setShowResetPinModal(false);
-      } else {
-        addToast(result.error || "Failed to reset PIN", "error");
-      }
-    } catch {
-      addToast("Failed to reset PIN", "error");
-    } finally {
-      setResettingPin(false);
-    }
-  };
 
   const handleSaveLimit = async () => {
     if (!newLimit || Number(newLimit) < 0) {
@@ -264,12 +234,6 @@ export default function CustomerDetailPage() {
                   Clear Flag
                 </button>
               )}
-              <button
-                onClick={() => setShowResetPinModal(true)}
-                className="px-3 py-1.5 bg-red-50 text-red-600 rounded-lg text-xs font-medium active:scale-[0.98]"
-              >
-                Reset PIN
-              </button>
               {customer.current_balance > 0 && (
                 <button
                   onClick={() => setShowReminderModal(true)}
@@ -634,44 +598,7 @@ export default function CustomerDetailPage() {
         </div>
       )}
 
-      {/* Reset PIN Confirmation Modal */}
-      {showResetPinModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-[var(--color-danger)]">Reset Customer PIN</h3>
-              <button onClick={() => setShowResetPinModal(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <p className="text-sm text-[var(--color-text-muted)] mb-6">
-              This will clear the customer&apos;s current PIN. They will be prompted to set a new PIN
-              the next time they access their dashboard. This action is logged for security.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowResetPinModal(false)}
-                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleResetPin}
-                disabled={resettingPin}
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {resettingPin ? (
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  "Reset PIN"
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
