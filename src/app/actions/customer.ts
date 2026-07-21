@@ -464,21 +464,23 @@ export async function getCustomerStats(
 
   const customerIds = [customer.id];
 
-  const { data: relationships, error: relError } = (await admin
-    .from("merchant_customers")
-    .select("credit_limit, merchants(id, name, business_name)")
-    .in("customer_id", customerIds)) as any;
+  // Both queries depend only on customer.id — run in parallel
+  const [{ data: relationships, error: relError }, { data: balanceLogs }] = await Promise.all([
+    admin
+      .from("merchant_customers")
+      .select("credit_limit, merchants(id, name, business_name)")
+      .in("customer_id", customerIds) as any,
+    admin
+      .from("credit_logs")
+      .select("merchant_id, amount, type, status, description")
+      .in("customer_id", customerIds)
+      .neq("type", "cash")
+      .not("status", "in", '("rejected","disputed")') as unknown as Promise<{
+      data: any[] | null;
+    }>,
+  ]);
 
   if (relError) throw relError;
-
-  const { data: balanceLogs } = await admin
-    .from("credit_logs")
-    .select("merchant_id, amount, type, status, description")
-    .in("customer_id", customerIds)
-    .neq("type", "cash")
-    .not("status", "in", '("rejected","disputed")') as unknown as {
-    data: any[] | null;
-  };
 
   const balanceByMerchant: Record<string, number> = {};
   for (const log of balanceLogs || []) {

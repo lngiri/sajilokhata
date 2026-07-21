@@ -687,7 +687,13 @@ export default function CustomerDashboard() {
       )}
 
       {/* ===== ALWAYS-VISIBLE DASHBOARD CONTENT ===== */}
-      <PullToRefresh onRefresh={loadStats}>
+      <PullToRefresh onRefresh={async () => {
+        if (!customerPhone || !mountedRef.current) return;
+        try {
+          const data = await getCustomerStats(customerPhone);
+          if (mountedRef.current) setStats(data);
+        } catch {}
+      }}>
       <div className="px-4 py-4 space-y-4">
         {/* Customer identity badge */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">

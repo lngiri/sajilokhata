@@ -10,10 +10,7 @@ import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
 import {
-  getMerchantStats,
-  getMerchantCreditLogs,
-  getMerchantProfile,
-  getMerchantCustomers,
+  getMerchantDashboardData,
   sendPaymentReminder,
   checkAndSendAutoReminders,
   updateCreditLogStatus,
@@ -148,85 +145,13 @@ export default function MerchantDashboard() {
 
   const supabase = useRef(createClient()).current;
 
-  // ─── Progressive loading: each track runs independently ───
-  const loadProfile = useCallback(async (id: string) => {
-    try {
-      const profileData = await getMerchantProfile(id, "id, name, business_type, business_name, phone, address, photo_url").catch(() => null);
-      if (!mountedRef.current) return;
-      setMerchantProfile(profileData);
-      if (profileData) {
-        const nameOk = !!profileData.name?.trim();
-        const addrOk = !!profileData.address?.trim();
-        const typeOk = !!profileData.business_type?.trim();
-        const isComplete = nameOk && addrOk && typeOk;
-        let dismissed = false;
-        try { dismissed = localStorage.getItem(`merchant_onboarded_${id}`) === "1"; } catch { /* ignore */ }
-        if (!isComplete && !dismissed && !onboardedRef.current) {
-          setShowOnboarding(true);
-        }
-      }
-    } catch { /* silent */ } finally {
-      if (mountedRef.current) setProfileLoading(false);
-    }
-  }, []);
-
-  const loadStats = useCallback(async (id: string) => {
-    try {
-      const statsData = await getMerchantStats(id);
-      if (!mountedRef.current) return;
-      setStats(statsData);
-      setLoadError(false);
-    } catch {
-      if (mountedRef.current) setLoadError(true);
-    } finally {
-      if (mountedRef.current) setStatsLoading(false);
-    }
-  }, []);
-
-  const loadLogs = useCallback(async (id: string) => {
-    try {
-      const [pendingData, editRequestedData, activityData] = await Promise.all([
-        getMerchantCreditLogs(id, { status: "pending", limit: 10, columns: "id, amount, type, status, description, created_at, attachment_url, customer_id, customers(name, phone)" }),
-        getMerchantCreditLogs(id, { status: "edit_requested", limit: 10, columns: "id, amount, type, status, description, proposed_amount, created_at, customer_id, customers(name, phone)" }),
-        getMerchantCreditLogs(id, { limit: 15, columns: "id, amount, type, status, description, created_at, customer_id, customers(name, phone)" }),
-      ]);
-      if (!mountedRef.current) return;
-      setPendingLogs([...pendingData, ...editRequestedData] as typeof pendingLogs);
-      setRecentActivity(activityData as typeof recentActivity);
-      setLastRefreshed(new Date());
-    } catch { /* silent */ } finally {
-      if (mountedRef.current) setLogsLoading(false);
-    }
-  }, []);
-
-  const loadCustomers = useCallback(async (id: string) => {
-    try {
-      const customersData = await getMerchantCustomers(id).catch(() => []);
-      if (!mountedRef.current) return;
-      setTopReceivables(
-        ((customersData as any[]) || [])
-          .filter(c => (c.current_balance || 0) > 0)
-          .sort((a, b) => (b.current_balance || 0) - (a.current_balance || 0))
-          .slice(0, 5)
-          .map(c => ({
-            customer_id: c.customer_id,
-            customer_name: c.customers?.name || null,
-            customer_phone: c.customers?.phone || "",
-            current_balance: c.current_balance || 0,
-          }))
-      );
-    } catch { /* silent */ } finally {
-      if (mountedRef.current) setCustomersLoading(false);
-    }
-  }, []);
-
   // Fire-and-forget non-critical loads
   const loadBackground = useCallback((id: string) => {
     getMerchantSmsBalance(id).then(setSmsBalance).catch(() => {});
     checkAndSendAutoReminders(id).catch(() => {});
   }, []);
 
-  /** Load all data with progressive rendering — profile first, then stats, then logs/customers */
+  /** Load all dashboard data in a single server round-trip */
   const loadData = useCallback(async () => {
     const id = merchantIdRef.current || (await getCurrentMerchantId());
     if (!mountedRef.current) return;
@@ -238,13 +163,42 @@ export default function MerchantDashboard() {
 
     if (!id) return;
 
-    // Track 1+2: Profile and stats load in parallel (fast queries)
-    await Promise.all([loadProfile(id), loadStats(id)]);
-    // Track 3+4: Logs and customers load in parallel (heavier queries)
-    await Promise.all([loadLogs(id), loadCustomers(id)]);
-    // Track 5: Fire-and-forget non-critical data
+    try {
+      const data = await getMerchantDashboardData(id);
+      if (!mountedRef.current) return;
+
+      setMerchantProfile(data.profile);
+      setStats(data.stats);
+      setPendingLogs(data.pendingLogs as typeof pendingLogs);
+      setRecentActivity(data.recentActivity as typeof recentActivity);
+      setTopReceivables(data.topReceivables);
+      setLastRefreshed(new Date());
+      setLoadError(false);
+
+      if (data.profile) {
+        const nameOk = !!data.profile.name?.trim();
+        const addrOk = !!data.profile.address?.trim();
+        const typeOk = !!data.profile.business_type?.trim();
+        const isComplete = nameOk && addrOk && typeOk;
+        let dismissed = false;
+        try { dismissed = localStorage.getItem(`merchant_onboarded_${id}`) === "1"; } catch { /* ignore */ }
+        if (!isComplete && !dismissed && !onboardedRef.current) {
+          setShowOnboarding(true);
+        }
+      }
+    } catch {
+      if (mountedRef.current) setLoadError(true);
+    } finally {
+      if (mountedRef.current) {
+        setProfileLoading(false);
+        setStatsLoading(false);
+        setLogsLoading(false);
+        setCustomersLoading(false);
+      }
+    }
+
     loadBackground(id);
-  }, [loadProfile, loadStats, loadLogs, loadCustomers, loadBackground]);
+  }, [loadBackground]);
 
   // Initial load + polling
   useEffect(() => {

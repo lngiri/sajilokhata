@@ -1192,3 +1192,133 @@ export async function submitPaymentVoucher(
     return { success: false, error: msg };
   }
 }
+
+// ──────────────────────────────────────────────
+// Consolidated Dashboard Data (single round-trip)
+// ──────────────────────────────────────────────
+
+export async function getMerchantDashboardData(merchantId: string) {
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  // Single auth check for entire dashboard load
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    throw new Error("Not logged in");
+  }
+
+  const [
+    profileResult,
+    customersResult,
+    pendingEditResult,
+    approvedResult,
+    recentResult,
+  ] = await Promise.all([
+    (admin.from("merchants") as any)
+      .select("id, name, business_type, business_name, phone, address, photo_url")
+      .eq("id", merchantId)
+      .single(),
+    (admin.from("merchant_customers") as any)
+      .select("*, customers(id, name, phone)")
+      .eq("merchant_id", merchantId),
+    (admin.from("credit_logs") as any)
+      .select("id, amount, type, status, description, created_at, attachment_url, proposed_amount, customer_id, customers(name, phone)")
+      .eq("merchant_id", merchantId)
+      .in("status", ["pending", "edit_requested"])
+      .order("created_at", { ascending: false })
+      .limit(10),
+    (admin.from("credit_logs") as any)
+      .select("amount, type, created_at, customer_id")
+      .eq("merchant_id", merchantId)
+      .eq("status", "approved"),
+    (admin.from("credit_logs") as any)
+      .select("id, amount, type, status, description, created_at, customer_id, customers(name, phone)")
+      .eq("merchant_id", merchantId)
+      .order("created_at", { ascending: false })
+      .limit(15),
+  ]);
+
+  const profile = profileResult?.data || null;
+  const allApproved = approvedResult?.data || [];
+  const pendingLogs = (pendingEditResult?.data || []) as any[];
+  const recentActivity = (recentResult?.data || []) as any[];
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const balanceLogs = allApproved.filter((l: any) => l.type !== "cash");
+  const cashLogs = allApproved.filter((l: any) => l.type === "cash");
+  const paymentLogs = allApproved.filter((l: any) => l.type === "credit");
+
+  const totalOutstanding = balanceLogs.reduce((sum: number, l: any) => {
+    return sum + (l.type === "debit" ? l.amount : -l.amount);
+  }, 0);
+
+  const todayTotal = balanceLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return sum + (l.type === "debit" ? l.amount : -l.amount);
+  }, 0);
+
+  const totalCashSales = cashLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return sum + l.amount;
+  }, 0);
+
+  const todayDebits = balanceLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return l.type === "debit" ? sum + l.amount : sum;
+  }, 0);
+
+  const totalSales = todayDebits + totalCashSales;
+
+  const todayPayments = paymentLogs.reduce((sum: number, l: any) => {
+    if (!l.created_at?.startsWith(today)) return sum;
+    return sum + l.amount;
+  }, 0);
+  const cashInHand = totalCashSales + todayPayments;
+
+  const customerRows = (customersResult?.data || []) as any[];
+  const seen = new Set<string>();
+  const deduped = customerRows.filter((r: any) => {
+    if (seen.has(r.customer_id)) return false;
+    seen.add(r.customer_id);
+    return true;
+  });
+
+  const totalCreditLimit = deduped.reduce((sum: number, c: any) => sum + (c.credit_limit || 0), 0);
+
+  const balanceMap: Record<string, number> = {};
+  for (const log of allApproved) {
+    if (log.type === "cash") continue;
+    const sign = log.type === "debit" ? 1 : -1;
+    const cid = log.customer_id;
+    if (cid) balanceMap[cid] = (balanceMap[cid] || 0) + sign * log.amount;
+  }
+
+  const topReceivables = deduped
+    .map((r: any) => ({
+      customer_id: r.customer_id,
+      customer_name: r.customers?.name || null,
+      customer_phone: r.customers?.phone || "",
+      current_balance: balanceMap[r.customer_id] || 0,
+    }))
+    .filter((c: any) => c.current_balance > 0)
+    .sort((a: any, b: any) => b.current_balance - a.current_balance)
+    .slice(0, 5);
+
+  return {
+    profile,
+    stats: {
+      totalOutstanding,
+      totalCreditLimit,
+      customerCount: deduped.length,
+      pendingCount: pendingLogs.filter((l: any) => l.status === "pending").length,
+      todayTotal,
+      totalCashSales,
+      totalSales,
+      cashInHand,
+    },
+    pendingLogs,
+    recentActivity,
+    topReceivables,
+  };
+}
