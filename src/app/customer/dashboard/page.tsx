@@ -45,6 +45,7 @@ export default function CustomerDashboard() {
     totalOutstanding: number;
     shopsCount: number;
     totalCreditLimit: number;
+    pendingCount: number;
     relationships: Array<{
       current_balance: number;
       credit_limit: number;
@@ -738,6 +739,26 @@ export default function CustomerDashboard() {
             Edit
           </button>
         </div>
+
+        {/* Pending Transaction Notification Banner */}
+        {!statsLoading && stats && stats.pendingCount > 0 && (
+          <a
+            href="/customer/history"
+            className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl active:bg-amber-100 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <span className="flex-1 text-sm font-medium text-amber-800">
+              {stats.pendingCount} pending transaction{stats.pendingCount > 1 ? "s" : ""} awaiting approval
+            </span>
+            <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </a>
+        )}
 
         {/* Outstanding Balance Card */}
         {statsLoading ? (

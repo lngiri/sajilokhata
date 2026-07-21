@@ -454,6 +454,7 @@ export async function getCustomerStats(
   totalOutstanding: number;
   shopsCount: number;
   totalCreditLimit: number;
+  pendingCount: number;
   relationships: any[];
 } | null> {
   const customer = await getAuthenticatedCustomer();
@@ -464,8 +465,8 @@ export async function getCustomerStats(
 
   const customerIds = [customer.id];
 
-  // Both queries depend only on customer.id — run in parallel
-  const [{ data: relationships, error: relError }, { data: balanceLogs }] = await Promise.all([
+  // All three queries depend only on customer.id — run in parallel
+  const [{ data: relationships, error: relError }, { data: balanceLogs }, { data: pendingLogs }] = await Promise.all([
     admin
       .from("merchant_customers")
       .select("credit_limit, merchants(id, name, business_name)")
@@ -476,6 +477,13 @@ export async function getCustomerStats(
       .in("customer_id", customerIds)
       .neq("type", "cash")
       .not("status", "in", '("rejected","disputed")') as unknown as Promise<{
+      data: any[] | null;
+    }>,
+    admin
+      .from("credit_logs")
+      .select("id")
+      .in("customer_id", customerIds)
+      .eq("status", "pending") as unknown as Promise<{
       data: any[] | null;
     }>,
   ]);
@@ -504,6 +512,7 @@ export async function getCustomerStats(
       (sum: number, r: any) => sum + (r.credit_limit || 0),
       0
     ) || 0;
+  const pendingCount = pendingLogs?.length || 0;
 
   const relationshipsWithBalance = (relationships || []).map((r: any) => ({
     ...r,
@@ -514,6 +523,7 @@ export async function getCustomerStats(
     totalOutstanding,
     shopsCount: relationships?.length || 0,
     totalCreditLimit,
+    pendingCount,
     relationships: relationshipsWithBalance,
   };
 }

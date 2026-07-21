@@ -913,7 +913,7 @@ export default function SettingsPage() {
                               account_holder: m?.account_holder || null,
                               account_number: m?.account_number || null,
                               bank_name: m?.bank_name || null,
-                              is_active: m?.is_active ?? false,
+                              is_active: m?.is_active ?? true,
                               sort_order: m?.sort_order ?? 0,
                             });
                             if (!result.success) {
