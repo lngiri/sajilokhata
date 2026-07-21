@@ -7,19 +7,49 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+/**
+ * Detect if PWA is already installed using multiple browser signals.
+ * Sync signals first (fast), then async signals (thorough).
+ *
+ * Signal priority:
+ *  1. display-mode: standalone  — launched from home screen (Android/iOS/Edge)
+ *  2. display-mode: fullscreen   — iOS Safari Add to Home Screen
+ *  3. getInstalledRelatedApps()  — Chrome/Edge Android (async, works even in browser tab)
+ *  4. appinstalled event          — fires immediately after a successful install
+ *  5. localStorage fallback       — persists across sessions if user clears SW/cookies
+ */
+function detectInstalledSync(): boolean {
+  if (window.matchMedia("(display-mode: standalone)").matches) return true;
+  if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
+  return false;
+}
+
+async function detectInstalledAsync(): Promise<boolean> {
+  // getInstalledRelatedApps: Chrome/Edge on Android — detects PWA even when opened via browser URL
+  try {
+    const nav = navigator as Navigator & { getInstalledRelatedApps?: () => Promise<Array<unknown>> };
+    if (nav.getInstalledRelatedApps) {
+      const apps = await nav.getInstalledRelatedApps();
+      if (apps.length > 0) return true;
+    }
+  } catch {
+    // API not available or rejected
+  }
+  return false;
+}
+
 export default function PWAInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
 
   useEffect(() => {
-    // Check if user previously dismissed the banner
+    // ── Fast exit: persistent dismiss flag ──
     try {
-      const dismissed = localStorage.getItem("pwa-install-dismissed");
-      if (dismissed) {
+      if (localStorage.getItem("pwa-install-dismissed")) {
         setIsDismissed(true);
         return;
       }
@@ -27,32 +57,78 @@ export default function PWAInstallBanner() {
       // localStorage unavailable (private browsing)
     }
 
-    // Check if already installed
-    const standalone = window.matchMedia("(display-mode: standalone)").matches;
-    setIsStandalone(standalone);
-    if (standalone) return;
+    // ── Fast exit: persistent install flag (fallback if browser signals missed) ──
+    try {
+      if (localStorage.getItem("pwa-installed")) {
+        setIsInstalled(true);
+        return;
+      }
+    } catch {
+      // localStorage unavailable
+    }
 
-    // Detect iOS Safari
+    // ── Sync detection: display-mode media queries ──
+    if (detectInstalledSync()) {
+      setIsInstalled(true);
+      return;
+    }
+
+    // ── Session-level dismiss (dismiss-without-installing in same tab) ──
+    try {
+      if (sessionStorage.getItem("pwa-install-dismissed-session")) {
+        setIsDismissed(true);
+        return;
+      }
+    } catch {
+      // sessionStorage unavailable
+    }
+
+    // ── Detect iOS Safari ──
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as typeof window & { MSStream?: unknown }).MSStream;
     setIsIOS(ios);
 
-    // For Android/Chrome: capture beforeinstallprompt
-    // e.preventDefault() suppresses Chrome's native mini-infobar so we only show our custom banner
+    // ── Async detection: getInstalledRelatedApps (Chrome/Edge Android) ──
+    detectInstalledAsync().then((installed) => {
+      if (installed) {
+        setIsInstalled(true);
+        try {
+          localStorage.setItem("pwa-installed", "true");
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    // ── Listen for appinstalled (fires after successful install) ──
+    const handleInstalled = () => {
+      setIsInstalled(true);
+      setShowBanner(false);
+      try {
+        localStorage.setItem("pwa-installed", "true");
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener("appinstalled", handleInstalled);
+
+    // ── Capture beforeinstallprompt (Android/Chrome/Edge) ──
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
       setTimeout(() => setShowBanner(true), 2000);
     };
-
     window.addEventListener("beforeinstallprompt", handler);
 
-    // For iOS: show banner after delay (no beforeinstallprompt support)
+    // ── iOS: show banner after delay (no beforeinstallprompt support) ──
+    let iosTimer: ReturnType<typeof setTimeout> | undefined;
     if (ios) {
-      setTimeout(() => setShowBanner(true), 3000);
+      iosTimer = setTimeout(() => setShowBanner(true), 3000);
     }
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", handleInstalled);
+      if (iosTimer) clearTimeout(iosTimer);
     };
   }, []);
 
@@ -65,6 +141,12 @@ export default function PWAInstallBanner() {
 
     if (outcome === "accepted") {
       setShowBanner(false);
+      // Mark as installed so banner never reappears even if appinstalled event is delayed
+      try {
+        localStorage.setItem("pwa-installed", "true");
+      } catch {
+        // ignore
+      }
     }
     setIsInstalling(false);
     setDeferredPrompt(null);
@@ -75,13 +157,14 @@ export default function PWAInstallBanner() {
     setIsDismissed(true);
     try {
       localStorage.setItem("pwa-install-dismissed", "true");
+      sessionStorage.setItem("pwa-install-dismissed-session", "true");
     } catch {
       // localStorage unavailable
     }
   };
 
   // Don't render if dismissed, already installed, or not ready
-  if (isDismissed || isStandalone || !showBanner) {
+  if (isDismissed || isInstalled || !showBanner) {
     return null;
   }
 
