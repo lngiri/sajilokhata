@@ -7,6 +7,7 @@ import type { Database } from "@/lib/types/database";
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 type CreditLogRow = Database["public"]["Tables"]["credit_logs"]["Row"];
 type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Insert"];
+type CreditLogItemInsert = Database["public"]["Tables"]["credit_log_items"]["Insert"];
 type MerchantCustomerRow = Database["public"]["Tables"]["merchant_customers"]["Row"];
 
 // ──────────────────────────────────────────────
@@ -84,6 +85,14 @@ export async function saveEntry(params: {
   unit?: "liter" | "jar" | "kg" | "piece" | "npr" | null;
   attachment_url?: string | null;
   idempotency_key?: string;
+  items?: Array<{
+    product_id?: string | null;
+    product_name: string;
+    quantity: number;
+    unit: string;
+    unit_price: number;
+    description?: string;
+  }>;
 }): Promise<{
   success: boolean;
   error?: string;
@@ -198,6 +207,27 @@ export async function saveEntry(params: {
     }
 
     console.log("[Entry] Entry saved successfully:", data?.id, "status:", data?.status);
+
+    // ── Step 4: Insert credit_log_items (if provided) ──
+    if (params.items && params.items.length > 0) {
+      const itemRows: CreditLogItemInsert[] = params.items.map((item, index) => ({
+        credit_log_id: data.id,
+        product_id: item.product_id || null,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit: item.unit,
+        unit_price: item.unit_price,
+        description: item.description || null,
+        sort_order: index,
+      }));
+
+      const { error: itemError } = await admin.from("credit_log_items").insert(itemRows);
+
+      if (itemError) {
+        console.error("[Entry] Items insert error (entry still saved):", JSON.stringify(itemError));
+        // Entry is already saved — log error but don't fail the whole operation
+      }
+    }
 
     return {
       success: true,

@@ -21,6 +21,7 @@ import { savePendingLog, savePendingAttachment } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl, normalizePhone } from "@/lib/phone";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
+import { getMerchantProducts } from "@/app/actions/products";
 
 
 type Step = "scan" | "enter" | "confirm" | "success";
@@ -67,6 +68,8 @@ export default function MerchantScanPage() {
   const profileCheckedRef = useRef(false);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
+  const [products, setProducts] = useState<Array<{ id: string; name: string; unit: string; default_rate: number; category: string | null }>>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   // Load merchant ID and customer list on mount
   useEffect(() => {
@@ -102,6 +105,7 @@ export default function MerchantScanPage() {
   useEffect(() => {
     if (isManual && merchantId) {
       getMerchantRecentDescriptions(merchantId).then(setRecentDescriptions).catch(() => {});
+      getMerchantProducts(merchantId).then(setProducts).catch(() => {});
     }
   }, [isManual, merchantId]);
 
@@ -204,6 +208,13 @@ export default function MerchantScanPage() {
             unit: (unit || null) as any,
             attachment_url: attachmentUrl,
             idempotency_key: crypto.randomUUID(),
+            items: selectedProductId && quantity && unit ? [{
+              product_id: selectedProductId,
+              product_name: description || "Item",
+              quantity: Number(quantity),
+              unit: unit,
+              unit_price: Number(amount) / Number(quantity || 1),
+            }] : undefined,
           });
 
           if (!result.success) {
@@ -250,6 +261,13 @@ export default function MerchantScanPage() {
             unit: (unit || null) as any,
             attachment_url: attachmentUrl ?? null,
             status: entryType === "cash" ? "approved" : "unverified",
+            items: selectedProductId && quantity && unit ? [{
+              productId: selectedProductId,
+              productName: description || "Item",
+              quantity: Number(quantity),
+              unit: unit,
+              unitPrice: Number(amount) / Number(quantity || 1),
+            }] : undefined,
           });
         }
       } else {
@@ -263,6 +281,13 @@ export default function MerchantScanPage() {
           description: description || null,
           type: entryType,
           idempotency_key: crypto.randomUUID(),
+          items: selectedProductId && quantity && unit ? [{
+            product_id: selectedProductId,
+            product_name: description || "Item",
+            quantity: Number(quantity),
+            unit: unit,
+            unit_price: Number(amount) / Number(quantity || 1),
+          }] : undefined,
         });
 
         if (!result.success) {
@@ -303,6 +328,7 @@ export default function MerchantScanPage() {
     setSmsSent(false);
     setQuantity("");
     setUnit("");
+    setSelectedProductId(null);
   };
 
   // ─── Hydration guard: return matching skeleton until mounted ────
@@ -513,6 +539,49 @@ export default function MerchantScanPage() {
                       addToast("Failed to parse bill", "error");
                     }
                   }} />
+
+                {/* Product Picker — only when merchant has products */}
+                {products.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-[var(--color-text)]">Product</label>
+                    <div className="mt-1 flex gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedProductId(null);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          selectedProductId === null
+                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                            : "bg-white text-gray-600 border-gray-200"
+                        }`}
+                      >
+                        Custom
+                      </button>
+                      {products.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedProductId(p.id);
+                            setDescription(p.name);
+                            setAmount(String(p.default_rate));
+                            setQuantity("1");
+                            setUnit(p.unit);
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                            selectedProductId === p.id
+                              ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                              : "bg-white text-gray-600 border-gray-200"
+                          }`}
+                        >
+                          {p.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 <div>
                   <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
                     className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
@@ -810,6 +879,45 @@ export default function MerchantScanPage() {
             </div>
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+              {/* Product Picker — QR scan mode */}
+              {products.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-[var(--color-text)]">Product</label>
+                  <div className="mt-1 flex gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProductId(null)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        selectedProductId === null
+                          ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                          : "bg-white text-gray-600 border-gray-200"
+                      }`}
+                    >
+                      Custom
+                    </button>
+                    {products.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedProductId(p.id);
+                          setDescription(p.name);
+                          setAmount(String(p.default_rate));
+                          setQuantity("1");
+                          setUnit(p.unit);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                          selectedProductId === p.id
+                            ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
+                            : "bg-white text-gray-600 border-gray-200"
+                        }`}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
                 <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus

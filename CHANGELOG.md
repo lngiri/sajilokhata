@@ -7,6 +7,11 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 ## [Unreleased]
 
 ### Added
+- **Add-role flow**: OtherRolePrompt component now navigates to `/login?addRole=<role>` to register a second role (e.g., merchant → customer or vice versa). Login page detects the `?addRole=` parameter, pre-fills the phone, and routes through OTP → registerNewUser → set PIN.
+- **Shared userId architecture**: `registerNewUser()` reuses the existing UUID when adding a second role to a phone that already exists in the other table. Enables dual-role users to share a single session across merchant and customer views.
+- **Post sign-out quick re-login**: On sign-out, `{ phone, isDualRole }` is saved to `localStorage("qr_hisab_last_session")`. On next login, dual-role users see a "Continue as Merchant / Continue as Customer" step; single-role users get their phone pre-filled.
+- **Login page post-signout role step**: New `"post_signout_role"` step in the login state machine for quick role-based re-authentication after sign-out.
+- **`qr_hisab_last_session` localStorage key**: Stores session info for quick re-login across sign-out cycles.
 - **Migration 025** (`025_add_merchant_photo_url.sql`): Adds `photo_url TEXT` column to merchants table for profile photo support.
 - **Photo upload endpoint** (`POST /api/merchant/upload-photo`): Stores profile photos in Supabase Storage `app_assets` bucket.
 - **Photo upload UI**: Camera/gallery file picker + preview in merchant settings page.
@@ -18,35 +23,32 @@ All notable changes to SajiloKhata (QR Hisab) are recorded here.
 - **SyncStatus compact view**: Now shows only a colored dot (green/amber/red/blue) without text labels. Tap to expand for full sync details.
 - **Manual entry cash default**: When entering manual mode from "Record Cash Sales", the Cash Sale tab is now pre-selected.
 - **ActionHub menu positioning**: Menu opens above or below the FAB depending on vertical position to stay within viewport.
-
-### Fixed
-- **Login localStorage**: `merchant_id` and `merchant_phone` now saved before redirect in all PIN flows (`handlePinSubmit`, `handleSetPin`, `handleSkipPin`, `handleForgotOtpSubmit`), fixing "+" button, QR scan, and phone-in-settings issues.
-- **"Not logged in" on save**: Root cause was `getCurrentMerchantId()` returning null because `merchant_id` wasn't set in localStorage on PIN login.
-- **Role selection UI**: New `select_role` step in login flow between OTP and PIN. New users choose Merchant or Customer; existing multi-role users choose which role to log in as.
-- **`registerNewUser(phone, role)` action**: Creates merchant or customer row, sets session cookie, records session. Replaces auto-creation that was inside `verifyRegistrationOtp`.
-- **`scripts/audit-ghost-users.ts`**: Read-only audit to find incomplete registrations (`pin_hash IS NULL`). Run with `--delete` to clean up.
-- **`scripts/wipe-all-users.ts`**: Wipes all user data (merchants, customers, sessions, logs) for a fresh start.
-
-### Changed
 - **`verifyRegistrationOtp`**: No longer creates user rows or sets session cookies. Only verifies OTP and returns existence info (`{ exists, hasPin, userId, userType }`). Caller must use `registerNewUser()` after role selection.
 - **Login flow**: OTP → role selection → account creation (`registerNewUser`) → PIN setup. No more auto-assumed "merchant" role.
-- **Onboard page**: Uses `registerNewUser(phone, 'customer')` for new customers instead of relying on `verifyRegistrationOtp` to create a merchant.
-- **Middleware logging** (`proxy.ts`): Logs `verifySessionToken()` result, `supabase.auth.getUser()` result, DB role lookup outcome, and final middleware action per request.
+- **Middleware logging**: Logs `verifySessionToken()` result, `supabase.auth.getUser()` result, DB role lookup outcome, and final middleware action per request.
 - **SessionGuard retry**: Non-force-logout mismatches retry `/api/auth/session` after 2s before wiping.
 - **Session API logging** (`/api/auth/session`): Logs cookie presence, HMAC verify result, DB lookup result, and specific reason for `userId: null`.
 - **Auth action verification**: `registerNewUser`, `loginWithPin`, and `setPin` read back the cookie after setting to confirm it was written.
-- **HMAC key resolution** (`session.ts`, `admin-session.ts`): Priority chain `SESSION_HMAC_SECRET → SUPABASE_SERVICE_ROLE_KEY → fallback`, with console log showing which source is used.
+- **HMAC key resolution** (`session.ts`, `admin-session.ts`): Priority chain `SESSION_HMAC_SECRET → SUPABASE_SERVICE_ROLE_KEY → fallback`, with console log showing which key source is used.
 - **`next.config.ts` `env`** bridges `SUPABASE_SERVICE_ROLE_KEY` → `SESSION_HMAC_SECRET` so both Edge and Node.js runtimes use the same HMAC key.
 
 ### Fixed
-- **Redirect loop (root cause)**: `verifySessionToken` in middleware (Edge Runtime) was using fallback `"session-secret-fallback"` while `createSessionToken` in server actions (Node.js) used the real `SUPABASE_SERVICE_ROLE_KEY`. Every cookie created by a server action was rejected by the middleware → immediate redirect to `/login`. Fix: `SESSION_HMAC_SECRET` is now bridged via `next.config.ts` `env` (available in ALL runtimes), and `getHmacKey()` logs which key source is used.
-- Role-based routing: `verifyRegistrationOtp` no longer auto-creates merchants — new users register with their chosen role.
+- **OtherRolePrompt flow**: Component now navigates to `/login?addRole=<role>` instead of bare `/login`. Previously, the login page's useEffect detected an existing session and auto-redirected back to the dashboard, making it impossible to complete the add-role registration.
+- **Add-role duplicate guard**: `registerNewUser()` no longer blocks adding a second role when the phone already exists in the other table. Only returns error if the target role already exists for that phone.
+- **Login page add-role auto-redirect**: useEffect now skips the auto-redirect when `?addRole=` parameter is present, allowing the add-role flow to proceed.
+- **Login page phone pre-fill**: When in add-role flow, the phone number is pre-filled from localStorage if available.
+- **Role selection rendering**: `handlePhoneSubmit` multi-role path now sets `availableRoles` to `["merchant", "customer"]` instead of `["both"]`, which rendered no selection buttons.
+- **Role selection userInfoRef**: `handlePhoneSubmit` multi-role path now sets `userInfoRef` to prevent "Session expired" error when the user selects a role.
+- **Login localStorage**: `merchant_id` and `merchant_phone` now saved before redirect in all PIN flows (`handlePinSubmit`, `handleSetPin`, `handleSkipPin`, `handleForgotOtpSubmit`), fixing "+" button, QR scan, and phone-in-settings issues.
+- **"Not logged in" on save**: Root cause was `getCurrentMerchantId()` returning null because `merchant_id` wasn't set in localStorage on PIN login.
+- **Redirect loop (root cause)**: `verifySessionToken` in middleware (Edge Runtime) was using fallback `"session-secret-fallback"` while `createSessionToken` in server actions (Node.js) used the real `SUPABASE_SERVICE_ROLE_KEY`. Every cookie created by a server action was rejected by the middleware → immediate redirect to `/login`. Fix: `SESSION_HMAC_SECRET` is now bridged via `next.config.ts` `env` (available in ALL runtimes).
 - Auth flow: `setPin()` now creates a session cookie (was missing, causing redirect to phone after PIN setup).
 - Auth flow: `handleSetPin` gracefully redirects to phone step if `userInfoRef` is missing.
 - Admin signout redirect: Changed `https://www.qrhisab.com` to `http://localhost:3000` fallback.
 - Auth signout redirect: Relative dev fallback instead of hardcoded production URL.
 - Forgot PIN flow: `forgotPinVerifyOtp` validates `exists` before proceeding, returns `redirect` URL based on `verified.userType`.
 - Admin session module (`admin-session.ts`) also uses `SESSION_HMAC_SECRET` for HMAC consistency.
+- Role-based routing: `verifyRegistrationOtp` no longer auto-creates merchants — new users register with their chosen role.
 
 ---
 

@@ -23,7 +23,7 @@ export default async function middleware(request: NextRequest) {
 
   // ── PUBLIC ROUTES — always pass through, no auth processing ──
   const PUBLIC_ROUTES = [
-    "/login", "/select-role", "/scan", "/onboard", "/delivery",
+    "/login", "/select-role", "/scan", "/onboard",
     "/verify", "/_not-found",
   ];
   if (PUBLIC_ROUTES.includes(pathname)) {
@@ -177,11 +177,11 @@ export default async function middleware(request: NextRequest) {
 
   console.log("[Middleware] Final decision:", { pathname, isAuthenticated, userRoles, action: "continue" });
 
-  // === Merchant / Delivery Protection ===
+  // === Merchant Protection ===
   const isMerchantPath = request.nextUrl.pathname.startsWith("/merchant");
 
   if (!isAuthenticated) {
-    if (isMerchantPath || request.nextUrl.pathname.startsWith("/delivery")) {
+    if (isMerchantPath) {
       console.log(
         "[Middleware] REDIRECT TO /login — unauthenticated protected route.",
         JSON.stringify({

@@ -19,7 +19,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "QR Hisab - Digital Credit Ledger",
   description:
-    "A mobile-first credit ledger and delivery diary for small retail shops in Nepal",
+    "A mobile-first credit ledger for small retail shops in Nepal",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

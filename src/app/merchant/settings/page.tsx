@@ -1256,7 +1256,7 @@ export default function SettingsPage() {
               </div>
             </div>
             <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
-              Digital Credit Ledger & Delivery Diary for small retail shops in
+              Digital Credit Ledger for small retail shops in
               Nepal. Built to replace traditional Udharo registers with a modern,
               offline-first solution.
             </p>

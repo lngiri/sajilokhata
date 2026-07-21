@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /merchant/
-Disallow: /delivery/
 Disallow: /scan/
 
 Sitemap: https://app.qrhisab.com/sitemap.xml

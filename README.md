@@ -1,6 +1,6 @@
 # QR Hisab (सजिलो खाता)
 
-Nepali shopko lagi digital credit ledger ra delivery diary. Mobile-first PWA built with Next.js 16.
+Nepali shopko lagi digital credit ledger. Mobile-first PWA built with Next.js 16.
 
 ## Quick Start
 
@@ -18,11 +18,15 @@ npm test                      # vitest
 |-------|--------|
 | Framework | Next.js 16 (App Router + Turbopack) |
 | UI | React 19, Tailwind CSS 4 |
-| Database | Supabase (Postgres) |
-| Auth | Custom HMAC-SHA256 session cookie |
+| Language | TypeScript 6 |
+| Database | Supabase (PostgreSQL + PostGIS) |
+| Auth | Custom HMAC-SHA256 session cookies + bcrypt PIN hashing |
+| AI | Google Gemini 2.5 Flash (receipt/ledger parsing) |
 | Offline | IndexedDB (idb) + Service Worker |
 | Payments | eSewa (SMS credit recharge) |
 | SMS | Aakash SMS API |
+| Export | CSV (papaparse), Excel (xlsx) |
+| Testing | Vitest + Testing Library + Playwright |
 | Deploy | Vercel |
 
 ## Project Structure
@@ -30,12 +34,19 @@ npm test                      # vitest
 ```
 src/
 ├── app/             # Next.js App Router pages + API routes + server actions
-├── components/      # Shared React components
+│   ├── actions/     # Server actions (otp, pin, merchant, admin, sms-billing, etc.)
+│   ├── admin/       # Admin panel
+│   ├── api/         # API route handlers (auth, merchant, sms, ai, billing)
+│   ├── customer/    # Customer-facing pages (dashboard, history, settings)
+│   ├── merchant/    # Merchant pages (dashboard, logs, customers, qr, billing, settings, scan, reports)
+│   ├── login/       # Auth wizard (phone → OTP → PIN → dashboard)
+│   └── ...
+├── components/      # Shared React components (30 files)
 ├── lib/             # Utilities: auth, session, supabase clients, phone, rate-limit, SMS, offline
-├── proxy.ts         # Middleware: route protection, session verification, role guard
+├── middleware.ts    # Route protection, session verification, role guard
 docs/                # Product docs, DB schema, architecture
 public/              # Static assets, service worker, PWA manifest
-supabase/migrations/ # SQL migrations (045 files)
+supabase/migrations/ # SQL migrations (46 files)
 ```
 
 Full architecture breakdown → [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -46,8 +57,10 @@ Full architecture breakdown → [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ```
 Phone → checkUserExists()
-  ├─ New user → sendRegistrationOtp() → OTP verify → role select → set PIN → dashboard
-  └─ Existing user → PIN entry → loginWithPin() → set session cookie → dashboard
+  ├─ New user → sendRegistrationOtp() → OTP verify → role select → registerNewUser() → set PIN → dashboard
+  ├─ Existing user (single role) → PIN entry → loginWithPin() → set session cookie → dashboard
+  ├─ Existing user (dual role) → role select → PIN entry → loginWithPin() → dashboard
+  └─ Add role → /login?addRole=X → OTP verify → registerNewUser() (shared userId) → set PIN → dashboard
 ```
 
 Two auth systems coexist:
@@ -108,11 +121,13 @@ The landing page and login page show a brief loading overlay with the role name 
 |----------|----------|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (HMAC secret) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (admin client + HMAC fallback) |
+| `SESSION_HMAC_SECRET` | No | Dedicated HMAC signing key (falls back to `SUPABASE_SERVICE_ROLE_KEY`) |
 | `AAKASH_SMS_TOKEN` | No | SMS API token |
 | `ESEWA_PRODUCT_CODE` | No | eSewa product code (default: EPAYTEST) |
 | `ESEWA_SECRET_KEY` | No | eSewa HMAC secret |
 | `NEXT_PUBLIC_SITE_URL` | No | Canonical site URL |
+| `COOKIE_DOMAIN` | No | Cookie domain for cross-subdomain auth |
 
 ## Scripts
 

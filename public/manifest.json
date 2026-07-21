@@ -1,7 +1,7 @@
 {
   "name": "QR Hisab",
   "short_name": "QR Hisab",
-  "description": "Digital Credit Ledger & Delivery Diary",
+  "description": "Digital Credit Ledger",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",

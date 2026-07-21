@@ -1,257 +1,138 @@
-# 🟢 QR Hisab — Core Phase Status Report
+# QR Hisab (Sajilo Khata) — Project Status
 
-**Date:** July 11, 2026
-**Project:** QR Hisab (Digital Credit Ledger & Delivery Diary)
-**Stack:** Next.js (App Router) + Supabase + Tailwind CSS + PWA
-**Status:** ✅ 100% Production Ready
-
----
-
-## 1. ✅ COMPLETED WORK (100% Done)
-
-### 1.1 Database & Schema (`supabase/migrations/001_initial_schema.sql`)
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| `merchants` table | ✅ | UUID PK, phone UNIQUE, business_type CHECK |
-| `customers` table | ✅ | UUID PK, phone index, PostGIS geolocation |
-| `merchant_customers` junction | ✅ | FK cascade, credit_limit, current_balance |
-| `credit_logs` ledger | ✅ | debit/credit types, pending/approved/disputed status |
-| `audit_logs` | ✅ | Immutable trail with IP, device, previous_values JSONB |
-| `sessions` | ✅ | Multi-device merchant sessions |
-| RLS Policies | ✅ | 13 policies covering all CRUD operations |
-| Triggers | ✅ | `trg_update_balance`, `trg_check_credit_limit` |
-| Indices | ✅ | 10 performance indices on key columns |
-| Materialized View | ✅ | `customer_summary` for dashboard aggregations |
-
-### 1.2 TypeScript Types (`src/lib/types/database.ts`)
-
-- Complete Row/Insert/Update types for all 6 tables
-- Helper types: `Merchant`, `Customer`, `CreditLog`, `AuditLog`, `Session`
-- Union types: `BusinessType`, `TransactionType`, `TransactionStatus`, `SyncStatus`
-
-### 1.3 Authentication & Session Management
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| Supabase Phone OTP Login | ✅ | Real `signInWithOtp()` + `verifyOtp()` |
-| Session Lookup | ✅ | `getCurrentMerchantId()` with 5-min cache |
-| Route Protection | ✅ | Middleware redirects `/merchant/*` to `/login` |
-| Sign Out | ✅ | Clears session + localStorage |
-| Auth Helper | ✅ | `src/lib/auth.ts` with cached merchant ID |
-
-### 1.4 Supabase Client Setup
-
-| File | Purpose | Status |
-|------|---------|--------|
-| `src/lib/supabase/client.ts` | Browser-side client | ✅ |
-| `src/lib/supabase/server.ts` | Server-side with cookie handling | ✅ |
-| `src/middleware.ts` | Session refresh + route protection | ✅ |
-
-### 1.5 Server Actions (`src/lib/actions.ts`)
-
-| Function | Purpose | Status |
-|----------|---------|--------|
-| `getMerchantProfile` | Fetch merchant by ID | ✅ |
-| `updateMerchantProfile` | Update merchant details | ✅ |
-| `findOrCreateCustomer` | Find by phone or create new | ✅ |
-| `linkCustomerToMerchant` | Create junction record | ✅ |
-| `createCreditLog` | Insert new credit entry | ✅ |
-| `getMerchantCreditLogs` | Filtered/paginated logs | ✅ |
-| `updateCreditLogStatus` | Approve/dispute/reject + audit log | ✅ |
-| `getMerchantCustomers` | List with balances | ✅ |
-| `updateCustomerCreditLimit` | Modify credit limit | ✅ |
-| `getMerchantStats` | Dashboard aggregations | ✅ |
-
-### 1.6 Offline Storage (`src/lib/offline/db.ts`)
-
-| Feature | Status |
-|---------|--------|
-| IndexedDB setup with `idb` library | ✅ |
-| `pendingLogs` store (with merchant/status indices) | ✅ |
-| `offlineCustomers` store (with phone index) | ✅ |
-| `settings` store | ✅ |
-| `savePendingLog` / `getPendingLogs` / `deletePendingLog` | ✅ |
-| `syncPendingLogs` (batch sync helper) | ✅ |
-| `isOnline()` / `onOnlineStatusChange()` | ✅ |
-
-### 1.7 QR System (`src/components/QRCode.tsx`)
-
-| Component | Purpose | Status |
-|-----------|---------|--------|
-| `QRDisplay` | Generate merchant QR with embedded JSON | ✅ |
-| `ReverseQR` | Customer-generated QR for offline mode | ✅ |
-| `QRScanner` | Camera stream + BarcodeDetector API | ✅ |
-
-### 1.8 UI Components
-
-| Component | Purpose | Status |
-|-----------|---------|--------|
-| `Toast` | Clean notification system (replaces alert()) | ✅ |
-| `BottomNav` | 5-tab mobile navigation | ✅ |
-| `NetworkStatus` | Offline banner indicator | ✅ |
-| `OfflineIndicator` | Pending entries count badge | ✅ |
-| `ServiceWorkerRegistrar` | SW registration on app load | ✅ |
-
-### 1.9 PWA & Service Worker
-
-| Feature | Status |
-|---------|--------|
-| `public/sw.js` | ✅ Cache-first for assets, network-first for API |
-| `src/app/manifest.json` | ✅ Full manifest with icons, theme, display |
-| `src/app/layout.tsx` | ✅ Mobile-first meta tags, viewport, theme color |
-| `src/app/globals.css` | ✅ Animations, safe areas, custom scrollbar |
-| `ServiceWorkerRegistrar` | ✅ Registers SW on mount |
-
-### 1.10 Export Engine
-
-| Format | Status |
-|--------|--------|
-| CSV Export | ✅ Real CSV download with headers |
-| JSON Export | ✅ Real JSON backup download |
-
-### 1.11 Pages (16 total)
-
-| Page | Path | Auth | Status |
-|------|------|------|--------|
-| Home | `/` | Public | ✅ Complete |
-| Login | `/login` | Public | ✅ Real Supabase OTP |
-| Merchant Dashboard | `/merchant/dashboard` | Protected | ✅ Real session lookup |
-| Merchant QR | `/merchant/qr` | Protected | ✅ Real merchant data |
-| Customer List | `/merchant/customers` | Protected | ✅ Real session lookup |
-| Customer Detail | `/merchant/customers/[id]` | Protected | ✅ Complete |
-| Ledger | `/merchant/logs` | Protected | ✅ Real session lookup |
-| Settings + Export | `/merchant/settings` | Protected | ✅ Real CSV/JSON export |
-| Scan | `/scan` | Public | ✅ Toast notifications |
-| Delivery | `/delivery` | Protected | ✅ Toast notifications |
-| Error | `/error` | - | ✅ Global error boundary |
-| Loading | `/loading` | - | ✅ Global loading spinner |
-| 404 | `/not-found` | - | ✅ Not found page |
-| Merchant Error | `/merchant/error` | - | ✅ Section error boundary |
-| Merchant Loading | `/merchant/loading` | - | ✅ Section loading state |
+**Date:** July 21, 2026  
+**Project:** SajiloKhata / QR Hisab (Digital Credit Ledger)  
+**Stack:** Next.js 16 + React 19 + TypeScript 6 + Supabase (PostgreSQL) + Tailwind CSS 4 + PWA  
+**Status:** Production Ready
 
 ---
 
-## 2. ✅ PREVIOUSLY PENDING — NOW COMPLETED
+## 1. Completed Work
 
-| Item | Before | After |
-|------|--------|-------|
-| Demo Mode Authentication | Hardcoded `DEMO_MERCHANT_ID` | Real Supabase OTP + `getCurrentMerchantId()` |
-| Alert Notifications | Native `alert()` calls | Custom Toast component with 4 types |
-| Service Worker | Missing | `public/sw.js` with cache-first strategy |
-| Export Functionality | Mock `setTimeout` | Real CSV/JSON file downloads |
-| Environment Config | No `.env.local` | `.env.local` with Supabase credentials |
-| Package Scripts | Missing | `dev`, `build`, `start`, `lint` |
+### Database & Schema
+- 46 SQL migrations (001–045, 099) applied
+- 16 tables: merchants, customers, merchant_customers, credit_logs, sessions, audit_logs, admins, app_settings, merchant_payment_methods, merchant_reminder_settings, payment_reminder_logs, sms_recharge_logs, sms_requests, short_links, merchant_ai_usage, rate_limits
+- 1 materialized view: `customer_summary`
+- 8 stored functions/RPCs (check_credit_limit, process_audit_log, sms balance management, customer balance, bulk import, user directory)
+- 3 active triggers (credit limit check, audit log creation, sms_requests updated_at)
+- PostGIS extension for geolocation
+- RLS policies on core tables
 
----
+### Authentication System
+- Custom HMAC-SHA256 session cookies (30-day TTL, force-logout support)
+- Phone + OTP + PIN hybrid auth flow
+- bcrypt PIN hashing (10 rounds)
+- Dual-role architecture (shared userId across merchants + customers)
+- Add-role flow via OtherRolePrompt → `/login?addRole=` parameter
+- Post sign-out quick re-login for dual-role users
+- Session heartbeat (periodic refresh)
+- SessionGuard (client-side session validation)
 
-## 3. 📁 PROJECT STRUCTURE
+### Merchant Features
+- Dashboard with credit ledger, customer management, QR generation
+- Customer list with balances, credit limits, trust status
+- Transaction ledger with status workflow (pending → approved/disputed/rejected)
+- QR code generation and scanning
+- SMS payment reminders with balance guard
+- eSewa SMS credit recharge (web checkout with HMAC verification)
+- Photo upload for profile
+- Settings with payment method toggles (Fonepay, eSewa, Khalti, NepalPay, Bank, Cash)
+- Cash sales mode
+- Excel import for bulk customer/transaction entry
+- Reports and analytics
 
-```
-QRHisab/
-├── docs/                          # Product specs + status
-│   ├── product_overview.md
-│   ├── technical_specifications.md
-│   ├── business_logic.md
-│   ├── database_schema.md
-│   ├── ai_instructions_prompt.md
-│   └── PROJECT_STATUS.md
-│
-├── supabase/
-│   └── migrations/
-│       └── 001_initial_schema.sql
-│
-├── src/
-│   ├── app/                        # 16 pages
-│   │   ├── layout.tsx              # Toast + SW registrar
-│   │   ├── page.tsx                # Home
-│   │   ├── globals.css
-│   │   ├── manifest.json
-│   │   ├── error.tsx
-│   │   ├── loading.tsx
-│   │   ├── not-found.tsx
-│   │   ├── login/page.tsx          # Real Supabase OTP
-│   │   ├── scan/page.tsx           # Toast notifications
-│   │   ├── delivery/page.tsx       # Toast notifications
-│   │   └── merchant/
-│   │       ├── dashboard/page.tsx  # Real auth lookup
-│   │       ├── qr/page.tsx         # Real merchant data
-│   │       ├── customers/page.tsx  # Real auth lookup
-│   │       ├── customers/[id]/page.tsx
-│   │       ├── logs/page.tsx       # Real auth lookup
-│   │       ├── settings/page.tsx   # Real CSV/JSON export
-│   │       ├── error.tsx
-│   │       └── loading.tsx
-│   │
-│   ├── components/
-│   │   ├── BottomNav.tsx
-│   │   ├── NetworkStatus.tsx
-│   │   ├── OfflineIndicator.tsx
-│   │   ├── QRCode.tsx
-│   │   ├── ServiceWorkerRegistrar.tsx
-│   │   └── Toast.tsx               # NEW: Notification system
-│   │
-│   ├── lib/
-│   │   ├── actions.ts              # Server actions
-│   │   ├── auth.ts                 # NEW: Auth helper with caching
-│   │   ├── supabase/
-│   │   │   ├── client.ts
-│   │   │   └── server.ts
-│   │   ├── offline/
-│   │   │   └── db.ts
-│   │   └── types/
-│   │       └── database.ts
-│   │
-│   ├── types/
-│   │   └── barcode-detector.d.ts
-│   │
-│   └── middleware.ts
-│
-├── public/
-│   ├── icons/
-│   │   ├── icon-192x192.png
-│   │   └── icon-512x512.png
-│   ├── robots.txt
-│   └── sw.js                       # NEW: Service worker
-│
-├── .env.local                      # NEW: Supabase credentials
-├── .env.example
-├── next.config.ts
-├── postcss.config.mjs
-├── tsconfig.json
-└── package.json
-```
+### Customer Features
+- Customer dashboard with unified view across merchants
+- Transaction history
+- Settings
+- PIN gate for sensitive operations
+
+### Admin Panel
+- Dashboard with stats, alerts, sessions
+- User directory
+- Merchant detail pages
+- Force logout kill-switch
+- Announcements and CMS
+
+### Offline & PWA
+- Service Worker with cache-first strategy
+- IndexedDB for offline pending logs
+- Sync queue with automatic retry
+- PWA install banner with multi-signal detection
+- Offline indicator
+
+### Infrastructure
+- Vercel deployment
+- Edge Middleware for route protection
+- API routes for auth, merchant operations, AI parsing, billing
+- CORS for cross-domain navigation (qrhisab.com ↔ app.qrhisab.com)
 
 ---
 
-## 4. 🚀 DEPLOYMENT CHECKLIST
+## 2. Pages (20+ total)
 
-- [x] Create Supabase project at supabase.com
-- [x] Run `001_initial_schema.sql` in SQL Editor
-- [x] Copy `.env.example` → `.env.local` with credentials
-- [x] Replace all `DEMO_MERCHANT_ID` with auth session lookup
-- [x] Wire up Supabase Auth (phone OTP)
-- [x] Create `public/sw.js` for PWA caching
-- [x] Replace `alert()` with toast notifications
-- [x] Implement CSV/JSON export
-- [ ] Run `npm run build` to verify production build ← DONE
-- [ ] Deploy to Vercel/Netlify
-- [ ] Test full flow: merchant login → customer scan → entry → approval
-
----
-
-## 5. 📊 FILE COUNT SUMMARY
-
-| Category | Count |
-|----------|-------|
-| Pages (`.tsx`) | 16 |
-| Components (`.tsx`) | 6 |
-| Library files (`.ts`) | 6 |
-| SQL migrations | 1 |
-| Config files | 4 |
-| Public assets | 4 |
-| **Total source files** | **37** |
+| Page | Path | Auth |
+|------|------|------|
+| Home | `/` | Public |
+| Login | `/login` | Public |
+| Select Role | `/select-role` | Protected |
+| Scan | `/scan` | Public |
+| Onboard | `/onboard` | Public |
+| Products | `/merchant/products` | Protected |
+| Verify | `/verify` | Public |
+| Merchant Dashboard | `/merchant/dashboard` | Protected |
+| Merchant QR | `/merchant/qr` | Protected |
+| Merchant Customers | `/merchant/customers` | Protected |
+| Merchant Customer Detail | `/merchant/customers/[id]` | Protected |
+| Merchant Ledger | `/merchant/logs` | Protected |
+| Merchant Settings | `/merchant/settings` | Protected |
+| Merchant Billing | `/merchant/billing` | Protected |
+| Merchant Cash Sales | `/merchant/cash-sales` | Protected |
+| Merchant Reports | `/merchant/reports` | Protected |
+| Merchant Import | `/merchant/import` | Protected |
+| Customer Dashboard | `/customer/dashboard` | Protected |
+| Customer History | `/customer/history` | Protected |
+| Customer Settings | `/customer/settings` | Protected |
+| Admin Dashboard | `/admin/dashboard` | Admin |
 
 ---
 
-*Report generated by Buffy (Freebuff AI Assistant) — Production Ready ✅*
+## 3. Components (29)
+
+ActionHub, AdminGuard, AmountSuggestions, AuthProvider, BottomNav, CustomerBottomNav, CustomerOnboardingModal, CustomerPinGate, DescriptionSuggestions, FeedbackModal, MerchantOnboardingModal, NetworkStatus, OtherRolePrompt, PendingApprovalModal, PullToRefresh, PWAInstallBanner, QRCode, QuickAddCustomer, ReferModal, RoleSwitcher, ServiceWorkerRegistrar, SessionGuard, SessionHeartbeat, SmsReminderModal, SyncStatus, ThemeSwitcher, Toast, TransactionIcon, VersionGuard
+
+---
+
+## 4. Environment Variables
+
+| Variable | Required |
+|----------|----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes |
+| `SESSION_HMAC_SECRET` | No (falls back to SUPABASE_SERVICE_ROLE_KEY) |
+| `AAKASH_SMS_TOKEN` | No |
+| `ESEWA_PRODUCT_CODE` | No (default: EPAYTEST) |
+| `ESEWA_SECRET_KEY` | No |
+| `NEXT_PUBLIC_SITE_URL` | No |
+| `COOKIE_DOMAIN` | No |
+
+---
+
+## 5. Deployment
+
+- [x] Supabase project configured
+- [x] 46 migrations applied
+- [x] Supabase Auth wired (phone OTP)
+- [x] Custom session cookie system
+- [x] PWA with service worker
+- [x] CSV/JSON export
+- [x] SMS integration (Aakash)
+- [x] eSewa payment integration (UAT)
+- [x] Deployed on Vercel
+- [ ] Move eSewa from UAT to production
+- [ ] Vercel preview deployments for PRs
+
+---
+
+*Report generated July 21, 2026*

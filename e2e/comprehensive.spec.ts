@@ -561,20 +561,6 @@ test.describe("Phase 15: Import", () => {
 });
 
 // ================================================================
-// PHASE 16: DELIVERY
-// ================================================================
-test.describe("Phase 16: Delivery", () => {
-
-  test("DL-01: Delivery page renders", async ({ page }) => {
-    await setupAuth(page);
-    await goto(page, "/delivery");
-    await page.waitForTimeout(3000);
-    await assertNoErrors(page);
-    console.log(`[DL] Delivery page: ${page.url()}`);
-  });
-});
-
-// ================================================================
 // PHASE 17: SMS REMINDERS
 // ================================================================
 test.describe("Phase 17: SMS Reminders", () => {
@@ -663,7 +649,7 @@ test.describe("Phase 19: Edge Cases", () => {
   });
 
   test("EC-06: All public pages error-free", async ({ page }) => {
-    for (const p of ["/login", "/scan", "/onboard", "/delivery"]) {
+    for (const p of ["/login", "/scan", "/onboard"]) {
       await goto(page, p);
       await page.waitForTimeout(1500);
       const errCount = await page.locator("text=Something went wrong").count();

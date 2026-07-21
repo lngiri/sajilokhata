@@ -2,7 +2,6 @@ const CACHE_NAME = "qrhisab-v8";
 const STATIC_ASSETS = [
   "/",
   "/scan",
-  "/delivery",
   "/merchant/dashboard",
   "/merchant/customers",
   "/merchant/logs",

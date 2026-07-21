@@ -525,6 +525,88 @@ export interface Database {
         };
         Relationships: [];
       };
+      merchant_products: {
+        Row: {
+          id: string;
+          merchant_id: string;
+          name: string;
+          unit: string;
+          default_rate: number;
+          category: string | null;
+          is_active: boolean;
+          sort_order: number;
+          metadata: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          merchant_id: string;
+          name: string;
+          unit?: string;
+          default_rate: number;
+          category?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          merchant_id?: string;
+          name?: string;
+          unit?: string;
+          default_rate?: number;
+          category?: string | null;
+          is_active?: boolean;
+          sort_order?: number;
+          metadata?: Json | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      credit_log_items: {
+        Row: {
+          id: string;
+          credit_log_id: string;
+          product_id: string | null;
+          product_name: string;
+          quantity: number;
+          unit: string;
+          unit_price: number;
+          line_total: number;
+          description: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          credit_log_id: string;
+          product_id?: string | null;
+          product_name: string;
+          quantity: number;
+          unit?: string;
+          unit_price: number;
+          description?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          credit_log_id?: string;
+          product_id?: string | null;
+          product_name?: string;
+          quantity?: number;
+          unit?: string;
+          unit_price?: number;
+          description?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
   };
 }
@@ -550,6 +632,8 @@ export type PaymentReminderLog = Database["public"]["Tables"]["payment_reminder_
 export type SmsRechargeLog = Database["public"]["Tables"]["sms_recharge_logs"]["Row"];
 export type ShortLink = Database["public"]["Tables"]["short_links"]["Row"];
 export type MerchantAiUsage = Database["public"]["Tables"]["merchant_ai_usage"]["Row"];
+export type MerchantProduct = Database["public"]["Tables"]["merchant_products"]["Row"];
+export type CreditLogItem = Database["public"]["Tables"]["credit_log_items"]["Row"];
 
 // Customer Summary (from materialized view)
 export interface CustomerSummary {

@@ -6,8 +6,6 @@ import {
   isOnline,
   onOnlineStatusChange,
   getPendingLogs,
-  getDeliveryLogs,
-  syncDeliveryLogs,
   recordSyncComplete,
   getLastSyncTime,
   getPendingAttachments,
@@ -18,6 +16,7 @@ import {
 } from "@/lib/offline/db";
 import { createCreditLog, findOrCreateCustomer, linkCustomerToMerchant, uploadAttachment } from "@/lib/actions";
 import { updateEntryAttachment } from "@/app/actions/entry";
+import { insertCreditLogItems } from "@/app/actions/products";
 
 const SYNC_TIMEOUT_MS = 15_000;
 
@@ -54,6 +53,14 @@ async function syncSingleLog(log: {
   ipAddress?: string;
   deviceInfo?: string;
   createdAt: string;
+  items?: Array<{
+    productId?: string;
+    productName: string;
+    quantity: number;
+    unit: string;
+    unitPrice: number;
+    description?: string;
+  }>;
 }): Promise<boolean> {
   await markLogAsSyncing(log.id);
 
@@ -88,7 +95,27 @@ async function syncSingleLog(log: {
       setTimeout(() => reject(new Error("SYNC_TIMEOUT")), SYNC_TIMEOUT_MS)
     );
 
-    await Promise.race([syncPromise, timeoutPromise]);
+    const createdLog = await Promise.race([syncPromise, timeoutPromise]);
+
+    // Insert credit_log_items if present
+    if (log.items && log.items.length > 0 && createdLog?.id) {
+      try {
+        await insertCreditLogItems(
+          createdLog.id,
+          log.items.map((item) => ({
+            product_id: item.productId || undefined,
+            product_name: item.productName,
+            quantity: item.quantity,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            description: item.description,
+          }))
+        );
+      } catch {
+        // Items insert failed but credit log already synced — log and continue
+      }
+    }
+
     await deletePendingLog(log.id);
     return true;
   } catch {
@@ -101,24 +128,21 @@ export default function SyncStatus() {
   const { addToast } = useToast();
   const [online, setOnline] = useState(true);
   const [pendingCreditCount, setPendingCreditCount] = useState(0);
-  const [pendingDeliveryCount, setPendingDeliveryCount] = useState(0);
   const [lastSync, setLastSync] = useState<Date | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [pendingAttachmentCount, setPendingAttachmentCount] = useState(0);
   const [syncedCount, setSyncedCount] = useState(0);
 
-  const totalPending = pendingCreditCount + pendingDeliveryCount + pendingAttachmentCount;
+  const totalPending = pendingCreditCount + pendingAttachmentCount;
 
   const updateCounts = useCallback(async () => {
-    const [creditLogs, deliveryLogs, lastSyncTime, attachments] = await Promise.all([
+    const [creditLogs, lastSyncTime, attachments] = await Promise.all([
       getPendingLogs(),
-      getDeliveryLogs(),
       getLastSyncTime(),
       getPendingAttachments(),
     ]);
     setPendingCreditCount(creditLogs.length);
-    setPendingDeliveryCount(deliveryLogs.length);
     setPendingAttachmentCount(attachments.length);
     setLastSync(lastSyncTime);
   }, []);
@@ -153,11 +177,6 @@ export default function SyncStatus() {
       const ok = await syncSingleLog(log);
       if (ok) synced++; else failed++;
     }
-
-    // Sync delivery logs
-    const deliveryResult = await syncDeliveryLogs(createCreditLog);
-    synced += deliveryResult.synced;
-    failed += deliveryResult.failed;
 
     // Sync pending photo attachments
     const pendingAttachments = await getPendingAttachments();
