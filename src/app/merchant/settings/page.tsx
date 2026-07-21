@@ -517,7 +517,7 @@ export default function SettingsPage() {
                 type="text"
                 value={merchantName}
                 onChange={(e) => setMerchantName(e.target.value)}
-                placeholder="e.g. Giri Kirana Store"
+                placeholder="Input your business name here"
                 className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
               />
             </div>

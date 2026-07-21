@@ -122,7 +122,7 @@ export default function MerchantOnboardingModal({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Kirana Shop"
+                placeholder="Input your business name here"
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition"
                 autoFocus={!nameSet}
               />
@@ -153,32 +153,20 @@ export default function MerchantOnboardingModal({
             </div>
           )}
 
-          {businessTypeSet ? (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business Type</label>
-              <div className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-                <span>{BUSINESS_TYPES.find((t) => t.value === currentBusinessType)?.label || currentBusinessType}</span>
-              </div>
-            </div>
-          ) : (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Business Type *</label>
-              <select
-                value={businessType}
-                onChange={(e) => setBusinessType(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition appearance-none bg-white"
-                autoFocus={nameSet && addressSet && !businessTypeSet}
-              >
-                <option value="">Select business type</option>
-                {BUSINESS_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Business Type *</label>
+            <select
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition appearance-none bg-white"
+              autoFocus={nameSet && addressSet && !businessTypeSet}
+            >
+              <option value="">Select your business type</option>
+              {BUSINESS_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {error && (
