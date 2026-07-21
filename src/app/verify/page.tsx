@@ -62,27 +62,10 @@ export default function VerifyPage() {
     }
     const check = async () => {
       try {
-        const supabase = (await import("@/lib/supabase/client")).createClient();
-        const { data: mc } = await supabase
-          .from("merchant_customers")
-          .select("credit_limit")
-          .eq("merchant_id", log.merchant_id)
-          .eq("customer_id", log.customer_id)
-          .maybeSingle();
+        const { getMerchantCustomerBalance } = await import("@/app/actions/merchant");
+        const { balance, creditLimit } = await getMerchantCustomerBalance(log.merchant_id, log.customer_id);
 
-        const creditLimit = (mc as any)?.credit_limit || 0;
-        const { data: approvedLogs } = await supabase
-          .from("credit_logs")
-          .select("amount, type")
-          .eq("merchant_id", log.merchant_id)
-          .eq("customer_id", log.customer_id)
-          .eq("status", "approved");
-
-        const currentBalance = (approvedLogs as any[])?.reduce((sum: number, l: any) => {
-          return sum + (l.type === "debit" ? l.amount : -l.amount);
-        }, 0) || 0;
-
-        const remainingLimit = creditLimit - currentBalance;
+        const remainingLimit = creditLimit - balance;
         if (log.amount > remainingLimit) {
           setCreditCheck({
             overLimit: true,

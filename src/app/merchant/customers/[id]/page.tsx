@@ -2,10 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCreditLogs, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile } from "@/app/actions/merchant";
+import { getMerchantCustomerDetail, updateCustomerCreditLimit, resetCustomerPin, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile } from "@/app/actions/merchant";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import TransactionIcon from "@/components/TransactionIcon";
 import SmsReminderModal from "@/components/SmsReminderModal";
@@ -102,7 +101,6 @@ export default function CustomerDetailPage() {
   }, [showResetPinModal]);
 
   useEffect(() => {
-    const supabase = createClient();
     let cancelled = false;
 
     async function loadCustomer() {
@@ -114,49 +112,16 @@ export default function CustomerDetailPage() {
           return;
         }
 
-        const { data: mc } = await supabase
-          .from("merchant_customers")
-          .select("*, customers(id, name, phone, trust_status, trust_notes)")
-          .eq("merchant_id", merchantId)
-          .eq("customer_id", customerId)
-          .single();
+        const detail = await getMerchantCustomerDetail(merchantId, customerId);
+        if (cancelled) return;
 
-        if (!mc || cancelled) {
+        if (!detail) {
           setLoading(false);
           return;
         }
 
-        const logs = await getMerchantCreditLogs(merchantId, {
-          customerId,
-          limit: 50,
-        });
-
-        if (cancelled) return;
-
-        const approvedLogs = logs.filter((l: any) => l.status === "approved");
-        const totalDebit = approvedLogs
-          .filter((l: any) => l.type === "debit")
-          .reduce((sum: number, l: any) => sum + l.amount, 0);
-        const totalCredit = approvedLogs
-          .filter((l: any) => l.type === "credit")
-          .reduce((sum: number, l: any) => sum + l.amount, 0);
-
-        const computedBalance = totalDebit - totalCredit;
-
         setMerchantIdState(merchantId);
-
-        setCustomer({
-          id: customerId,
-          name: mc.customers?.name || null,
-          phone: mc.customers?.phone || "",
-          credit_limit: mc.credit_limit,
-          current_balance: computedBalance,
-          total_debit_amount: totalDebit,
-          total_credit_amount: totalCredit,
-          transactions: (logs as Transaction[]) || [],
-          trust_status: mc.customers?.trust_status || "good",
-          trust_notes: mc.customers?.trust_notes || null,
-        });
+        setCustomer(detail as CustomerDetail);
 
         getMerchantProfile(merchantId, "name").then((p: any) => {
           if (p?.name) setMerchantName(p.name);
@@ -170,6 +135,7 @@ export default function CustomerDetailPage() {
     }
 
     loadCustomer();
+    return () => { cancelled = true; };
   }, [customerId]);
 
   const handleResetPin = async () => {

@@ -7,8 +7,7 @@ import { useToast } from "@/components/Toast";
 import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/app/actions/customer";
 import TransactionIcon from "@/components/TransactionIcon";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { normalizePhone } from "@/lib/phone";
+import { getCustomerIdsForPhone } from "@/app/actions/customer";
 import { playSuccessSound } from "@/lib/sound";
 import CustomerPinGate from "@/components/CustomerPinGate";
 
@@ -64,6 +63,7 @@ export default function CustomerHistoryPage() {
   const mountedRef = useRef(true);
   const realtimeChannelRef = useRef<any>(null);
   const realtimeSetupRef = useRef(false);
+  const realtimeSupabaseRef = useRef<any>(null);
   const loadLogsRef = useRef<() => Promise<void>>(undefined!);
 
   // On mount, restore customer session
@@ -102,19 +102,14 @@ export default function CustomerHistoryPage() {
     if (!customerPhone || realtimeSetupRef.current) return;
     realtimeSetupRef.current = true;
 
-    const supabase = createClient();
-
     const setupRealtime = async () => {
-      const np = normalizePhone(customerPhone);
-      const { data: customers } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("phone", np);
-
+      const customerIds = await getCustomerIdsForPhone(customerPhone);
       if (!realtimeSetupRef.current) return;
-      if (!customers || customers.length === 0) return;
+      if (customerIds.length === 0) return;
 
-      const customerIds = customers.map((c: any) => c.id);
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      realtimeSupabaseRef.current = supabase;
 
       realtimeChannelRef.current = supabase
         .channel("customer-history-realtime")
@@ -172,8 +167,8 @@ export default function CustomerHistoryPage() {
 
     return () => {
       realtimeSetupRef.current = false;
-      if (realtimeChannelRef.current) {
-        supabase.removeChannel(realtimeChannelRef.current);
+      if (realtimeChannelRef.current && realtimeSupabaseRef.current) {
+        realtimeSupabaseRef.current.removeChannel(realtimeChannelRef.current);
         realtimeChannelRef.current = null;
       }
     };

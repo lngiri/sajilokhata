@@ -366,6 +366,51 @@ export async function getMerchantCustomerBalance(merchantId: string, customerId:
 }
 
 // ──────────────────────────────────────────────
+// Customer Detail (replaces browser-side supabase query)
+// ──────────────────────────────────────────────
+
+export async function getMerchantCustomerDetail(merchantId: string, customerId: string) {
+  const admin = getAdminClient();
+  if (!admin) throw new Error("Server config");
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    throw new Error("Not logged in");
+  }
+
+  const { data: mc } = await (admin.from("merchant_customers") as any)
+    .select("*, customers(id, name, phone, trust_status, trust_notes)")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  if (!mc) return null;
+
+  const logs = await getMerchantCreditLogs(merchantId, { customerId, limit: 50 });
+
+  const approvedLogs = logs.filter((l: any) => l.status === "approved");
+  const totalDebit = approvedLogs
+    .filter((l: any) => l.type === "debit")
+    .reduce((sum: number, l: any) => sum + l.amount, 0);
+  const totalCredit = approvedLogs
+    .filter((l: any) => l.type === "credit")
+    .reduce((sum: number, l: any) => sum + l.amount, 0);
+
+  return {
+    id: customerId,
+    name: mc.customers?.name || null,
+    phone: mc.customers?.phone || "",
+    credit_limit: mc.credit_limit,
+    current_balance: totalDebit - totalCredit,
+    total_debit_amount: totalDebit,
+    total_credit_amount: totalCredit,
+    transactions: (logs as any[]) || [],
+    trust_status: mc.customers?.trust_status || "good",
+    trust_notes: mc.customers?.trust_notes || null,
+  };
+}
+
+// ──────────────────────────────────────────────
 // Write Operations
 // ──────────────────────────────────────────────
 

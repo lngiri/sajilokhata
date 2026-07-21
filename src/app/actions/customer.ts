@@ -637,3 +637,24 @@ export async function findOrCreateCustomer(
   if (!customer) throw new Error("Not authenticated");
   return customer;
 }
+
+// ──────────────────────────────────────────────
+// Customer IDs for Realtime subscriptions
+// (replaces browser-side supabase.from("customers") query)
+// ──────────────────────────────────────────────
+
+/**
+ * Get customer IDs by phone — used for Realtime channel filters.
+ * Safe because it derives identity from the customer_session cookie.
+ */
+export async function getCustomerIdsForPhone(phone: string): Promise<string[]> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+
+  const normalized = normalizePhone(phone);
+  const { data } = await admin.from("customers")
+    .select("id")
+    .eq("phone", normalized);
+
+  return (data as { id: string }[] | null)?.map((c) => c.id) || [];
+}
