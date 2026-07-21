@@ -19,6 +19,11 @@ import {
   acceptEditRequest,
   rejectEditRequest,
 } from "@/lib/actions";
+import {
+  getNotifications as getNotifs,
+  getUnreadCount,
+  markAsRead,
+} from "@/app/actions/notifications";
 import { getCurrentMerchantId, signOut } from "@/lib/auth";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import { useRouter } from "next/navigation";
@@ -118,6 +123,8 @@ export default function MerchantDashboard() {
   } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -200,14 +207,29 @@ export default function MerchantDashboard() {
     loadBackground(id);
   }, [loadBackground]);
 
+  const loadNotifications = useCallback(async () => {
+    const id = merchantIdRef.current;
+    if (!id) return;
+    const [notifData, unread] = await Promise.all([
+      getNotifs(id, "merchant", 10),
+      getUnreadCount(id, "merchant"),
+    ]);
+    if (mountedRef.current) {
+      setNotifications(notifData);
+      setUnreadNotifCount(unread);
+    }
+  }, []);
+
   // Initial load + polling
   useEffect(() => {
     mountedRef.current = true;
     loadData();
+    loadNotifications();
 
     const interval = setInterval(() => {
       if (document.visibilityState === "visible") {
         loadData();
+        loadNotifications();
       }
     }, POLL_INTERVAL);
 
@@ -264,10 +286,26 @@ export default function MerchantDashboard() {
   }, [showProfileMenu]);
 
   // ================================================================
-  // Supabase Realtime — listen for INSERT + UPDATE on credit_logs
+  // Realtime — listen for INSERT + UPDATE on credit_logs + notifications
   // ================================================================
   useEffect(() => {
     if (!merchantId) return;
+
+    const notifChannel = supabase
+      .channel("merchant-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${merchantId}`,
+        },
+        () => {
+          if (mountedRef.current) loadNotifications();
+        }
+      )
+      .subscribe();
 
     const channel = supabase
       .channel("merchant-dashboard")
@@ -317,8 +355,9 @@ export default function MerchantDashboard() {
 
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(notifChannel);
     };
-  }, [merchantId, addToast, loadData, supabase]);
+  }, [merchantId, addToast, loadData, loadNotifications, supabase]);
 
   // ================================================================
   // Issue 3: Handle pull-to-refresh — show QR modal + silent refetch
@@ -440,13 +479,26 @@ export default function MerchantDashboard() {
                 </a>
                 <div ref={notificationRef}>
                   <button
-                    onClick={() => setShowNotifications(!showNotifications)}
+                    onClick={() => {
+                      setShowNotifications(!showNotifications);
+                      if (!showNotifications && merchantId) {
+                        markAsRead(merchantId, "merchant").then(() => {
+                          setUnreadNotifCount(0);
+                          loadNotifications();
+                        }).catch(() => {});
+                      }
+                    }}
                     className="p-1.5 active:scale-90 transition-transform relative"
                   >
                     <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                     </svg>
-                    {pendingLogs.length > 0 && (
+                    {unreadNotifCount > 0 && (
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+                        {unreadNotifCount}
+                      </span>
+                    )}
+                    {unreadNotifCount === 0 && pendingLogs.length > 0 && (
                       <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
                         {pendingLogs.length}
                       </span>
@@ -467,56 +519,83 @@ export default function MerchantDashboard() {
           className="fixed right-4 top-16 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-3 border-b border-gray-100">
+          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
+            {notifications.length > 0 && (
+              <span className="text-[10px] text-[var(--color-text-muted)]">{notifications.length}</span>
+            )}
           </div>
-          <div className="max-h-64 overflow-y-auto">
-            {pendingLogs.length > 0 ? (
-              topPendingLogs.map((log) => (
-                <a
-                  key={log.id}
-                  href="/merchant/logs"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-amber-600">!</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[var(--color-text)] truncate">
-                      {log.customers?.name || log.customers?.phone || "Unknown"} requested Rs. {log.amount.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">
-                      {timeAgo(log.created_at)}
-                    </p>
-                  </div>
-                </a>
-              ))
-            ) : recentActivity.length > 0 ? (
-              topActivity.map((log) => (
-                <a
-                  key={log.id}
-                  href="/merchant/logs"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-gray-500">
-                      {(log.customers?.name || log.customers?.phone || "?").charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[var(--color-text)] truncate">
-                      {log.customers?.name || log.customers?.phone || "Unknown"} — {log.type === "debit" ? "Debit" : log.type === "credit" ? "Payment" : "Cash"}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">
-                      Rs. {log.amount.toLocaleString()} · {timeAgo(log.created_at)}
-                    </p>
-                  </div>
-                </a>
-              ))
-            ) : (
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 && pendingLogs.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
                 No notifications
               </div>
+            ) : (
+              <>
+                {/* Pending entries section */}
+                {pendingLogs.length > 0 && (
+                  <div className="px-3 pt-2 pb-1">
+                    <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Pending</p>
+                  </div>
+                )}
+                {topPendingLogs.map((log) => (
+                  <a
+                    key={`pending-${log.id}`}
+                    href="/merchant/logs"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 active:bg-amber-100 transition-colors border-l-2 border-amber-400 ml-2"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-amber-600">!</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                        {log.customers?.name || log.customers?.phone || "Unknown"} — Rs. {log.amount.toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">{timeAgo(log.created_at)}</p>
+                    </div>
+                  </a>
+                ))}
+                {/* Persistent notifications section */}
+                {notifications.length > 0 && (
+                  <div className="px-3 pt-2 pb-1">
+                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Updates</p>
+                  </div>
+                )}
+                {notifications.slice(0, 5).map((n: any) => (
+                  <a
+                    key={n.id}
+                    href="/merchant/logs"
+                    className={`flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.read ? "bg-blue-50/30" : ""}`}
+                  >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      n.type === "entry_created" ? "bg-green-50" :
+                      n.type === "entry_rejected" ? "bg-red-50" :
+                      n.type === "entry_disputed" ? "bg-purple-50" :
+                      n.type === "customer_linked" ? "bg-blue-50" :
+                      "bg-gray-50"
+                    }`}>
+                      <span className={`text-xs font-bold ${
+                        n.type === "entry_created" ? "text-green-600" :
+                        n.type === "entry_rejected" ? "text-red-600" :
+                        n.type === "entry_disputed" ? "text-purple-600" :
+                        n.type === "customer_linked" ? "text-blue-600" :
+                        "text-gray-500"
+                      }`}>
+                        {n.type === "entry_created" ? "+" :
+                         n.type === "entry_rejected" ? "✗" :
+                         n.type === "entry_disputed" ? "!" :
+                         n.type === "customer_linked" ? "👤" :
+                         "•"}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-[var(--color-text)] truncate">{n.title}</p>
+                      {n.body && <p className="text-[10px] text-[var(--color-text-muted)] truncate">{n.body}</p>}
+                      <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">{timeAgo(n.created_at)}</p>
+                    </div>
+                  </a>
+                ))}
+              </>
             )}
           </div>
           <a

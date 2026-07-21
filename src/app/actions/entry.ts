@@ -2,6 +2,7 @@
 
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import { createNotification } from "@/app/actions/notifications";
 import type { Database } from "@/lib/types/database";
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
@@ -227,6 +228,24 @@ export async function saveEntry(params: {
         console.error("[Entry] Items insert error (entry still saved):", JSON.stringify(itemError));
         // Entry is already saved — log error but don't fail the whole operation
       }
+    }
+
+    if (!isCash && resolvedCustomerId) {
+      const { data: shop } = await (admin.from("merchants") as any)
+        .select("name")
+        .eq("id", params.merchant_id)
+        .single()
+        .catch(() => ({ data: null }));
+      const shopName = shop?.name || "Shop";
+      createNotification({
+        userId: resolvedCustomerId,
+        userType: "customer",
+        type: "entry_created",
+        title: `New entry at ${shopName}`,
+        body: `Rs. ${Number(params.amount).toLocaleString()} ${params.type} added`,
+        referenceId: data.id,
+        referenceType: "credit_log",
+      });
     }
 
     return {

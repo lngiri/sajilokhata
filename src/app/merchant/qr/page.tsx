@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { QRDisplay } from "@/components/QRCode";
 import BottomNav from "@/components/BottomNav";
 import { getCurrentMerchantId } from "@/lib/auth";
@@ -52,13 +53,22 @@ export default function MerchantQRPage() {
     business_name: null,
   };
 
-  // Prefer business_name over name (same logic as dashboard)
   const displayName = merchantData.business_name?.trim() || merchantData.name || "My Shop";
+
+  const qrData = JSON.stringify({
+    type: "merchant_scan",
+    merchantId: merchantData.id,
+    merchantName: displayName,
+    businessType: merchantData.business_type,
+    timestamp: Date.now(),
+  });
 
   return (
     <div className="pb-20">
+      {/* ── Screen layout ── */}
+
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 print:hidden">
         <div className="flex items-center px-4 py-3">
           <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -71,7 +81,7 @@ export default function MerchantQRPage() {
         </div>
       </div>
 
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-4 py-6 space-y-6 print:hidden">
         {/* Merchant Info */}
         <div className="text-center">
           <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-lg">
@@ -135,6 +145,69 @@ export default function MerchantQRPage() {
       </div>
 
       <BottomNav />
+
+      {/* ── Print-only layout (hidden on screen) ── */}
+      <div className="hidden print:block print-visible">
+        {/* Brand */}
+        <div className="text-center mb-6">
+          <p className="text-xs tracking-widest text-gray-400 uppercase">QR Hisab</p>
+          <div className="w-16 h-px bg-gray-200 mx-auto mt-2" />
+        </div>
+
+        {/* Shop name */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold text-black">{displayName}</h1>
+          {merchantData.business_name && merchantData.business_name !== merchantData.name && (
+            <p className="text-sm text-gray-500 mt-1">{merchantData.name}</p>
+          )}
+          <p className="text-sm text-gray-500 capitalize">{merchantData.business_type} Shop</p>
+        </div>
+
+        {/* QR Code — large, pure B/W */}
+        <div className="flex justify-center mb-6">
+          <div className="p-4 border-2 border-black rounded-2xl">
+            <QRCodeSVG
+              value={qrData}
+              size={320}
+              level="H"
+              bgColor="#ffffff"
+              fgColor="#000000"
+              includeMargin={false}
+            />
+          </div>
+        </div>
+
+        {/* Tagline */}
+        <div className="text-center mb-5">
+          <p className="text-sm font-semibold text-black">Scan garera credit rakhnus</p>
+          <p className="text-xs text-gray-500">Scan to record credit</p>
+        </div>
+
+        {/* Steps — bilingual */}
+        <div className="border-t border-gray-200 pt-4 space-y-3">
+          <StepPrint nepali="Phone ko camera kholnus" english="Open your phone camera" num={1} />
+          <StepPrint nepali="QR code scan garnus" english="Scan the QR code" num={2} />
+          <StepPrint nepali="Amount ra description lekhnus" english="Enter amount & description" num={3} />
+          <StepPrint nepali="Shopkeeper le approve garidincha" english="Shopkeeper will approve the entry" num={4} />
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-gray-200 mt-5 pt-3 text-center">
+          <p className="text-[10px] tracking-wider text-gray-400 uppercase">QR Hisab — Digital Credit Ledger</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StepPrint({ nepali, english, num }: { nepali: string; english: string; num: number }) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="w-5 h-5 rounded-full bg-black text-white text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">{num}</span>
+      <div>
+        <p className="text-sm font-medium text-black leading-tight">{nepali}</p>
+        <p className="text-xs text-gray-500 leading-tight">{english}</p>
+      </div>
     </div>
   );
 }

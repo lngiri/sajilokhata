@@ -78,6 +78,18 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
+    if (admin && log.customer_id) {
+      await admin.from("notifications").insert({
+        user_id: log.customer_id,
+        user_type: "customer",
+        type: "edit_accepted",
+        title: "Merchant accepted your edit request",
+        body: `Amount updated to Rs. ${Number(log.proposed_amount).toLocaleString()}`,
+        reference_id: log.id,
+        reference_type: "credit_log",
+      });
+    }
+
     return NextResponse.json({ success: true });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || "Failed to accept edit" }, { status: 500 });

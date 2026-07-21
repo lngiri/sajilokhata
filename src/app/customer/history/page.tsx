@@ -13,6 +13,7 @@ import CustomerPinGate from "@/components/CustomerPinGate";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
+const LAST_SEEN_KEY = "customer_history_last_seen";
 
 interface HistoryEntry {
   id: string;
@@ -60,6 +61,9 @@ export default function CustomerHistoryPage() {
   const [filter, setFilter] = useState<"all" | "unverified" | "pending" | "approved" | "rejected">("all");
   const [stats, setStats] = useState({ total: 0, pending: 0, unverified: 0, approved: 0, rejected: 0 });
   const [editModal, setEditModal] = useState<{ id: string; amount: number; description: string } | null>(null);
+  const [lastSeenAt, setLastSeenAt] = useState(() => {
+    try { return Number(localStorage.getItem(LAST_SEEN_KEY)) || Date.now(); } catch { return Date.now(); }
+  });
   const mountedRef = useRef(true);
   const realtimeChannelRef = useRef<any>(null);
   const realtimeSetupRef = useRef(false);
@@ -206,6 +210,13 @@ export default function CustomerHistoryPage() {
   useEffect(() => {
     loadLogsRef.current = loadLogs;
   }, [loadLogs]);
+
+  // Mark seen timestamp when page loads
+  useEffect(() => {
+    const now = Date.now();
+    setLastSeenAt(now);
+    try { localStorage.setItem(LAST_SEEN_KEY, String(now)); } catch {}
+  }, []);
 
   // Mounted ref + cleanup
   useEffect(() => {
@@ -380,8 +391,11 @@ export default function CustomerHistoryPage() {
                   <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}>
                     <div className="flex items-start gap-3">
                       {/* Type icon */}
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
+                      <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
                         <TransactionIcon type={log.type} size={18} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
+                        {new Date(log.created_at).getTime() > lastSeenAt && (
+                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white text-[6px] font-bold text-white flex items-center justify-center">N</span>
+                        )}
                       </div>
 
                       {/* Details */}

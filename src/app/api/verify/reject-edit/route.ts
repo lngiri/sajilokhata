@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,15 +10,16 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = await createClient();
+    const admin = getAdminClient();
 
     const { data: rawLog, error: fetchError } = await supabase
       .from("credit_logs")
-      .select("id, amount, proposed_amount, status")
+      .select("id, amount, proposed_amount, status, customer_id")
       .eq("id", logId)
       .single();
 
     const log = rawLog as unknown as {
-      id: string; amount: number; proposed_amount: number | null; status: string;
+      id: string; amount: number; proposed_amount: number | null; status: string; customer_id: string;
     } | null;
 
     if (fetchError || !log) {
@@ -37,6 +39,18 @@ export async function POST(req: NextRequest) {
       .eq("id", log.id);
 
     if (updateError) throw updateError;
+
+    if (admin && log.customer_id) {
+      await admin.from("notifications").insert({
+        user_id: log.customer_id,
+        user_type: "customer",
+        type: "edit_rejected",
+        title: "Merchant declined your edit request",
+        body: `Edit request for Rs. ${Number(log.amount).toLocaleString()} was declined`,
+        reference_id: log.id,
+        reference_type: "credit_log",
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (e: any) {

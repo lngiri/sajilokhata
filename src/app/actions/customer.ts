@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import { createNotification } from "@/app/actions/notifications";
 import type { Database } from "@/lib/types/database";
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
@@ -204,6 +205,16 @@ export async function addCustomerForMerchant(
       }
     }
 
+    createNotification({
+      userId: merchantId,
+      userType: "merchant",
+      type: "customer_linked",
+      title: "New customer added",
+      body: `${customer.name || "Customer"} linked to your shop`,
+      referenceId: customer.id,
+      referenceType: "customer",
+    });
+
     return {
       success: true,
       customer: { id: customer.id, name: customer.name, phone: normalized },
@@ -384,6 +395,23 @@ export async function submitCustomerEntry(
     }
 
     const log = rawLog as Pick<CreditLogRow, "id">;
+
+    const { data: shop } = await (admin.from("merchants") as any)
+      .select("name")
+      .eq("id", merchantId)
+      .single()
+      .catch(() => ({ data: null }));
+    const shopName = shop?.name || "Shop";
+    createNotification({
+      userId: merchantId,
+      userType: "merchant",
+      type: "entry_created",
+      title: `New credit request from ${session.name || "a customer"}`,
+      body: `Rs. ${Number(amount).toLocaleString()} ${type} requested at ${shopName}`,
+      referenceId: log.id,
+      referenceType: "credit_log",
+    });
+
     return { success: true, logId: log.id };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -623,6 +651,19 @@ export async function cancelCreditLog(logId: string): Promise<any> {
     .single();
 
   if (error) throw error;
+
+  if (data?.merchant_id) {
+    createNotification({
+      userId: data.merchant_id,
+      userType: "merchant",
+      type: "entry_rejected",
+      title: `Entry cancelled by ${customer.name || "Customer"}`,
+      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry cancelled`,
+      referenceId: logId,
+      referenceType: "credit_log",
+    });
+  }
+
   return data;
 }
 
@@ -649,6 +690,19 @@ export async function confirmCustomerEntry(logId: string): Promise<any> {
     .single();
 
   if (error) throw error;
+
+  if (data?.merchant_id) {
+    createNotification({
+      userId: data.merchant_id,
+      userType: "merchant",
+      type: "entry_approved",
+      title: `Entry confirmed by ${customer.name || "Customer"}`,
+      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry approved`,
+      referenceId: logId,
+      referenceType: "credit_log",
+    });
+  }
+
   return data;
 }
 
@@ -672,6 +726,19 @@ export async function disputeEntry(logId: string): Promise<any> {
     .single();
 
   if (error) throw error;
+
+  if (data?.merchant_id) {
+    createNotification({
+      userId: data.merchant_id,
+      userType: "merchant",
+      type: "entry_disputed",
+      title: `Entry disputed by ${customer.name || "Customer"}`,
+      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry disputed`,
+      referenceId: logId,
+      referenceType: "credit_log",
+    });
+  }
+
   return data;
 }
 

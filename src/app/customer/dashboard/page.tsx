@@ -18,9 +18,15 @@ import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
   getCustomerStats,
+  getCustomerIdsForPhone,
 } from "@/app/actions/customer";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
 import { getCustomerProfile, updateCustomerAvatar, submitCustomerEntry } from "@/app/actions/customer";
+import {
+  getNotifications as getNotifs,
+  getUnreadCount,
+  markAsRead,
+} from "@/app/actions/notifications";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
 
 function maskPhone(phone: string): string {
@@ -102,13 +108,9 @@ export default function CustomerDashboard() {
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Array<{
-    id: string;
-    shopName: string;
-    amount: number;
-    status: string;
-    created_at: string;
-  }>>([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   const customerNotificationRef = useRef<HTMLDivElement>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -212,13 +214,33 @@ export default function CustomerDashboard() {
     loadStatsRef.current = loadStats;
   }, [loadStats]);
 
-  // Load stats + profile when phone is available
+  const loadNotifications = useCallback(async () => {
+    if (!customerId) return;
+    const [notifData, unread] = await Promise.all([
+      getNotifs(customerId, "customer", 10),
+      getUnreadCount(customerId, "customer"),
+    ]);
+    if (mountedRef.current) {
+      setNotifications(notifData);
+      setUnreadNotifCount(unread);
+    }
+  }, [customerId]);
+
+  const loadCustomerId = useCallback(async (phone: string) => {
+    const ids = await getCustomerIdsForPhone(phone);
+    if (ids.length > 0 && mountedRef.current) {
+      setCustomerId(ids[0]);
+    }
+  }, []);
+
+  // Load stats + profile + notifications when phone is available
   useEffect(() => {
     if (onboardingCompletedRef.current) return;
     if (!initialized || !customerPhone) return;
     let cancelled = false;
 
     loadStats();
+    loadCustomerId(customerPhone);
 
     setProfileLoading(true);
     getCustomerProfile(customerPhone).then((profile) => {
@@ -246,7 +268,14 @@ export default function CustomerDashboard() {
     });
 
     return () => { cancelled = true; };
-  }, [initialized, customerPhone, loadStats]);
+  }, [initialized, customerPhone, loadStats, loadCustomerId]);
+
+  // Load notifications when customerId resolves
+  useEffect(() => {
+    if (customerId) {
+      loadNotifications();
+    }
+  }, [customerId, loadNotifications]);
 
   // If no customer phone after full init (both localStorage + cookie checked), redirect to login
   useEffect(() => {
@@ -325,6 +354,30 @@ export default function CustomerDashboard() {
       }
     };
   }, [initialized, customerPhone, addToast]);
+
+  // Realtime for customer notifications table
+  useEffect(() => {
+    if (!customerId) return;
+    const supabase = realtimeClientRef.current;
+    const channel = supabase
+      .channel("customer-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${customerId}`,
+        },
+        () => {
+          if (mountedRef.current) loadNotifications();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [customerId, loadNotifications]);
 
   // Close customer notification dropdown on click outside
   useEffect(() => {
@@ -540,15 +593,28 @@ export default function CustomerDashboard() {
             <RoleSwitcher />
             <div ref={customerNotificationRef}>
               <button
-                onClick={() => setShowNotifications(!showNotifications)}
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  if (!showNotifications && customerId) {
+                    markAsRead(customerId, "customer").then(() => {
+                      setUnreadNotifCount(0);
+                      loadNotifications();
+                    }).catch(() => {});
+                  }
+                }}
                 className="p-1.5 active:scale-90 transition-transform relative"
               >
                 <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                 </svg>
-                {(notifications.length > 0 || (stats?.pendingCount ?? 0) > 0) && (
+                {unreadNotifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+                    {unreadNotifCount}
+                  </span>
+                )}
+                {unreadNotifCount === 0 && (stats?.pendingCount ?? 0) > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
-                    {stats?.pendingCount ?? notifications.length}
+                    {stats?.pendingCount}
                   </span>
                 )}
               </button>
@@ -575,40 +641,55 @@ export default function CustomerDashboard() {
           className="fixed right-4 top-16 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-3 border-b border-gray-100">
+          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
             <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
+            {notifications.length > 0 && (
+              <span className="text-[10px] text-[var(--color-text-muted)]">{notifications.length}</span>
+            )}
           </div>
-          <div className="max-h-64 overflow-y-auto">
-            {notifications.length > 0 ? (
-              notifications.slice(0, 3).map((n) => (
+          <div className="max-h-80 overflow-y-auto">
+            {notifications.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
+                No notifications
+              </div>
+            ) : (
+              notifications.slice(0, 10).map((n: any) => (
                 <a
                   key={n.id}
                   href="/customer/history"
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                  className={`flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.read ? "bg-blue-50/30" : ""}`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    n.status === "approved" ? "bg-green-50" : n.status === "rejected" ? "bg-red-50" : "bg-amber-50"
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                    n.type === "entry_approved" ? "bg-green-50" :
+                    n.type === "entry_rejected" || n.type === "edit_rejected" ? "bg-red-50" :
+                    n.type === "entry_created" ? "bg-amber-50" :
+                    n.type === "credit_limit_changed" ? "bg-blue-50" :
+                    "bg-gray-50"
                   }`}>
                     <span className={`text-xs font-bold ${
-                      n.status === "approved" ? "text-green-600" : n.status === "rejected" ? "text-red-600" : "text-amber-600"
+                      n.type === "entry_approved" ? "text-green-600" :
+                      n.type === "entry_rejected" || n.type === "edit_rejected" ? "text-red-600" :
+                      n.type === "entry_created" ? "text-amber-600" :
+                      n.type === "credit_limit_changed" ? "text-blue-600" :
+                      "text-gray-500"
                     }`}>
-                      {n.status === "approved" ? "✓" : n.status === "rejected" ? "✗" : "!"}
+                      {n.type === "entry_approved" ? "✓" :
+                       n.type === "entry_rejected" || n.type === "edit_rejected" ? "✗" :
+                       n.type === "entry_created" ? "+" :
+                       n.type === "edit_accepted" ? "✓" :
+                       n.type === "credit_limit_changed" ? "💰" :
+                       "•"}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[var(--color-text)] truncate">
-                      {n.shopName} — Rs. {n.amount.toLocaleString()} {n.status}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">
-                      {new Date(n.created_at).toLocaleTimeString()}
+                    <p className="text-xs font-medium text-[var(--color-text)] truncate">{n.title}</p>
+                    {n.body && <p className="text-[10px] text-[var(--color-text-muted)] truncate">{n.body}</p>}
+                    <p className="text-[9px] text-[var(--color-text-muted)] mt-0.5">
+                      {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                 </a>
               ))
-            ) : (
-              <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
-                No notifications
-              </div>
             )}
           </div>
           <a

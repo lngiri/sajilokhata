@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { createNotification } from "@/app/actions/notifications";
 
 /**
  * Require a valid merchant session before allowing data access.
@@ -466,6 +467,17 @@ export async function updateCustomerCreditLimit(
     .single();
 
   if (error) throw error;
+
+  createNotification({
+    userId: customerId,
+    userType: "customer",
+    type: "credit_limit_changed",
+    title: "Credit limit updated",
+    body: `New credit limit: Rs. ${Number(creditLimit).toLocaleString()}`,
+    referenceId: customerId,
+    referenceType: "customer",
+  });
+
   return data;
 }
 
@@ -492,6 +504,25 @@ export async function updateCreditLogStatus(
     .single();
 
   if (error) throw error;
+
+  if (data?.customer_id && (status === "approved" || status === "rejected")) {
+    const [custResult, shopResult] = await Promise.all([
+      (admin.from("customers") as any).select("name").eq("id", data.customer_id).single().catch(() => ({ data: null })),
+      (admin.from("merchants") as any).select("name").eq("id", sessionUserId).single().catch(() => ({ data: null })),
+    ]);
+    const customerName = custResult?.data?.name || "Customer";
+    const shopName = shopResult?.data?.name || "Shop";
+    createNotification({
+      userId: data.customer_id,
+      userType: "customer",
+      type: status === "approved" ? "entry_approved" : "entry_rejected",
+      title: `Entry ${status} by ${shopName}`,
+      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry ${status}`,
+      referenceId: logId,
+      referenceType: "credit_log",
+    });
+  }
+
   return data;
 }
 
@@ -1229,6 +1260,22 @@ export async function submitPaymentVoucher(
       console.error("[submitPaymentVoucher] Insert error:", insertError);
       return { success: false, error: insertError.message };
     }
+
+    const [custResult, shopResult] = await Promise.all([
+      (admin.from("customers") as any).select("name").eq("id", customerId).single().catch(() => ({ data: null })),
+      (admin.from("merchants") as any).select("name").eq("id", merchantId).single().catch(() => ({ data: null })),
+    ]);
+    const customerName = custResult?.data?.name || "Customer";
+    const shopName = shopResult?.data?.name || "Shop";
+    createNotification({
+      userId: merchantId,
+      userType: "merchant",
+      type: "payment_voucher",
+      title: `Payment voucher from ${customerName}`,
+      body: `Rs. ${Number(amount).toLocaleString()} voucher submitted at ${shopName}`,
+      referenceId: logId,
+      referenceType: "credit_log",
+    });
 
     return { success: true, logId };
   } catch (err) {
