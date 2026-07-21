@@ -97,6 +97,7 @@ END;
 $$;
 
 -- 4. Bind trigger to credit_logs
+DROP TRIGGER IF EXISTS audit_credit_logs_trigger ON public.credit_logs;
 CREATE TRIGGER audit_credit_logs_trigger
   AFTER INSERT OR UPDATE OR DELETE ON public.credit_logs
   FOR EACH ROW
@@ -105,12 +106,14 @@ CREATE TRIGGER audit_credit_logs_trigger
 -- 5. RLS: merchants SELECT only their own logs; client writes blocked
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "merchants_select_own_audit_logs" ON public.audit_logs;
 CREATE POLICY "merchants_select_own_audit_logs"
   ON public.audit_logs
   FOR SELECT
   TO authenticated
   USING (merchant_id = auth.uid());
 
+DROP POLICY IF EXISTS "block_client_write_audit_logs" ON public.audit_logs;
 CREATE POLICY "block_client_write_audit_logs"
   ON public.audit_logs
   FOR ALL

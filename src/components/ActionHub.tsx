@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ReferModal from "./ReferModal";
 import FeedbackModal from "./FeedbackModal";
+import { isFabHidden, setFabHidden, FAB_VISIBILITY_EVENT } from "@/lib/ui/fabVisibility";
 
 const menuVariants = {
   hidden: { opacity: 0, scale: 0.8, y: 20, transition: { duration: 0.15 } },
@@ -41,20 +42,27 @@ const ITEMS = [
 const HELP_URL = "https://wa.me/9779763658505";
 const FAB_SIZE = 56;
 const DISMISS_THRESHOLD = 80;
+const LONG_PRESS_MS = 1200;
+const LONG_PRESS_MOVE_THRESHOLD = 10;
 
 export default function ActionHub() {
   const [mounted, setMounted] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
   const [referOpen, setReferOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
   const posRef = useRef({ x: 0, y: 0 });
   const dragRef = useRef({ startX: 0, startY: 0, elX: 0, elY: 0, moved: false, dismissed: false });
   const ignoreClickRef = useRef(false);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggeredRef = useRef(false);
   const fabRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
+      setHidden(isFabHidden());
       const p = {
         x: window.innerWidth - FAB_SIZE - 24,
         y: window.innerHeight - FAB_SIZE - 24,
@@ -62,6 +70,21 @@ export default function ActionHub() {
       posRef.current = p;
       setPos(p);
       setMounted(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setHidden(isFabHidden());
+    };
+    window.addEventListener(FAB_VISIBILITY_EVENT, handleVisibilityChange);
+    return () => window.removeEventListener(FAB_VISIBILITY_EVENT, handleVisibilityChange);
+  }, []);
+
+  const clearLongPressTimer = useCallback(() => {
+    if (longPressTimerRef.current !== null) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
   }, []);
 
@@ -78,13 +101,23 @@ export default function ActionHub() {
       moved: false,
       dismissed: false,
     };
-  }, []);
+    longPressTriggeredRef.current = false;
+    clearLongPressTimer();
+    longPressTimerRef.current = setTimeout(() => {
+      longPressTriggeredRef.current = true;
+      longPressTimerRef.current = null;
+      setShowConfirm(true);
+    }, LONG_PRESS_MS);
+  }, [clearLongPressTimer]);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     const dx = e.clientX - dragRef.current.startX;
     const dy = e.clientY - dragRef.current.startY;
     if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
       dragRef.current.moved = true;
+    }
+    if (Math.abs(dx) > LONG_PRESS_MOVE_THRESHOLD || Math.abs(dy) > LONG_PRESS_MOVE_THRESHOLD) {
+      clearLongPressTimer();
     }
     if (dragRef.current.moved) {
       const newY = Math.max(0, Math.min(window.innerHeight - FAB_SIZE, dragRef.current.elY + dy));
@@ -96,16 +129,21 @@ export default function ActionHub() {
       posRef.current = newPos;
       setPos(newPos);
     }
-  }, []);
+  }, [clearLongPressTimer]);
 
   const handlePointerUp = useCallback(() => {
+    clearLongPressTimer();
     if (dragRef.current.dismissed) {
       setOpen(false);
       ignoreClickRef.current = true;
     }
-  }, []);
+  }, [clearLongPressTimer]);
 
   const handleFabClick = useCallback(() => {
+    if (longPressTriggeredRef.current) {
+      longPressTriggeredRef.current = false;
+      return;
+    }
     if (ignoreClickRef.current) {
       ignoreClickRef.current = false;
       return;
@@ -115,6 +153,11 @@ export default function ActionHub() {
       return;
     }
     setOpen((v) => !v);
+  }, []);
+
+  const handleHide = useCallback(() => {
+    setShowConfirm(false);
+    setFabHidden(true);
   }, []);
 
   const handleAction = (action: string) => {
@@ -152,7 +195,7 @@ export default function ActionHub() {
     height: FAB_SIZE,
   }), [pos.x, pos.y]);
 
-  if (!mounted) return null;
+  if (!mounted || hidden) return null;
 
   return (
     <>
@@ -199,29 +242,73 @@ export default function ActionHub() {
         )}
       </AnimatePresence>
 
-      <button
-        ref={fabRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onClick={handleFabClick}
-        style={fabStyle}
-        className={`rounded-full shadow-xl flex items-center justify-center backdrop-blur-sm will-change-transform transition-colors ${
-          open
-            ? "bg-red-500/90 hover:bg-red-500 text-white"
-            : "bg-blue-600/90 hover:bg-blue-600 text-white"
-        }`}
-      >
-        {open ? (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        ) : (
-          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
-          </svg>
+      <AnimatePresence>
+        {!showConfirm && (
+          <motion.button
+            ref={fabRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onClick={handleFabClick}
+            style={fabStyle}
+            initial={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+            className={`rounded-full shadow-xl flex items-center justify-center backdrop-blur-sm will-change-transform transition-colors ${
+              open
+                ? "bg-red-500/90 hover:bg-red-500 text-white"
+                : "bg-blue-600/90 hover:bg-blue-600 text-white"
+            }`}
+          >
+            {open ? (
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m7-7H5" />
+              </svg>
+            )}
+          </motion.button>
         )}
-      </button>
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showConfirm && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[60] bg-black/40"
+              onClick={() => setShowConfirm(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.15 }}
+              className="fixed z-[61] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] bg-white rounded-2xl shadow-2xl p-6 text-center"
+            >
+              <h3 className="text-base font-bold text-gray-900 mb-1">Hide Quick Action?</h3>
+              <p className="text-sm text-gray-500 mb-5">You can enable it again anytime from Settings.</p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleHide}
+                  className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
+                >
+                  Hide
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <ReferModal open={referOpen} onClose={() => setReferOpen(false)} />
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />

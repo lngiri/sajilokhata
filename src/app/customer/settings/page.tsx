@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { signOut } from "@/lib/auth";
 import { updateCustomerProfile } from "@/app/actions/customer";
 import CustomerPinGate from "@/components/CustomerPinGate";
+import { isFabHidden, setFabHidden } from "@/lib/ui/fabVisibility";
 
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
 
@@ -18,6 +19,11 @@ export default function CustomerSettings() {
   const [initialized, setInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editName, setEditName] = useState("");
+  const [fabHiddenState, setFabHiddenState] = useState(false);
+
+  useEffect(() => {
+    setFabHiddenState(isFabHidden());
+  }, []);
 
   useEffect(() => {
     try {
@@ -153,6 +159,34 @@ export default function CustomerSettings() {
             </p>
           </div>
         </div>
+
+        {/* Preferences Section */}
+        <section>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+            Preferences
+          </h2>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)]">Show Quick Action Button</p>
+                <p className="text-xs text-[var(--color-text-muted)]">Floating + button on all screens</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={!fabHiddenState}
+                  onChange={(e) => {
+                    const hide = !e.target.checked;
+                    setFabHidden(hide);
+                    setFabHiddenState(hide);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+              </label>
+            </div>
+          </div>
+        </section>
 
         {/* Sign Out Button */}
         <button

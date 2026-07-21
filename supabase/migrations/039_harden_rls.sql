@@ -8,15 +8,18 @@
 -- ============================================================
 DROP POLICY IF EXISTS "Permissive: all operations allowed (testing phase)" ON merchants;
 
+DROP POLICY IF EXISTS "Merchants read own profile" ON merchants;
 CREATE POLICY "Merchants read own profile"
   ON merchants FOR SELECT
   USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "Merchants update own profile" ON merchants;
 CREATE POLICY "Merchants update own profile"
   ON merchants FOR UPDATE
   USING (id = auth.uid())
   WITH CHECK (id = auth.uid());
 
+DROP POLICY IF EXISTS "Merchants insert own profile" ON merchants;
 CREATE POLICY "Merchants insert own profile"
   ON merchants FOR INSERT
   WITH CHECK (id = auth.uid());
@@ -28,10 +31,12 @@ CREATE POLICY "Merchants insert own profile"
 -- ============================================================
 DROP POLICY IF EXISTS "Permissive: all operations allowed (testing phase)" ON customers;
 
+DROP POLICY IF EXISTS "Anyone can read customers" ON customers;
 CREATE POLICY "Anyone can read customers"
   ON customers FOR SELECT
   USING (true);
 
+DROP POLICY IF EXISTS "Authenticated users can create customers" ON customers;
 CREATE POLICY "Authenticated users can create customers"
   ON customers FOR INSERT
   WITH CHECK (auth.role() = 'authenticated');
@@ -41,14 +46,17 @@ CREATE POLICY "Authenticated users can create customers"
 -- ============================================================
 DROP POLICY IF EXISTS "Permissive: all operations allowed (testing phase)" ON merchant_customers;
 
+DROP POLICY IF EXISTS "Merchants read their own customer links" ON merchant_customers;
 CREATE POLICY "Merchants read their own customer links"
   ON merchant_customers FOR SELECT
   USING (merchant_id = auth.uid());
 
+DROP POLICY IF EXISTS "Merchants insert their own customer links" ON merchant_customers;
 CREATE POLICY "Merchants insert their own customer links"
   ON merchant_customers FOR INSERT
   WITH CHECK (merchant_id = auth.uid());
 
+DROP POLICY IF EXISTS "Merchants update their own customer links" ON merchant_customers;
 CREATE POLICY "Merchants update their own customer links"
   ON merchant_customers FOR UPDATE
   USING (merchant_id = auth.uid())
@@ -82,36 +90,25 @@ CREATE POLICY "Merchants update their own credit_logs"
 
 -- ============================================================
 -- 5. audit_logs
+-- Handled by migration 040 (recreates table with new schema)
 -- ============================================================
-DROP POLICY IF EXISTS "Permissive: all operations allowed (testing phase)" ON audit_logs;
-
-CREATE POLICY "Merchants read audit logs for their credit_logs"
-  ON audit_logs FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM credit_logs cl
-      WHERE cl.id = audit_logs.credit_log_id
-        AND cl.merchant_id = auth.uid()
-    )
-  );
-
-CREATE POLICY "Anyone can insert audit_logs"
-  ON audit_logs FOR INSERT
-  WITH CHECK (true);
 
 -- ============================================================
 -- 6. sessions
 -- ============================================================
 DROP POLICY IF EXISTS "Permissive: all operations allowed (testing phase)" ON sessions;
 
+DROP POLICY IF EXISTS "Merchants read their own sessions" ON sessions;
 CREATE POLICY "Merchants read their own sessions"
   ON sessions FOR SELECT
   USING (merchant_id = auth.uid());
 
+DROP POLICY IF EXISTS "Merchants insert their own sessions" ON sessions;
 CREATE POLICY "Merchants insert their own sessions"
   ON sessions FOR INSERT
   WITH CHECK (merchant_id = auth.uid());
 
+DROP POLICY IF EXISTS "Merchants delete their own sessions" ON sessions;
 CREATE POLICY "Merchants delete their own sessions"
   ON sessions FOR DELETE
   USING (merchant_id = auth.uid());

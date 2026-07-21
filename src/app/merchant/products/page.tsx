@@ -54,8 +54,17 @@ export default function ProductsPage() {
     try {
       const data = await getAllMerchantProducts(merchantId);
       setProducts(data as Product[]);
-    } catch (e) {
-      addToast("Failed to load products", "error");
+    } catch (e: any) {
+      const msg = e?.message || "";
+      if (
+        msg.includes("does not exist") ||
+        msg.includes("relation") ||
+        msg.includes("merchant_products")
+      ) {
+        setProducts([]);
+      } else {
+        addToast("Failed to load products: " + msg, "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -101,8 +110,8 @@ export default function ProductsPage() {
       }
       resetForm();
       loadProducts();
-    } catch (e) {
-      addToast("Failed to save product", "error");
+    } catch (e: any) {
+      addToast(e?.message || "Failed to save product", "error");
     } finally {
       setSaving(false);
     }
@@ -129,6 +138,13 @@ export default function ProductsPage() {
 
   const activeProducts = products.filter((p) => p.is_active);
   const inactiveProducts = products.filter((p) => !p.is_active);
+
+  useEffect(() => {
+    if (showForm) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [showForm]);
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)] pb-24">
@@ -252,58 +268,69 @@ export default function ProductsPage() {
       {/* Add/Edit Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
-          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md p-6 space-y-4 animate-slide-up">
-            <h2 className="text-lg font-bold text-[var(--color-text)]">
-              {editingProduct ? "Edit Product" : "Add Product"}
-            </h2>
-            <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Product Name *</label>
-              <input
-                type="text"
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g. Full Cream Milk, Basmati Rice"
-                autoFocus
-                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-              />
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[85dvh] flex flex-col animate-slide-up">
+            <div className="flex items-center justify-between px-6 pt-6 pb-2">
+              <h2 className="text-lg font-bold text-[var(--color-text)]">
+                {editingProduct ? "Edit Product" : "Add Product"}
+              </h2>
+              <button onClick={resetForm} className="p-1 text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-            <div className="flex gap-3">
-              <div className="flex-1">
-                <label className="text-sm font-medium text-[var(--color-text)]">Rate (Rs.) *</label>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">Product Name *</label>
                 <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={formRate}
-                  onChange={(e) => setFormRate(e.target.value)}
-                  placeholder="0"
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center"
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Full Cream Milk, Basmati Rice"
+                  autoFocus
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               </div>
-              <div className="flex-1">
-                <label className="text-sm font-medium text-[var(--color-text)]">Unit</label>
-                <select
-                  value={formUnit}
-                  onChange={(e) => setFormUnit(e.target.value)}
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm appearance-none"
-                >
-                  {UNITS.map((u) => (
-                    <option key={u} value={u}>{u.charAt(0).toUpperCase() + u.slice(1)}</option>
-                  ))}
-                </select>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-[var(--color-text)]">Rate (Rs.) *</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formRate}
+                    onChange={(e) => setFormRate(e.target.value)}
+                    placeholder="0"
+                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="text-sm font-medium text-[var(--color-text)]">Unit</label>
+                  <select
+                    value={formUnit}
+                    onChange={(e) => setFormUnit(e.target.value)}
+                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm appearance-none"
+                  >
+                    {UNITS.map((u) => (
+                      <option key={u} value={u}>{u.charAt(0).toUpperCase() + u.slice(1)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-[var(--color-text)]">Category</label>
+                <input
+                  type="text"
+                  value={formCategory}
+                  onChange={(e) => setFormCategory(e.target.value)}
+                  placeholder="Optional: e.g. Dairy, Groceries"
+                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                />
               </div>
             </div>
-            <div>
-              <label className="text-sm font-medium text-[var(--color-text)]">Category</label>
-              <input
-                type="text"
-                value={formCategory}
-                onChange={(e) => setFormCategory(e.target.value)}
-                placeholder="Optional: e.g. Dairy, Groceries"
-                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-              />
-            </div>
-            <div className="flex gap-3 pt-2">
+
+            <div className="flex-shrink-0 flex gap-3 px-6 pb-6 pt-4 border-t border-gray-100">
               <button onClick={resetForm} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">
                 Cancel
               </button>

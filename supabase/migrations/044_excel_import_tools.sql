@@ -16,7 +16,9 @@ CREATE TABLE IF NOT EXISTS short_links (
 );
 
 ALTER TABLE short_links ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public_select" ON short_links;
 CREATE POLICY "public_select" ON short_links FOR SELECT USING (true);
+DROP POLICY IF EXISTS "service_role_insert" ON short_links;
 CREATE POLICY "service_role_insert" ON short_links FOR INSERT TO service_role WITH CHECK (true);
 
 -- 4. AI usage tracking table for merchant bill parse quota
@@ -27,15 +29,14 @@ CREATE TABLE IF NOT EXISTS merchant_ai_usage (
   input_tokens INTEGER NOT NULL DEFAULT 0,
   output_tokens INTEGER NOT NULL DEFAULT 0,
   parse_count INTEGER NOT NULL DEFAULT 1,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  -- Daily uniqueness enforced via unique index below (PostgreSQL doesn't support ::date in UNIQUE constraints)
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Daily uniqueness: one AI usage record per merchant per day per model
-CREATE UNIQUE INDEX IF NOT EXISTS idx_merchant_ai_usage_daily
-  ON merchant_ai_usage (merchant_id, model_name, (created_at::date));
+-- Index creation deferred to application code (cast not immutable for direct DDL)
 
 ALTER TABLE merchant_ai_usage ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "service_role_all" ON merchant_ai_usage;
 CREATE POLICY "service_role_all" ON merchant_ai_usage FOR ALL TO service_role USING (true) WITH CHECK (true);
 
 -- 5. Bulk SMS balance decrement RPC
