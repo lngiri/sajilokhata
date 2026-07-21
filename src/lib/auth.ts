@@ -86,6 +86,26 @@ export async function signOut() {
     const swVersion = localStorage.getItem("sw_version");
     const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
 
+    // 2b. Save last session info for quick re-login after sign-out
+    const lastMerchantPhone = localStorage.getItem("merchant_phone");
+    const lastCustomerSessionRaw = localStorage.getItem("sajilo_customer_session");
+    let lastSessionInfo: string | null = null;
+    try {
+      if (lastMerchantPhone) {
+        let isDualRole = false;
+        if (lastCustomerSessionRaw) {
+          const parsed = JSON.parse(lastCustomerSessionRaw);
+          isDualRole = !!parsed?.phone;
+        }
+        lastSessionInfo = JSON.stringify({ phone: lastMerchantPhone, isDualRole });
+      } else if (lastCustomerSessionRaw) {
+        const parsed = JSON.parse(lastCustomerSessionRaw);
+        if (parsed?.phone) {
+          lastSessionInfo = JSON.stringify({ phone: parsed.phone, isDualRole: false });
+        }
+      }
+    } catch { /* ignore parse errors */ }
+
     // 3. Wipe all client-side storage
     localStorage.clear();
     sessionStorage.clear();
@@ -93,6 +113,7 @@ export async function signOut() {
     // 4. Restore app config
     if (swVersion) localStorage.setItem("sw_version", swVersion);
     if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
+    if (lastSessionInfo) localStorage.setItem("qr_hisab_last_session", lastSessionInfo);
     // Fire-and-forget: don't await — redirect must not be blocked
     clearIndexedDB().catch(() => {});
 

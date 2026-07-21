@@ -74,9 +74,15 @@ export default function CustomerSettings() {
 
   const handleSignOut = () => {
     setSigningOut(true);
+    // Save last session info for quick re-login
+    const hasMerchant = !!localStorage.getItem("merchant_phone");
+    localStorage.setItem("qr_hisab_last_session", JSON.stringify({
+      phone: customerPhone,
+      isDualRole: hasMerchant,
+    }));
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
     localStorage.removeItem("qr_hisab_auth_" + customerPhone);
-    window.location.replace("/");
+    window.location.replace("/login?signedOut=1");
   };
 
   const maskPhone = (phone: string): string => {

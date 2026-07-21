@@ -6,13 +6,15 @@ import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, for
 
 type Step =
   | "loading"
+  | "welcome"
   | "phone"
   | "pin"
   | "set_pin"
   | "otp"
   | "select_role"
   | "forgot_phone"
-  | "forgot_otp";
+  | "forgot_otp"
+  | "post_signout_role";
 
 type SelectRoleMode = "register" | "login";
 
@@ -34,6 +36,8 @@ export default function LoginPage() {
   const [selectRoleMode, setSelectRoleMode] = useState<SelectRoleMode>("register");
   const [availableRoles, setAvailableRoles] = useState<("merchant" | "customer")[]>(["merchant", "customer"]);
   const [registerName, setRegisterName] = useState("");
+  const [authMode, setAuthMode] = useState<"signin" | "register" | null>(null);
+  const [phoneErrorAction, setPhoneErrorAction] = useState<"signin" | "register" | null>(null);
 
 
 
@@ -85,20 +89,43 @@ export default function LoginPage() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Skip session check if user just signed out — show phone input immediately
-      if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("signedOut")) {
-        // Clean the URL without triggering a reload
-        window.history.replaceState({}, "", window.location.pathname);
-        if (!cancelled) setStep("phone");
+      if (typeof window === "undefined") return;
+
+      // 1. Check for last signed-out session (quick re-login for dual-role)
+      const lastSessionRaw = localStorage.getItem("qr_hisab_last_session");
+      if (lastSessionRaw) {
+        try {
+          const { phone: lastPhone, isDualRole } = JSON.parse(lastSessionRaw);
+          localStorage.removeItem("qr_hisab_last_session");
+          window.history.replaceState({}, "", window.location.pathname);
+          if (!cancelled) {
+            if (isDualRole) {
+              setStep("post_signout_role");
+            } else {
+              setPhone(lastPhone);
+              setStep("phone");
+            }
+          }
+        } catch {
+          localStorage.removeItem("qr_hisab_last_session");
+          if (!cancelled) setStep("welcome");
+        }
         return;
       }
 
-      // Also skip session check if user has no local session data
+      // 2. Skip session check if user just signed out — show welcome modal
+      if (new URLSearchParams(window.location.search).has("signedOut")) {
+        window.history.replaceState({}, "", window.location.pathname);
+        if (!cancelled) setStep("welcome");
+        return;
+      }
+
+      // 3. Also skip session check if user has no local session data
       // (means they explicitly navigated to /login, not redirected from middleware)
       const hasLocalSession = localStorage.getItem("merchant_id") || localStorage.getItem("sajilo_customer_session");
       if (!hasLocalSession) {
-        console.log("[Login] No local session data → showing phone input");
-        if (!cancelled) setStep("phone");
+        console.log("[Login] No local session data → showing welcome");
+        if (!cancelled) setStep("welcome");
         return;
       }
 
@@ -126,8 +153,8 @@ export default function LoginPage() {
           }
 
           if (data.roles.length === 0) {
-            console.log("[Login] Session exists but no roles → showing phone");
-            if (!cancelled) setStep("phone");
+            console.log("[Login] Session exists but no roles → showing welcome");
+            if (!cancelled) setStep("welcome");
             return;
           }
           if (data.roles.length === 1) {
@@ -141,7 +168,7 @@ export default function LoginPage() {
           return;
         }
       } catch (e) { console.log("[Login] Session check failed:", e); }
-      if (!cancelled) setStep("phone");
+      if (!cancelled) setStep("welcome");
     })();
     return () => { cancelled = true; };
   }, []);
@@ -181,6 +208,20 @@ export default function LoginPage() {
       console.error("[Login] Phone submit error:", JSON.stringify(errorDetail, null, 2));
       console.error("[Login] Original error object:", e);
       setError("Network error. Please try again.");
+      setLoading(false);
+      return;
+    }
+
+    // Auth mode validation
+    if (authMode === "register" && exists) {
+      setError("This phone number is already registered.");
+      setPhoneErrorAction("signin");
+      setLoading(false);
+      return;
+    }
+    if (authMode === "signin" && !exists) {
+      setError("No account found with this number.");
+      setPhoneErrorAction("register");
       setLoading(false);
       return;
     }
@@ -527,6 +568,49 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  // ── Post sign-out role selection ──
+  const handlePostSignoutRoleSelect = async (role: "merchant" | "customer") => {
+    setLoading(true);
+    setError("");
+    try {
+      const raw = localStorage.getItem("qr_hisab_last_session");
+      if (!raw) {
+        setStep("phone");
+        setLoading(false);
+        return;
+      }
+      const { phone: lastPhone } = JSON.parse(raw);
+      localStorage.removeItem("qr_hisab_last_session");
+      setPhone(lastPhone);
+      const result = await checkUserExists(lastPhone);
+      const user = result.users.find((u) => u.userType === role || u.userType === "both");
+      if (!user) {
+        setError("Account not found. Please sign in again.");
+        setStep("phone");
+        setLoading(false);
+        return;
+      }
+      userInfoRef.current = { userId: user.userId, userType: role, name: user.name };
+      if (user.hasPin) {
+        setStep("pin");
+      } else {
+        setStep("set_pin");
+      }
+    } catch {
+      setError("Something went wrong. Please try again.");
+      setStep("phone");
+    }
+    setLoading(false);
+  };
+
+  const handlePhoneErrorAction = () => {
+    if (phoneErrorAction) {
+      setAuthMode(phoneErrorAction);
+      setError("");
+      setPhoneErrorAction(null);
+    }
+  };
+
   // ── Forgot PIN ──
   const handleForgotPhoneSubmit = async () => {
     if (!phone || phone.length < 10) return;
@@ -785,10 +869,110 @@ export default function LoginPage() {
         </div>
       )}
 
+      {/* ── Welcome Modal ── */}
+      {step === "welcome" && (
+        <div className="w-full max-w-xs space-y-4 animate-fade-in">
+          <p className="text-sm text-[var(--color-text-muted)] text-center">How would you like to continue?</p>
+
+          <button
+            onClick={() => { setAuthMode("signin"); setStep("phone"); setError(""); setPhoneErrorAction(null); }}
+            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
+            </svg>
+            Sign In to Existing Account
+          </button>
+
+          <button
+            onClick={() => { setAuthMode("register"); setStep("phone"); setError(""); setPhoneErrorAction(null); }}
+            className="w-full py-3.5 bg-white text-[var(--color-text)] rounded-xl font-semibold border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
+            </svg>
+            Create a New Account
+          </button>
+        </div>
+      )}
+
+      {/* ── Post Sign-out Role Selection ── */}
+      {step === "post_signout_role" && (
+        <div className="w-full max-w-xs space-y-4 animate-fade-in">
+          <p className="text-sm text-[var(--color-text-muted)] text-center">Choose which account to continue with</p>
+
+          <button
+            onClick={() => handlePostSignoutRoleSelect("merchant")}
+            disabled={loading}
+            className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
+          >
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-[var(--color-text)]">Continue as Merchant</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Manage your shop, credits & customers</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => handlePostSignoutRoleSelect("customer")}
+            disabled={loading}
+            className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-emerald-300 active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
+          >
+            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
+              </svg>
+            </div>
+            <div className="text-left">
+              <p className="font-semibold text-[var(--color-text)]">Continue as Customer</p>
+              <p className="text-xs text-[var(--color-text-muted)]">Track your purchases & credit history</p>
+            </div>
+          </button>
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-3 bg-[var(--color-bg)] text-[var(--color-text-muted)]">or</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              localStorage.removeItem("qr_hisab_last_session");
+              setPhone("");
+              setStep("phone");
+              setError("");
+            }}
+            disabled={loading}
+            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-2"
+          >
+            Use another account
+          </button>
+
+          {error && (
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+          )}
+
+          {loading && (
+            <div className="flex justify-center">
+              <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── Phone Entry ── */}
       {step === "phone" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
-          <p className="text-sm text-[var(--color-text-muted)] text-center">Sign in with your phone number</p>
+          <p className="text-sm text-[var(--color-text-muted)] text-center">
+            {authMode === "register" ? "Enter your phone number to create an account" : "Sign in with your phone number"}
+          </p>
 
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
@@ -806,7 +990,15 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+          )}
+          {phoneErrorAction && (
+            <button
+              onClick={handlePhoneErrorAction}
+              className="w-full py-2.5 text-sm font-medium text-[var(--color-primary)] bg-[var(--color-primary)]/5 rounded-xl active:scale-[0.98] transition-transform"
+            >
+              {phoneErrorAction === "signin" ? "Sign In Instead" : "Create a New Account"}
+            </button>
           )}
 
           <button
@@ -818,6 +1010,15 @@ export default function LoginPage() {
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : "Continue"}
           </button>
+
+          {authMode && (
+            <button
+              onClick={() => { setStep("welcome"); setError(""); setPhoneErrorAction(null); setAuthMode(null); }}
+              className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
+            >
+              ← Back
+            </button>
+          )}
         </div>
       )}
 
