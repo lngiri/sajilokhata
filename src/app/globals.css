@@ -111,6 +111,14 @@ body {
   animation: pulse-soft 2s ease-in-out infinite;
 }
 
+@keyframes bounce-subtle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.animate-bounce-subtle {
+  animation: bounce-subtle 1.5s ease-in-out infinite;
+}
+
 /* Slide up animation for modals */
 @keyframes slide-up {
   from { transform: translateY(100%); opacity: 0; }
@@ -151,4 +159,36 @@ body {
 }
 .animate-entrance-delay-2 {
   animation: entrance 0.4s cubic-bezier(0.22, 1, 0.36, 1) 0.2s both;
+}
+
+/* ── Print layout for QR page ── */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .print-visible,
+  .print-visible * {
+    visibility: visible !important;
+  }
+
+  .print-visible {
+    position: absolute;
+    inset: 0;
+    padding: 15mm;
+    background: white;
+  }
+
+  body {
+    background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
 }

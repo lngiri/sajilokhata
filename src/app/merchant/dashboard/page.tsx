@@ -447,7 +447,9 @@ export default function MerchantDashboard() {
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                     </svg>
                     {pendingLogs.length > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
+                        {pendingLogs.length}
+                      </span>
                     )}
                   </button>
                 </div>
@@ -608,21 +610,25 @@ export default function MerchantDashboard() {
         </div>
       )}
 
-      {/* Pending banner */}
+      {/* Pending banner — PROMINENT */}
       {!logsLoading && pendingLogs.length > 0 && (
         <a
           href="/merchant/logs"
-          className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100 active:bg-amber-100 transition-colors"
+          className="relative flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-transform overflow-hidden"
         >
-          <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
+          <div className="relative w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-bounce-subtle">
+            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <span className="text-sm font-medium text-amber-800 flex-1 text-left">
-            {pendingLogs.length} {pendingLogs.length === 1 ? "entry" : "entries"} pending approval
-          </span>
-          <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="relative flex-1">
+            <p className="text-sm font-bold">
+              {pendingLogs.length} {pendingLogs.length === 1 ? "entry" : "entries"} pending approval
+            </p>
+            <p className="text-xs text-white/80 mt-0.5">Tap to review and approve</p>
+          </div>
+          <svg className="relative w-5 h-5 text-white/80 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </a>
