@@ -27,10 +27,10 @@ export function QRDisplay({
       <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
         <QRCodeSVG
           value={qrData}
-          size={240}
+          size={260}
           level="H"
-          bgColor="#ffffff"
-          fgColor="#0f172a"
+          bgColor="#FFFFFF"
+          fgColor="#000000"
           includeMargin={true}
         />
       </div>
