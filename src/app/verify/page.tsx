@@ -165,14 +165,16 @@ export default function VerifyPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white rounded-3xl shadow-lg p-6 space-y-5 animate-fade-in">
 
-        {/* QR Hisab platform bar */}
-        <div className="flex items-center justify-center gap-1.5 pb-3 border-b border-gray-100 mb-3">
-          <div className="w-5 h-5 rounded bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center flex-shrink-0">
-            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        {/* QR Hisab platform bar with logo draw animation */}
+        <div className="flex items-center justify-center gap-2 pb-3 border-b border-gray-100 mb-3">
+          <div className="relative w-6 h-6">
+            <svg viewBox="0 0 36 36" className="absolute inset-0 w-6 h-6" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
+              <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
+              <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
             </svg>
           </div>
-          <span className="text-[11px] font-bold text-[var(--color-primary)] tracking-wider uppercase">QR Hisab</span>
+          <span className="text-[11px] font-bold text-[var(--color-primary)] tracking-wider uppercase">QR Hisab ✨</span>
         </div>
 
         {/* Bill header */}
@@ -180,8 +182,8 @@ export default function VerifyPage() {
           <p className="text-xs text-[var(--color-text-muted)] mb-1">
             Issued by {log?.merchants?.name || "Merchant"}
           </p>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">Transaction</h1>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Verify Transaction</p>
+          <h1 className="text-lg font-bold text-[var(--color-text)]">Verify Entry ✅</h1>
+          <p className="text-xs text-[var(--color-text-muted)] mt-1">Review and confirm this transaction</p>
         </div>
 
         {/* Loading */}
@@ -199,8 +201,8 @@ export default function VerifyPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
-            <p className="font-medium text-[var(--color-text)]">Invalid Link</p>
-            <p className="text-sm text-[var(--color-text-muted)] mt-1">Invalid or expired verification link</p>
+            <p className="font-medium text-[var(--color-text)]">Oops! Link expired 😅</p>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">This verification link is invalid or has expired. Ask the merchant to send a new one.</p>
           </div>
         )}
 
@@ -345,13 +347,13 @@ export default function VerifyPage() {
               )}
             </div>
             <p className="font-bold text-[var(--color-text)]">
-              {actionDone === "approved" ? "Approved!" :
-               actionDone === "edit_requested" ? "Edit Requested!" :
-               "Disputed!"}
+              {actionDone === "approved" ? "All good! 🎉" :
+               actionDone === "edit_requested" ? "Edit Requested! ✏️" :
+               "Disputed! ⚠️"}
             </p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {actionDone === "approved"
-                ? "Transaction has been approved successfully."
+                ? "Transaction approved! Thank you ❤️"
                 : actionDone === "edit_requested"
                 ? "Your amount edit request has been submitted. The merchant will review it."
                 : "Your dispute has been submitted. The merchant will be notified."}

@@ -52,7 +52,7 @@ export default function SessionsPage() {
   const userTypeBadge = (ut: string) => {
     if (ut === "both") return "bg-purple-500/10 text-purple-400";
     if (ut === "merchant") return "bg-blue-500/10 text-blue-400";
-    return "bg-emerald-500/10 text-emerald-400";
+    return "bg-[var(--color-primary)]/10 text-[var(--color-primary-light)]";
   };
 
   return (
@@ -128,7 +128,7 @@ export default function SessionsPage() {
                       <div className="flex items-center gap-3 mt-1.5 text-xs text-[var(--a-muted)]">
                         <span className="font-mono">{u.phone}</span>
                         <span>&bull;</span>
-                        <span className={u.status === "suspended" ? "text-red-400" : "text-emerald-400"}>
+                        <span className={u.status === "suspended" ? "text-red-400" : "text-[var(--color-primary-light)]"}>
                           {u.status}
                         </span>
                         <span>&bull;</span>
@@ -146,7 +146,7 @@ export default function SessionsPage() {
                         <button
                           onClick={() => handleClear(u.userId)}
                           disabled={actionLoading === `clear_${u.userId}`}
-                          className="px-4 py-2 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg transition-colors"
+                          className="px-4 py-2 text-xs font-semibold bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white rounded-lg transition-colors"
                         >
                           {actionLoading === `clear_${u.userId}` ? (
                             <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />

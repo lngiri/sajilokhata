@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
     <div className="min-h-dvh flex items-center justify-center bg-slate-100 dark:bg-gray-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-lg">
+          <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-lg">
             <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
               placeholder="admin@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+              className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/40 outline-none text-sm"
             />
           </div>
 
@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500/40 outline-none text-sm"
+              className="w-full mt-1.5 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/40 outline-none text-sm"
             />
           </div>
 
@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
           <button
             onClick={handleSubmit}
             disabled={!email || !password || loading}
-            className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-semibold active:scale-[0.98] transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white rounded-xl font-semibold active:scale-[0.98] transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

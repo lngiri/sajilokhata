@@ -109,7 +109,7 @@ export default function MerchantOnboardingModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
               <div className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-[var(--color-primary)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 <span>{currentName}</span>
@@ -133,7 +133,7 @@ export default function MerchantOnboardingModal({
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Business Address</label>
               <div className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 flex items-center gap-2">
-                <svg className="w-4 h-4 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-[var(--color-primary)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
                 <span>{currentAddress}</span>

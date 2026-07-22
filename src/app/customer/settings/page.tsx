@@ -104,14 +104,14 @@ export default function CustomerSettings() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center gap-2.5 px-4 py-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
             <span className="text-sm font-bold text-white tracking-tight">QR</span>
           </div>
           <div>
-            <h1 className="text-base font-bold text-[var(--color-text)]">Settings</h1>
-            <p className="text-[10px] text-emerald-600 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
-              QR Hisab
+            <h1 className="text-base font-bold text-[var(--color-text)]">Settings ⚙️</h1>
+            <p className="text-[10px] text-[var(--color-primary)] flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)]/50 inline-block" />
+              QR Hisab ✨
             </p>
           </div>
         </div>

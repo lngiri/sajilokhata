@@ -183,15 +183,23 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg">
-            <span className="text-xl font-bold text-white tracking-tight">QR</span>
+          {/* Friendly logo with draw animation */}
+          <div className="relative w-16 h-16 mx-auto mb-4">
+            <svg viewBox="0 0 36 36" className="absolute inset-0 w-16 h-16" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
+              <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
+              <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
+              <circle cx="27" cy="27" r="2" className="animate-draw" style={{ animationDelay: '0.9s' }} />
+              <circle cx="18" cy="18" r="1.5" className="animate-draw" style={{ animationDelay: '1.0s' }} />
+            </svg>
+            <img src="/icons/logo.png" alt="" className="absolute inset-0 w-16 h-16 rounded-2xl object-contain shadow-lg animate-fade-in" style={{ animationDelay: '0.8s' }} />
           </div>
-          <h1 className="text-2xl font-bold text-[var(--color-text)]">QR Hisab</h1>
+          <h1 className="text-2xl font-extrabold text-[var(--color-text)]">Create Account ✨</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
             {step === "phone" && "Enter your phone number to register"}
             {step === "otp" && `Enter the 6-digit code sent to ${maskPhone(phone)}`}
             {step === "profile" && "Complete your profile to get started"}
-            {step === "done" && "You're all set!"}
+            {step === "done" && "Welcome to the family!"}
           </p>
         </div>
 
@@ -308,16 +316,16 @@ export default function RegisterPage() {
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-bold text-[var(--color-text)]">Welcome, {name}!</h2>
+              <h2 className="text-lg font-extrabold text-[var(--color-text)]">Welcome, {name}! 🎉</h2>
               <p className="text-sm text-[var(--color-text-muted)] mt-1">
-                Your account is now active. You can scan shop QR codes to start tracking your ledger.
+                You&apos;re all set! Scan shop QR codes to start tracking your transactions.
               </p>
             </div>
             <a
               href="/login"
               className="block w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform text-center"
             >
-              Go to Login
+              Go to Login 🚀
             </a>
           </div>
         )}

@@ -32,6 +32,14 @@ import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
+/** Get a friendly time-based greeting */
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
 const POLL_INTERVAL = 300_000;
 
 /** Format a timestamp as a relative time string (e.g. "2 min ago") */
@@ -430,15 +438,15 @@ export default function MerchantDashboard() {
             className="text-left active:scale-95 transition-transform flex-1 min-w-0"
           >
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
                 <span className="text-sm font-bold text-white tracking-tight">QR</span>
               </div>
               <div className="min-w-0">
                 <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
-                  {merchantProfile?.name || "QR Hisab"}
+                  {getGreeting()}, {merchantProfile?.name?.split(" ")[0] || "there"} 👋
                 </h1>
-                <p className="text-[10px] text-emerald-600 truncate leading-tight flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                <p className="text-[10px] text-[var(--color-primary)] truncate leading-tight flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block" />
                   {merchantProfile?.business_name?.trim() || merchantProfile?.name || "Shop"}{merchantProfile?.address ? ` · ${merchantProfile.address}` : ""}
                 </p>
               </div>
@@ -455,7 +463,7 @@ export default function MerchantDashboard() {
                 {merchantProfile && (
                   <button
                     onClick={() => setShowProfileMenu(true)}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden flex-shrink-0"
+                    className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden flex-shrink-0"
                   >
                     {merchantProfile.photo_url ? (
                       <img
@@ -470,7 +478,7 @@ export default function MerchantDashboard() {
                 )}
                 <a
                   href="/merchant/billing"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-semibold border border-emerald-200 active:scale-95 transition-transform"
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-[var(--color-primary)]/5 text-[var(--color-primary-dark)] rounded-full text-[10px] font-semibold border border-[var(--color-primary)]/20 active:scale-95 transition-transform"
                 >
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
@@ -630,7 +638,7 @@ export default function MerchantDashboard() {
 
             {/* Avatar + name header */}
             <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
                 {merchantProfile.photo_url ? (
                   <img src={merchantProfile.photo_url} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -783,11 +791,11 @@ export default function MerchantDashboard() {
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
               <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Outstanding</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Money to Collect</p>
                 <p className="text-xl font-bold text-[var(--color-danger)]">Rs. {stats.totalOutstanding.toLocaleString()}</p>
               </a>
               <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Cash</p>
                 <p className="text-xl font-bold text-[var(--color-primary)]">Rs. {stats.todayTotal.toLocaleString()}</p>
               </a>
               <a href="/merchant/customers" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
@@ -815,11 +823,11 @@ export default function MerchantDashboard() {
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
               <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Sales</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
                 <p className="text-xl font-bold text-blue-600">Rs. {stats.totalSales.toLocaleString()}</p>
               </a>
               <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash In Hand</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash Today</p>
                 <p className="text-xl font-bold text-green-600">Rs. {stats.cashInHand.toLocaleString()}</p>
               </a>
             </div>
@@ -972,7 +980,8 @@ export default function MerchantDashboard() {
                   <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  <p className="text-sm">No activity yet</p>
+                  <p className="text-sm">No activity yet 📝</p>
+                  <p className="text-xs mt-1">Start by adding a customer or making a sale</p>
                 </div>
               ) : (
                 <div className="space-y-1.5">
@@ -1051,7 +1060,8 @@ export default function MerchantDashboard() {
                   <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
                   </svg>
-                  <p className="text-sm">No pending entries</p>
+                  <p className="text-sm">All caught up! 🎉</p>
+                  <p className="text-xs mt-1">No entries waiting for your approval</p>
                 </div>
               ) : (
                 <div className="space-y-2">

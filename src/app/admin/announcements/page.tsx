@@ -60,13 +60,13 @@ export default function AnnouncementsPage() {
         </div>
 
         {active && (
-          <div className="bg-emerald-500/10 border border-emerald-800/30 rounded-xl p-4">
-            <p className="text-xs font-medium text-emerald-400 mb-1">Currently active:</p>
+          <div className="bg-[var(--color-primary)]/10 border border-[var(--color-primary-dark)]/30 rounded-xl p-4">
+            <p className="text-xs font-medium text-[var(--color-primary-light)] mb-1">Currently active:</p>
             <p className="text-sm text-[var(--a-text-2)]">{active}</p>
           </div>
         )}
 
-        {feedback && <p className={`text-sm font-medium ${feedback.includes("published") || feedback.includes("removed") ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
+        {feedback && <p className={`text-sm font-medium ${feedback.includes("published") || feedback.includes("removed") ? "text-[var(--color-primary-light)]" : "text-red-400"}`}>{feedback}</p>}
 
         <div className="flex gap-3">
           <button

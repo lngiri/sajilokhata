@@ -253,7 +253,7 @@ export default function CustomerHistoryPage() {
               </svg>
             </a>
             <h1 className="text-lg font-bold text-[var(--color-text)]">
-              {shopNameParam ? `${shopNameParam} History` : "Transaction History"}
+              {shopNameParam ? `${shopNameParam}'s Khata 📒` : "Your Khata 📒"}
             </h1>
           </div>
           <button
@@ -333,11 +333,11 @@ export default function CustomerHistoryPage() {
               </svg>
             </div>
             <p className="font-medium text-[var(--color-text-muted)]">
-              {filter === "all" ? "No transactions yet" : `No ${filter} transactions`}
+              {filter === "all" ? "No transactions yet 📝" : `No ${filter} transactions 📝`}
             </p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {filter === "all"
-                ? "Scan a shop QR or search by phone to get started."
+                ? "Scan a shop QR or search by phone to get started ✨"
                 : `You have no ${filter} credit requests.`}
             </p>
             <div className="flex gap-3 justify-center mt-4">
@@ -394,7 +394,7 @@ export default function CustomerHistoryPage() {
                       <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
                         <TransactionIcon type={log.type} size={18} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
                         {new Date(log.created_at).getTime() > lastSeenAt && (
-                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white text-[6px] font-bold text-white flex items-center justify-center">N</span>
+                          <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[var(--color-primary)] border-2 border-white text-[6px] font-bold text-white flex items-center justify-center">N</span>
                         )}
                       </div>
 

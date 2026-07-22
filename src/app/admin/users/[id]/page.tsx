@@ -76,7 +76,7 @@ export default function AdminMerchantDetailPage() {
           </div>
           <div className="flex items-center gap-3">
             <span className={`inline-block text-xs font-semibold px-3 py-1 rounded-full ${
-              merchant.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
+              merchant.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-[var(--color-primary)]/10 text-[var(--color-primary-light)]"
             }`}>
               {merchant.status}
             </span>
@@ -84,7 +84,7 @@ export default function AdminMerchantDetailPage() {
               onClick={handleToggle}
               className={`text-xs font-semibold px-4 py-2 rounded-lg transition-all ${
                 merchant.status === "suspended"
-                  ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                  ? "bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white"
                   : "bg-red-600 hover:bg-red-500 text-white"
               }`}
             >
@@ -117,7 +117,7 @@ export default function AdminMerchantDetailPage() {
       {/* Stats cards */}
       <div className="grid grid-cols-2 gap-4 mt-6">
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-5">
-          <p className="text-3xl font-bold tracking-tight text-emerald-400">{merchant.transactionCount}</p>
+          <p className="text-3xl font-bold tracking-tight text-[var(--color-primary-light)]">{merchant.transactionCount}</p>
           <p className="text-xs text-[var(--a-muted)] mt-1">Total Transactions</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-5">

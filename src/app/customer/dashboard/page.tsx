@@ -1,4 +1,12 @@
 "use client";
+/** Get a friendly time-based greeting */
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+}
+
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import SyncStatus from "@/components/SyncStatus";
@@ -577,13 +585,13 @@ export default function CustomerDashboard() {
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-sm flex-shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
               <span className="text-sm font-bold text-white tracking-tight">QR</span>
             </div>
             <div>
-              <h1 className="text-base font-bold text-[var(--color-text)]">QR Hisab Customer</h1>
-              <p className="text-[10px] text-emerald-600 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+              <h1 className="text-base font-bold text-[var(--color-text)]">{getGreeting()}, {customerName?.split(" ")[0] || "there"} 👋</h1>
+              <p className="text-[10px] text-[var(--color-primary)] flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block" />
                 QR Hisab &middot; Active
               </p>
             </div>
@@ -622,7 +630,7 @@ export default function CustomerDashboard() {
             {customerPhone && (
               <button
                 onClick={() => setShowProfileMenu(true)}
-                className="w-7 h-7 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden"
+                className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden"
               >
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -724,7 +732,7 @@ export default function CustomerDashboard() {
 
             {/* Avatar + name header */}
             <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -1150,7 +1158,7 @@ export default function CustomerDashboard() {
               {/* Avatar upload */}
               <div className="flex flex-col items-center">
                 <label className="relative cursor-pointer group">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
                     ) : (

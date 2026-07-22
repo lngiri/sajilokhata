@@ -99,7 +99,7 @@ function ToastItem({
   };
 
   const bgColor = {
-    success: "bg-emerald-500",
+    success: "bg-[var(--color-primary)]",
     error: "bg-red-500",
     warning: "bg-amber-500",
     info: "bg-blue-500",

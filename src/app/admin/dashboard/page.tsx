@@ -53,7 +53,7 @@ export default function AdminDashboard() {
 
   const cards = [
     { label: "Merchants", value: stats?.totalMerchants ?? "-", sub: `${merchants.length} registered`, accent: "text-blue-400" },
-    { label: "End Customers", value: stats?.totalCustomers ?? "-", sub: "total accounts", accent: "text-emerald-400" },
+    { label: "End Customers", value: stats?.totalCustomers ?? "-", sub: "total accounts", accent: "text-[var(--color-primary-light)]" },
     { label: "Transactions", value: totalTx.toLocaleString(), sub: `${stats?.activeTransactions ?? 0} pending`, accent: "text-amber-400" },
     { label: "Disputes", value: disputes.length, sub: "open cases", accent: "text-red-400" },
   ];
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3 text-sm text-right text-[var(--a-text-2)]">{m.transactionCount}</td>
                     <td className="px-4 py-3 text-right">
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${
-                        m.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
+                        m.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-[var(--color-primary)]/10 text-[var(--color-primary-light)]"
                       }`}>
                         {m.status}
                       </span>

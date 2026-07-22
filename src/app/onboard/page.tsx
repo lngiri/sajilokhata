@@ -121,13 +121,19 @@ export default function OnboardPage() {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
       <div className="w-full max-w-sm text-center space-y-6">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-lg">
-          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        {/* Friendly logo with draw animation */}
+        <div className="relative w-16 h-16 mx-auto">
+          <svg viewBox="0 0 36 36" className="absolute inset-0 w-16 h-16" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
+            <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
+            <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
+            <circle cx="27" cy="27" r="2" className="animate-draw" style={{ animationDelay: '0.9s' }} />
+            <circle cx="18" cy="18" r="1.5" className="animate-draw" style={{ animationDelay: '1.0s' }} />
           </svg>
+          <img src="/icons/logo.png" alt="" className="absolute inset-0 w-16 h-16 rounded-2xl object-contain shadow-lg animate-fade-in" style={{ animationDelay: '0.8s' }} />
         </div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-primary)]">QR Hisab</h1>
-        <p className="text-sm text-[var(--color-text-muted)]">Customer Onboarding</p>
+        <h1 className="text-2xl font-extrabold text-[var(--color-text)]">Welcome! 👋</h1>
+        <p className="text-sm text-[var(--color-text-muted)]">Let&apos;s get you set up with QR Hisab</p>
 
         {sendingOtp && (
           <div className="flex flex-col items-center gap-3 py-8">
@@ -201,15 +207,21 @@ export default function OnboardPage() {
 
         {step === "done" && (
           <div className="space-y-4">
-            <p className="text-lg font-bold text-[var(--color-text)]">Welcome to QR Hisab!</p>
+            <div className="w-16 h-16 mx-auto rounded-full bg-[var(--color-primary)]/15 flex items-center justify-center mb-2">
+              <svg viewBox="0 0 32 32" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="16" cy="16" r="12" stroke="#22C55E" fill="#22C55E15" />
+                <path d="M10 16l4 4 8-8" stroke="#22C55E" />
+              </svg>
+            </div>
+            <p className="text-lg font-bold text-[var(--color-text)]">You&apos;re all set! 🎉</p>
             <p className="text-sm text-[var(--color-text-muted)]">
-              Your account has been created. You can now view and manage your transactions.
+              Your account is ready. Time to start tracking your transactions!
             </p>
             <a
               href="/customer/dashboard"
-              className="block w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold"
+              className="block w-full py-3.5 bg-[var(--color-primary)] text-white rounded-[var(--radius-button)] font-bold active:scale-[0.98] transition-transform shadow-sm"
             >
-              Go to Dashboard
+              Go to Dashboard 🚀
             </a>
           </div>
         )}

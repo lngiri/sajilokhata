@@ -109,7 +109,7 @@ export default function SmsRequestsPage() {
                   <button
                     onClick={() => handleApprove(req.id)}
                     disabled={processing === req.id}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                    className="px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
                   >
                     {processing === req.id ? (
                       <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />

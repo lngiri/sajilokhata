@@ -165,10 +165,10 @@ export default function SmsReminderModal({
 
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2">
-                  <svg className="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
                   </svg>
-                  <span className="text-sm font-semibold text-emerald-700">
+                  <span className="text-sm font-semibold text-[var(--color-primary-dark)]">
                     {smsCredits} SMS credit{smsCredits > 1 ? "s" : ""}
                   </span>
                 </div>
@@ -255,7 +255,7 @@ export default function SmsReminderModal({
                 <span className="text-xs text-[var(--color-text-muted)]">
                   {charCount}/{MAX_CHARS} characters
                 </span>
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-primary-dark)] bg-[var(--color-primary)]/5 px-2 py-0.5 rounded-full">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
                   </svg>
@@ -295,7 +295,7 @@ export default function SmsReminderModal({
                       : "No credits available"}
                   </p>
                 </div>
-                <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full">
+                <span className="text-[10px] font-semibold text-[var(--color-primary-dark)] bg-[var(--color-primary)]/5 px-2 py-1 rounded-full">
                   {smsCredits} credit{smsCredits > 1 ? "s" : ""}
                 </span>
               </button>

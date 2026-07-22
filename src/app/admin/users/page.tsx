@@ -7,7 +7,7 @@ import type { DirectoryUser } from "@/app/actions/admin";
 
 const ROLE_BADGE: Record<string, string> = {
   merchant: "bg-blue-500/10 text-blue-400",
-  customer: "bg-emerald-500/10 text-emerald-400",
+  customer: "bg-[var(--color-primary)]/10 text-[var(--color-primary-light)]",
   both: "bg-purple-500/10 text-purple-400",
 };
 
@@ -109,7 +109,7 @@ export default function UsersPage() {
           <p className="text-xs text-[var(--a-muted)] mt-1">Merchants</p>
         </a>
         <a href="/admin/users?role=customer" className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-4 hover:border-[var(--a-border-2)] transition-colors block">
-          <p className="text-2xl font-bold tracking-tight text-emerald-400">{stats.customers}</p>
+          <p className="text-2xl font-bold tracking-tight text-[var(--color-primary-light)]">{stats.customers}</p>
           <p className="text-xs text-[var(--a-muted)] mt-1">Customers</p>
         </a>
         <a href="/admin/users?role=both" className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-4 hover:border-[var(--a-border-2)] transition-colors block">
@@ -122,7 +122,7 @@ export default function UsersPage() {
       {feedback && (
         <div className={`mb-4 px-4 py-3 rounded-xl text-sm font-medium ${
           feedback.type === "success"
-            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+            ? "bg-[var(--color-primary)]/10 text-[var(--color-primary-light)] border border-[var(--color-primary)]/20"
             : "bg-red-500/10 text-red-400 border border-red-500/20"
         }`}>
           {feedback.message}
@@ -216,7 +216,7 @@ export default function UsersPage() {
                       <span className="text-xs text-[var(--a-muted)]">&mdash;</span>
                     ) : (
                       <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${
-                        u.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-emerald-500/10 text-emerald-400"
+                        u.status === "suspended" ? "bg-red-500/10 text-red-400" : "bg-[var(--color-primary)]/10 text-[var(--color-primary-light)]"
                       }`}>
                         {u.status}
                       </span>
@@ -229,7 +229,7 @@ export default function UsersPage() {
                         disabled={toggling === u.id}
                         className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-all disabled:opacity-50 ${
                           u.status === "suspended"
-                            ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                            ? "bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white"
                             : "bg-red-600 hover:bg-red-500 text-white"
                         }`}
                       >

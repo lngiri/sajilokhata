@@ -28,7 +28,7 @@ export default function HealthPage() {
   useEffect(() => { check(); }, []);
 
   const statusBg = (s: string) =>
-    s === "green" ? "bg-emerald-500/10 border-emerald-800/30"
+    s === "green" ? "bg-[var(--color-primary)]/10 border-[var(--color-primary-dark)]/30"
     : s === "yellow" ? "bg-amber-500/10 border-amber-800/30"
     : "bg-red-500/10 border-red-800/30";
 
@@ -52,8 +52,8 @@ export default function HealthPage() {
         <div className="space-y-6">
           <div className={`rounded-xl shadow-lg p-6 border ${statusBg(health.status)}`}>
             <div className="flex items-center gap-3 mb-2">
-              <div className={`w-3 h-3 rounded-full ${health.status === "green" ? "bg-emerald-400" : health.status === "yellow" ? "bg-amber-400" : "bg-red-400"}`} />
-              <span className={`text-lg font-bold ${health.status === "green" ? "text-emerald-400" : health.status === "yellow" ? "text-amber-400" : "text-red-400"}`}>
+              <div className={`w-3 h-3 rounded-full ${health.status === "green" ? "bg-[var(--color-primary-light)]" : health.status === "yellow" ? "bg-amber-400" : "bg-red-400"}`} />
+              <span className={`text-lg font-bold ${health.status === "green" ? "text-[var(--color-primary-light)]" : health.status === "yellow" ? "text-amber-400" : "text-red-400"}`}>
                 {health.status.toUpperCase()}
               </span>
             </div>
@@ -68,7 +68,7 @@ export default function HealthPage() {
                   <span className="text-sm font-medium text-[var(--a-text)]">{c.label}</span>
                   {c.detail && <p className="text-xs text-[var(--a-muted)] mt-0.5">{c.detail}</p>}
                 </div>
-                <span className={`text-xs font-semibold ${c.ok ? "text-emerald-400" : "text-red-400"}`}>
+                <span className={`text-xs font-semibold ${c.ok ? "text-[var(--color-primary-light)]" : "text-red-400"}`}>
                   {c.ok ? "PASS" : "FAIL"}
                 </span>
               </div>

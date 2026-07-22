@@ -150,7 +150,7 @@ export default function LedgerPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </a>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">Ledger</h1>
+          <h1 className="text-lg font-bold text-[var(--color-text)]">Ledger 📒</h1>
         </div>
 
         <div className="flex gap-1 px-4 pb-3 overflow-x-auto">
@@ -200,8 +200,8 @@ export default function LedgerPage() {
               <svg className="w-16 h-16 mx-auto mb-3 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
               </svg>
-              <p className="font-medium">No entries found</p>
-              <p className="text-sm mt-1">Start by scanning a customer's QR or ask them to scan yours</p>
+              <p className="font-medium">No entries yet 📝</p>
+              <p className="text-sm mt-1">Start by scanning a customer QR or ask them to scan yours ✨</p>
               <div className="flex gap-3 justify-center mt-4">
                 <a
                   href="/merchant/scan"

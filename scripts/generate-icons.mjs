@@ -42,12 +42,12 @@ function createSolidPNG(size) {
   const ihdrChunk = makeChunk("IHDR", ihdr);
 
   // Solid emerald (#059669) pixels
-  const emerald = [5, 150, 105];
+  const primaryGreen = [22, 163, 74];
   const rawRows = [];
   for (let y = 0; y < size; y++) {
     rawRows.push(0); // filter byte - none
     for (let x = 0; x < size; x++) {
-      rawRows.push(emerald[0], emerald[1], emerald[2], 255);
+      rawRows.push(primaryGreen[0], primaryGreen[1], primaryGreen[2], 255);
     }
   }
 

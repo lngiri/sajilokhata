@@ -180,8 +180,8 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
   if (!cameraStarted) {
     return (
       <div className="relative w-full aspect-square max-w-sm mx-auto overflow-hidden rounded-2xl bg-gray-900 flex flex-col items-center justify-center p-6">
-        <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-4">
-          <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="w-16 h-16 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-[var(--color-primary-light)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.16a15.53 15.53 0 01-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
           </svg>
@@ -192,7 +192,7 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
         </p>
         <button
           onClick={() => { setCameraStarted(true); requestAnimationFrame(startCamera); }}
-          className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.97]"
+          className="px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.97]"
         >
           Start Scanning
         </button>

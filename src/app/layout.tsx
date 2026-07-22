@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "next-themes";
-import { Inter } from "next/font/google";
+import { Nunito } from "next/font/google";
 import { ToastProvider } from "@/components/Toast";
 import NetworkStatus from "@/components/NetworkStatus";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
@@ -11,13 +11,14 @@ import SessionHeartbeat from "@/components/SessionHeartbeat";
 import VersionGuard from "@/components/VersionGuard";
 import "./globals.css";
 
-const inter = Inter({
+const nunito = Nunito({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-nunito",
+  weight: ["400", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
-  title: "QR Hisab - Digital Credit Ledger",
+  title: "QR Hisab — Your Digital Khata", 
   description:
     "A mobile-first credit ledger for small retail shops in Nepal",
   manifest: "/manifest.json",
@@ -36,7 +37,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#059669",
+  themeColor: "#16A34A",
   viewportFit: "cover",
 };
 
@@ -46,9 +47,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${nunito.variable} font-sans`}>
       <head>
-        <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <link rel="apple-touch-icon" href="/icons/logo.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
       </head>
       <body className="font-sans antialiased bg-[var(--color-bg)] text-[var(--color-text)]">

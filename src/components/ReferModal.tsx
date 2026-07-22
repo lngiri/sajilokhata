@@ -107,7 +107,7 @@ export default function ReferModal({ open, onClose }: Props) {
             </button>
 
             {copied && (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-2 text-center">
+              <p className="text-xs text-[var(--color-primary)] dark:text-[var(--color-primary-light)] mt-2 text-center">
                 Link copied to clipboard!
               </p>
             )}

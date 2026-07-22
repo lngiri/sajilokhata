@@ -150,7 +150,7 @@ export default function MerchantQRPage() {
       <div className="hidden print:block print-visible">
         {/* Brand */}
         <div className="text-center mb-6">
-          <p className="text-xs tracking-widest text-gray-400 uppercase">QR Hisab</p>
+          <p className="text-xs tracking-widest text-[var(--color-text-muted)] uppercase">QR Hisab ✨</p>
           <div className="w-16 h-px bg-gray-200 mx-auto mt-2" />
         </div>
 
@@ -193,7 +193,7 @@ export default function MerchantQRPage() {
 
         {/* Footer */}
         <div className="border-t border-gray-200 mt-5 pt-3 text-center">
-          <p className="text-[10px] tracking-wider text-gray-400 uppercase">QR Hisab — Digital Credit Ledger</p>
+          <p className="text-[10px] tracking-wider text-[var(--color-text-muted)] uppercase">QR Hisab — Your Digital Khata 🌱</p>
         </div>
       </div>
     </div>

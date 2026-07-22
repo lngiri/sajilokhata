@@ -73,7 +73,7 @@ export default function StoragePage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
-          <p className="text-4xl font-bold tracking-tight text-emerald-400">{totalTx.toLocaleString()}</p>
+          <p className="text-4xl font-bold tracking-tight text-[var(--color-primary-light)]">{totalTx.toLocaleString()}</p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Total Transactions</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">

@@ -50,7 +50,7 @@ export default function AnalyticsPage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
-          <p className="text-4xl font-bold tracking-tight text-emerald-400">{data.length}</p>
+          <p className="text-4xl font-bold tracking-tight text-[var(--color-primary-light)]">{data.length}</p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Active Merchants</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
@@ -104,7 +104,7 @@ export default function AnalyticsPage() {
                   </td>
                   <td className="px-5 py-3.5 text-sm text-[var(--a-muted)] font-mono">{m.phone}</td>
                   <td className="px-5 py-3.5 text-right">
-                    <span className="font-semibold text-emerald-400">{m.transactionCount.toLocaleString()}</span>
+                    <span className="font-semibold text-[var(--color-primary-light)]">{m.transactionCount.toLocaleString()}</span>
                   </td>
                   <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{m.customerCount.toLocaleString()}</td>
                   <td className="px-5 py-3.5 text-right text-[var(--a-muted)] text-xs">

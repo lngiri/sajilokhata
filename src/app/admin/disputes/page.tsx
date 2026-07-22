@@ -80,7 +80,7 @@ export default function DisputesPage() {
                 <button
                   onClick={() => handleResolve(d.id)}
                   disabled={resolving === d.id}
-                  className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
+                  className="shrink-0 px-4 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
                 >
                   {resolving === d.id ? (
                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />

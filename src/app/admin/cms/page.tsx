@@ -57,7 +57,7 @@ export default function CMSPage() {
           />
         </div>
 
-        {feedback && <p className={`text-sm font-medium ${feedback === "Saved" ? "text-emerald-400" : "text-red-400"}`}>{feedback}</p>}
+        {feedback && <p className={`text-sm font-medium ${feedback === "Saved" ? "text-[var(--color-primary-light)]" : "text-red-400"}`}>{feedback}</p>}
 
         <button
           onClick={save}

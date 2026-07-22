@@ -830,18 +830,24 @@ export default function LoginPage() {
   return (
     <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
       <div className="mb-8 text-center animate-fade-in">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-lg">
-          <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        {/* Friendly logo with draw animation */}
+        <div className="relative w-16 h-16 mx-auto mb-4">
+          <svg viewBox="0 0 36 36" className="absolute inset-0 w-16 h-16" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
+            <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
+            <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
+            <circle cx="27" cy="27" r="2" className="animate-draw" style={{ animationDelay: '0.9s' }} />
+            <circle cx="18" cy="18" r="1.5" className="animate-draw" style={{ animationDelay: '1.0s' }} />
           </svg>
+          <img src="/icons/logo.png" alt="" className="absolute inset-0 w-16 h-16 rounded-2xl object-contain shadow-lg animate-fade-in" style={{ animationDelay: '0.8s' }} />
         </div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-primary)]">QR Hisab</h1>
-        <p className="text-sm text-[var(--color-text-muted)] mt-1">Digital Diary</p>
+        <h1 className="text-2xl font-extrabold text-[var(--color-text)]">Welcome! 👋</h1>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">Your digital khata awaits</p>
         {(step === "pin" || step === "set_pin") && userInfoRef.current?.userType && (
           <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
             userInfoRef.current.userType === "merchant" || userInfoRef.current.userType === "both"
               ? "bg-blue-100 text-blue-700"
-              : "bg-emerald-100 text-emerald-700"
+              : "bg-[var(--color-primary)]/10 text-[var(--color-primary-dark)]"
           }`}>
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               {userInfoRef.current.userType === "customer" ? (
@@ -964,8 +970,8 @@ export default function LoginPage() {
                 disabled={loading}
                 className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4"
               >
-                <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/5 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
                   </svg>
                 </div>
@@ -1040,10 +1046,10 @@ export default function LoginPage() {
           <button
             onClick={() => handlePostSignoutRoleSelect("customer")}
             disabled={loading}
-            className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-emerald-300 active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
+            className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary-light)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
           >
-            <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/5 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z" />
               </svg>
             </div>

@@ -77,10 +77,10 @@ export default function FeedbackModal({ open, onClose }: Props) {
 
             {sent ? (
               <div className="py-8 text-center">
-                <svg className="w-12 h-12 mx-auto mb-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-12 h-12 mx-auto mb-3 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Thank you!</p>
+                <p className="text-sm font-medium text-[var(--color-primary)] dark:text-[var(--color-primary-light)]">Thank you!</p>
                 <p className="text-xs text-gray-500 mt-1">Your feedback helps us improve.</p>
               </div>
             ) : (
