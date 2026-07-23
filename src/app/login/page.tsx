@@ -236,7 +236,7 @@ export default function LoginPage() {
       };
       console.error("[Login] Phone submit error:", JSON.stringify(errorDetail, null, 2));
       console.error("[Login] Original error object:", e);
-      setError("Network error. Please try again.");
+      setError(e?.message || "Network error. Please try again.");
       setLoading(false);
       return;
     }
@@ -268,7 +268,7 @@ export default function LoginPage() {
       } catch (e) {
         if (!mountedRef.current) return;
         console.error("[Login] Add-role OTP send error:", e);
-        setError("Network error. Please try again.");
+        setError((e as Error)?.message || "Network error. Please try again.");
         setLoading(false);
         return;
       }
@@ -291,7 +291,7 @@ export default function LoginPage() {
       } catch (e) {
         if (!mountedRef.current) return;
         console.error("[Login] OTP send error:", e);
-        setError("Network error. Please try again.");
+        setError((e as Error)?.message || "Network error. Please try again.");
         setLoading(false);
         return;
       }
@@ -743,7 +743,7 @@ export default function LoginPage() {
       setStep("forgot_otp");
     } catch (e) {
       console.error("[Login] Forgot PIN submit error:", e);
-      setError("Network error. Please try again.");
+      setError((e as Error)?.message || "Network error. Please try again.");
     }
     setLoading(false);
   };
