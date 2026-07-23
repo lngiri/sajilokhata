@@ -874,7 +874,7 @@ export default function CustomerDashboard() {
         ) : stats ? (
           <a
             href="/customer/history"
-            className="block bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-2xl p-5 shadow-sm text-white active:opacity-90 transition-opacity"
+            className="block bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-2xl p-5 shadow-sm text-white active:opacity-90 transition-opacity"
           >
             <p className="text-sm opacity-80 mb-1">Total Outstanding Balance</p>
             <p className="text-3xl font-bold mb-1">
@@ -958,7 +958,7 @@ export default function CustomerDashboard() {
             </p>
             <button
               onClick={() => { setShowScanner(true); setScanStep("scan"); }}
-              className="mt-4 px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
+              className="mt-4 px-6 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM6.75 6.75h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
@@ -1080,7 +1080,7 @@ export default function CustomerDashboard() {
                     placeholder="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-3xl font-bold text-center border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                    className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-2xl sm:text-3xl font-bold text-center border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                     autoFocus
                   />
                   <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
@@ -1106,7 +1106,7 @@ export default function CustomerDashboard() {
                   <button
                     onClick={submitCreditEntry}
                     disabled={!amount || Number(amount) <= 0 || saving}
-                    className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {saving ? (
                       <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1140,7 +1140,7 @@ export default function CustomerDashboard() {
                 </div>
                 <button
                   onClick={closeModal}
-                  className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
+                  className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform"
                 >
                   Done
                 </button>
@@ -1266,7 +1266,7 @@ export default function CustomerDashboard() {
                   }
                 }}
                 disabled={!editName || avatarUploading}
-                className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+                className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
               >
                 {avatarUploading ? "Uploading..." : "Save"}
               </button>
@@ -1382,7 +1382,7 @@ export default function CustomerDashboard() {
                   }
                 }}
                 disabled={voucherUploading || !voucherAmount || !voucherFile}
-                className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {voucherUploading ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1494,7 +1494,7 @@ export default function CustomerDashboard() {
                         );
                         addToast("Copied!", "success");
                       }}
-                      className="mt-2 px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.97] transition-transform"
+                      className="mt-2 px-3 py-2.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.97] transition-transform"
                     >
                       Copy Details
                     </button>

@@ -134,7 +134,7 @@ export default function CustomerSettings() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="mt-3 w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                className="mt-3 w-full py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {saving ? (
                   <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -173,6 +173,8 @@ export default function CustomerSettings() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
+                  role="switch"
+                  aria-label="Toggle quick action button"
                   checked={!fabHiddenState}
                   onChange={(e) => {
                     const hide = !e.target.checked;
@@ -181,7 +183,7 @@ export default function CustomerSettings() {
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary-surface)]" />
               </label>
             </div>
           </div>

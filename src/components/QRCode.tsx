@@ -192,7 +192,7 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
         </p>
         <button
           onClick={() => { setCameraStarted(true); requestAnimationFrame(startCamera); }}
-          className="px-6 py-2.5 bg-[var(--color-primary)] hover:bg-[var(--color-primary-light)] text-white font-semibold rounded-xl text-sm transition-colors active:scale-[0.97]"
+          className="px-6 py-2.5 bg-[var(--color-primary-surface)] hover:bg-[var(--color-primary-surface-hover)] text-[var(--color-primary-foreground)] font-semibold rounded-xl text-sm transition-colors active:scale-[0.97]"
         >
           Start Scanning
         </button>

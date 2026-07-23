@@ -226,7 +226,7 @@ export default function ScanPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center px-4 py-3">
-          <a href="/" className="mr-3 p-1 active:scale-95 transition-transform">
+          <a href="/" aria-label="Back to home" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
@@ -257,7 +257,7 @@ export default function ScanPage() {
                   {name && (
                     <button
                       onClick={() => setShowFullPhone(!showFullPhone)}
-                      className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                      className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title={showFullPhone ? "Hide number" : "Show full number"}
                     >
                       {showFullPhone ? (
@@ -277,7 +277,7 @@ export default function ScanPage() {
             </div>
             <button
               onClick={handleResetPhone}
-              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-danger)] px-2.5 py-1 rounded-lg active:scale-95 transition-all"
+              className="text-xs text-[var(--color-text-muted)] hover:text-[var(--color-danger)] px-3 py-2 rounded-lg active:scale-95 transition-all"
             >
               Change
             </button>
@@ -335,7 +335,7 @@ export default function ScanPage() {
                 placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-3xl font-bold text-center border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-2xl sm:text-3xl font-bold text-center border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               />
               <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
             </div>
@@ -362,7 +362,7 @@ export default function ScanPage() {
             <button
               onClick={handleSubmitEntry}
               disabled={!amount || Number(amount) <= 0 || loading}
-              className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -406,7 +406,7 @@ export default function ScanPage() {
             </button>
             <button
               onClick={() => setStep("done")}
-              className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98]"
+              className="flex-1 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium active:scale-[0.98]"
             >
               Done
             </button>
@@ -444,7 +444,7 @@ export default function ScanPage() {
             </button>
             <a
               href="/customer/dashboard"
-              className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] inline-flex items-center justify-center"
+              className="flex-1 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] inline-flex items-center justify-center"
             >
               Go to Dashboard
             </a>

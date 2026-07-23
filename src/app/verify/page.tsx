@@ -355,7 +355,7 @@ export default function VerifyPage() {
             </p>
             <button
               onClick={handleGoToDashboard}
-              className="w-full mt-4 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
+              className="w-full mt-4 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform"
             >
               Go to Dashboard
             </button>

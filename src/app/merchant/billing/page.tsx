@@ -17,7 +17,7 @@ type PackageKey = SmsPackageType;
 
 const PACKAGE_META: Record<PackageKey, { color: string; popular?: boolean }> = {
   small: { color: "from-blue-500 to-blue-600" },
-  medium: { color: "from-[var(--color-primary)] to-[var(--color-primary-dark)]", popular: true },
+  medium: { color: "from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)]", popular: true },
   large: { color: "from-purple-500 to-purple-600" },
 };
 
@@ -131,7 +131,7 @@ export default function BillingPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
-          <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
+          <a href="/merchant/dashboard" aria-label="Back to dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
@@ -172,7 +172,7 @@ export default function BillingPage() {
         {/* Plan Cards */}
         <section>
           <h2 className="font-semibold text-[var(--color-text)] mb-3">Recharge Packages</h2>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {(Object.entries(SMS_PACKAGES) as [PackageKey, typeof SMS_PACKAGES[PackageKey]][]).map(([key, pkg]) => {
               const meta = PACKAGE_META[key];
               return (
@@ -181,7 +181,7 @@ export default function BillingPage() {
                   className={`relative bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4 flex flex-col items-center text-center ${meta.popular ? "ring-2 ring-[var(--color-primary)]" : ""}`}
                 >
                   {meta.popular && (
-                    <span className="absolute -top-2.5 bg-[var(--color-primary)] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                    <span className="absolute -top-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                       BEST VALUE
                     </span>
                   )}
@@ -192,7 +192,7 @@ export default function BillingPage() {
                   </p>
                   <button
                     onClick={() => openModal(key)}
-                    className={`mt-3 w-full py-2 rounded-xl text-xs font-semibold text-white bg-gradient-to-r ${meta.color} active:scale-[0.97] transition-transform`}
+                    className={`mt-3 w-full py-3 rounded-xl text-xs font-semibold text-white bg-gradient-to-r ${meta.color} active:scale-[0.97] transition-transform`}
                   >
                     Buy Now
                   </button>
@@ -406,7 +406,7 @@ export default function BillingPage() {
                 <button
                   onClick={handleManualSubmit}
                   disabled={submitting}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] active:scale-[0.98] transition-transform disabled:opacity-60 flex items-center justify-center gap-2"
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] active:scale-[0.98] transition-transform disabled:opacity-60 flex items-center justify-center gap-2"
                 >
                   {submitting ? (
                     <>

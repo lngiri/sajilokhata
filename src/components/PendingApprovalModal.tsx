@@ -69,7 +69,7 @@ export default function PendingApprovalModal(props: Props) {
             )}
             <button
               onClick={props.onClose}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform"
+              className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform"
             >
               OK
             </button>
@@ -160,7 +160,7 @@ export default function PendingApprovalModal(props: Props) {
                   <button
                     onClick={() => handleApprove(entry.id)}
                     disabled={savingId === entry.id}
-                    className="flex-1 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-1"
+                    className="flex-1 py-2 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-1"
                   >
                     {savingId === entry.id ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

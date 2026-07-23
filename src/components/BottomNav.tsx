@@ -135,7 +135,7 @@ export default function BottomNav() {
                 onClick={() => setShowQRModal(true)}
                 className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
               >
-                <div className="w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] shadow-lg flex items-center justify-center ring-4 ring-[var(--color-bg)]">
+                <div className="w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] shadow-lg flex items-center justify-center ring-4 ring-[var(--color-bg)]">
                   {item.icon(true)}
                 </div>
                 <span className="text-[10px] font-medium text-[var(--color-primary)] -mt-0.5">

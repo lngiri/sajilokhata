@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 export default function MerchantError({
   error,
   reset,
@@ -7,6 +9,8 @@ export default function MerchantError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  useEffect(() => { console.error("Merchant error:", error); }, [error]);
+
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh px-6">
       <div className="w-16 h-16 mb-4 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
@@ -18,7 +22,7 @@ export default function MerchantError({
         Something went wrong
       </h2>
       <p className="text-sm text-[var(--color-text-muted)] text-center mb-6">
-        {error.message || "An unexpected error occurred. Please try again."}
+        An unexpected error occurred. Please try again.
       </p>
       <div className="flex gap-3">
         <a
@@ -29,7 +33,7 @@ export default function MerchantError({
         </a>
         <button
           onClick={reset}
-          className="px-6 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform"
+          className="px-6 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium active:scale-[0.98] transition-transform"
         >
           Try Again
         </button>

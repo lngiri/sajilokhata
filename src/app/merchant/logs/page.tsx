@@ -145,7 +145,7 @@ export default function LedgerPage() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center px-4 py-3">
-          <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
+          <a href="/merchant/dashboard" aria-label="Back to dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>

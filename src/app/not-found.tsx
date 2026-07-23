@@ -31,7 +31,7 @@ export default function NotFound() {
         </p>
         <a
           href="/"
-          className="px-8 py-3.5 bg-[var(--color-primary)] text-white rounded-[var(--radius-button)] font-bold active:scale-[0.98] transition-transform shadow-sm inline-block"
+          className="px-8 py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] font-bold active:scale-[0.98] transition-transform shadow-sm inline-block"
         >
           Take Me Home 🏠
         </a>

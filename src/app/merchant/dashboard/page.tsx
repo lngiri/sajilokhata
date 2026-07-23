@@ -766,7 +766,7 @@ export default function MerchantDashboard() {
           <p className="text-sm text-[var(--color-text-muted)] mt-1">Check your connection and try again</p>
           <button
             onClick={loadData}
-            className="mt-4 px-6 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform flex items-center gap-2"
+            className="mt-4 px-6 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
@@ -790,17 +790,17 @@ export default function MerchantDashboard() {
             </div>
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Money to Collect</p>
-                <p className="text-xl font-bold text-[var(--color-danger)]">Rs. {stats.totalOutstanding.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-[var(--color-danger)] truncate">Rs. {stats.totalOutstanding.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Cash</p>
-                <p className="text-xl font-bold text-[var(--color-primary)]">Rs. {stats.todayTotal.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-[var(--color-primary)] truncate">Rs. {stats.todayTotal.toLocaleString()}</p>
               </a>
-              <a href="/merchant/customers" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
+              <a href="/merchant/customers" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
-                <p className="text-xl font-bold text-[var(--color-text)]">{stats.customerCount}</p>
+                <p className="text-lg sm:text-xl font-bold text-[var(--color-text)] truncate">{stats.customerCount}</p>
               </a>
               <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] relative overflow-hidden active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Pending</p>
@@ -822,13 +822,13 @@ export default function MerchantDashboard() {
             </div>
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/scan?manual=true" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
+              <a href="/merchant/scan?manual=true" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
-                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">Rs. {stats.totalSales.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash Today</p>
-                <p className="text-xl font-bold text-green-600 dark:text-green-400">Rs. {stats.cashInHand.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
               </a>
             </div>
           )}
@@ -856,7 +856,7 @@ export default function MerchantDashboard() {
             <div className="grid grid-cols-2 gap-3">
               <a
                 href="/merchant/scan?manual=true"
-                className="flex items-center justify-center gap-2 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+                className="flex items-center justify-center gap-2 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -913,7 +913,7 @@ export default function MerchantDashboard() {
                   </h2>
                   <a
                     href="/merchant/customers"
-                    className="text-xs text-[var(--color-primary)] font-medium active:opacity-70"
+                    className="text-xs text-[var(--color-primary)] font-medium active:opacity-70 py-2"
                   >
                     View All Customers →
                   </a>
@@ -931,7 +931,7 @@ export default function MerchantDashboard() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <a href={`/merchant/customers/${rc.customer_id}`} className="block">
-                          <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                          <p className="font-medium text-sm text-[var(--color-text)] truncate" title={rc.customer_name || rc.customer_phone}>
                             {rc.customer_name || rc.customer_phone}
                           </p>
                           <p className="text-xs text-[var(--color-danger)] font-semibold">
@@ -949,7 +949,7 @@ export default function MerchantDashboard() {
                           });
                           setShowSmsReminderModal(true);
                         }}
-                        className="px-3 py-1.5 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform flex items-center gap-1.5 flex-shrink-0"
+                        className="px-3 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-lg text-xs font-medium active:scale-[0.97] transition-transform flex items-center gap-1.5 flex-shrink-0"
                       >
                         <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
@@ -1123,7 +1123,7 @@ export default function MerchantDashboard() {
                                     addToast("Failed to accept edit", "error");
                                   }
                                 }}
-                                className="w-full px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                                className="w-full px-3 py-2.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
                                 Accept
                               </button>
@@ -1137,7 +1137,7 @@ export default function MerchantDashboard() {
                                     addToast("Failed to reject edit", "error");
                                   }
                                 }}
-                                className="w-full px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                                className="w-full px-3 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
                                 Reject
                               </button>
@@ -1154,7 +1154,7 @@ export default function MerchantDashboard() {
                                     addToast("Failed to approve", "error");
                                   }
                                 }}
-                                className="w-full px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                                className="w-full px-3 py-2.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
                                 Approve
                               </button>
@@ -1168,7 +1168,7 @@ export default function MerchantDashboard() {
                                     addToast("Failed to reject", "error");
                                   }
                                 }}
-                                className="w-full px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                                className="w-full px-3 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
                                 Reject
                               </button>

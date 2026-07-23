@@ -90,6 +90,7 @@ export default function CashSalesPage() {
         <div className="flex items-center gap-3 px-4 py-3">
           <button
             onClick={() => router.back()}
+            aria-label="Back"
             className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-90 transition-transform flex-shrink-0"
           >
             <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

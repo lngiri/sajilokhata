@@ -794,7 +794,7 @@ export default function LoginPage() {
   if (step === "loading") {
     return (
       <div className="min-h-dvh flex flex-col items-center justify-center px-6 py-12 bg-[var(--color-bg)]">
-        <div className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+        <div role="status" aria-live="polite" className="w-12 h-12 border-4 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
         <p className="mt-4 text-sm text-[var(--color-text-muted)]">Checking session...</p>
       </div>
     );
@@ -809,7 +809,7 @@ export default function LoginPage() {
   ) => (
     <div>
       <label className="block text-sm font-medium text-[var(--color-text)] mb-3 text-center">{label}</label>
-      <div className="flex justify-center gap-3">
+      <div className="flex justify-center gap-2">
         {pinArr.map((d, i) => (
           <input
             key={i}
@@ -865,13 +865,13 @@ export default function LoginPage() {
           {renderPinDots(pin, setPin, pinRefs, "Enter your PIN", handlePinSubmit)}
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           <button
             onClick={handlePinSubmit}
             disabled={pinArrayToString(pin).length < 4 || loading}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -880,7 +880,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => { setStep("forgot_phone"); setError(""); }}
-            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
+            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-3"
           >
             Forgot PIN?
           </button>
@@ -897,20 +897,20 @@ export default function LoginPage() {
           {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           <button
             onClick={handleSetPin}
             disabled={pinArrayToString(newPin).length < 4 || pinArrayToString(confirmPin).length < 4 || loading}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : "Set PIN & Continue"}
           </button>
 
-          <button onClick={handleSkipPin} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+          <button onClick={handleSkipPin} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-3">
             Skip for now
           </button>
         </div>
@@ -946,8 +946,8 @@ export default function LoginPage() {
                 disabled={loading || (selectRoleMode === "register" && !registerName.trim())}
                 className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/5 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                 </div>
@@ -978,7 +978,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           {loading && (
@@ -996,7 +996,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => { setAuthMode("signin"); setStep("phone"); setError(""); setPhoneErrorAction(null); }}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
@@ -1070,13 +1070,13 @@ export default function LoginPage() {
               setError("");
             }}
             disabled={loading}
-            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-2"
+            className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-3"
           >
             Use another account
           </button>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           {loading && (
@@ -1110,7 +1110,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
           {phoneErrorAction && (
             <button
@@ -1124,7 +1124,7 @@ export default function LoginPage() {
           <button
             onClick={handlePhoneSubmit}
             disabled={phone.length < 10 || loading}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -1177,20 +1177,20 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button
             onClick={handleOtpSubmit}
             disabled={otp.length < 4 || loading}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : "Verify & Login"}
           </button>
 
-          <button onClick={backToPhone} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+          <button onClick={backToPhone} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-3">
             Change phone number
           </button>
         </div>
@@ -1217,20 +1217,20 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button
             onClick={handleForgotPhoneSubmit}
             disabled={phone.length < 10 || loading}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : "Send Reset OTP"}
           </button>
 
-          <button onClick={() => { setStep("pin"); setError(""); }} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+          <button onClick={() => { setStep("pin"); setError(""); }} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-3">
             Back to PIN entry
           </button>
         </div>
@@ -1276,20 +1276,20 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div role="alert" className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button
             onClick={handleForgotOtpSubmit}
             disabled={otp.length < 4 || pinArrayToString(newPin).length < 4 || pinArrayToString(confirmPin).length < 4 || loading}
-            className="w-full py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : "Verify & Reset PIN"}
           </button>
 
-          <button onClick={() => { setStep("forgot_phone"); setError(""); }} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors">
+          <button onClick={() => { setStep("forgot_phone"); setError(""); }} className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors py-3">
             Back
           </button>
         </div>

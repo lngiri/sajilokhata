@@ -216,7 +216,7 @@ export default function RegisterPage() {
             <button
               onClick={handlePhoneSubmit}
               disabled={loading || phone.replace(/\D/g, "").length < 10}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -230,7 +230,7 @@ export default function RegisterPage() {
         {/* Step: OTP */}
         {step === "otp" && (
           <div className="bg-[var(--color-surface)] rounded-2xl p-6 shadow-sm border border-[var(--color-border)] space-y-4">
-            <div className="flex justify-center gap-2">
+            <div className="flex justify-center gap-1.5">
               {otp.map((digit, idx) => (
                 <input
                   key={idx}
@@ -243,12 +243,12 @@ export default function RegisterPage() {
                   value={digit}
                   onChange={(e) => handleOtpDigit(e.target.value, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                  className="w-12 h-14 text-center text-xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  className="w-[44px] h-14 text-center text-xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               ))}
             </div>
             {otpError && (
-              <p className="text-xs text-red-500 dark:text-red-400 text-center">{otpError}</p>
+              <p role="alert" className="text-xs text-red-500 dark:text-red-400 text-center">{otpError}</p>
             )}
             {verifying && (
               <div className="flex justify-center">
@@ -257,7 +257,7 @@ export default function RegisterPage() {
             )}
             <button
               onClick={() => { setStep("phone"); setOtp(["", "", "", "", "", ""]); setOtpError(""); }}
-              className="w-full text-xs text-[var(--color-primary)] font-medium py-2"
+              className="w-full text-xs text-[var(--color-primary)] font-medium py-3"
             >
               Change phone number
             </button>
@@ -291,7 +291,7 @@ export default function RegisterPage() {
             <button
               onClick={handleSaveProfile}
               disabled={saving || !name.trim()}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {saving ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -318,7 +318,7 @@ export default function RegisterPage() {
             </div>
             <a
               href="/login"
-              className="block w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform text-center"
+              className="block w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform text-center"
             >
               Go to Login 🚀
             </a>

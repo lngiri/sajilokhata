@@ -130,7 +130,7 @@ export default function OnboardPage() {
 
         {sendingOtp && (
           <div className="flex flex-col items-center gap-3 py-8">
-            <div className="w-8 h-8 border-[3px] border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+            <div role="status" aria-live="polite" className="w-8 h-8 border-[3px] border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-[var(--color-text-muted)]">Sending OTP...</p>
           </div>
         )}
@@ -146,11 +146,11 @@ export default function OnboardPage() {
               className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl text-lg font-mono border border-[var(--color-border)] text-center focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               maxLength={10}
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
             <button
               onClick={handleSendOtp}
               disabled={loading || phone.length < 10}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+              className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
             >
               {loading ? "Sending..." : "Send OTP"}
             </button>
@@ -172,12 +172,12 @@ export default function OnboardPage() {
               maxLength={6}
               autoFocus
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
             {resendMessage && <p className="text-sm text-green-600">{resendMessage}</p>}
             <button
               onClick={handleVerifyOtp}
               disabled={loading || otp.length < 4}
-              className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+              className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
             >
               {loading ? "Verifying..." : "Verify & Onboard"}
             </button>
@@ -185,14 +185,14 @@ export default function OnboardPage() {
               <button
                 onClick={handleResendOtp}
                 disabled={resendCooldown > 0 || loading}
-                className="text-sm font-medium text-[var(--color-primary)] active:opacity-70 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
+                className="text-sm font-medium text-[var(--color-primary)] active:opacity-70 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors py-2"
               >
                 {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : "Resend OTP"}
               </button>
               <span className="text-gray-200 dark:text-gray-600">|</span>
               <button
                 onClick={handleChangePhone}
-                className="text-sm text-[var(--color-text-muted)] underline active:opacity-70"
+                className="text-sm text-[var(--color-text-muted)] underline active:opacity-70 py-2"
               >
                 Change phone
               </button>
@@ -214,7 +214,7 @@ export default function OnboardPage() {
             </p>
             <a
               href="/customer/dashboard"
-              className="block w-full py-3.5 bg-[var(--color-primary)] text-white rounded-[var(--radius-button)] font-bold active:scale-[0.98] transition-transform shadow-sm"
+              className="block w-full py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] font-bold active:scale-[0.98] transition-transform shadow-sm"
             >
               Go to Dashboard 🚀
             </a>

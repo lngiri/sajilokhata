@@ -319,12 +319,12 @@ export default function LandingPage() {
   ];
 
   const features = [
-    { title: "Your Digital Khata", desc: "Replace your physical ledger with a secure digital credit system. Track every rupee with complete history.", doodle: Doodles.notebook, color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10" },
-    { title: "QR Code Access", desc: "Customers scan your QR to see their balance. No app download needed — works in any browser.", doodle: Doodles.qr, color: "text-blue-500", bg: "bg-blue-50" },
-    { title: "SMS Payment Reminders", desc: "Send automatic reminders via SMS. Keep your cash flow healthy with timely follow-ups.", doodle: Doodles.receipt, color: "text-violet-500", bg: "bg-violet-50" },
-    { title: "PIN Security", desc: "A simple 4-digit PIN keeps your account safe. Only you can see your business data.", doodle: Doodles.check, color: "text-amber-500", bg: "bg-amber-50" },
-    { title: "Live Dashboard", desc: "See today's cash, money to collect, and pending approvals — all updated in real-time.", doodle: Doodles.star, color: "text-rose-500", bg: "bg-rose-50" },
-    { title: "Manage All Your Customers", desc: "Keep track of hundreds of customers. Set credit limits and see each relationship clearly.", doodle: Doodles.users, color: "text-cyan-500", bg: "bg-cyan-50" },
+    { title: "Your Digital Khata", desc: "Replace your physical ledger with a secure digital credit system. Track every rupee with complete history.", doodle: Doodles.notebook, color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10 dark:bg-green-950/30" },
+    { title: "QR Code Access", desc: "Customers scan your QR to see their balance. No app download needed — works in any browser.", doodle: Doodles.qr, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
+    { title: "SMS Payment Reminders", desc: "Send automatic reminders via SMS. Keep your cash flow healthy with timely follow-ups.", doodle: Doodles.receipt, color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30" },
+    { title: "PIN Security", desc: "A simple 4-digit PIN keeps your account safe. Only you can see your business data.", doodle: Doodles.check, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
+    { title: "Live Dashboard", desc: "See today's cash, money to collect, and pending approvals — all updated in real-time.", doodle: Doodles.star, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30" },
+    { title: "Manage All Your Customers", desc: "Keep track of hundreds of customers. Set credit limits and see each relationship clearly.", doodle: Doodles.users, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-950/30" },
   ];
 
   const useCases = [
@@ -361,7 +361,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-[var(--color-bg)]/80 backdrop-blur-lg border-b border-[var(--color-border)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <LogoWithAbout size={36} showAnimation onClick={() => setAboutOpen(true)} />
+            <LogoWithAbout size={36} showAnimation onClick={() => setAboutOpen(true)} className="p-1" />
             <span className="text-lg font-extrabold text-[var(--color-text)]">QR Hisab</span>
           </div>
           <div className="flex items-center gap-3">
@@ -369,7 +369,7 @@ export default function LandingPage() {
               Log in
             </Link>            <Link
               href="/login?signedOut=1"
-              className="btn-bounce px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-[var(--radius-button)] text-sm font-bold hover:bg-[var(--color-primary-dark)] transition-all active:scale-[0.97] shadow-sm"
+              className="btn-bounce px-5 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] text-sm font-bold hover:bg-[var(--color-primary-surface-hover)] transition-all active:scale-[0.97] shadow-sm"
             >
               Get Started Free
             </Link>
@@ -413,7 +413,7 @@ export default function LandingPage() {
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-entrance-delay-2">
               <Link
                 href="/login?signedOut=1"
-                className="btn-bounce w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-[var(--color-primary)] text-white rounded-[var(--radius-button)] font-bold text-lg hover:bg-[var(--color-primary-dark)] transition-all shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 active:scale-[0.98]"
+                className="btn-bounce w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-[var(--color-primary-surface-hover)] transition-all shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 active:scale-[0.98]"
               >
                 Start Free
                 {Icons.arrow}
@@ -436,10 +436,10 @@ export default function LandingPage() {
 
           {/* Hero visual — phone mockup */}
           <div className="mt-20 max-w-sm mx-auto animate-entrance-delay-2">
-            <div className="relative bg-[var(--color-text)] rounded-[2.5rem] p-2 shadow-2xl">
+            <div className="relative bg-stone-950 dark:bg-stone-900 rounded-[2.5rem] p-2 shadow-2xl">
               <div className="bg-[var(--color-surface)] rounded-[2rem] overflow-hidden">
                 {/* Phone status bar */}
-                <div className="h-10 bg-[var(--color-primary)] flex items-center justify-between px-6">
+                <div className="h-10 bg-[var(--color-primary-surface)] flex items-center justify-between px-6">
                   <span className="text-xs font-semibold text-white/80">9:41</span>
                   <span className="text-xs font-bold text-white">QR Hisab</span>
                   <span className="text-xs text-white/80">●●●</span>
@@ -455,7 +455,7 @@ export default function LandingPage() {
                       <p className="text-xs text-[var(--color-text-muted)]">How&apos;s business today? 👋</p>
                     </div>
                   </div>
-                  <div className="bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] rounded-[var(--radius-card)] p-4 text-white">
+                  <div className="bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-[var(--radius-card)] p-4 text-[var(--color-primary-foreground)]">
                     <p className="text-xs opacity-80">Money to Collect</p>
                     <p className="text-2xl font-extrabold mt-1">Rs. 45,200</p>
                     <p className="text-xs opacity-60 mt-1">From 23 customers</p>
@@ -513,7 +513,7 @@ export default function LandingPage() {
             {/* Problems */}
             <div>
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-red-50 dark:bg-red-950/30 rounded-2xl flex items-center justify-center">
                   <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                   </svg>
@@ -522,7 +522,7 @@ export default function LandingPage() {
               </div>
               <div className="space-y-4">
                 {problems.map((p, i) => (
-                  <div key={i} className="animate-card-in p-5 bg-red-50/50 border border-red-100 rounded-[var(--radius-card)] flex gap-4">
+                  <div key={i} className="animate-card-in p-5 bg-red-50/50 dark:bg-red-950/20 dark:border-red-900/50 rounded-[var(--radius-card)] flex gap-4">
                     <span className="text-2xl flex-shrink-0 mt-0.5 opacity-60">{p.doodle}</span>
                     <div>
                       <p className="font-bold text-[var(--color-text)] text-sm">{p.title}</p>
@@ -617,14 +617,14 @@ export default function LandingPage() {
       </section>
 
       {/* ══════ HOW IT WORKS ══════ */}
-      <section id="how-it-works" className="py-24 sm:py-32 bg-[var(--color-text)] text-white">
+      <section id="how-it-works" className="py-24 sm:py-32 bg-stone-900 dark:bg-stone-800 text-[var(--color-primary-foreground)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <p className="text-sm font-bold text-[var(--color-primary-light)] uppercase tracking-wider mb-3">Get started in 3 steps 🚀</p>
             <h2 className="text-3xl sm:text-4xl font-extrabold">
               Ready in under a minute
             </h2>
-            <p className="mt-4 text-lg text-gray-400 dark:text-gray-500">
+            <p className="mt-4 text-lg text-gray-400">
               No training needed. If you can use a phone, you can use QR Hisab.
             </p>
           </div>
@@ -635,11 +635,11 @@ export default function LandingPage() {
 
             {steps.map((s, i) => (
               <div key={i} className="text-center relative">
-                <div className="w-28 h-28 bg-[var(--color-primary)] rounded-full flex items-center justify-center mx-auto mb-6 text-4xl font-extrabold relative z-10 shadow-lg shadow-[var(--color-primary)]/30">
+                <div className="w-28 h-28 bg-[var(--color-primary-surface)] rounded-full flex items-center justify-center mx-auto mb-6 text-4xl font-extrabold relative z-10 shadow-lg shadow-[var(--color-primary)]/30">
                   {s.num}
                 </div>
                 <h3 className="text-xl font-bold mb-2">{s.title}</h3>
-                <p className="text-gray-400 dark:text-gray-500 leading-relaxed max-w-xs mx-auto">{s.desc}</p>
+                <p className="text-gray-400 leading-relaxed max-w-xs mx-auto">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -695,9 +695,9 @@ export default function LandingPage() {
                 <button
                   onClick={() => handleContinue("merchant")}
                   disabled={!!redirecting}
-                  className="w-full p-4 bg-gradient-to-r from-blue-50 to-white rounded-[var(--radius-button)] border border-blue-100 hover:border-blue-300 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
+                  className="w-full p-4 bg-gradient-to-r from-blue-50 dark:from-blue-950/30 dark:to-[var(--color-surface)] rounded-[var(--radius-button)] border border-blue-100 dark:border-blue-900/50 hover:border-blue-300 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center flex-shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0">
                     <span className="text-blue-600">{Icons.store}</span>
                   </div>
                   <div className="flex-1 min-w-0">
@@ -716,7 +716,7 @@ export default function LandingPage() {
                 <button
                   onClick={() => handleContinue("customer")}
                   disabled={!!redirecting}
-                  className="w-full p-4 bg-gradient-to-r from-[var(--color-primary)]/5 to-white rounded-[var(--radius-button)] border border-[var(--color-primary)]/15 hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
+                  className="w-full p-4 bg-gradient-to-r from-[var(--color-primary)]/5 dark:to-[var(--color-surface)] rounded-[var(--radius-button)] border border-[var(--color-primary)]/15 hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
                 >
                   <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
                     <span className="text-[var(--color-primary)]">{Icons.users}</span>
@@ -756,7 +756,7 @@ export default function LandingPage() {
       )}
 
       {/* ══════ FINAL CTA ══════ */}
-      <section className="py-24 sm:py-32 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white relative overflow-hidden">
+      <section className="py-24 sm:py-32 bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] text-[var(--color-primary-foreground)] relative overflow-hidden">
         <FloatingDoodle doodle={Doodles.star} className="top-10 left-[10%] rotate-12 opacity-30" />
         <FloatingDoodle doodle={Doodles.leaf} className="bottom-10 right-[10%] -rotate-12 opacity-30" />
 

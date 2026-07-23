@@ -342,7 +342,7 @@ export default function MerchantReportsPage() {
       <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <a href="/merchant/dashboard" className="p-1 active:scale-95 transition-transform">
+            <a href="/merchant/dashboard" aria-label="Back to dashboard" className="p-1 active:scale-95 transition-transform">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
               </svg>

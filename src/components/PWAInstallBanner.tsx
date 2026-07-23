@@ -173,7 +173,7 @@ export default function PWAInstallBanner() {
       <div className="bg-white dark:bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-4 max-w-md mx-auto">
         {/* App Icon */}
         <div className="flex items-start gap-3">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center flex-shrink-0 shadow-lg">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] flex items-center justify-center flex-shrink-0 shadow-lg">
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
@@ -204,7 +204,7 @@ export default function PWAInstallBanner() {
             <button
               onClick={handleInstall}
               disabled={isInstalling}
-              className="flex-1 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+              className="flex-1 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isInstalling ? (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

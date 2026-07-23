@@ -97,7 +97,7 @@ export default function OtherRolePrompt({ currentRole }: Props) {
             </button>
             <button
               onClick={handleRegister}
-              className="flex-1 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
+              className="flex-1 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
             >
               Register as {otherLabel}
             </button>

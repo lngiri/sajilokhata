@@ -33,7 +33,7 @@ export default async function BusinessProfilePage({ params }: Props) {
   return (
     <div className="min-h-dvh flex flex-col bg-gradient-to-b from-white to-gray-50">
       {/* Header */}
-      <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)]">
+      <div className="relative h-48 bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)]">
         <div className="absolute bottom-0 left-0 right-0 p-6">
           <h1 className="text-2xl font-bold text-white">{displayName}</h1>
           {merchant.business_type && (

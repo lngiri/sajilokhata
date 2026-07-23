@@ -6,6 +6,10 @@
   --color-primary: #16A34A;
   --color-primary-light: #22C55E;
   --color-primary-dark: #15803D;
+  --color-primary-surface: #16A34A;
+  --color-primary-surface-dark: #15803D;
+  --color-primary-surface-hover: #15803D;
+  --color-primary-foreground: #FFFFFF;
   --color-accent: #F59E0B;
   --color-danger: #EF4444;
   --color-bg: #FAFAF8;
@@ -25,6 +29,10 @@
   --color-primary: #4ADE80;
   --color-primary-light: #86EFAC;
   --color-primary-dark: #22C55E;
+  --color-primary-surface: #166534;
+  --color-primary-surface-dark: #14532D;
+  --color-primary-surface-hover: #14532D;
+  --color-primary-foreground: #FFFFFF;
   --color-accent: #FBBF24;
   --color-danger: #F87171;
   --color-bg: #0C0A09;
