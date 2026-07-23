@@ -224,7 +224,7 @@ export default function ScanPage() {
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center px-4 py-3">
           <a href="/" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -241,7 +241,7 @@ export default function ScanPage() {
       {step === "scan" && (
         <div className="px-4 py-6 space-y-4 animate-fade-in">
           {/* Persisted customer badge */}
-          <div className="flex items-center justify-between bg-white rounded-xl px-4 py-2.5 shadow-sm border border-gray-50">
+          <div className="flex items-center justify-between bg-[var(--color-surface)] rounded-xl px-4 py-2.5 shadow-sm border border-gray-50 dark:border-gray-700">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
                 <svg className="w-4 h-4 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -257,18 +257,15 @@ export default function ScanPage() {
                   {name && (
                     <button
                       onClick={() => setShowFullPhone(!showFullPhone)}
-                      className="p-0.5 rounded hover:bg-gray-100 transition-colors"
+                      className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                       title={showFullPhone ? "Hide number" : "Show full number"}
                     >
                       {showFullPhone ? (
-                        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <svg className="w-3 h-3 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
                         </svg>
                       ) : (
-                        <svg className="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                        <svg className="w-3 h-3 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       )}
                     </button>
                   )}
@@ -296,19 +293,19 @@ export default function ScanPage() {
       {/* Step 3: Enter Amount */}
       {step === "enter" && (
         <div className="px-6 py-8 space-y-6 animate-fade-in">
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 text-center">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-gray-50 dark:border-gray-700 text-center">
             <p className="text-xs text-[var(--color-text-muted)] mb-1">Entry at</p>
             <p className="font-bold text-lg text-[var(--color-text)]">{merchantName}</p>
           </div>
 
           {/* Debit / Credit toggle */}
-          <div className="flex bg-gray-100 rounded-xl p-1">
+          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
             <button
               onClick={() => setEntryType("debit")}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 entryType === "debit"
-                  ? "bg-white text-[var(--color-danger)] shadow-sm"
-                  : "text-gray-500"
+                  ? "bg-white dark:bg-gray-700 text-[var(--color-danger)] shadow-sm"
+                  : "text-gray-500 dark:text-gray-400"
               }`}
             >
               Credit Taken
@@ -317,8 +314,8 @@ export default function ScanPage() {
               onClick={() => setEntryType("credit")}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
                 entryType === "credit"
-                  ? "bg-white text-[var(--color-primary)] shadow-sm"
-                  : "text-gray-500"
+                  ? "bg-white dark:bg-gray-700 text-[var(--color-primary)] shadow-sm"
+                  : "text-gray-500 dark:text-gray-400"
               }`}
             >
               Payment
@@ -335,7 +332,7 @@ export default function ScanPage() {
                 placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-3xl font-bold text-center border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               />
               <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
             </div>
@@ -347,7 +344,7 @@ export default function ScanPage() {
                 placeholder="e.g. Rice 10kg, Milk 2L"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full mt-1 px-4 py-3 bg-white rounded-2xl border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-2xl border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               />
             </div>
           </div>
@@ -355,7 +352,7 @@ export default function ScanPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep("scan")}
-              className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98]"
+              className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98]"
             >
               Back
             </button>
@@ -379,18 +376,18 @@ export default function ScanPage() {
       {/* Step 4: Reverse QR (Offline mode) */}
       {step === "reverse" && (
         <div className="px-4 py-6 space-y-6 animate-fade-in">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-gray-50 dark:border-gray-700">
             <CustomerQR customerId={phone} />
           </div>
 
-          <div className="bg-amber-50 rounded-2xl p-4 border border-amber-200">
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-800">
             <div className="flex items-start gap-3">
-              <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
               </svg>
               <div>
-                <p className="text-sm font-medium text-amber-800">You are offline</p>
-                <p className="text-xs text-amber-700 mt-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-300">You are offline</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                   Show this QR to the shopkeeper so they can scan and save your entry. It will sync when you&apos;re back online.
                 </p>
               </div>
@@ -400,7 +397,7 @@ export default function ScanPage() {
           <div className="flex gap-3">
             <button
               onClick={() => setStep("enter")}
-              className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98]"
+              className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98]"
             >
               Edit Amount
             </button>
@@ -438,7 +435,7 @@ export default function ScanPage() {
                 setEntryType("debit");
                 setStep("scan");
               }}
-              className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-semibold active:scale-[0.98]"
+              className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-semibold active:scale-[0.98]"
             >
               New Entry
             </button>
