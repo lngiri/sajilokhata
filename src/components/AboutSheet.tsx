@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef, useLayoutEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { APP_VERSION } from "@/lib/version";
 import AppLogo from "./AppLogo";
@@ -39,40 +39,47 @@ export default function AboutSheet({ open, onClose }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const el = sheetRef.current;
+    if (!el) return;
+    const update = () => {
+      el.style.maxHeight = `${window.innerHeight - 32}px`;
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", () => setTimeout(update, 150));
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open) return;
-
-    const scrollY = window.scrollY;
     const body = document.body;
     const html = document.documentElement;
-
-    const originalBodyOverflow = body.style.overflow;
-    const originalBodyPosition = body.style.position;
-    const originalBodyTop = body.style.top;
-    const originalBodyWidth = body.style.width;
-    const originalBodyPaddingRight = body.style.paddingRight;
-    const originalHtmlOverflow = html.style.overflow;
-
-    const scrollbarWidth = window.innerWidth - html.clientWidth;
-    if (scrollbarWidth > 0) {
-      body.style.paddingRight = `${scrollbarWidth}px`;
-    }
-
+    const origBodyOverflow = body.style.overflow;
+    const origHtmlOverflow = html.style.overflow;
     body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
     html.style.overflow = "hidden";
-
     return () => {
-      body.style.overflow = originalBodyOverflow;
-      body.style.position = originalBodyPosition;
-      body.style.top = originalBodyTop;
-      body.style.width = originalBodyWidth;
-      body.style.paddingRight = originalBodyPaddingRight;
-      html.style.overflow = originalHtmlOverflow;
-      window.scrollTo(0, scrollY);
+      body.style.overflow = origBodyOverflow;
+      html.style.overflow = origHtmlOverflow;
     };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: TouchEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-sheet-content]")) return;
+      e.preventDefault();
+    };
+    document.addEventListener("touchmove", handler, { passive: false });
+    return () => document.removeEventListener("touchmove", handler);
   }, [open]);
 
   const contentRef = useCallback((el: HTMLDivElement | null) => {
@@ -93,20 +100,23 @@ export default function AboutSheet({ open, onClose }: Props) {
           onClick={onClose}
         >
           <motion.div
+            ref={(node) => {
+              (sheetRef as React.MutableRefObject<HTMLDivElement | null>).current = node;
+              contentRef(node);
+            }}
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
-            ref={contentRef}
-            className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl"
+            data-sheet-content
+            className="absolute bottom-0 left-0 right-0 overflow-y-auto bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl"
+            style={{ maxHeight: "85dvh" }}
           >
-            {/* Drag handle */}
             <div className="sticky top-0 z-10 pt-3 pb-2 bg-white dark:bg-gray-900">
               <div className="w-10 h-1 mx-auto rounded-full bg-gray-300 dark:bg-gray-600" />
             </div>
 
-            {/* Close button */}
             <button
               onClick={onClose}
               className="absolute top-3 right-4 z-20 p-1.5 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
@@ -117,8 +127,7 @@ export default function AboutSheet({ open, onClose }: Props) {
               </svg>
             </button>
 
-            <div className="px-6 pb-8 pt-2 space-y-6">
-              {/* Header */}
+            <div className="px-6 pb-8 pt-2 space-y-6" style={{ paddingBottom: "calc(2rem + env(safe-area-inset-bottom, 0px))" }}>
               <div className="text-center">
                 <div className="flex justify-center mb-3">
                   <AppLogo size={64} showAnimation={false} clickable={false} />
@@ -130,7 +139,6 @@ export default function AboutSheet({ open, onClose }: Props) {
                 </p>
               </div>
 
-              {/* Features */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                   Features
@@ -147,7 +155,6 @@ export default function AboutSheet({ open, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Support */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                   Support
@@ -174,7 +181,6 @@ export default function AboutSheet({ open, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Social */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                   Social
@@ -192,7 +198,6 @@ export default function AboutSheet({ open, onClose }: Props) {
                 </div>
               </div>
 
-              {/* Legal */}
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                   Legal
