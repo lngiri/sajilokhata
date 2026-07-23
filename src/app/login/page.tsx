@@ -928,7 +928,7 @@ export default function LoginPage() {
                 onChange={(e) => setRegisterName(e.target.value)}
                 placeholder="e.g. Giri Kirana Store"
                 maxLength={100}
-                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 autoFocus
               />
             </div>
@@ -944,7 +944,7 @@ export default function LoginPage() {
               <button
                 onClick={() => handleRoleSelect("merchant")}
                 disabled={loading || (selectRoleMode === "register" && !registerName.trim())}
-                className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
+                className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
               >
                 <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -962,7 +962,7 @@ export default function LoginPage() {
               <button
                 onClick={() => handleRoleSelect("customer")}
                 disabled={loading}
-                className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4"
+                className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4"
               >
                 <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/5 flex items-center justify-center">
                   <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1006,7 +1006,7 @@ export default function LoginPage() {
 
           <button
             onClick={() => { setAuthMode("register"); setStep("phone"); setError(""); setPhoneErrorAction(null); }}
-            className="w-full py-3.5 bg-white text-[var(--color-text)] rounded-xl font-semibold border border-gray-200 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-[var(--color-surface)] text-[var(--color-text)] rounded-xl font-semibold border border-gray-200 dark:border-gray-600 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z" />
@@ -1024,7 +1024,7 @@ export default function LoginPage() {
           <button
             onClick={() => handlePostSignoutRoleSelect("merchant")}
             disabled={loading}
-            className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-blue-300 active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
+            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
           >
             <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1040,7 +1040,7 @@ export default function LoginPage() {
           <button
             onClick={() => handlePostSignoutRoleSelect("customer")}
             disabled={loading}
-            className="w-full p-4 bg-white rounded-xl border border-gray-200 hover:border-[var(--color-primary-light)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
+            className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-[var(--color-primary-light)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
           >
             <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/5 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1055,7 +1055,7 @@ export default function LoginPage() {
 
           <div className="relative my-2">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
+              <div className="w-full border-t border-gray-200 dark:border-gray-700" />
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="px-3 bg-[var(--color-bg)] text-[var(--color-text-muted)]">or</span>
@@ -1204,13 +1204,13 @@ export default function LoginPage() {
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
             <div className="flex mt-1">
-              <span className="px-3 py-3 bg-gray-100 rounded-l-xl text-sm font-medium text-gray-500 border border-r-0 border-gray-100">+977</span>
+              <span className="px-3 py-3 bg-gray-100 dark:bg-gray-800 rounded-l-xl text-sm font-medium text-gray-500 dark:text-gray-400 border border-r-0 border-gray-100 dark:border-gray-700">+977</span>
               <input
                 type="tel"
                 placeholder="9841234567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                className="flex-1 px-4 py-3 bg-white rounded-r-xl text-lg font-mono border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                className="flex-1 px-4 py-3 bg-[var(--color-surface)] rounded-r-xl text-lg font-mono border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
                 maxLength={10}
               />
             </div>
@@ -1269,7 +1269,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="space-y-4 pt-2 border-t border-gray-100">
+          <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
             <p className="text-xs text-[var(--color-text-muted)] text-center">Set a new 4-digit PIN</p>
             {renderPinDots(newPin, setNewPin, newPinRefs, "New PIN")}
             {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
