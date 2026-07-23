@@ -9,8 +9,8 @@ export default function MerchantError({
 }) {
   return (
     <div className="flex flex-col items-center justify-center min-h-dvh px-6">
-      <div className="w-16 h-16 mb-4 rounded-full bg-red-50 flex items-center justify-center">
-        <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div className="w-16 h-16 mb-4 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+        <svg className="w-8 h-8 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
         </svg>
       </div>
@@ -23,7 +23,7 @@ export default function MerchantError({
       <div className="flex gap-3">
         <a
           href="/"
-          className="px-6 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium"
+          className="px-6 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium"
         >
           Home
         </a>

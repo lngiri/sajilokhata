@@ -63,11 +63,11 @@ function MetricCard({
   disabled?: boolean;
 }) {
   return (
-    <div className={`rounded-xl p-4 border ${disabled ? "border-dashed border-gray-200 bg-gray-50/50" : "bg-white shadow-sm border-gray-50"}`}>
-      <p className={`text-xs font-medium ${disabled ? "text-gray-300" : "text-[var(--color-text-muted)]"}`}>
+    <div className={`rounded-xl p-4 border ${disabled ? "border-dashed border-gray-200 dark:border-[var(--color-border)] bg-gray-50/50 dark:bg-gray-800/50" : "bg-[var(--color-surface)] shadow-sm border-[var(--color-border)]"}`}>
+      <p className={`text-xs font-medium ${disabled ? "text-gray-300 dark:text-gray-600" : "text-[var(--color-text-muted)]"}`}>
         {label}
       </p>
-      <p className={`text-xl font-bold mt-1 ${disabled ? "text-gray-200" : color}`}>
+      <p className={`text-xl font-bold mt-1 ${disabled ? "text-gray-200 dark:text-gray-700" : color}`}>
         {disabled ? "—" : `${prefix} ${typeof value === "number" ? value.toLocaleString() : value}`}
       </p>
     </div>
@@ -95,7 +95,7 @@ function CashFlowChart({ data }: { data: { date: string; debit: number; credit: 
     );
   }
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
+    <div className="bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)]">
       <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Cash Flow Trend (Credit, Cash & Received)</p>
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data}>
@@ -145,7 +145,7 @@ function TopCustomersChart({ data }: { data: { name: string; balance: number }[]
     );
   }
   return (
-    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
+    <div className="bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)]">
       <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Top Customers by Outstanding Balance</p>
       <ResponsiveContainer width="100%" height={220}>
         <BarChart data={data} layout="vertical">
@@ -163,12 +163,12 @@ function TopCustomersChart({ data }: { data: { name: string; balance: number }[]
 // ─── Transaction Audit Log ─────────────────────────────────────
 
 const STATUS_BADGE: Record<string, string> = {
-  approved: "bg-green-50 text-green-700",
-  pending: "bg-amber-50 text-amber-700",
-  rejected: "bg-slate-100 text-slate-500 line-through opacity-60",
-  disputed: "bg-red-50 text-red-700",
-  unverified: "bg-blue-50 text-blue-700",
-  edit_requested: "bg-indigo-50 text-indigo-700",
+  approved: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+  pending: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
+  rejected: "bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-400 line-through opacity-60",
+  disputed: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
+  unverified: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+  edit_requested: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300",
 };
 
 function TransactionAuditLog({
@@ -206,7 +206,7 @@ function TransactionAuditLog({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-xs text-[var(--color-text-muted)] border-b border-gray-100">
+          <tr className="text-xs text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
             <th className="text-left py-2 pr-2 font-medium">Date</th>
             <th className="text-left py-2 pr-2 font-medium">Customer</th>
             <th className="text-left py-2 pr-2 font-medium">Status</th>
@@ -216,7 +216,7 @@ function TransactionAuditLog({
         </thead>
         <tbody>
           {logs.map((log: any) => (
-            <tr key={log.id} className={`border-b border-gray-50 last:border-0 ${log.status === "rejected" ? "opacity-60" : ""}`}>
+            <tr key={log.id} className={`border-b border-[var(--color-border)] last:border-0 ${log.status === "rejected" ? "opacity-60" : ""}`}>
               <td className="py-2.5 pr-2 text-[var(--color-text)] whitespace-nowrap text-xs">
                 {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kathmandu" })}
               </td>
@@ -224,16 +224,16 @@ function TransactionAuditLog({
                 {log.customers?.name || log.customers?.phone || "—"}
               </td>
               <td className="py-2.5 pr-2">
-                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_BADGE[log.status] || "bg-gray-100 text-gray-600"}`}>
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${STATUS_BADGE[log.status] || "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>
                   {STATUS_LABELS[log.status] || log.status}
                 </span>
               </td>
               <td className="py-2.5 pr-2">
-                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-50 text-red-700" : log.type === "cash" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
                   {log.type === "debit" ? "Credit" : log.type === "cash" ? "Cash" : "Payment"}
                 </span>
               </td>
-              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
+              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>
                 Rs. {log.amount.toLocaleString()}
               </td>
             </tr>
@@ -339,7 +339,7 @@ export default function MerchantReportsPage() {
   return (
     <div className="pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
             <a href="/merchant/dashboard" className="p-1 active:scale-95 transition-transform">
@@ -359,17 +359,17 @@ export default function MerchantReportsPage() {
         <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto">
           {(["today", "week", "month", "custom"] as RangePreset[]).map((p) => (
             <button key={p} onClick={() => setPreset(p)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${preset === p ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-600"}`}>
+              className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${preset === p ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>
               {p === "today" ? "Today" : p === "week" ? "This Week" : p === "month" ? "This Month" : "Custom Range"}
             </button>
           ))}
           {preset === "custom" && (
             <div className="flex items-center gap-1.5 ml-2">
               <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)}
-                className="px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none" />
+                className="px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg outline-none dark:bg-gray-800 dark:text-white" />
               <span className="text-xs text-[var(--color-text-muted)]">—</span>
               <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)}
-                className="px-2 py-1 text-xs border border-gray-200 rounded-lg outline-none" />
+                className="px-2 py-1 text-xs border border-gray-200 dark:border-gray-700 rounded-lg outline-none dark:bg-gray-800 dark:text-white" />
             </div>
           )}
         </div>
@@ -378,13 +378,13 @@ export default function MerchantReportsPage() {
       <div className="px-4 py-4 space-y-4">
         {/* Summary Cards */}
         <div className="grid grid-cols-2 gap-3">
-          <MetricCard label="Total Sales" value={analytics?.totalSales ?? "—"} color="text-blue-600" />
-          <MetricCard label="Cash In Hand" value={analytics?.cashInHand ?? "—"} color="text-green-600" />
-          <MetricCard label="Outstanding Credit" value={analytics?.totalOutstanding ?? "—"} color="text-red-600" />
-          <MetricCard label="Cash Received" value={analytics?.totalReceived ?? "—"} color="text-green-600" />
+          <MetricCard label="Total Sales" value={analytics?.totalSales ?? "—"} color="text-blue-600 dark:text-blue-400" />
+          <MetricCard label="Cash In Hand" value={analytics?.cashInHand ?? "—"} color="text-green-600 dark:text-green-400" />
+          <MetricCard label="Outstanding Credit" value={analytics?.totalOutstanding ?? "—"} color="text-red-600 dark:text-red-400" />
+          <MetricCard label="Cash Received" value={analytics?.totalReceived ?? "—"} color="text-green-600 dark:text-green-400" />
           <MetricCard label="Net Cash Flow"
             value={analytics ? (analytics.netCashFlow >= 0 ? analytics.netCashFlow : `-${Math.abs(analytics.netCashFlow)}`) : "—"}
-            color={(analytics?.netCashFlow ?? 0) >= 0 ? "text-green-600" : "text-red-600"}
+            color={(analytics?.netCashFlow ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}
           />
           <MetricCard label="Customers" value={analytics?.topCustomers.length ?? "—"} prefix="#" color="text-[var(--color-primary)]" />
         </div>
@@ -394,13 +394,13 @@ export default function MerchantReportsPage() {
         <TopCustomersChart data={safeTopCustomers} />
 
         {/* Transaction Audit Log */}
-        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-50">
+        <div className="bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)]">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-[var(--color-text)]">Transactions</p>
             <div className="flex items-center gap-1">
               {(["approved", "pending", "rejected", "all"] as LogFilter[]).map((f) => (
                 <button key={f} onClick={() => setLogFilter(f)}
-                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${logFilter === f ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 text-gray-500"}`}>
+                  className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${logFilter === f ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                   {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}

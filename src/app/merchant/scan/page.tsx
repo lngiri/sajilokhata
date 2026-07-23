@@ -333,7 +333,7 @@ export default function MerchantScanPage() {
 
   // ─── Hydration guard: return matching skeleton until mounted ────
   if (!isMounted) {
-    return <div className="min-h-screen bg-gray-50" />;
+    return <div className="min-h-screen dark:bg-gray-800/50" />;
   }
 
   // ─── Manual mode: short-circuit, no camera ──────────────────────
@@ -341,7 +341,7 @@ export default function MerchantScanPage() {
     return (
       <div className="pb-20">
         {/* Header */}
-        <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+        <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
           <div className="flex items-center px-4 py-3">
             <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -364,7 +364,7 @@ export default function MerchantScanPage() {
                   {entryType === "cash" ? "Customer Phone (Optional)" : "Customer Phone Number"}
                 </label>
                 <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm font-medium text-gray-500">+977</span>
+                  <span className="text-sm font-medium text-[var(--color-text-muted)]">+977</span>
                     <input
                       type="tel"
                       placeholder="98XXXXXXXX"
@@ -407,7 +407,7 @@ export default function MerchantScanPage() {
                         setCustomerBalance(null);
                       }
                     }}
-                    className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-gray-50"
+                    className="flex-1 px-4 py-3 bg-white rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:bg-gray-800/50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                   />
                   {customerLookup === "looking" && entryType !== "cash" && (
                     <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
@@ -417,14 +417,14 @@ export default function MerchantScanPage() {
                 {/* Lookup result */}
                 {entryType !== "cash" && customerLookup === "found" && (
                   <div className="mt-2 space-y-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg text-sm font-medium text-green-700">
-                      <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/40 rounded-lg text-sm font-medium text-green-700 dark:text-green-300">
+                      <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <span>Already registered ✅{customerName ? ` as ${customerName}` : ""}</span>
                     </div>
                     {customerBalance !== null && (
-                      <div className={`px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                      <div className={`px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
                         {customerBalance > 0 ? `Current Due: Rs. ${customerBalance.toLocaleString()}` : "No outstanding balance"}
                       </div>
                     )}
@@ -433,8 +433,8 @@ export default function MerchantScanPage() {
 
                 {entryType !== "cash" && customerLookup === "not_found" && (
                   <div className="mt-2 space-y-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 rounded-lg text-sm font-medium text-amber-700">
-                      <svg className="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className="flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-300">
+                      <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
                       <span>Not registered yet 📱</span>
@@ -479,8 +479,8 @@ export default function MerchantScanPage() {
                         )}
                       </button>
                     ) : (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 rounded-lg text-sm text-green-700">
-                        <svg className="w-4 h-4 text-green-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/40 rounded-lg text-sm text-green-700 dark:text-green-300">
+                        <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         <span>SMS sent with registration link</span>
@@ -490,15 +490,15 @@ export default function MerchantScanPage() {
                 )}
               </div>
 
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+              <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
                 <p className="text-sm font-medium text-[var(--color-text)] mb-3">Transaction Type</p>
                 <div className="flex gap-2">
                   <button onClick={() => setEntryType("debit")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Credit Given
                   </button>
                   <button onClick={() => setEntryType("credit")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Amount Received
                   </button>
                   <button onClick={() => {
@@ -509,17 +509,17 @@ export default function MerchantScanPage() {
                       setCustomerLookup("idle");
                       setCustomerBalance(null);
                     }}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}>
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Cash Sale
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+              <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
                   <button type="button" onClick={() => document.getElementById("ai-bill-input")?.click()}
-                    className="text-xs text-blue-600 underline hover:text-blue-800 transition">
+                    className="text-xs text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition">
                     Scan Bill with AI
                   </button>
                 </div>
@@ -561,7 +561,7 @@ export default function MerchantScanPage() {
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                           selectedProductId === null
                             ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                            : "bg-white text-gray-600 border-gray-200"
+                            : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
                         }`}
                       >
                         Custom
@@ -580,7 +580,7 @@ export default function MerchantScanPage() {
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                             selectedProductId === p.id
                               ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                              : "bg-white text-gray-600 border-gray-200"
+                              : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
                           }`}
                         >
                           {p.name}
@@ -592,13 +592,13 @@ export default function MerchantScanPage() {
 
                 <div>
                   <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
-                    className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                    className="w-full mt-1 px-4 py-4 bg-white dark:bg-gray-800 rounded-2xl text-3xl font-bold text-center border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
                   <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
                   <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grossery items" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
-                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                    className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
                   <DescriptionSuggestions
                     descriptions={recentDescriptions}
                     onSelect={(desc) => setDescription(desc)}
@@ -610,12 +610,12 @@ export default function MerchantScanPage() {
                   <div className="flex-1">
                     <label className="text-sm font-medium text-[var(--color-text)]">Quantity</label>
                     <input type="number" min="0" step="any" placeholder="0" value={quantity} onChange={(e) => setQuantity(e.target.value)}
-                      className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center" />
+                      className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center dark:text-white" />
                   </div>
                   <div className="flex-1">
                     <label className="text-sm font-medium text-[var(--color-text)]">Unit</label>
                     <select value={unit} onChange={(e) => setUnit(e.target.value)}
-                      className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm appearance-none">
+                      className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm appearance-none dark:text-white">
                       <option value="">—</option>
                       <option value="liter">Liter</option>
                       <option value="kg">Kg</option>
@@ -644,7 +644,7 @@ export default function MerchantScanPage() {
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] active:scale-[0.98] transition-all"
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] text-xs font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] hover:border-[var(--color-primary)] active:scale-[0.98] transition-all"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
@@ -657,7 +657,7 @@ export default function MerchantScanPage() {
                         <img
                           src={attachmentPreview}
                           alt="Receipt preview"
-                          className="w-10 h-10 rounded-lg object-cover border border-gray-200"
+                          className="w-10 h-10 rounded-lg object-cover border border-[var(--color-border)]"
                         />
                         <button
                           type="button"
@@ -682,7 +682,7 @@ export default function MerchantScanPage() {
               </div>
 
               <div className="flex gap-3">
-                <button onClick={handleReset} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">Cancel</button>
+                <button onClick={handleReset} className="flex-1 py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform">Cancel</button>
                 <button onClick={handleEnterNext} disabled={!amount || Number(amount) <= 0}
                   className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50">Continue</button>
               </div>
@@ -692,10 +692,10 @@ export default function MerchantScanPage() {
           {/* Manual: Confirm */}
           {step === "confirm" && (
             <div className="space-y-4 animate-fade-in">
-              <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
-                <div className="text-center pb-2 border-b border-gray-50">
-                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
-                    <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
+                <div className="text-center pb-2 border-b border-[var(--color-border)]">
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                    <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
@@ -713,11 +713,11 @@ export default function MerchantScanPage() {
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : entryType === "cash" ? "text-blue-600" : "text-green-600"}`}>Rs. {Number(amount).toLocaleString()}</p>
+                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : entryType === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>Rs. {Number(amount).toLocaleString()}</p>
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
-                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : entryType === "cash" ? "bg-blue-50 text-blue-700" : "bg-green-50 text-green-700"}`}>
+                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : entryType === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
                         {entryType === "debit" ? "Credit Given" : entryType === "cash" ? "Cash Sale" : "Amount Received"}
                       </span>
                     </div>
@@ -735,26 +735,26 @@ export default function MerchantScanPage() {
                     </div>
                   )}
                   {entryType === "cash" ? (
-                    <div className="bg-blue-50 rounded-xl p-3 flex items-start gap-2">
-                      <svg className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className="bg-blue-100 dark:bg-blue-900/40 rounded-xl p-3 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
-                      <p className="text-xs text-blue-800">Cash sale will be recorded immediately. No customer confirmation needed.</p>
+                      <p className="text-xs text-blue-800 dark:text-blue-300">Cash sale will be recorded immediately. No customer confirmation needed.</p>
                     </div>
                   ) : (
-                    <div className="bg-amber-50 rounded-xl p-3 flex items-start gap-2">
-                      <svg className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className="bg-amber-100 dark:bg-amber-900/40 rounded-xl p-3 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
-                      <p className="text-xs text-amber-800">This entry will appear as "Unverified" on the customer's side. They must confirm it to mark it approved.</p>
+                      <p className="text-xs text-amber-800 dark:text-amber-300">This entry will appear as "Unverified" on the customer's side. They must confirm it to mark it approved.</p>
                     </div>
                   )}
                 </div>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setStep("enter")} disabled={saving} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50">Edit</button>
+                <button onClick={() => setStep("enter")} disabled={saving} className="flex-1 py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50">Edit</button>
                 <button onClick={handleConfirm} disabled={saving} className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
-                  {saving ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Save Entry</>}
+                {saving ? <div className="w-5 h-5 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" /> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Save Entry</>}
                 </button>
               </div>
             </div>
@@ -776,9 +776,9 @@ export default function MerchantScanPage() {
                     : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${Number(amount).toLocaleString()} for ${customerName}` : `Rs. ${Number(amount).toLocaleString()} saved`}`}
                 </p>
                 {entryType === "cash" ? (
-                  <p className="text-xs text-blue-600 mt-2">Cash sale recorded and approved</p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Cash sale recorded and approved</p>
                 ) : (
-                  <p className="text-xs text-amber-600 mt-2">Waiting for customer confirmation</p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Waiting for customer confirmation</p>
                 )}
                 {verificationToken && customerPhone && entryType !== "cash" && (
                   <>
@@ -811,7 +811,7 @@ export default function MerchantScanPage() {
                             addToast("Failed to copy", "error");
                           }
                         }}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform hover:bg-gray-200"
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform hover:bg-gray-200 dark:hover:bg-gray-700"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
@@ -823,7 +823,7 @@ export default function MerchantScanPage() {
                 )}
               </div>
               <div className="flex gap-3">
-                <button onClick={handleReset} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">New Entry</button>
+                <button onClick={handleReset} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform">New Entry</button>
                 <a href="/merchant/logs" className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform flex items-center justify-center">View Ledger</a>
               </div>
             </div>
@@ -839,7 +839,7 @@ export default function MerchantScanPage() {
   return (
     <div className="pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
           <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -872,10 +872,10 @@ export default function MerchantScanPage() {
         {/* QR: Enter Details */}
         {step === "enter" && (
           <div className="space-y-4 animate-fade-in">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
+            <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
               <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center">
-                  <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -886,7 +886,7 @@ export default function MerchantScanPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+            <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
               {/* Product Picker — QR scan mode */}
               {products.length > 0 && (
                 <div>
@@ -898,7 +898,7 @@ export default function MerchantScanPage() {
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                         selectedProductId === null
                           ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                          : "bg-white text-gray-600 border-gray-200"
+                          : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
                       }`}
                     >
                       Custom
@@ -917,7 +917,7 @@ export default function MerchantScanPage() {
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                           selectedProductId === p.id
                             ? "bg-[var(--color-primary)] text-white border-[var(--color-primary)]"
-                            : "bg-white text-gray-600 border-gray-200"
+                            : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
                         }`}
                       >
                         {p.name}
@@ -929,18 +929,18 @@ export default function MerchantScanPage() {
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
                 <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
-                  className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                  className="w-full mt-1 px-4 py-4 bg-white dark:bg-gray-800 rounded-2xl text-3xl font-bold text-center border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
                 <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
               </div>
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
                 <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all" />
+                  className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
               </div>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={handleReset} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">Cancel</button>
+              <button onClick={handleReset} className="flex-1 py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform">Cancel</button>
               <button onClick={handleEnterNext} disabled={!amount || Number(amount) <= 0}
                 className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50">Continue</button>
             </div>
@@ -950,10 +950,10 @@ export default function MerchantScanPage() {
         {/* QR: Confirm */}
         {step === "confirm" && (
           <div className="space-y-4 animate-fade-in">
-            <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
-              <div className="text-center pb-2 border-b border-gray-50">
-                <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-50 flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
+              <div className="text-center pb-2 border-b border-[var(--color-border)]">
+                <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
+                  <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -967,11 +967,11 @@ export default function MerchantScanPage() {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600" : "text-green-600"}`}>Rs. {Number(amount).toLocaleString()}</p>
+                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>Rs. {Number(amount).toLocaleString()}</p>
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
-                    <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+                    <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
                       {entryType === "debit" ? "Credit Given" : "Amount Received"}
                     </span>
                   </div>
@@ -985,7 +985,7 @@ export default function MerchantScanPage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button onClick={() => setStep("enter")} disabled={saving} className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50">Edit</button>
+              <button onClick={() => setStep("enter")} disabled={saving} className="flex-1 py-3.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50">Edit</button>
               <button onClick={handleConfirm} disabled={saving} className="flex-1 py-3.5 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2">
                 {saving ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Save Entry</>}
               </button>
@@ -1008,7 +1008,7 @@ export default function MerchantScanPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              <button onClick={handleReset} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">Scan Another</button>
+              <button onClick={handleReset} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform">Scan Another</button>
               <a href="/merchant/logs" className="flex-1 py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform flex items-center justify-center">View Ledger</a>
             </div>
           </div>

@@ -94,7 +94,7 @@ export default function CustomersPage() {
   return (
     <div className="pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
           <a
             href="/merchant/dashboard"
@@ -112,7 +112,7 @@ export default function CustomersPage() {
         {/* Search */}
         <div className="px-4 pb-3">
           <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
             </svg>
             <label htmlFor="customer-search" className="sr-only">Search customers</label>
@@ -122,7 +122,7 @@ export default function CustomersPage() {
               placeholder="Search by name or phone..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 rounded-xl text-sm border-0 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-sm border-0 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
             />
           </div>
         </div>
@@ -142,7 +142,7 @@ export default function CustomersPage() {
                 <p className="text-sm mt-1">Try a different search term</p>
               </div>
               {phoneAccountStatus && (
-                <div className="mt-4 mx-1 px-4 py-3 bg-blue-50 rounded-xl text-sm text-blue-700 flex items-center gap-2">
+                <div className="mt-4 mx-1 px-4 py-3 bg-blue-100 dark:bg-blue-900/40 rounded-xl text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
                   <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
                   </svg>
@@ -179,7 +179,7 @@ export default function CustomersPage() {
               <a
                 key={mc.id}
                 href={mc.customers?.id ? `/merchant/customers/${mc.customers.id}` : "#"}
-                className="block bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform"
+                className="block bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform"
               >
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
@@ -206,7 +206,7 @@ export default function CustomersPage() {
                 </div>
 
                 {/* Balance bar */}
-                <div className="mt-3 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="mt-3 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
                   {mc.credit_limit > 0 && (
                     <div
                       className={`h-full rounded-full transition-all ${

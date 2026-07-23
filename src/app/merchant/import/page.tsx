@@ -173,9 +173,9 @@ export default function ImportPage() {
   const isProcessing = importing || phase === "db" || phase === "sms";
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800/50 pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
           <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -187,17 +187,17 @@ export default function ImportPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-6">
-        <p className="text-sm text-gray-500 mb-4">
-          SMS Balance: <span className="font-semibold text-blue-600">{smsBalance}</span> parts
+        <p className="text-sm text-[var(--color-text-muted)] mb-4">
+          SMS Balance: <span className="font-semibold text-blue-600 dark:text-blue-400">{smsBalance}</span> parts
         </p>
 
         {rows.length === 0 && !loading && (
           <div
-            className="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 transition"
+            className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-10 text-center cursor-pointer hover:border-blue-400 transition"
             onClick={() => fileInputRef.current?.click()}
           >
-            <p className="text-gray-500 mb-2">Drop an Excel or CSV file here</p>
-            <p className="text-xs text-gray-400">Supports .csv, .xlsx, .xls</p>
+            <p className="text-[var(--color-text-muted)] mb-2">Drop an Excel or CSV file here</p>
+            <p className="text-xs text-[var(--color-text-muted)]">Supports .csv, .xlsx, .xls</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -210,15 +210,15 @@ export default function ImportPage() {
 
         {loading && (
           <div className="text-center py-10">
-            <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-2" />
-            <p className="text-gray-500">Parsing file...</p>
+            <div className="animate-spin h-8 w-8 border-4 border-blue-500 dark:border-blue-400 border-t-transparent rounded-full mx-auto mb-2" />
+            <p className="text-[var(--color-text-muted)]">Parsing file...</p>
           </div>
         )}
 
         {rows.length > 0 && (
           <>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-[var(--color-text-muted)]">
                 {rows.filter((r) => r.valid).length} valid rows · {selectedSmsCount} SMS selected
                 {smsExceedsBalance && (
                   <span className="text-red-500 font-semibold ml-2">
@@ -235,9 +235,9 @@ export default function ImportPage() {
               </button>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm mb-4 max-h-96 overflow-y-auto">
+            <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm mb-4 max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 sticky top-0">
+                <thead className="bg-gray-100 dark:bg-gray-800 sticky top-0">
                   <tr>
                     <th className="p-2 text-left">Name</th>
                     <th className="p-2 text-left">Phone</th>
@@ -247,7 +247,7 @@ export default function ImportPage() {
                 </thead>
                 <tbody>
                   {rows.map((row) => (
-                    <tr key={row.id} className="border-t border-gray-100">
+                    <tr key={row.id} className="border-t border-[var(--color-border)]">
                       <td className="p-2">
                         <span className={row.valid ? "" : "text-red-400"}>{row.name || "—"}</span>
                         {!row.valid && row.error && (
@@ -273,23 +273,23 @@ export default function ImportPage() {
 
             {/* Progress indicator */}
             {phase === "db" && (
-              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm">
-                <p className="font-semibold text-blue-700">Saving customers to database...</p>
-                <div className="mt-2 h-2 bg-blue-100 rounded-full overflow-hidden">
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl text-sm">
+                <p className="font-semibold text-blue-700 dark:text-blue-300">Saving customers to database...</p>
+                <div className="mt-2 h-2 bg-blue-100 dark:bg-blue-900/40 rounded-full overflow-hidden">
                   <div className="h-full bg-blue-500 rounded-full animate-pulse w-full" />
                 </div>
               </div>
             )}
 
             {phase === "sms" && (
-              <div className="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-xl text-sm">
-                <p className="font-semibold text-purple-700">
+              <div className="mb-4 p-4 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded-xl text-sm">
+                <p className="font-semibold text-purple-700 dark:text-purple-300">
                   Sending SMS: {smsProgress.sent + smsProgress.failed} of {smsProgress.total} batches completed
                 </p>
-                <p className="text-purple-600 text-xs mt-0.5">
+                <p className="text-purple-600 dark:text-purple-400 text-xs mt-0.5">
                   {smsProgress.sent} sent · {smsProgress.failed} failed
                 </p>
-                <div className="mt-2 h-2 bg-purple-100 rounded-full overflow-hidden">
+                <div className="mt-2 h-2 bg-purple-100 dark:bg-purple-900/40 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-purple-500 rounded-full transition-all duration-300"
                     style={{ width: `${((smsProgress.sent + smsProgress.failed) / smsProgress.total) * 100}%` }}
@@ -299,9 +299,9 @@ export default function ImportPage() {
             )}
 
             {phase === "done" && result && (
-              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl text-sm">
-                <p className="font-semibold text-green-700">Import complete</p>
-                <p className="text-green-600">
+              <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-700 rounded-xl text-sm">
+                <p className="font-semibold text-green-700 dark:text-green-300">Import complete</p>
+                <p className="text-green-600 dark:text-green-400">
                   {result.imported} customers imported · {result.smsSent} SMS sent
                   {result.smsFailed > 0 && ` · ${result.smsFailed} SMS failed`}
                 </p>
@@ -311,7 +311,7 @@ export default function ImportPage() {
             <button
               onClick={handleImport}
               disabled={!hasValidRows || smsExceedsBalance || isProcessing}
-              className="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition"
+              className="w-full py-3 rounded-xl font-semibold text-white bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed transition"
             >
               {phase === "db"
                 ? "Saving to database..."

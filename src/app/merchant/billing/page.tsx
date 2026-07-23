@@ -129,7 +129,7 @@ export default function BillingPage() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)] pb-24">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
           <a href="/merchant/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -150,7 +150,7 @@ export default function BillingPage() {
         </div>
 
         {/* Balance Badge */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-6 text-center">
+        <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-6 text-center">
           <p className="text-sm text-[var(--color-text-muted)] mb-1">Current Balance</p>
           <p className="text-4xl font-bold text-[var(--color-text)]">{smsBalance}</p>
           <p className="text-xs text-[var(--color-text-muted)] mt-1">SMS credits remaining</p>
@@ -158,11 +158,11 @@ export default function BillingPage() {
 
         {/* Low Balance Warning */}
         {smsBalance <= 5 && (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
-            <svg className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-700 rounded-xl px-4 py-3 flex items-start gap-3">
+            <svg className="w-5 h-5 text-amber-500 dark:text-amber-400 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
             </svg>
-            <p className="text-sm text-amber-800">
+            <p className="text-sm text-amber-800 dark:text-amber-200">
               Your SMS balance is running low.{" "}
               <span className="font-medium">Recharge below to continue sending payment reminders.</span>
             </p>
@@ -178,7 +178,7 @@ export default function BillingPage() {
               return (
                 <div
                   key={key}
-                  className={`relative bg-white rounded-2xl shadow-sm border border-gray-50 p-4 flex flex-col items-center text-center ${meta.popular ? "ring-2 ring-[var(--color-primary)]" : ""}`}
+                  className={`relative bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4 flex flex-col items-center text-center ${meta.popular ? "ring-2 ring-[var(--color-primary)]" : ""}`}
                 >
                   {meta.popular && (
                     <span className="absolute -top-2.5 bg-[var(--color-primary)] text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
@@ -203,7 +203,7 @@ export default function BillingPage() {
         </section>
 
         {/* How It Works */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 space-y-2">
+        <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4 space-y-2">
           <h3 className="font-semibold text-sm text-[var(--color-text)]">How it works</h3>
           <ol className="text-xs text-[var(--color-text-muted)] space-y-1 list-decimal list-inside">
             <li>Choose a package and click <strong>Buy Now</strong></li>
@@ -217,7 +217,7 @@ export default function BillingPage() {
         {logs.length > 0 && (
           <section>
             <h2 className="font-semibold text-[var(--color-text)] mb-3">Recharge History</h2>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-100">
+            <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] divide-y divide-gray-100 dark:divide-gray-700">
               {logs.map((log: any) => (
                 <div key={log.id} className="px-4 py-3 flex items-center justify-between">
                   <div>
@@ -231,10 +231,10 @@ export default function BillingPage() {
                   <span
                     className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
                       log.status === "completed"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"
                         : log.status === "failed"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
+                        ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400"
+                        : "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
                     }`}
                   >
                     {log.status.charAt(0).toUpperCase() + log.status.slice(1)}
@@ -249,7 +249,7 @@ export default function BillingPage() {
         {reminderLogs.length > 0 && (
           <section>
             <h2 className="font-semibold text-[var(--color-text)] mb-3">SMS History</h2>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-100">
+            <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] divide-y divide-gray-100 dark:divide-gray-700">
               {reminderLogs.map((log: any) => (
                 <div key={log.id} className="px-4 py-3 flex items-center justify-between">
                   <div className="flex-1 min-w-0">
@@ -264,17 +264,17 @@ export default function BillingPage() {
                       })}
                       {log.type === "share_link" ? " · Shared" : ""}
                     </p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5 max-w-[220px]">
+                    <p className="text-xs text-[var(--color-text-muted)] truncate mt-0.5 max-w-[220px]">
                       {log.message}
                     </p>
                   </div>
                   <span
                     className={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ml-2 ${
                       log.status === "sent"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"
                         : log.status === "failed"
-                        ? "bg-red-100 text-red-700"
-                        : "bg-amber-100 text-amber-700"
+                        ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400"
+                        : "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"
                     }`}
                   >
                     {log.type === "share_link" ? "Shared" : log.status.charAt(0).toUpperCase() + log.status.slice(1)}
@@ -289,12 +289,12 @@ export default function BillingPage() {
       {/* ─── Payment Method Modal ─────────────────────────────── */}
       {showModal && selectedPkg && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm max-h-[85vh] overflow-y-auto">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-xl w-full max-w-sm max-h-[85vh] overflow-y-auto">
             {/* Modal Header */}
-            <div className="p-5 border-b border-gray-100">
+            <div className="p-5 border-b border-[var(--color-border)]">
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-[var(--color-text)]">Select Payment Method</h3>
-                <button onClick={closeModal} className="p-1 text-gray-400 hover:text-gray-600">
+                <button onClick={closeModal} className="p-1 text-[var(--color-text-muted)] hover:text-gray-600 dark:hover:text-gray-300">
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -307,19 +307,19 @@ export default function BillingPage() {
 
             <div className="p-5 space-y-4">
               {/* Option 1: Auto eSewa (Coming Soon) */}
-              <div className="relative border border-gray-200 rounded-xl p-4 opacity-60 grayscale">
+              <div className="relative border border-gray-200 dark:border-gray-700 rounded-xl p-4 opacity-60 grayscale">
                 <span className="absolute -top-2.5 right-3 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
                   Coming Soon
                 </span>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/40 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-gray-400">Pay via eSewa (Auto)</p>
-                    <p className="text-xs text-gray-400">Instant automatic credit</p>
+                    <p className="text-sm font-semibold text-[var(--color-text-muted)]">Pay via eSewa (Auto)</p>
+                    <p className="text-xs text-[var(--color-text-muted)]">Instant automatic credit</p>
                   </div>
                 </div>
               </div>
@@ -327,8 +327,8 @@ export default function BillingPage() {
               {/* Option 2: Manual Transfer */}
               <div className="border border-[var(--color-primary)]/30 rounded-xl p-4 space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                    <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                     </svg>
                   </div>
@@ -339,10 +339,10 @@ export default function BillingPage() {
                 </div>
 
                 {/* Payment Instructions */}
-                <div className="bg-gray-50 rounded-xl px-3 py-3 space-y-1 text-xs text-[var(--color-text-muted)]">
-                  <p><span className="font-medium text-gray-700">eSewa ID:</span> {ADMIN_PAYMENT_INFO.esewa}</p>
-                  <p><span className="font-medium text-gray-700">Bank:</span> {ADMIN_PAYMENT_INFO.bank}</p>
-                  <p className="text-[10px] text-gray-400 mt-1">Send the exact package amount and upload the screenshot below.</p>
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl px-3 py-3 space-y-1 text-xs text-[var(--color-text-muted)]">
+                  <p><span className="font-medium text-gray-700 dark:text-gray-200">eSewa ID:</span> {ADMIN_PAYMENT_INFO.esewa}</p>
+                  <p><span className="font-medium text-gray-700 dark:text-gray-200">Bank:</span> {ADMIN_PAYMENT_INFO.bank}</p>
+                  <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Send the exact package amount and upload the screenshot below.</p>
                 </div>
 
                 {/* Form */}
@@ -353,7 +353,7 @@ export default function BillingPage() {
                       type="text"
                       value={`Rs. ${SMS_PACKAGES[selectedPkg].amount}`}
                       disabled
-                      className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500"
+                      className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-[var(--color-text-muted)] dark:text-white"
                     />
                   </div>
                   <div>
@@ -362,7 +362,7 @@ export default function BillingPage() {
                       type="text"
                       value={`${SMS_PACKAGES[selectedPkg].sms_count} SMS`}
                       disabled
-                      className="w-full px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-sm text-gray-500"
+                      className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-sm text-[var(--color-text-muted)] dark:text-white"
                     />
                   </div>
                   <div>
@@ -374,18 +374,18 @@ export default function BillingPage() {
                       value={transactionId}
                       onChange={(e) => setTransactionId(e.target.value)}
                       placeholder="e.g. ESMF-XXXXXX"
-                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)]"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)]/30 focus:border-[var(--color-primary)] dark:bg-gray-800 dark:text-white"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-[var(--color-text)] mb-1">
                       Payment Screenshot <span className="text-red-500">*</span>
                     </label>
-                    <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-gray-200 border-dashed cursor-pointer hover:bg-gray-50 transition-colors">
-                      <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <label className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-[var(--color-border)] border-dashed cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors">
+                      <svg className="w-5 h-5 text-[var(--color-text-muted)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                       </svg>
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-[var(--color-text-muted)]">
                         {screenshotFile ? screenshotFile.name : "Upload screenshot"}
                       </span>
                       <input
@@ -396,7 +396,7 @@ export default function BillingPage() {
                       />
                     </label>
                     {screenshotFile && (
-                      <p className="text-[11px] text-green-600 mt-1">
+                      <p className="text-[11px] text-green-600 dark:text-green-400 mt-1">
                         {(screenshotFile.size / 1024).toFixed(1)} KB selected
                       </p>
                     )}
@@ -410,7 +410,7 @@ export default function BillingPage() {
                 >
                   {submitting ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
                       Submitting...
                     </>
                   ) : (

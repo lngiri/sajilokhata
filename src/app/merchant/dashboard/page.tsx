@@ -395,13 +395,13 @@ export default function MerchantDashboard() {
         return "text-green-600 bg-green-50";
       case "pending":
       case "unverified":
-        return "text-amber-600 bg-amber-50";
+        return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30";
       case "rejected":
-        return "text-slate-500 bg-slate-100";
+        return "text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/30";
       case "disputed":
         return "text-[var(--color-danger)] bg-[var(--color-danger)]/10";
       default:
-        return "text-gray-500 bg-gray-100";
+        return "text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800";
     }
   };
 
@@ -432,7 +432,7 @@ export default function MerchantDashboard() {
       )}
       <div className="pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <LogoWithAbout size={36} showAnimation={false} />
@@ -497,7 +497,7 @@ export default function MerchantDashboard() {
                     }}
                     className="p-1.5 active:scale-90 transition-transform relative"
                   >
-                    <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                     </svg>
                     {unreadNotifCount > 0 && (
@@ -523,10 +523,10 @@ export default function MerchantDashboard() {
       {/* Notification dropdown (outside sticky header to avoid stacking context issues) */}
       {showNotifications && (
         <div
-          className="fixed right-4 top-16 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100] animate-fade-in"
+          className="fixed right-4 top-16 w-72 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)] overflow-hidden z-[100] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="p-3 border-b border-[var(--color-border)] flex items-center justify-between">
             <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
             {notifications.length > 0 && (
               <span className="text-[10px] text-[var(--color-text-muted)]">{notifications.length}</span>
@@ -565,28 +565,28 @@ export default function MerchantDashboard() {
                 {/* Persistent notifications section */}
                 {notifications.length > 0 && (
                   <div className="px-3 pt-2 pb-1">
-                    <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Updates</p>
+                    <p className="text-[10px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Updates</p>
                   </div>
                 )}
                 {notifications.slice(0, 5).map((n: any) => (
                   <a
                     key={n.id}
                     href="/merchant/logs"
-                    className={`flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.read ? "bg-blue-50/30" : ""}`}
+                    className={`flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors ${!n.read ? "dark:bg-blue-900/20 bg-blue-50/30" : ""}`}
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      n.type === "entry_created" ? "bg-green-50" :
-                      n.type === "entry_rejected" ? "bg-red-50" :
-                      n.type === "entry_disputed" ? "bg-purple-50" :
-                      n.type === "customer_linked" ? "bg-blue-50" :
-                      "bg-gray-50"
+                      n.type === "entry_created" ? "bg-green-100 dark:bg-green-900/40" :
+                      n.type === "entry_rejected" ? "bg-red-100 dark:bg-red-900/40" :
+                      n.type === "entry_disputed" ? "bg-purple-100 dark:bg-purple-900/40" :
+                      n.type === "customer_linked" ? "bg-blue-100 dark:bg-blue-900/40" :
+                      "bg-gray-100 dark:bg-gray-800"
                     }`}>
                       <span className={`text-xs font-bold ${
-                        n.type === "entry_created" ? "text-green-600" :
-                        n.type === "entry_rejected" ? "text-red-600" :
-                        n.type === "entry_disputed" ? "text-purple-600" :
-                        n.type === "customer_linked" ? "text-blue-600" :
-                        "text-gray-500"
+                        n.type === "entry_created" ? "text-green-700 dark:text-green-400" :
+                        n.type === "entry_rejected" ? "text-red-700 dark:text-red-400" :
+                        n.type === "entry_disputed" ? "text-purple-700 dark:text-purple-400" :
+                        n.type === "customer_linked" ? "text-blue-700 dark:text-blue-400" :
+                        "text-gray-500 dark:text-gray-400"
                       }`}>
                         {n.type === "entry_created" ? "+" :
                          n.type === "entry_rejected" ? "✗" :
@@ -607,7 +607,7 @@ export default function MerchantDashboard() {
           </div>
           <a
             href="/merchant/logs"
-            className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-[var(--color-border)] hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors"
           >
             View All
           </a>
@@ -623,12 +623,12 @@ export default function MerchantDashboard() {
           <div
             ref={profileMenuRef}
             onClick={(e) => e.stopPropagation()}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto animate-scale-up"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] max-h-[85vh] overflow-y-auto animate-scale-up"
           >
             {/* Close button */}
             <button
               onClick={() => setShowProfileMenu(false)}
-              className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 active:scale-90 transition-transform z-10"
+              className="absolute top-3 right-3 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] active:scale-90 transition-transform z-10"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -636,7 +636,7 @@ export default function MerchantDashboard() {
             </button>
 
             {/* Avatar + name header */}
-            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
+            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-[var(--color-border)]">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
                 {merchantProfile.photo_url ? (
                   <img src={merchantProfile.photo_url} alt="" className="w-full h-full object-cover" />
@@ -661,9 +661,9 @@ export default function MerchantDashboard() {
             <div className="p-4 space-y-2">
               <a
                 href="/merchant/settings"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors"
               >
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a17.933 17.933 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
                 Edit Profile
@@ -671,9 +671,9 @@ export default function MerchantDashboard() {
 
               <a
                 href="/merchant/billing"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors"
               >
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
                 </svg>
                 SMS Balance: {smsBalance ?? 0} credits
@@ -684,7 +684,7 @@ export default function MerchantDashboard() {
                   setShowProfileMenu(false);
                   await signOut();
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
@@ -781,27 +781,27 @@ export default function MerchantDashboard() {
           {statsLoading ? (
             <div className="grid grid-cols-2 gap-3">
               {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                  <div className="h-3 w-16 bg-gray-100 rounded animate-pulse mb-2" />
-                  <div className="h-6 w-24 bg-gray-200 rounded animate-pulse" />
+                <div key={i} className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
+                  <div className="h-3 w-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                  <div className="h-6 w-24 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
                 </div>
               ))}
             </div>
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Money to Collect</p>
                 <p className="text-xl font-bold text-[var(--color-danger)]">Rs. {stats.totalOutstanding.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Cash</p>
                 <p className="text-xl font-bold text-[var(--color-primary)]">Rs. {stats.todayTotal.toLocaleString()}</p>
               </a>
-              <a href="/merchant/customers" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+              <a href="/merchant/customers" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
                 <p className="text-xl font-bold text-[var(--color-text)]">{stats.customerCount}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 relative overflow-hidden active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] relative overflow-hidden active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Pending</p>
                 <p className="text-xl font-bold text-[var(--color-accent)]">{stats.pendingCount}</p>
                 {stats.pendingCount > 0 && (
@@ -813,21 +813,21 @@ export default function MerchantDashboard() {
           {statsLoading ? (
             <div className="grid grid-cols-2 gap-3">
               {[1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50">
-                  <div className="h-3 w-16 bg-gray-100 rounded animate-pulse mb-2" />
-                  <div className="h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                <div key={i} className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
+                  <div className="h-3 w-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse mb-2" />
+                  <div className="h-6 w-20 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
                 </div>
               ))}
             </div>
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/scan?manual=true" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+              <a href="/merchant/scan?manual=true" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
-                <p className="text-xl font-bold text-blue-600">Rs. {stats.totalSales.toLocaleString()}</p>
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">Rs. {stats.totalSales.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform">
+              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash Today</p>
-                <p className="text-xl font-bold text-green-600">Rs. {stats.cashInHand.toLocaleString()}</p>
+                <p className="text-xl font-bold text-green-600 dark:text-green-400">Rs. {stats.cashInHand.toLocaleString()}</p>
               </a>
             </div>
           )}
@@ -864,7 +864,7 @@ export default function MerchantDashboard() {
               </a>
               <a
                 href="/merchant/products"
-                className="flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+                className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25-2.25M12 13.875l2.25 2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
@@ -874,7 +874,7 @@ export default function MerchantDashboard() {
             </div>
             <a
               href="/merchant/reports"
-              className="flex items-center justify-center gap-2 py-3 bg-white text-[var(--color-text)] border border-gray-200 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -885,11 +885,11 @@ export default function MerchantDashboard() {
             {/* Cash Sales Ledger Entry */}
             <a
               href="/merchant/cash-sales"
-              className="block bg-white rounded-2xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform"
+              className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-blue-700 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -897,7 +897,7 @@ export default function MerchantDashboard() {
                   <p className="font-medium text-sm text-[var(--color-text)]">Cash Sales Ledger</p>
                   <p className="text-xs text-[var(--color-text-muted)]">View history of all cash transactions</p>
                 </div>
-                <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                 </svg>
               </div>
@@ -921,7 +921,7 @@ export default function MerchantDashboard() {
                   {topReceivables.map((rc) => (
                     <div
                       key={rc.customer_id}
-                      className="bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3"
+                      className="bg-[var(--color-surface)] rounded-xl p-3.5 shadow-sm border border-[var(--color-border)] flex items-center gap-3"
                     >
                       <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
                         <span className="text-sm font-bold text-red-600">
@@ -991,10 +991,10 @@ export default function MerchantDashboard() {
                       <a
                         key={log.id}
                         href={href}
-                        className={`block bg-white rounded-xl p-3.5 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.98] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}
+                        className={`block bg-[var(--color-surface)] rounded-xl p-3.5 shadow-sm border border-[var(--color-border)] flex items-center gap-3 active:scale-[0.98] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}
                       >
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : log.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
-                          <TransactionIcon type={log.type} size={14} className={log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"} />
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-green-100 dark:bg-green-900/40"}`}>
+                          <TransactionIcon type={log.type} size={14} className={log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -1010,7 +1010,7 @@ export default function MerchantDashboard() {
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"}`}>
+                          <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 dark:text-slate-500 line-through" : log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"}`}>
                             {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
                           </p>
                           <p className="text-[9px] text-[var(--color-text-muted)]">
@@ -1071,12 +1071,12 @@ export default function MerchantDashboard() {
                     return (
                       <div
                         key={log.id}
-                        className={`bg-white rounded-xl p-4 shadow-sm border flex items-center gap-3 ${
-                          isEditRequest ? "border-blue-200 bg-blue-50/30" : log.attachment_url ? "border-purple-200 bg-purple-50/30" : "border-gray-50"
+                        className={`bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border flex items-center gap-3 ${
+                          isEditRequest ? "border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-900/20" : log.attachment_url ? "border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-900/20" : "border-[var(--color-border)]"
                         }`}
                       >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : log.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
-                          <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-600" : log.type === "cash" ? "text-blue-600" : "text-green-600"} />
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-green-100 dark:bg-green-900/40"}`}>
+                          <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -1084,7 +1084,7 @@ export default function MerchantDashboard() {
                               {log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
                             </p>
                             {log.attachment_url && (
-                              <span className="text-[10px] font-medium text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full whitespace-nowrap">
+                              <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40 px-1.5 py-0.5 rounded-full whitespace-nowrap">
                                 Voucher
                               </span>
                             )}
@@ -1093,14 +1093,14 @@ export default function MerchantDashboard() {
                             {log.description || "No description"}
                           </p>
                           {isEditRequest && log.proposed_amount && (
-                            <p className="text-xs text-blue-700 font-medium mt-1">
+                            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium mt-1">
                               Customer requested amount change from Rs. {log.amount.toLocaleString()} to Rs. {log.proposed_amount.toLocaleString()}
                             </p>
                           )}
                           {log.attachment_url && (
                             <button
                               onClick={() => setPreviewImage(log.attachment_url)}
-                              className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 font-medium active:opacity-70"
+                              className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 font-medium active:opacity-70"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
@@ -1136,7 +1136,7 @@ export default function MerchantDashboard() {
                                     addToast("Failed to reject edit", "error");
                                   }
                                 }}
-                                className="w-full px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                                className="w-full px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
                                 Reject
                               </button>
@@ -1167,7 +1167,7 @@ export default function MerchantDashboard() {
                                     addToast("Failed to reject", "error");
                                   }
                                 }}
-                                className="w-full px-3 py-1.5 bg-gray-200 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
+                                className="w-full px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
                               >
                                 Reject
                               </button>

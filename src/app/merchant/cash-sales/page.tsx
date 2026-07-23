@@ -86,13 +86,13 @@ export default function CashSalesPage() {
   return (
     <div className="pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center gap-3 px-4 py-3">
           <button
             onClick={() => router.back()}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform flex-shrink-0"
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-90 transition-transform flex-shrink-0"
           >
-            <svg className="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
             </svg>
           </button>
@@ -111,8 +111,8 @@ export default function CashSalesPage() {
         </div>
       ) : logs.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center px-4">
-          <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-4">
-            <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -134,10 +134,10 @@ export default function CashSalesPage() {
               <button
                 key={log.id}
                 onClick={() => setSelectedLog(log)}
-                className="w-full text-left bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.98] transition-transform flex items-center gap-3"
+                className="w-full text-left bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform flex items-center gap-3"
               >
-                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -150,7 +150,7 @@ export default function CashSalesPage() {
                   </p>
                 </div>
                 <div className="text-right flex-shrink-0">
-                  <p className="font-bold text-sm text-blue-600">
+                  <p className="font-bold text-sm text-blue-600 dark:text-blue-400">
                     Rs. {log.amount.toLocaleString()}
                   </p>
                   {log.quantity && (
@@ -171,26 +171,26 @@ export default function CashSalesPage() {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) setSelectedLog(null); }}
         >
-          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl animate-slide-up p-6 max-h-[90dvh] overflow-y-auto">
+          <div className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl sm:rounded-3xl animate-slide-up p-6 max-h-[90dvh] overflow-y-auto">
             {/* Handle + Close */}
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-lg text-[var(--color-text)]">Receipt Detail</h2>
               <button
                 onClick={() => setSelectedLog(null)}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-90 transition-transform"
               >
-                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
 
             {/* Receipt Card */}
-            <div className="bg-gray-50 rounded-2xl p-5 space-y-4 border border-gray-100">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-5 space-y-4 border border-[var(--color-border)]">
               {/* Header */}
-              <div className="text-center pb-3 border-b border-gray-200">
-                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-2">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="text-center pb-3 border-b border-[var(--color-border)]">
+                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center mx-auto mb-2">
+                  <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
@@ -202,7 +202,7 @@ export default function CashSalesPage() {
               {selectedLog.description && (
                 <div>
                   <p className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-1.5">Items</p>
-                  <div className="bg-white rounded-xl p-3 border border-gray-100">
+                  <div className="bg-[var(--color-surface)] rounded-xl p-3 border border-[var(--color-border)]">
                     <div className="flex items-center justify-between">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-[var(--color-text)]">
@@ -214,7 +214,7 @@ export default function CashSalesPage() {
                           </p>
                         )}
                       </div>
-                      <p className="font-bold text-sm text-blue-600 flex-shrink-0 ml-3">
+                      <p className="font-bold text-sm text-blue-600 dark:text-blue-400 flex-shrink-0 ml-3">
                         Rs. {selectedLog.amount.toLocaleString()}
                       </p>
                     </div>
@@ -223,14 +223,14 @@ export default function CashSalesPage() {
               )}
 
               {/* Totals */}
-              <div className="bg-white rounded-xl p-3 border border-gray-100 space-y-1.5">
+              <div className="bg-[var(--color-surface)] rounded-xl p-3 border border-[var(--color-border)] space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-[var(--color-text-muted)]">Subtotal</span>
                   <span className="font-medium text-[var(--color-text)]">Rs. {selectedLog.amount.toLocaleString()}</span>
                 </div>
-                <div className="border-t border-gray-100 pt-1.5 flex items-center justify-between">
+                <div className="border-t border-[var(--color-border)] pt-1.5 flex items-center justify-between">
                   <span className="font-semibold text-[var(--color-text)]">Total</span>
-                  <span className="font-bold text-lg text-blue-600">Rs. {selectedLog.amount.toLocaleString()}</span>
+                  <span className="font-bold text-lg text-blue-600 dark:text-blue-400">Rs. {selectedLog.amount.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -243,7 +243,7 @@ export default function CashSalesPage() {
                 {selectedLog.approved_at && (
                   <div className="flex items-center justify-between">
                     <span>Received</span>
-                    <span className="font-medium text-green-600">{formatDateTime(selectedLog.approved_at)}</span>
+                    <span className="font-medium text-green-600 dark:text-green-400">{formatDateTime(selectedLog.approved_at)}</span>
                   </div>
                 )}
               </div>

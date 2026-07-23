@@ -10,12 +10,12 @@ import TransactionIcon from "@/components/TransactionIcon";
 import SmsReminderModal from "@/components/SmsReminderModal";
 
 const STATUS_BADGE: Record<string, string> = {
-  approved: "bg-green-50 text-green-700",
-  pending: "bg-amber-50 text-amber-700",
-  rejected: "bg-slate-100 text-slate-500",
-  disputed: "bg-red-50 text-red-700",
-  unverified: "bg-blue-50 text-blue-700",
-  edit_requested: "bg-indigo-50 text-indigo-700",
+  approved: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
+  pending: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
+  rejected: "bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-400",
+  disputed: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
+  unverified: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+  edit_requested: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -167,7 +167,7 @@ export default function CustomerDetailPage() {
   return (
     <div className="pb-20 min-h-dvh bg-[var(--color-bg)]">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
           <button onClick={() => router.back()} className="mr-3 p-1 active:scale-95 transition-transform">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -194,7 +194,7 @@ export default function CustomerDetailPage() {
               txSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
             }
           }}
-          className="w-full text-left bg-white rounded-2xl p-5 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform cursor-pointer"
+          className="w-full text-left bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform cursor-pointer"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -212,7 +212,7 @@ export default function CustomerDetailPage() {
               {customer.trust_status === "good" ? (
                 <button
                   onClick={() => { setFlagStatus("warning"); setFlagNotes(""); setShowFlagModal(true); }}
-                  className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                  className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 rounded-lg text-xs font-medium active:scale-[0.98]"
                 >
                   Flag
                 </button>
@@ -229,7 +229,7 @@ export default function CustomerDetailPage() {
                       addToast(r.error || "Failed to clear", "error");
                     }
                   }}
-                  className="px-3 py-1.5 bg-green-50 text-green-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                  className="px-3 py-1.5 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium active:scale-[0.98]"
                 >
                   Clear Flag
                 </button>
@@ -237,12 +237,12 @@ export default function CustomerDetailPage() {
               {customer.current_balance > 0 && (
                 <button
                   onClick={() => setShowReminderModal(true)}
-                  className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                  className="px-3 py-1.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium active:scale-[0.98]"
                 >
                   Remind
                 </button>
               )}
-              <svg className="w-4 h-4 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </div>
@@ -253,27 +253,27 @@ export default function CustomerDetailPage() {
         {customer.trust_status !== "good" && (
           <div className={`rounded-2xl p-4 shadow-sm border ${
             customer.trust_status === "defaulter"
-              ? "bg-red-50 border-red-200"
-              : "bg-amber-50 border-amber-200"
+              ? "bg-red-100 dark:bg-red-900/40 border-red-200 dark:border-red-900/50"
+              : "bg-amber-100 dark:bg-amber-900/40 border-amber-200 dark:border-amber-900/50"
           }`}>
             <div className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                customer.trust_status === "defaulter" ? "bg-red-100" : "bg-amber-100"
+                customer.trust_status === "defaulter" ? "bg-red-100 dark:bg-red-900/40" : "bg-amber-100 dark:bg-amber-900/40"
               }`}>
-                <svg className={`w-4 h-4 ${customer.trust_status === "defaulter" ? "text-red-600" : "text-amber-600"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className={`w-4 h-4 ${customer.trust_status === "defaulter" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
                 </svg>
               </div>
               <div className="flex-1 min-w-0">
-                <p className={`font-semibold text-sm ${customer.trust_status === "defaulter" ? "text-red-800" : "text-amber-800"}`}>
+                <p className={`font-semibold text-sm ${customer.trust_status === "defaulter" ? "text-red-800 dark:text-red-300" : "text-amber-800 dark:text-amber-300"}`}>
                   Trust Warning
                 </p>
-                <p className={`text-xs mt-0.5 ${customer.trust_status === "defaulter" ? "text-red-600" : "text-amber-600"}`}>
+                <p className={`text-xs mt-0.5 ${customer.trust_status === "defaulter" ? "text-red-600 dark:text-red-400" : "text-amber-600 dark:text-amber-400"}`}>
                   This customer has been flagged as{" "}
                   <span className="font-medium capitalize">{customer.trust_status}</span>
                 </p>
                 {customer.trust_notes && (
-                  <p className={`text-xs mt-1 italic ${customer.trust_status === "defaulter" ? "text-red-500" : "text-amber-500"}`}>
+                  <p className={`text-xs mt-1 italic ${customer.trust_status === "defaulter" ? "text-red-500 dark:text-red-400" : "text-amber-500 dark:text-amber-400"}`}>
                     "{customer.trust_notes}"
                   </p>
                 )}
@@ -283,7 +283,7 @@ export default function CustomerDetailPage() {
         )}
 
         {/* Balance Overview */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 space-y-4">
+        <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-[var(--color-text-muted)]">Current Balance</p>
@@ -293,7 +293,7 @@ export default function CustomerDetailPage() {
             </div>
             <button
               onClick={() => { setNewLimit(String(customer.credit_limit)); setShowCreditLimitModal(true); }}
-              className="px-3 py-1.5 bg-gray-100 rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.98]"
+              className="px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.98]"
             >
               Edit Limit
             </button>
@@ -305,7 +305,7 @@ export default function CustomerDetailPage() {
               <span>Credit Used</span>
               <span>{balancePercent.toFixed(0)}%</span>
             </div>
-            <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
                   balancePercent > 80 ? "bg-[var(--color-danger)]" : balancePercent > 50 ? "bg-[var(--color-accent)]" : "bg-[var(--color-primary)]"
@@ -321,11 +321,11 @@ export default function CustomerDetailPage() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
               <p className="text-xs text-[var(--color-text-muted)]">Total Credit Taken</p>
               <p className="font-bold text-[var(--color-danger)]">Rs. {customer.total_debit_amount.toLocaleString()}</p>
             </div>
-            <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
               <p className="text-xs text-[var(--color-text-muted)]">Total Paid</p>
               <p className="font-bold text-[var(--color-primary)]">Rs. {customer.total_credit_amount.toLocaleString()}</p>
             </div>
@@ -355,16 +355,16 @@ export default function CustomerDetailPage() {
                       setAuditLoading(false);
                     }
                   }}
-                  className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 flex items-center gap-3 active:scale-[0.99] transition-transform cursor-pointer ${tx.status === "rejected" ? "opacity-60" : ""}`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-50" : tx.type === "cash" ? "bg-blue-50" : "bg-green-50"}`}>
-                    <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600" : tx.type === "cash" ? "text-blue-600" : "text-green-600"} />
+                  className={`bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3 active:scale-[0.99] transition-transform cursor-pointer ${tx.status === "rejected" ? "opacity-60" : ""}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${tx.type === "debit" ? "bg-red-100 dark:bg-red-900/40" : tx.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-green-100 dark:bg-green-900/40"}`}>
+                    <TransactionIcon type={tx.type} size={16} className={tx.type === "debit" ? "text-red-600 dark:text-red-400" : tx.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className={`font-medium text-sm truncate ${tx.status === "rejected" ? "text-slate-500 line-through" : "text-[var(--color-text)]"}`}>
                         {tx.type === "cash" ? `Cash Sale${tx.description ? ` - ${tx.description}` : ""}` : (tx.description || "No description")}
                       </p>
-                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${STATUS_BADGE[tx.status] || "bg-gray-100 text-gray-600"}`}>
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium whitespace-nowrap ${STATUS_BADGE[tx.status] || "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"}`}>
                         {STATUS_LABELS[tx.status] || tx.status}
                       </span>
                     </div>
@@ -372,14 +372,14 @@ export default function CustomerDetailPage() {
                       {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kathmandu" })}
                     </p>
                     {(tx.ip_address || tx.device_info) && (
-                      <p className="text-[10px] text-gray-400 truncate max-w-[200px]">
+                      <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[200px]">
                         {[tx.device_info, tx.ip_address].filter(Boolean).join(" · ")}
                       </p>
                     )}
                     {tx.attachment_url && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setPreviewImage(tx.attachment_url); }}
-                        className="mt-1 inline-flex items-center gap-1 text-[10px] text-purple-600 font-medium active:opacity-70"
+                         className="mt-1 inline-flex items-center gap-1 text-[10px] text-purple-600 dark:text-purple-400 font-medium active:opacity-70"
                       >
                         <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
@@ -388,7 +388,7 @@ export default function CustomerDetailPage() {
                       </button>
                     )}
                   </div>
-                  <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600" : "text-[var(--color-primary)]"}`}>
+                  <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-[var(--color-primary)]"}`}>
                     {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}Rs. {tx.amount.toLocaleString()}
                   </p>
                 </div>
@@ -401,11 +401,11 @@ export default function CustomerDetailPage() {
       {/* Credit Limit Modal */}
       {showCreditLimitModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up">
+          <div className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl p-6 animate-slide-up">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-[var(--color-text)]">Update Credit Limit</h3>
               <button onClick={() => setShowCreditLimitModal(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -418,7 +418,7 @@ export default function CustomerDetailPage() {
                 step="1"
                 value={newLimit}
                 onChange={(e) => setNewLimit(e.target.value)}
-                className="w-full mt-1 px-4 py-3 bg-gray-50 rounded-xl text-lg font-bold border-0 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                className="w-full mt-1 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-lg font-bold border-0 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               />
             </div>
             <button
@@ -427,7 +427,7 @@ export default function CustomerDetailPage() {
               className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {savingLimit ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
               ) : (
                 "Save Limit"
               )}
@@ -439,11 +439,11 @@ export default function CustomerDetailPage() {
       {/* Flag Customer Modal */}
       {showFlagModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in">
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up">
+          <div className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl p-6 animate-slide-up">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-[var(--color-text)]">Flag Customer</h3>
               <button onClick={() => setShowFlagModal(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -454,13 +454,13 @@ export default function CustomerDetailPage() {
                 <div className="flex gap-2 mt-1">
                   <button
                     onClick={() => setFlagStatus("warning")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${flagStatus === "warning" ? "bg-amber-500 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${flagStatus === "warning" ? "bg-amber-500 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}
                   >
                     Warning
                   </button>
                   <button
                     onClick={() => setFlagStatus("defaulter")}
-                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${flagStatus === "defaulter" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 text-gray-500"}`}
+                    className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all ${flagStatus === "defaulter" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}
                   >
                     Defaulter
                   </button>
@@ -474,7 +474,7 @@ export default function CustomerDetailPage() {
                   rows={2}
                   maxLength={200}
                   placeholder="e.g. Repeated late payments"
-                  className="w-full mt-1 px-3 py-2 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
+                  className="w-full mt-1 px-3 py-2 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none dark:text-white"
                 />
               </div>
             </div>
@@ -502,7 +502,7 @@ export default function CustomerDetailPage() {
               className="w-full py-3 bg-[var(--color-primary)] text-white rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {flagging ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
               ) : (
                 `Flag as ${flagStatus === "warning" ? "Warning" : "Defaulter"}`
               )}
@@ -514,11 +514,11 @@ export default function CustomerDetailPage() {
       {/* Audit Trail Modal */}
       {showAuditModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in" onClick={() => setShowAuditModal(false)}>
-          <div className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl p-6 animate-slide-up max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-[var(--color-text)]">Audit Trail</h3>
               <button onClick={() => setShowAuditModal(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -532,7 +532,7 @@ export default function CustomerDetailPage() {
             ) : (
               <div className="space-y-3">
                 {auditLogs.map((log) => (
-                  <div key={log.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                  <div key={log.id} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                     <div className={`w-2 h-2 rounded-full mt-1.5 ${
                       log.action_type === "approved" ? "bg-green-500" :
                       log.action_type === "rejected" ? "bg-red-500" :

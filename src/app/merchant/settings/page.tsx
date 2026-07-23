@@ -401,7 +401,7 @@ export default function SettingsPage() {
             value={d}
             onChange={(e) => handlePinDigit(e.target.value, i, arr, setter)}
             onFocus={(e) => e.target.select()}
-            className="w-10 h-10 text-center text-lg font-bold bg-white rounded-lg border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+            className="w-10 h-10 text-center text-lg font-bold bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
           />
         ))}
       </div>
@@ -411,7 +411,7 @@ export default function SettingsPage() {
   return (
     <div className="pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center px-4 py-3">
           <a
             href="/merchant/dashboard"
@@ -443,18 +443,18 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             Shop Profile
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-50">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
             {/* Profile Photo */}
             <div className="p-4">
               <label className="block text-sm font-medium text-[var(--color-text)] mb-3">
                 Profile Photo
               </label>
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-gray-200">
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center overflow-hidden flex-shrink-0 border-2 border-[var(--color-border)]">
                   {photoUrl ? (
                     <img src={photoUrl} alt="Profile" loading="lazy" className="w-full h-full object-cover" />
                   ) : (
-                    <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className="w-8 h-8 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                     </svg>
                   )}
@@ -508,7 +508,7 @@ export default function SettingsPage() {
                           addToast("Failed to remove photo", "error");
                         }
                       }}
-                      className="block mt-2 text-xs text-red-500 font-medium active:opacity-70"
+                      className="block mt-2 text-xs text-red-500 dark:text-red-400 font-medium active:opacity-70"
                     >
                       Remove Photo
                     </button>
@@ -526,7 +526,7 @@ export default function SettingsPage() {
                 value={merchantName}
                 onChange={(e) => setMerchantName(e.target.value)}
                 placeholder="Input your business name here"
-                className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
               />
             </div>
 
@@ -538,7 +538,7 @@ export default function SettingsPage() {
               <select
                 value={businessType}
                 onChange={(e) => setBusinessType(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all capitalize appearance-none"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all capitalize appearance-none"
               >
                 <option value="kirana">Kirana</option>
                 <option value="dairy">Dairy</option>
@@ -561,7 +561,7 @@ export default function SettingsPage() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Kathmandu, Nepal"
-                className="w-full px-3.5 py-2.5 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all placeholder:text-gray-300"
               />
             </div>
 
@@ -571,8 +571,8 @@ export default function SettingsPage() {
                 Registered Business Phone
               </label>
               {loading ? (
-                <div className="px-3.5 py-2.5 bg-gray-50 rounded-xl">
-                  <div className="h-5 w-40 bg-gray-200 rounded animate-pulse" />
+                <div className="px-3.5 py-2.5 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                  <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 </div>
               ) : (
                 <div className="px-3.5 py-2.5 bg-[var(--color-primary)]/5 rounded-xl text-sm font-mono text-[var(--color-primary-dark)] border border-[var(--color-primary)]/10 flex items-center gap-2">
@@ -600,7 +600,7 @@ export default function SettingsPage() {
             className="w-full mt-4 py-3 bg-[var(--color-primary)] text-white rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {saving ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <svg
@@ -629,7 +629,7 @@ export default function SettingsPage() {
           </h2>
 
           {/* Master toggle */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 mb-3">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4 mb-3">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">Payment Option</p>
@@ -661,12 +661,12 @@ export default function SettingsPage() {
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)] peer-disabled:opacity-50" />
+                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)] peer-disabled:opacity-50" />
               </label>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-50">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
             {PAYMENT_TYPES.map((pt) => {
               const method = paymentMethods[pt.key];
               const isActive = method?.is_active ?? false;
@@ -732,13 +732,13 @@ export default function SettingsPage() {
                           }}
                           className="sr-only peer"
                         />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+                        <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
                       </label>
                       <button
                         onClick={() => setExpandedMethod(expanded ? null : pt.key)}
                         className="p-1 active:scale-90 transition-transform"
                       >
-                        <svg className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <svg className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
                         </svg>
                       </button>
@@ -746,7 +746,7 @@ export default function SettingsPage() {
                   </div>
 
                   {expanded && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 space-y-3">
+                    <div className="mt-3 pt-3 border-t border-[var(--color-border)] space-y-3">
                       {/* Label field for all except cash */}
                       {pt.key !== "cash" && (
                         <div>
@@ -763,7 +763,7 @@ export default function SettingsPage() {
                               setPaymentMethods(updated);
                             }}
                             placeholder={pt.label}
-                            className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                            className="w-full px-3 py-2 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
                           />
                         </div>
                       )}
@@ -777,11 +777,11 @@ export default function SettingsPage() {
                               <img
                                 src={method.qr_url}
                                 alt={`${pt.label} QR`}
-                                className="w-24 h-24 object-contain rounded-lg border border-gray-200"
+                                className="w-24 h-24 object-contain rounded-lg border border-[var(--color-border)]"
                               />
                             </div>
                           )}
-                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl text-sm font-medium cursor-pointer active:scale-[0.98] transition-transform">
+                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-medium cursor-pointer active:scale-[0.98] transition-transform">
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
@@ -833,7 +833,7 @@ export default function SettingsPage() {
                                 }
                                 setPaymentMethods(updated);
                               }}
-                              className="block mt-1 text-xs text-red-500 font-medium active:opacity-70"
+                              className="block mt-1 text-xs text-red-500 dark:text-red-400 font-medium active:opacity-70"
                             >
                               Remove QR
                             </button>
@@ -858,7 +858,7 @@ export default function SettingsPage() {
                                 setPaymentMethods(updated);
                               }}
                               placeholder="e.g. Ram Shrestha"
-                              className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
                             />
                           </div>
                           <div>
@@ -875,7 +875,7 @@ export default function SettingsPage() {
                                 setPaymentMethods(updated);
                               }}
                               placeholder="e.g. 1234567890"
-                              className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
                             />
                           </div>
                           <div>
@@ -892,7 +892,7 @@ export default function SettingsPage() {
                                 setPaymentMethods(updated);
                               }}
                               placeholder="e.g. NMB Bank"
-                              className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none placeholder:text-gray-300"
                             />
                           </div>
                         </>
@@ -930,7 +930,7 @@ export default function SettingsPage() {
                         className="w-full py-2 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {saving ? (
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <div className="w-4 h-4 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
                         ) : (
                           "Save"
                         )}
@@ -951,7 +951,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             PIN Security
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4">
             {!showPinChange ? (
               <button
                 onClick={() => { setShowPinChange(true); setPinError(""); }}
@@ -968,12 +968,12 @@ export default function SettingsPage() {
                 {renderPinInputs(newPin, setNewPin, "New PIN")}
                 {renderPinInputs(confirmPin, setConfirmPin, "Confirm New PIN")}
                 {pinError && (
-                  <div className="bg-red-50 text-red-600 text-xs px-3 py-2 rounded-lg">{pinError}</div>
+                  <div className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-xs px-3 py-2 rounded-lg">{pinError}</div>
                 )}
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setShowPinChange(false); setPinError(""); setCurrentPin(["", "", "", ""]); setNewPin(["", "", "", ""]); setConfirmPin(["", "", "", ""]); }}
-                    className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                    className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
                   >
                     Cancel
                   </button>
@@ -983,7 +983,7 @@ export default function SettingsPage() {
                     className="flex-1 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {changingPin ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-4 h-4 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
                     ) : (
                       "Update PIN"
                     )}
@@ -1003,11 +1003,11 @@ export default function SettingsPage() {
             <button
               onClick={() => handleExport("csv")}
               disabled={exporting}
-              className="w-full flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-[0.99] transition-transform disabled:opacity-50"
+              className="w-full flex items-center gap-3 p-4 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform disabled:opacity-50"
             >
-              <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-green-100 dark:bg-green-900/40 flex items-center justify-center">
                 <svg
-                  className="w-5 h-5 text-green-600"
+                  className="w-5 h-5 text-green-600 dark:text-green-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1029,17 +1029,17 @@ export default function SettingsPage() {
                 </p>
               </div>
               {exporting && (
-                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-gray-600 dark:border-t-gray-300 rounded-full animate-spin" />
               )}
             </button>
             <button
               onClick={() => handleExport("json")}
               disabled={exporting}
-              className="w-full flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-[0.99] transition-transform disabled:opacity-50"
+              className="w-full flex items-center gap-3 p-4 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform disabled:opacity-50"
             >
-              <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
                 <svg
-                  className="w-5 h-5 text-blue-600"
+                  className="w-5 h-5 text-blue-600 dark:text-blue-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -1061,7 +1061,7 @@ export default function SettingsPage() {
                 </p>
               </div>
               {exporting && (
-                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-gray-300 dark:border-gray-600 border-t-gray-600 dark:border-t-gray-300 rounded-full animate-spin" />
               )}
             </button>
           </div>
@@ -1072,7 +1072,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             Preferences
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">Show Quick Action Button</p>
@@ -1089,7 +1089,7 @@ export default function SettingsPage() {
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
               </label>
             </div>
           </div>
@@ -1100,7 +1100,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             Auto Reminder
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4 space-y-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">End-of-Month SMS Reminder</p>
@@ -1113,7 +1113,7 @@ export default function SettingsPage() {
                   onChange={(e) => setReminderSettings({ ...reminderSettings, auto_reminder_enabled: e.target.checked })}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
               </label>
             </div>
 
@@ -1124,7 +1124,7 @@ export default function SettingsPage() {
                   <select
                     value={reminderSettings.reminder_day_of_month}
                     onChange={(e) => setReminderSettings({ ...reminderSettings, reminder_day_of_month: Number(e.target.value) })}
-                    className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none"
                   >
                     {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
                       <option key={d} value={d}>{d}{d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th"} day</option>
@@ -1143,14 +1143,14 @@ export default function SettingsPage() {
                     }}
                     maxLength={150}
                     rows={2}
-                    className="w-full px-3 py-2 bg-white rounded-xl text-sm border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none resize-none"
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-800 rounded-xl text-sm border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none resize-none"
                   />
                   <p className="text-xs text-[var(--color-text-muted)] text-right mt-1">
                     {reminderSettings.reminder_message_template.length}/150
                   </p>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-3">
+                <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Preview:</p>
                   <p className="text-sm text-[var(--color-text)]">
                     {reminderSettings.reminder_message_template
@@ -1180,7 +1180,7 @@ export default function SettingsPage() {
               className="w-full py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {savingReminder ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-4 h-4 border-2 border-[var(--color-bg)] border-t-transparent rounded-full animate-spin" />
               ) : (
                 "Save Reminder Settings"
               )}
@@ -1196,12 +1196,12 @@ export default function SettingsPage() {
             </h2>
             <a
               href="/merchant/billing"
-              className="block bg-white rounded-2xl shadow-sm border border-gray-50 p-4 active:scale-[0.99] transition-transform"
+              className="block bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4 active:scale-[0.99] transition-transform"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-blue-500 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
                     </svg>
                   </div>
@@ -1214,11 +1214,11 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   {smsBalance <= 5 && (
-                    <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">
                       LOW
                     </span>
                   )}
-                  <svg className="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="w-4 h-4 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                   </svg>
                 </div>
@@ -1234,11 +1234,11 @@ export default function SettingsPage() {
           </h2>
           <button
             onClick={signOut}
-            className="w-full flex items-center gap-3 p-4 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-[0.99] transition-transform"
+            className="w-full flex items-center gap-3 p-4 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform"
           >
-            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
               <svg
-                className="w-5 h-5 text-red-500"
+                className="w-5 h-5 text-red-500 dark:text-red-400"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -1252,7 +1252,7 @@ export default function SettingsPage() {
               </svg>
             </div>
             <div className="text-left">
-              <p className="font-medium text-sm text-red-600">Sign Out</p>
+              <p className="font-medium text-sm text-red-600 dark:text-red-400">Sign Out</p>
               <p className="text-xs text-[var(--color-text-muted)]">
                 Log out of your account
               </p>
@@ -1265,7 +1265,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             About
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4">
             <div className="flex items-center gap-3 mb-3">
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center">
                 <svg
@@ -1304,7 +1304,7 @@ export default function SettingsPage() {
             <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
               Your Shop QR
             </h2>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4">
               <QRDisplay
                 merchantId={merchantId}
                 merchantName={merchantName}
