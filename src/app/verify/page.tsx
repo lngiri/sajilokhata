@@ -9,6 +9,7 @@ import {
   requestAmountEdit,
 } from "@/lib/actions";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
+import LogoWithAbout from "@/components/LogoWithAbout";
 
 type Step = "loading" | "invalid" | "action" | "onboard" | "done";
 
@@ -162,18 +163,12 @@ export default function VerifyPage() {
           onComplete={handleCustomerOnboarded}
         />
       )}
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-lg p-6 space-y-5 animate-fade-in">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+      <div className="w-full max-w-md bg-[var(--color-surface)] rounded-3xl shadow-lg p-6 space-y-5 animate-fade-in">
 
         {/* QR Hisab platform bar with logo draw animation */}
-        <div className="flex items-center justify-center gap-2 pb-3 border-b border-gray-100 mb-3">
-          <div className="relative w-6 h-6">
-            <svg viewBox="0 0 36 36" className="absolute inset-0 w-6 h-6" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
-              <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
-              <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
-            </svg>
-          </div>
+        <div className="flex items-center justify-center gap-2 pb-3 border-b border-[var(--color-border)] mb-3">
+          <LogoWithAbout size={24} showAnimation />
           <span className="text-[11px] font-bold text-[var(--color-primary)] tracking-wider uppercase">QR Hisab ✨</span>
         </div>
 
@@ -209,7 +204,7 @@ export default function VerifyPage() {
         {/* Action (Approve/Dispute/Edit) — shown immediately with token */}
         {step === "action" && log && (
           <div className="space-y-4">
-            <div className="bg-gray-50 rounded-xl p-4 space-y-2">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-2">
               <div className="flex justify-between">
                 <span className="text-xs text-[var(--color-text-muted)]">Amount</span>
                 <span className={`font-bold ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
@@ -251,12 +246,12 @@ export default function VerifyPage() {
                   onChange={(e) => setProposedAmount(e.target.value.replace(/\D/g, ""))}
                   placeholder={log.amount.toString()}
                   min={1}
-                  className="w-full px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-bold"
+                  className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-bold"
                 />
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setShowEditInput(false); setProposedAmount(""); }}
-                    className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                    className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
                   >
                     Cancel
                   </button>
@@ -285,7 +280,7 @@ export default function VerifyPage() {
                   value={disputeReason}
                   onChange={(e) => setDisputeReason(e.target.value)}
                   rows={2}
-                  className="w-full mt-1 px-3 py-2 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
+                  className="w-full mt-1 px-3 py-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
                   placeholder="e.g. Amount is incorrect"
                 />
               </div>
@@ -303,7 +298,7 @@ export default function VerifyPage() {
                 <button
                   onClick={handleDispute}
                   disabled={submitting}
-                  className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                  className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
                 >
                   Dispute
                 </button>
@@ -311,7 +306,7 @@ export default function VerifyPage() {
                   onClick={handleApprove}
                   disabled={submitting || creditCheck?.overLimit}
                   className={`flex-1 py-3 rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    creditCheck?.overLimit ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-green-600 text-white"
+                    creditCheck?.overLimit ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" : "bg-green-600 text-white"
                   }`}
                 >
                   {submitting ? (
