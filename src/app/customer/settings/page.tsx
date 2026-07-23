@@ -103,7 +103,7 @@ export default function CustomerSettings() {
     <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={() => {}}>
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2.5 px-4 py-3">
           <LogoWithAbout size={36} showAnimation={false} />
           <div>
@@ -118,7 +118,7 @@ export default function CustomerSettings() {
 
       <div className="px-4 py-4 space-y-4">
         {/* Profile Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-50 divide-y divide-gray-50">
+        <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-gray-50 dark:border-gray-700 divide-y divide-gray-50 dark:divide-gray-700">
           <div className="p-4">
             <label className="block text-xs text-[var(--color-text-muted)] uppercase tracking-wider font-semibold mb-1.5">
               Display Name
@@ -128,7 +128,7 @@ export default function CustomerSettings() {
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               placeholder="Enter your name"
-              className="w-full px-4 py-2.5 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-medium text-[var(--color-text)]"
+              className="w-full px-4 py-2.5 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm font-medium text-[var(--color-text)]"
             />
             {hasChanges && (
               <button
@@ -164,7 +164,7 @@ export default function CustomerSettings() {
           <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
             Preferences
           </h2>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-50 p-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-gray-50 dark:border-gray-700 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-[var(--color-text)]">Show Quick Action Button</p>
@@ -181,7 +181,7 @@ export default function CustomerSettings() {
                   }}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
+                <div className="w-9 h-5 bg-gray-200 dark:bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--color-primary)]" />
               </label>
             </div>
           </div>
@@ -191,7 +191,7 @@ export default function CustomerSettings() {
         <button
           onClick={handleSignOut}
           disabled={signingOut}
-          className="w-full py-3.5 bg-red-50 text-red-600 rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2 border border-red-200"
+          className="w-full py-3.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-xl font-semibold text-sm active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2 border border-red-200 dark:border-red-800"
         >
           {signingOut ? (
             <div className="w-5 h-5 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
