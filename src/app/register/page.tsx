@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/Toast";
+import LogoWithAbout from "@/components/LogoWithAbout";
 
 function maskPhone(phone: string): string {
   if (phone.length < 8) return phone;
@@ -183,16 +184,8 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          {/* Friendly logo with draw animation */}
-          <div className="relative w-16 h-16 mx-auto mb-4">
-            <svg viewBox="0 0 36 36" className="absolute inset-0 w-16 h-16" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
-              <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
-              <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
-              <circle cx="27" cy="27" r="2" className="animate-draw" style={{ animationDelay: '0.9s' }} />
-              <circle cx="18" cy="18" r="1.5" className="animate-draw" style={{ animationDelay: '1.0s' }} />
-            </svg>
-            <img src="/icons/logo.png" alt="" className="absolute inset-0 w-16 h-16 rounded-2xl object-contain shadow-lg animate-fade-in" style={{ animationDelay: '0.8s' }} />
+          <div className="mx-auto mb-4">
+            <LogoWithAbout size={64} showAnimation />
           </div>
           <h1 className="text-2xl font-extrabold text-[var(--color-text)]">Create Account ✨</h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">

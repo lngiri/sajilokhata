@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+import LogoWithAbout from "@/components/LogoWithAbout";
+import AboutSheet from "@/components/AboutSheet";
 
 /* ─── IntersectionObserver hook for scroll animations ─── */
 function useScrollReveal() {
@@ -224,6 +226,7 @@ export default function LandingPage() {
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [redirecting, setRedirecting] = useState<string | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -358,19 +361,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 bg-[var(--color-bg)]/80 backdrop-blur-lg border-b border-[var(--color-border)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            {/* Logo draw animation — SVG draws itself, then fades to reveal the actual logo */}
-            <div className="relative w-9 h-9">
-              <svg viewBox="0 0 36 36" className="absolute inset-0 w-9 h-9" fill="none" stroke="var(--color-primary)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                {/* QR corners — draw in progressive sequence */}
-                <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
-                <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
-                <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
-                {/* Center dots */}
-                <circle cx="27" cy="27" r="2" className="animate-draw" style={{ animationDelay: '0.9s' }} />
-                <circle cx="18" cy="18" r="1.5" className="animate-draw" style={{ animationDelay: '1.0s' }} />
-              </svg>
-              <img src="/icons/logo.png" alt="" className="w-9 h-9 rounded-xl object-contain animate-fade-in" style={{ animationDelay: '0.8s' }} />
-            </div>
+            <LogoWithAbout size={36} showAnimation onClick={() => setAboutOpen(true)} />
             <span className="text-lg font-extrabold text-[var(--color-text)]">QR Hisab</span>
           </div>
           <div className="flex items-center gap-3">
@@ -797,7 +788,7 @@ export default function LandingPage() {
             {/* Brand */}
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
-                <img src="/icons/logo.png" alt="QR Hisab" className="w-9 h-9 rounded-xl object-contain" />
+                <LogoWithAbout size={36} showAnimation={false} onClick={() => setAboutOpen(true)} />
                 <span className="text-lg font-extrabold text-[var(--color-text)]">QR Hisab</span>
               </div>
               <p className="text-sm text-[var(--color-text-muted)] max-w-sm leading-relaxed">
@@ -832,6 +823,8 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+
+      <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
     </div>
   );
 }

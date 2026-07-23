@@ -1,3 +1,5 @@
+import LogoWithAbout from "@/components/LogoWithAbout";
+
 export default function NotFound() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-dvh px-6 bg-[var(--color-bg)]">
@@ -15,16 +17,8 @@ export default function NotFound() {
       </div>
 
       <div className="relative text-center">
-        {/* Logo with draw animation */}
-        <div className="relative w-20 h-20 mx-auto mb-6">
-          <svg viewBox="0 0 36 36" className="absolute inset-0 w-20 h-20" fill="none" stroke="var(--color-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="4" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0s' }} />
-            <rect x="22" y="4" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.3s' }} />
-            <rect x="4" y="22" width="10" height="10" rx="2" className="animate-draw" style={{ animationDelay: '0.6s' }} />
-            <circle cx="27" cy="27" r="2" className="animate-draw" style={{ animationDelay: '0.9s' }} />
-            <circle cx="18" cy="18" r="1.5" className="animate-draw" style={{ animationDelay: '1.0s' }} />
-          </svg>
-          <img src="/icons/logo.png" alt="" className="absolute inset-0 w-20 h-20 rounded-2xl object-contain shadow-lg animate-fade-in" style={{ animationDelay: '0.8s' }} />
+        <div className="mx-auto mb-6">
+          <LogoWithAbout size={80} showAnimation />
         </div>
 
         <div className="text-6xl font-extrabold text-[var(--color-border)] mb-4">404</div>
