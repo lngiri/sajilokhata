@@ -191,7 +191,7 @@ export default function VerifyPage() {
         {/* Invalid */}
         {step === "invalid" && (
           <div className="text-center py-6">
-            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
               <svg className="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -229,7 +229,7 @@ export default function VerifyPage() {
 
             {/* Credit limit info */}
             {creditCheck && log.type === "debit" && (
-              <div className={`rounded-xl p-3 text-sm ${creditCheck.overLimit ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700"}`}>
+              <div className={`rounded-xl p-3 text-sm ${creditCheck.overLimit ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400" : "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400"}`}>
                 {creditCheck.message}
               </div>
             )}
@@ -291,7 +291,7 @@ export default function VerifyPage() {
                 <button
                   onClick={() => setShowEditInput(true)}
                   disabled={submitting}
-                  className="flex-1 py-3 bg-blue-50 text-blue-700 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                  className="flex-1 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
                 >
                   Edit Amount
                 </button>
@@ -324,8 +324,8 @@ export default function VerifyPage() {
         {step === "done" && (
           <div className="text-center py-6">
             <div className={`w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center ${
-              actionDone === "approved" ? "bg-green-50" :
-              actionDone === "edit_requested" ? "bg-blue-50" : "bg-amber-50"
+              actionDone === "approved" ? "bg-green-50 dark:bg-green-900/20" :
+              actionDone === "edit_requested" ? "bg-blue-50 dark:bg-blue-900/20" : "bg-amber-50 dark:bg-amber-900/20"
             }`}>
               {actionDone === "approved" ? (
                 <svg className="w-7 h-7 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -364,7 +364,7 @@ export default function VerifyPage() {
 
         {/* Bottom message */}
         {message && (
-          <div className={`text-center text-sm p-3 rounded-xl ${message.includes("sent") || message.includes("success") || message.includes("approved") || message.includes("Dev mode") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
+          <div className={`text-center text-sm p-3 rounded-xl ${message.includes("sent") || message.includes("success") || message.includes("approved") || message.includes("Dev mode") ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400" : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"}`}>
             {message}
           </div>
         )}

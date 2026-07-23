@@ -392,7 +392,7 @@ export default function MerchantDashboard() {
   const statusColor = (status: string) => {
     switch (status) {
       case "approved":
-        return "text-green-600 bg-green-50";
+        return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
       case "pending":
       case "unverified":
         return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30";
@@ -453,7 +453,7 @@ export default function MerchantDashboard() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {isRefreshing ? (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
                 <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                 <span className="text-[10px] font-medium text-blue-600">Syncing...</span>
               </div>
@@ -549,9 +549,9 @@ export default function MerchantDashboard() {
                   <a
                     key={`pending-${log.id}`}
                     href="/merchant/logs"
-                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 active:bg-amber-100 transition-colors border-l-2 border-amber-400 ml-2"
+                    className="flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-900/30 active:bg-amber-100 dark:active:bg-amber-900/50 transition-colors border-l-2 border-amber-400 ml-2"
                   >
-                    <div className="w-7 h-7 rounded-full bg-amber-50 flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-bold text-amber-600">!</span>
                     </div>
                     <div className="flex-1 min-w-0">
@@ -572,7 +572,7 @@ export default function MerchantDashboard() {
                   <a
                     key={n.id}
                     href="/merchant/logs"
-                    className={`flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors ${!n.read ? "dark:bg-blue-900/20 bg-blue-50/30" : ""}`}
+                    className={`flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors ${!n.read ? "bg-blue-50/30 dark:bg-blue-900/20" : ""}`}
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
                       n.type === "entry_created" ? "bg-green-100 dark:bg-green-900/40" :
@@ -727,7 +727,7 @@ export default function MerchantDashboard() {
           const needsUpdate = !name || name.toLowerCase() === "shop";
           if (!needsUpdate) return null;
           return (
-            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+            <div className="mx-4 mt-4 p-4 bg-gradient-to-r from-blue-50 dark:from-blue-900/20 to-indigo-50 dark:to-indigo-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                   <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -756,7 +756,7 @@ export default function MerchantDashboard() {
 
       {loadError && !statsLoading && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-50 flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
             <svg className="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
@@ -836,7 +836,7 @@ export default function MerchantDashboard() {
             {smsBalance !== null && smsBalance <= 5 && (
               <a
                 href="/merchant/billing"
-                className="flex items-center gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl active:scale-[0.98] transition-transform"
+                className="flex items-center gap-3 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl active:scale-[0.98] transition-transform"
               >
                 <svg className="w-5 h-5 text-amber-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
@@ -923,7 +923,7 @@ export default function MerchantDashboard() {
                       key={rc.customer_id}
                       className="bg-[var(--color-surface)] rounded-xl p-3.5 shadow-sm border border-[var(--color-border)] flex items-center gap-3"
                     >
-                      <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0">
+                      <div className="w-9 h-9 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center flex-shrink-0">
                         <span className="text-sm font-bold text-red-600">
                           {(rc.customer_name || rc.customer_phone).charAt(0).toUpperCase()}
                         </span>

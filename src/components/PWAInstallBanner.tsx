@@ -170,7 +170,7 @@ export default function PWAInstallBanner() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[90] p-4 animate-slide-up">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 max-w-md mx-auto">
+      <div className="bg-white dark:bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 p-4 max-w-md mx-auto">
         {/* App Icon */}
         <div className="flex items-start gap-3">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center flex-shrink-0 shadow-lg">
@@ -196,7 +196,7 @@ export default function PWAInstallBanner() {
         <div className="flex gap-2 mt-4">
           <button
             onClick={handleDismiss}
-            className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+            className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
           >
             Dismiss
           </button>

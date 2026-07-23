@@ -17,7 +17,7 @@ export default function DescriptionSuggestions({ descriptions, onSelect }: Descr
             key={i}
             type="button"
             onClick={() => onSelect(desc)}
-            className="px-2.5 py-1 text-xs font-medium bg-gray-50 text-gray-600 rounded-full border border-gray-200 active:scale-95 transition-transform hover:bg-gray-100"
+            className="px-2.5 py-1 text-xs font-medium bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300 rounded-full border border-gray-200 dark:border-gray-600 active:scale-95 transition-transform hover:bg-gray-100 dark:hover:bg-gray-700"
           >
             {desc}
           </button>

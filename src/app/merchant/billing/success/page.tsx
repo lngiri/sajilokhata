@@ -12,7 +12,7 @@ function SuccessContent() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center px-4">
-      <div className="max-w-sm w-full bg-white rounded-3xl shadow-sm border border-gray-50 p-8 text-center">
+      <div className="max-w-sm w-full bg-white dark:bg-[var(--color-surface)] rounded-3xl shadow-sm border border-gray-50 dark:border-gray-700 p-8 text-center">
         {status === "completed" ? (
           <>
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">

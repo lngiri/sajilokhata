@@ -81,7 +81,7 @@ export default function FeedbackModal({ open, onClose }: Props) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p className="text-sm font-medium text-[var(--color-primary)] dark:text-[var(--color-primary-light)]">Thank you!</p>
-                <p className="text-xs text-gray-500 mt-1">Your feedback helps us improve.</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Your feedback helps us improve.</p>
               </div>
             ) : (
               <>

@@ -36,9 +36,9 @@ export default function PendingApprovalModal(props: Props) {
   if (props.mode === "customer") {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in p-4">
-        <div className="w-full max-w-sm bg-white rounded-3xl p-6 animate-slide-up shadow-2xl text-center">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-50 flex items-center justify-center">
-            <svg className="w-10 h-10 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+        <div className="w-full max-w-sm bg-white dark:bg-[var(--color-surface)] rounded-3xl p-6 animate-slide-up shadow-2xl text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+            <svg className="w-10 h-10 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -62,7 +62,7 @@ export default function PendingApprovalModal(props: Props) {
             {props.onViewHistory && (
               <button
                 onClick={props.onViewHistory}
-                className="w-full py-3 bg-gray-100 text-[var(--color-text)] rounded-xl font-medium active:scale-[0.98] transition-transform"
+                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-[var(--color-text)] rounded-xl font-medium active:scale-[0.98] transition-transform"
               >
                 Track in History
               </button>
@@ -106,11 +106,11 @@ export default function PendingApprovalModal(props: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 animate-fade-in">
-      <div className="w-full max-w-md bg-white rounded-t-3xl animate-slide-up max-h-[80vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50">
+      <div className="w-full max-w-md bg-white dark:bg-[var(--color-surface)] rounded-t-3xl animate-slide-up max-h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-gray-700">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center">
-              <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -119,7 +119,7 @@ export default function PendingApprovalModal(props: Props) {
             </h2>
           </div>
           <button onClick={merchantProps.onClose} className="p-1">
-            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -134,7 +134,7 @@ export default function PendingApprovalModal(props: Props) {
             entryList.map((entry) => (
               <div
                 key={entry.id}
-                className="bg-gray-50 rounded-xl p-4 space-y-2"
+                className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-sm text-[var(--color-text)]">
@@ -153,7 +153,7 @@ export default function PendingApprovalModal(props: Props) {
                   <button
                     onClick={() => handleReject(entry.id)}
                     disabled={savingId === entry.id}
-                    className="flex-1 py-2 bg-gray-200 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+                    className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
                   >
                     Reject
                   </button>
@@ -174,10 +174,10 @@ export default function PendingApprovalModal(props: Props) {
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-gray-50">
+        <div className="px-6 py-4 border-t border-gray-50 dark:border-gray-700">
           <button
             onClick={merchantProps.onClose}
-            className="w-full py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+            className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform"
           >
             Done
           </button>

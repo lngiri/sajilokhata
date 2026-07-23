@@ -24,7 +24,7 @@ export function QRDisplay({
 
   return (
     <div className="flex flex-col items-center p-6">
-      <div className="bg-white p-6 rounded-3xl shadow-lg border border-gray-100">
+      <div className="bg-white dark:bg-[var(--color-surface)] p-6 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
         <QRCodeSVG
           value={qrData}
           size={260}
@@ -57,7 +57,7 @@ export function CustomerQR({ customerId }: CustomerQRProps) {
       <p className="text-sm font-medium text-[var(--color-primary)] mb-4">
         Show this QR to your merchant
       </p>
-      <div className="bg-white p-4 rounded-2xl shadow-md">
+      <div className="bg-white dark:bg-[var(--color-surface)] p-4 rounded-2xl shadow-md">
         <QRCodeSVG
           value={qrData}
           size={180}

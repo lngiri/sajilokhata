@@ -69,7 +69,7 @@ export default function OtherRolePrompt({ currentRole }: Props) {
 
       {/* Modal */}
       <div className="fixed bottom-0 left-0 right-0 z-[201] animate-slide-up">
-        <div className="bg-white rounded-t-2xl shadow-xl px-5 pt-6 pb-8 mx-2 mb-2">
+        <div className="bg-white dark:bg-[var(--color-surface)] rounded-t-2xl shadow-xl px-5 pt-6 pb-8 mx-2 mb-2">
           <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
 
           <div className="flex items-center gap-3 mb-4">
@@ -91,7 +91,7 @@ export default function OtherRolePrompt({ currentRole }: Props) {
           <div className="flex gap-3">
             <button
               onClick={handleDismiss}
-              className="flex-1 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+              className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
             >
               Not now
             </button>

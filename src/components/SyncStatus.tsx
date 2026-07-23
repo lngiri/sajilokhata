@@ -288,16 +288,16 @@ export default function SyncStatus() {
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-sm animate-fade-in">
       <div
-        className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-sm mx-auto p-5 shadow-2xl animate-slide-up"
+        className="bg-white dark:bg-[var(--color-surface)] rounded-t-3xl sm:rounded-3xl w-full max-w-sm mx-auto p-5 shadow-2xl animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-bold text-[var(--color-text)]">Sync Status</h3>
           <button
             onClick={() => setExpanded(false)}
-            className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform"
+            className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-90 transition-transform"
           >
-            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -305,7 +305,7 @@ export default function SyncStatus() {
 
         <div className="space-y-3">
           {/* Network status */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
             <div className="flex items-center gap-2.5">
               {syncing ? (
                 <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-spin border-2 border-blue-200 border-t-blue-500" />
@@ -331,10 +331,10 @@ export default function SyncStatus() {
           <div
             className={`flex items-center justify-between p-3 rounded-xl ${
               syncing
-                ? "bg-blue-50"
+                ? "bg-blue-50 dark:bg-blue-900/20"
                 : pendingCreditCount > 0
-                  ? "bg-amber-50"
-                  : "bg-green-50"
+                  ? "bg-amber-50 dark:bg-amber-900/20"
+                  : "bg-green-50 dark:bg-green-900/20"
             }`}
           >
             <div className="flex items-center gap-2.5">
@@ -364,7 +364,7 @@ export default function SyncStatus() {
 
           {/* Attachment count */}
           {pendingAttachmentCount > 0 && (
-            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-xl">
+            <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
               <div className="flex items-center gap-2.5">
                 <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.41a2.25 2.25 0 013.182 0l2.909 2.91m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
@@ -376,9 +376,9 @@ export default function SyncStatus() {
           )}
 
           {/* Last sync */}
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
             <div className="flex items-center gap-2.5">
-              <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <span className="text-sm font-medium text-[var(--color-text)]">Last Sync</span>
@@ -434,7 +434,7 @@ export default function SyncStatus() {
 
         <button
           onClick={() => setExpanded(false)}
-          className="w-full mt-3 py-2.5 bg-gray-100 text-gray-600 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+          className="w-full mt-3 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
         >
           Close
         </button>

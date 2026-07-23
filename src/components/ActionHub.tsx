@@ -287,14 +287,14 @@ export default function ActionHub() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ duration: 0.15 }}
-              className="fixed z-[61] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] bg-white rounded-2xl shadow-2xl p-6 text-center"
+              className="fixed z-[61] left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[280px] bg-white dark:bg-[var(--color-surface)] rounded-2xl shadow-2xl p-6 text-center"
             >
-              <h3 className="text-base font-bold text-gray-900 mb-1">Hide Quick Action?</h3>
-              <p className="text-sm text-gray-500 mb-5">You can enable it again anytime from Settings.</p>
+              <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-1">Hide Quick Action?</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-5">You can enable it again anytime from Settings.</p>
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowConfirm(false)}
-                  className="flex-1 py-2.5 bg-gray-100 text-gray-700 rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
+                  className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
                 >
                   Cancel
                 </button>

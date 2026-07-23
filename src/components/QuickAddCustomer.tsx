@@ -109,13 +109,13 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 animate-fade-in" onClick={onClose}>
       <div
-        className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 space-y-5 animate-slide-up"
+        className="w-full max-w-md bg-white dark:bg-[var(--color-surface)] rounded-t-3xl sm:rounded-3xl p-6 space-y-5 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-[var(--color-text)]">Add Customer</h2>
           <button onClick={onClose} className="p-1 active:scale-90 transition-transform">
-            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -125,14 +125,14 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm font-medium text-gray-500">+977</span>
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">+977</span>
               <input
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 onBlur={() => doLookup(phone)}
                 placeholder="98XXXXXXXX"
-                className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
+                className="flex-1 px-4 py-3 bg-white dark:bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
                 autoFocus
               />
               {lookingUp && (
@@ -140,7 +140,7 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
               )}
             </div>
             {lookupMsg && (
-              <p className={`text-xs mt-1.5 ${exists ? "text-amber-600" : "text-gray-500"}`}>
+              <p className={`text-xs mt-1.5 ${exists ? "text-amber-600" : "text-gray-500 dark:text-gray-400"}`}>
                 {lookupMsg}
               </p>
             )}
@@ -156,8 +156,8 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
               placeholder={exists ? "Registered name (auto-filled)" : "e.g. Ram Sharma"}
               maxLength={100}
               disabled={nameDisabled}
-              className={`w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all ${
-                nameDisabled ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""
+              className={`w-full mt-1 px-4 py-3 bg-white dark:bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all ${
+                nameDisabled ? "bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 cursor-not-allowed" : ""
               }`}
             />
             {exists && (
@@ -172,7 +172,7 @@ export default function QuickAddCustomer({ merchantId, onCustomerAdded, onClose 
         </div>
 
         <div className="flex gap-3">
-          <button onClick={onClose} className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform">
+          <button onClick={onClose} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform">
             Cancel
           </button>
           <button

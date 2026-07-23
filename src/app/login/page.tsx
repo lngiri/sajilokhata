@@ -865,7 +865,7 @@ export default function LoginPage() {
           {renderPinDots(pin, setPin, pinRefs, "Enter your PIN", handlePinSubmit)}
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           <button
@@ -897,7 +897,7 @@ export default function LoginPage() {
           {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, "Confirm PIN")}
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           <button
@@ -946,7 +946,7 @@ export default function LoginPage() {
                 disabled={loading || (selectRoleMode === "register" && !registerName.trim())}
                 className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-[var(--color-primary)] active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
               >
-                <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
@@ -978,7 +978,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           {loading && (
@@ -1026,7 +1026,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full p-4 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 hover:border-blue-300 dark:hover:border-blue-600 active:scale-[0.98] transition-all flex items-center gap-4 disabled:opacity-50"
           >
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
               <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
               </svg>
@@ -1076,7 +1076,7 @@ export default function LoginPage() {
           </button>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
 
           {loading && (

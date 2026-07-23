@@ -420,7 +420,7 @@ export default function LandingPage() {
               </Link>
               <a
                 href="#how-it-works"
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[var(--color-text)] rounded-[var(--radius-button)] font-bold text-lg border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 transition-all active:scale-[0.98]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-[var(--color-surface)] text-[var(--color-text)] rounded-[var(--radius-button)] font-bold text-lg border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 transition-all active:scale-[0.98]"
               >
                 See How It Works
               </a>
@@ -437,7 +437,7 @@ export default function LandingPage() {
           {/* Hero visual — phone mockup */}
           <div className="mt-20 max-w-sm mx-auto animate-entrance-delay-2">
             <div className="relative bg-[var(--color-text)] rounded-[2.5rem] p-2 shadow-2xl">
-              <div className="bg-white rounded-[2rem] overflow-hidden">
+              <div className="bg-[var(--color-surface)] rounded-[2rem] overflow-hidden">
                 {/* Phone status bar */}
                 <div className="h-10 bg-[var(--color-primary)] flex items-center justify-between px-6">
                   <span className="text-xs font-semibold text-white/80">9:41</span>
@@ -574,7 +574,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {useCases.map((uc, i) => (
-              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : "delay-3"} bg-white rounded-[var(--radius-card)] p-8 border border-[var(--color-border)] hover:shadow-lg hover:border-[var(--color-primary)]/20 transition-all group`}>
+              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : "delay-3"} bg-[var(--color-surface)] rounded-[var(--radius-card)] p-8 border border-[var(--color-border)] hover:shadow-lg hover:border-[var(--color-primary)]/20 transition-all group`}>
                 <div className="w-14 h-14 bg-[var(--color-primary)]/10 rounded-2xl flex items-center justify-center mb-5 text-2xl group-hover:scale-110 transition-transform">
                   {uc.doodle}
                 </div>
@@ -604,7 +604,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f, i) => (
-              <div key={i} className={`animate-card-in ${i % 3 === 0 ? "delay-1" : i % 3 === 1 ? "delay-2" : "delay-3"} bg-white rounded-[var(--radius-card)] p-7 border border-[var(--color-border)] hover:shadow-lg hover:border-[var(--color-primary)]/20 transition-all group`}>
+              <div key={i} className={`animate-card-in ${i % 3 === 0 ? "delay-1" : i % 3 === 1 ? "delay-2" : "delay-3"} bg-[var(--color-surface)] rounded-[var(--radius-card)] p-7 border border-[var(--color-border)] hover:shadow-lg hover:border-[var(--color-primary)]/20 transition-all group`}>
                 <div className={`w-14 h-14 ${f.bg} rounded-2xl flex items-center justify-center mb-5 ${f.color} group-hover:scale-110 transition-transform`}>
                   {f.doodle}
                 </div>
@@ -624,7 +624,7 @@ export default function LandingPage() {
             <h2 className="text-3xl sm:text-4xl font-extrabold">
               Ready in under a minute
             </h2>
-            <p className="mt-4 text-lg text-gray-400">
+            <p className="mt-4 text-lg text-gray-400 dark:text-gray-500">
               No training needed. If you can use a phone, you can use QR Hisab.
             </p>
           </div>
@@ -639,7 +639,7 @@ export default function LandingPage() {
                   {s.num}
                 </div>
                 <h3 className="text-xl font-bold mb-2">{s.title}</h3>
-                <p className="text-gray-400 leading-relaxed max-w-xs mx-auto">{s.desc}</p>
+                <p className="text-gray-400 dark:text-gray-500 leading-relaxed max-w-xs mx-auto">{s.desc}</p>
               </div>
             ))}
           </div>
@@ -661,7 +661,7 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map((t, i) => (
-              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : "delay-3"} bg-white rounded-[var(--radius-card)] p-7 border border-[var(--color-border)] hover:shadow-lg transition-shadow`}>
+              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : "delay-3"} bg-[var(--color-surface)] rounded-[var(--radius-card)] p-7 border border-[var(--color-border)] hover:shadow-lg transition-shadow`}>
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(5)].map((_, j) => <span key={j}>{Icons.star}</span>)}
                 </div>
@@ -685,7 +685,7 @@ export default function LandingPage() {
       {hasAnySession && (
         <section className="py-16 bg-[var(--color-surface)]">
           <div className="max-w-lg mx-auto px-4">
-            <div className="bg-white rounded-[var(--radius-dialog)] shadow-lg border border-[var(--color-border)] p-6 sm:p-8 space-y-4">
+            <div className="bg-[var(--color-surface)] rounded-[var(--radius-dialog)] shadow-lg border border-[var(--color-border)] p-6 sm:p-8 space-y-4">
               <div className="text-center mb-2">
                 <h2 className="text-xl font-extrabold text-[var(--color-text)]">Welcome back! 👋</h2>
                 <p className="text-sm text-[var(--color-text-muted)] mt-1">Choose an account to continue</p>
@@ -740,7 +740,7 @@ export default function LandingPage() {
                   <div className="w-full border-t border-[var(--color-border)]" />
                 </div>
                 <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-white text-[var(--color-text-muted)]">or</span>
+                  <span className="px-3 bg-[var(--color-surface)] text-[var(--color-text-muted)]">or</span>
                 </div>
               </div>
 
@@ -771,7 +771,7 @@ export default function LandingPage() {
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/login?signedOut=1"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-[var(--color-primary-dark)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-white/90 transition-all shadow-xl active:scale-[0.98]"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-[var(--color-surface)] text-[var(--color-primary-dark)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-white/90 dark:hover:bg-[var(--color-surface)] transition-all shadow-xl active:scale-[0.98]"
             >
               Start Using QR Hisab
               {Icons.arrow}
@@ -782,7 +782,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══════ FOOTER — Friendly, warm ══════ */}
-      <footer className="border-t border-[var(--color-border)] bg-white">
+      <footer className="border-t border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
             {/* Brand */}
