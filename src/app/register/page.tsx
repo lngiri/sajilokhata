@@ -202,13 +202,13 @@ export default function RegisterPage() {
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm font-medium text-gray-500">+977</span>
+                <span className="text-sm font-medium text-gray-500 dark:text-gray-400">+977</span>
                 <input
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
                   placeholder="98XXXXXXXX"
-                  className="flex-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
+                  className="flex-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono"
                   autoFocus
                 />
               </div>
@@ -248,7 +248,7 @@ export default function RegisterPage() {
               ))}
             </div>
             {otpError && (
-              <p className="text-xs text-red-500 text-center">{otpError}</p>
+              <p className="text-xs text-red-500 dark:text-red-400 text-center">{otpError}</p>
             )}
             {verifying && (
               <div className="flex justify-center">
@@ -274,7 +274,7 @@ export default function RegisterPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Ram Sharma"
-                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 autoFocus
               />
             </div>
@@ -285,7 +285,7 @@ export default function RegisterPage() {
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Kathmandu"
-                className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
               />
             </div>
             <button
@@ -304,9 +304,9 @@ export default function RegisterPage() {
 
         {/* Step: Done */}
         {step === "done" && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 text-center space-y-4">
-            <div className="w-16 h-16 mx-auto rounded-full bg-green-50 flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 shadow-sm border border-gray-50 dark:border-gray-700 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+              <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </div>
