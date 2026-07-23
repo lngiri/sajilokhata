@@ -7,6 +7,7 @@ import { useToast } from "@/components/Toast";
 import { signOut } from "@/lib/auth";
 import { updateCustomerProfile } from "@/app/actions/customer";
 import CustomerPinGate from "@/components/CustomerPinGate";
+import LogoWithAbout from "@/components/LogoWithAbout";
 import { isFabHidden, setFabHidden } from "@/lib/ui/fabVisibility";
 
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -104,9 +105,7 @@ export default function CustomerSettings() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center gap-2.5 px-4 py-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
-            <span className="text-sm font-bold text-white tracking-tight">QR</span>
-          </div>
+          <LogoWithAbout size={36} showAnimation={false} />
           <div>
             <h1 className="text-base font-bold text-[var(--color-text)]">Settings ⚙️</h1>
             <p className="text-[10px] text-[var(--color-primary)] flex items-center gap-1">

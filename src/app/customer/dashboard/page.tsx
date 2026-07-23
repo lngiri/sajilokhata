@@ -20,6 +20,7 @@ import CustomerBottomNav from "@/components/CustomerBottomNav";
 import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
 import CustomerPinGate from "@/components/CustomerPinGate";
+import LogoWithAbout from "@/components/LogoWithAbout";
 import { createClient } from "@/lib/supabase/client";
 import { normalizePhone } from "@/lib/phone";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
@@ -585,9 +586,7 @@ export default function CustomerDashboard() {
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
-              <span className="text-sm font-bold text-white tracking-tight">QR</span>
-            </div>
+            <LogoWithAbout size={36} showAnimation={false} />
             <div>
               <h1 className="text-base font-bold text-[var(--color-text)]">{getGreeting()}, {customerName?.split(" ")[0] || "there"} 👋</h1>
               <p className="text-[10px] text-[var(--color-primary)] flex items-center gap-1">

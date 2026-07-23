@@ -30,6 +30,7 @@ import { useRouter } from "next/navigation";
 import TransactionIcon from "@/components/TransactionIcon";
 import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
+import LogoWithAbout from "@/components/LogoWithAbout";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
 /** Get a friendly time-based greeting */
@@ -433,14 +434,12 @@ export default function MerchantDashboard() {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={handleBrandingRefresh}
-            className="text-left active:scale-95 transition-transform flex-1 min-w-0"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--color-primary)] to-[var(--color-primary-dark)] flex items-center justify-center shadow-sm flex-shrink-0">
-                <span className="text-sm font-bold text-white tracking-tight">QR</span>
-              </div>
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <LogoWithAbout size={36} showAnimation={false} />
+            <button
+              onClick={handleBrandingRefresh}
+              className="text-left active:scale-95 transition-transform min-w-0"
+            >
               <div className="min-w-0">
                 <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
                   {getGreeting()}, {merchantProfile?.name?.split(" ")[0] || "there"} 👋
@@ -450,8 +449,8 @@ export default function MerchantDashboard() {
                   {merchantProfile?.business_name?.trim() || merchantProfile?.name || "Shop"}{merchantProfile?.address ? ` · ${merchantProfile.address}` : ""}
                 </p>
               </div>
-            </div>
-          </button>
+            </button>
+          </div>
           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {isRefreshing ? (
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 bg-blue-50">
