@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { APP_VERSION } from "@/lib/version";
 import AppLogo from "./AppLogo";
@@ -39,6 +39,48 @@ export default function AboutSheet({ open, onClose }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!open) return;
+
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const html = document.documentElement;
+
+    const originalBodyOverflow = body.style.overflow;
+    const originalBodyPosition = body.style.position;
+    const originalBodyTop = body.style.top;
+    const originalBodyWidth = body.style.width;
+    const originalBodyPaddingRight = body.style.paddingRight;
+    const originalHtmlOverflow = html.style.overflow;
+
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`;
+    }
+
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    html.style.overflow = "hidden";
+
+    return () => {
+      body.style.overflow = originalBodyOverflow;
+      body.style.position = originalBodyPosition;
+      body.style.top = originalBodyTop;
+      body.style.width = originalBodyWidth;
+      body.style.paddingRight = originalBodyPaddingRight;
+      html.style.overflow = originalHtmlOverflow;
+      window.scrollTo(0, scrollY);
+    };
+  }, [open]);
+
+  const contentRef = useCallback((el: HTMLDivElement | null) => {
+    if (el) {
+      el.style.overscrollBehavior = "contain";
+    }
+  }, []);
+
   return (
     <AnimatePresence>
       {open && (
@@ -56,6 +98,7 @@ export default function AboutSheet({ open, onClose }: Props) {
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 30, stiffness: 300 }}
             onClick={(e) => e.stopPropagation()}
+            ref={contentRef}
             className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl"
           >
             {/* Drag handle */}
