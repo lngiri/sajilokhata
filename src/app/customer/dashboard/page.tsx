@@ -583,7 +583,7 @@ export default function CustomerDashboard() {
     )}
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2.5">
             <LogoWithAbout size={36} showAnimation={false} />
@@ -611,7 +611,7 @@ export default function CustomerDashboard() {
                 }}
                 className="p-1.5 active:scale-90 transition-transform relative"
               >
-                <svg className="w-5 h-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                 </svg>
                 {unreadNotifCount > 0 && (
@@ -645,10 +645,10 @@ export default function CustomerDashboard() {
       {/* Customer notification dropdown (outside sticky header) */}
       {showNotifications && (
         <div
-          className="fixed right-4 top-16 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden z-[100] animate-fade-in"
+          className="fixed right-4 top-16 w-72 bg-[var(--color-surface)] rounded-2xl shadow-xl border border-[var(--color-border)] overflow-hidden z-[100] animate-fade-in"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="p-3 border-b border-[var(--color-border)] flex items-center justify-between">
             <p className="text-sm font-semibold text-[var(--color-text)]">Notifications</p>
             {notifications.length > 0 && (
               <span className="text-[10px] text-[var(--color-text-muted)]">{notifications.length}</span>
@@ -664,21 +664,21 @@ export default function CustomerDashboard() {
                 <a
                   key={n.id}
                   href="/customer/history"
-                  className={`flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 active:bg-gray-100 transition-colors ${!n.read ? "bg-blue-50/30" : ""}`}
+                  className={`flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors ${!n.read ? "bg-blue-50/30" : ""}`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    n.type === "entry_approved" ? "bg-green-50" :
-                    n.type === "entry_rejected" || n.type === "edit_rejected" ? "bg-red-50" :
-                    n.type === "entry_created" ? "bg-amber-50" :
-                    n.type === "credit_limit_changed" ? "bg-blue-50" :
-                    "bg-gray-50"
+                    n.type === "entry_approved" ? "bg-green-50 dark:bg-green-900/20" :
+                    n.type === "entry_rejected" || n.type === "edit_rejected" ? "bg-red-50 dark:bg-red-900/20" :
+                    n.type === "entry_created" ? "bg-amber-50 dark:bg-amber-900/20" :
+                    n.type === "credit_limit_changed" ? "bg-blue-50 dark:bg-blue-900/20" :
+                    "bg-gray-50 dark:bg-gray-800/50"
                   }`}>
                     <span className={`text-xs font-bold ${
-                      n.type === "entry_approved" ? "text-green-600" :
-                      n.type === "entry_rejected" || n.type === "edit_rejected" ? "text-red-600" :
-                      n.type === "entry_created" ? "text-amber-600" :
-                      n.type === "credit_limit_changed" ? "text-blue-600" :
-                      "text-gray-500"
+                      n.type === "entry_approved" ? "text-green-600 dark:text-green-400" :
+                      n.type === "entry_rejected" || n.type === "edit_rejected" ? "text-red-600 dark:text-red-400" :
+                      n.type === "entry_created" ? "text-amber-600 dark:text-amber-400" :
+                      n.type === "credit_limit_changed" ? "text-blue-600 dark:text-blue-400" :
+                      "text-[var(--color-text-muted)]"
                     }`}>
                       {n.type === "entry_approved" ? "✓" :
                        n.type === "entry_rejected" || n.type === "edit_rejected" ? "✗" :
@@ -701,7 +701,7 @@ export default function CustomerDashboard() {
           </div>
           <a
             href="/customer/history"
-            className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-gray-100 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+            className="block text-center text-xs font-medium text-[var(--color-primary)] py-3 border-t border-[var(--color-border)] hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors"
           >
             View All
           </a>
@@ -717,12 +717,12 @@ export default function CustomerDashboard() {
           <div
             ref={profileMenuRef}
             onClick={(e) => e.stopPropagation()}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 max-h-[85vh] overflow-y-auto animate-scale-up"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] max-h-[85vh] overflow-y-auto animate-scale-up"
           >
             {/* Close button */}
             <button
               onClick={() => setShowProfileMenu(false)}
-              className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 active:scale-90 transition-transform z-10"
+              className="absolute top-3 right-3 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] active:scale-90 transition-transform z-10"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -730,7 +730,7 @@ export default function CustomerDashboard() {
             </button>
 
             {/* Avatar + name header */}
-            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-gray-50">
+            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-[var(--color-border)]">
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -750,9 +750,9 @@ export default function CustomerDashboard() {
             <div className="p-4 space-y-2">
               <a
                 href="/customer/settings"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors"
               >
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a17.933 17.933 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                 </svg>
                 Edit Profile
@@ -765,7 +765,7 @@ export default function CustomerDashboard() {
                   localStorage.removeItem("qr_hisab_auth_" + customerPhone);
                   window.location.replace("/");
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 active:bg-red-100 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:bg-red-100 dark:active:bg-red-900/30 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
@@ -787,7 +787,7 @@ export default function CustomerDashboard() {
       }}>
       <div className="px-4 py-4 space-y-4">
         {/* Customer identity badge */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-50 flex items-center gap-3">
+        <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
           <div className="w-12 h-12 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center">
             <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
@@ -805,15 +805,15 @@ export default function CustomerDashboard() {
                 <span>{showFullPhone ? customerPhone : maskPhone(customerPhone)}</span>
                 <button
                   onClick={() => setShowFullPhone(!showFullPhone)}
-                  className="p-0.5 rounded hover:bg-gray-100 transition-colors"
+                  className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                   title={showFullPhone ? "Hide number" : "Show full number"}
                 >
                   {showFullPhone ? (
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className="w-3.5 h-3.5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
                     </svg>
                   ) : (
-                    <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <svg className="w-3.5 h-3.5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
                       <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
@@ -856,7 +856,7 @@ export default function CustomerDashboard() {
 
         {/* Outstanding Balance Card */}
         {statsLoading ? (
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-50 flex items-center justify-center py-8">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] flex items-center justify-center py-8">
             <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : stats ? (
@@ -934,7 +934,7 @@ export default function CustomerDashboard() {
             )}
           </a>
         ) : (
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-50 text-center">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-8 shadow-sm border border-[var(--color-border)] text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--color-primary)]/5 flex items-center justify-center">
               <svg className="w-8 h-8 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
@@ -959,7 +959,7 @@ export default function CustomerDashboard() {
         {/* Scan Shop QR — always visible primary CTA */}
         <button
           onClick={() => { setShowScanner(true); setScanStep("scan"); }}
-          className="w-full flex items-center gap-4 p-5 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-[0.98] transition-transform text-left"
+          className="w-full flex items-center gap-4 p-5 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform text-left"
         >
           <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
             <svg className="w-6 h-6 text-[var(--color-primary)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -971,16 +971,16 @@ export default function CustomerDashboard() {
             <p className="font-semibold text-[var(--color-text)]">Scan Shop QR</p>
             <p className="text-xs text-[var(--color-text-muted)]">Send credit or payment request to a shop</p>
           </div>
-          <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          <svg className="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
         </button>
 
         {/* Quick Action: Transaction History */}
         <a
           href="/customer/history"
-          className="flex items-center gap-4 p-5 bg-white rounded-2xl shadow-sm border border-gray-50 active:scale-[0.98] transition-transform"
+          className="flex items-center gap-4 p-5 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform"
         >
-          <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center">
-            <svg className="w-6 h-6 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+            <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
@@ -988,7 +988,7 @@ export default function CustomerDashboard() {
             <p className="font-semibold text-[var(--color-text)]">Transaction History</p>
             <p className="text-xs text-[var(--color-text-muted)]">View all your credit requests and their status</p>
           </div>
-          <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+          <svg className="w-5 h-5 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
         </a>
       </div>
       </PullToRefresh>
@@ -999,7 +999,7 @@ export default function CustomerDashboard() {
           className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
           onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
         >
-          <div className="w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 animate-slide-up max-h-[90dvh] overflow-y-auto">
+          <div className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl sm:rounded-3xl p-6 animate-slide-up max-h-[90dvh] overflow-y-auto">
             {/* Modal handle */}
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-lg text-[var(--color-text)]">
@@ -1009,9 +1009,9 @@ export default function CustomerDashboard() {
               </h2>
               <button
                 onClick={closeModal}
-                className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center active:scale-90 transition-transform"
+                className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center active:scale-90 transition-transform"
               >
-                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-4 h-4 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1030,19 +1030,19 @@ export default function CustomerDashboard() {
             {/* Step 2: Enter Amount */}
             {scanStep === "enter" && (
               <div className="space-y-4">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-center">
+                <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] text-center">
                   <p className="text-xs text-[var(--color-text-muted)] mb-1">Entry at</p>
                   <p className="font-bold text-lg text-[var(--color-text)]">{merchantName}</p>
                 </div>
 
                 {/* Debit / Credit toggle */}
-                <div className="flex bg-gray-100 rounded-xl p-1">
+                <div className="flex bg-gray-100 dark:bg-gray-800 rounded-xl p-1">
                   <button
                     onClick={() => setEntryType("debit")}
                     className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       entryType === "debit"
-                        ? "bg-white text-[var(--color-danger)] shadow-sm"
-                        : "text-gray-500"
+                        ? "bg-[var(--color-surface)] text-[var(--color-danger)] shadow-sm"
+                        : "text-[var(--color-text-muted)]"
                     }`}
                   >
                     Credit Taken
@@ -1051,8 +1051,8 @@ export default function CustomerDashboard() {
                     onClick={() => setEntryType("credit")}
                     className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all ${
                       entryType === "credit"
-                        ? "bg-white text-[var(--color-primary)] shadow-sm"
-                        : "text-gray-500"
+                        ? "bg-[var(--color-surface)] text-[var(--color-primary)] shadow-sm"
+                        : "text-[var(--color-text-muted)]"
                     }`}
                   >
                     Payment
@@ -1068,7 +1068,7 @@ export default function CustomerDashboard() {
                     placeholder="0"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
-                    className="w-full mt-1 px-4 py-4 bg-white rounded-2xl text-3xl font-bold text-center border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                    className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-3xl font-bold text-center border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                     autoFocus
                   />
                   <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
@@ -1080,14 +1080,14 @@ export default function CustomerDashboard() {
                     placeholder="e.g. Rice 10kg, Milk 2L"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                    className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                   />
                 </div>
 
                 <div className="flex gap-3 pt-2">
                   <button
                     onClick={() => setScanStep("scan")}
-                    className="flex-1 py-3.5 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+                    className="flex-1 py-3.5 bg-gray-100 dark:bg-gray-800 text-[var(--color-text)] rounded-xl font-medium active:scale-[0.98] transition-transform"
                   >
                     Back
                   </button>
@@ -1109,8 +1109,8 @@ export default function CustomerDashboard() {
             {/* Step 3: Success */}
             {scanStep === "success" && (
               <div className="text-center py-4 space-y-6">
-                <div className="w-20 h-20 mx-auto rounded-full bg-green-50 flex items-center justify-center">
-                  <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <div className="w-20 h-20 mx-auto rounded-full bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                  <svg className="w-10 h-10 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
                 </div>
@@ -1144,11 +1144,11 @@ export default function CustomerDashboard() {
           className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowEditProfile(false); }}
         >
-          <div className="w-full max-w-sm bg-white rounded-3xl p-6 animate-slide-up shadow-2xl">
+          <div className="w-full max-w-sm bg-[var(--color-surface)] rounded-3xl p-6 animate-slide-up shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-bold text-lg text-[var(--color-text)]">Edit Profile</h2>
               <button onClick={() => setShowEditProfile(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1221,7 +1221,7 @@ export default function CustomerDashboard() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="w-full mt-1 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               </div>
               <div>
@@ -1230,7 +1230,7 @@ export default function CustomerDashboard() {
                   type="tel"
                   value={editPhone}
                   readOnly
-                  className="w-full mt-1 px-4 py-3 bg-gray-100 rounded-xl border border-gray-200 text-gray-500 cursor-not-allowed"
+                  className="w-full mt-1 px-4 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl border border-[var(--color-border)] text-[var(--color-text-muted)] cursor-not-allowed"
                 />
                 <p className="text-xs text-[var(--color-text-muted)] mt-1">
                   Phone number cannot be changed. Contact admin to update.
@@ -1270,13 +1270,13 @@ export default function CustomerDashboard() {
           onClick={() => setShowVoucherModal(false)}
         >
           <div
-            className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up"
+            className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl p-6 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-[var(--color-text)]">Upload Payment Voucher</h3>
               <button onClick={() => setShowVoucherModal(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1295,13 +1295,13 @@ export default function CustomerDashboard() {
                   value={voucherAmount}
                   onChange={(e) => setVoucherAmount(e.target.value)}
                   placeholder="e.g. 500"
-                  className="w-full px-4 py-3 bg-white rounded-xl text-lg font-bold border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl text-lg font-bold border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-1">Payment Screenshot</label>
-                <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer active:bg-gray-50 transition-colors">
+                <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-[var(--color-border)] rounded-xl cursor-pointer active:bg-gray-50 dark:bg-gray-800/50 transition-colors">
                   {voucherPreview ? (
                     <div className="relative w-full">
                       <img src={voucherPreview} alt="Voucher preview" className="w-full max-h-40 object-contain rounded-lg" />
@@ -1316,7 +1316,7 @@ export default function CustomerDashboard() {
                     </div>
                   ) : (
                     <>
-                      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <svg className="w-8 h-8 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                       </svg>
                       <p className="text-sm text-[var(--color-text-muted)]">Tap to upload screenshot</p>
@@ -1390,13 +1390,13 @@ export default function CustomerDashboard() {
           onClick={() => setShowPaymentMethods(false)}
         >
           <div
-            className="w-full max-w-md bg-white rounded-t-3xl p-6 animate-slide-up max-h-[80vh] overflow-y-auto"
+            className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl p-6 animate-slide-up max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-lg text-[var(--color-text)]">Pay {paymentMethodsMerchant.name}</h3>
               <button onClick={() => setShowPaymentMethods(false)} className="p-1">
-                <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
@@ -1416,7 +1416,7 @@ export default function CustomerDashboard() {
             ) : (
               <div className="space-y-3">
                 {paymentMethods.map((pm, i) => (
-                  <div key={i} className="bg-gray-50 rounded-xl p-4">
+                  <div key={i} className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-4">
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-lg">
                         {pm.method_type === "fonepay" ? "🏦" :
@@ -1446,14 +1446,14 @@ export default function CustomerDashboard() {
                           <img
                             src={pm.qr_url}
                             alt={`${pm.label || pm.method_type} QR code - tap to enlarge`}
-                            className="w-32 h-32 object-contain rounded-lg border border-gray-200 bg-white group-hover:border-[var(--color-primary)]/40 group-hover:shadow-md transition-all"
+                            className="w-32 h-32 object-contain rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] group-hover:border-[var(--color-primary)]/40 group-hover:shadow-md transition-all"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = "none";
                               const fallback = (e.target as HTMLImageElement).nextElementSibling;
                               if (fallback) (fallback as HTMLElement).style.display = "flex";
                             }}
                           />
-                          <div className="hidden w-32 h-32 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
+                          <div className="hidden w-32 h-32 items-center justify-center rounded-lg border border-dashed border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50">
                             <span className="text-xs text-[var(--color-text-muted)]">Image unavailable</span>
                           </div>
                           <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg">
@@ -1482,7 +1482,7 @@ export default function CustomerDashboard() {
                         );
                         addToast("Copied!", "success");
                       }}
-                      className="mt-2 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.97] transition-transform"
+                      className="mt-2 px-3 py-1.5 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-xs font-medium text-[var(--color-text)] active:scale-[0.97] transition-transform"
                     >
                       Copy Details
                     </button>
@@ -1518,9 +1518,9 @@ export default function CustomerDashboard() {
           {/* QR code container */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-[90vw] max-h-[85vh] bg-white rounded-2xl shadow-2xl p-4 animate-scale-up flex flex-col items-center"
+            className="relative max-w-[90vw] max-h-[85vh] bg-[var(--color-surface)] rounded-2xl shadow-2xl p-4 animate-scale-up flex flex-col items-center"
           >
-            <p className="text-sm font-semibold text-gray-700 mb-3 text-center">{qrPreviewLabel}</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 text-center">{qrPreviewLabel}</p>
             <img
               src={qrPreviewUrl}
               alt={`${qrPreviewLabel} QR code - full size`}
@@ -1531,10 +1531,10 @@ export default function CustomerDashboard() {
                 if (fallback) (fallback as HTMLElement).style.display = "flex";
               }}
             />
-            <div className="hidden w-48 h-48 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50">
-              <span className="text-sm text-gray-400">Failed to load QR image</span>
+            <div className="hidden w-48 h-48 items-center justify-center rounded-lg border border-dashed border-[var(--color-border)] bg-gray-50 dark:bg-gray-800/50">
+              <span className="text-sm text-[var(--color-text-muted)]">Failed to load QR image</span>
             </div>
-            <p className="text-xs text-gray-400 mt-3 text-center">Scan this code with another device to pay</p>
+            <p className="text-xs text-[var(--color-text-muted)] mt-3 text-center">Scan this code with another device to pay</p>
           </div>
 
           {/* Keyboard hint */}
