@@ -178,7 +178,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
   );
 
   return (
-    <div className="fixed inset-0 z-[70] bg-white flex flex-col items-center justify-center px-6">
+    <div className="fixed inset-0 z-[70] bg-white dark:bg-gray-900 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-xs space-y-6">
         <div className="text-center">
           <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-[var(--color-primary)]/10 flex items-center justify-center">
@@ -199,7 +199,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
         {step === "pin" && (
           <>
             {renderDots(pin, setPin, pinRefs, "PIN")}
-            {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
+            {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
             <button
               onClick={handlePinSubmit}
               disabled={pinArrToString(pin).length < 4 || loading}
@@ -216,7 +216,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
           <>
             {renderDots(newPin, setNewPin, newPinRefs, "New PIN")}
             {renderDots(confirmPin, setConfirmPin, newPinRefs, "Confirm PIN")}
-            {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
+            {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
             <button
               onClick={handleSetPin}
               disabled={pinArrToString(newPin).length < 4 || pinArrToString(confirmPin).length < 4 || loading}
@@ -230,7 +230,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
         )}
 
         {onSignOut && (
-          <button onClick={onSignOut} className="w-full text-center text-xs text-gray-400 active:text-red-500">
+          <button onClick={onSignOut} className="w-full text-center text-xs text-gray-400 dark:text-gray-500 active:text-red-500 dark:active:text-red-400">
             Sign out
           </button>
         )}
