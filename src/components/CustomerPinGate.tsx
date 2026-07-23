@@ -164,12 +164,13 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
             ref={(el) => { refs.current[i] = el; }}
             type="tel"
             inputMode="numeric"
+            pattern="[0-9]*"
             maxLength={1}
             value={d}
             onChange={(e) => handleDigit(e.target.value, i, arr, setter, refs)}
             onKeyDown={(e) => handleKeyDown(e, i, arr, setter, refs)}
             onFocus={(e) => e.target.select()}
-            className="w-14 h-14 text-center text-2xl font-bold bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+            className="w-14 h-14 text-center text-2xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
           />
         ))}
       </div>

@@ -816,12 +816,13 @@ export default function LoginPage() {
             ref={(el) => { refs.current[i] = el; }}
             type="tel"
             inputMode="numeric"
+            pattern="[0-9]*"
             maxLength={1}
             value={d}
             onChange={(e) => handlePinDigit(e.target.value, i, pinArr, setter, refs, autoSubmit)}
             onKeyDown={(e) => handlePinKeyDown(e, i, pinArr, setter, refs)}
             onFocus={(e) => e.target.select()}
-            className="w-14 h-14 text-center text-2xl font-bold bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+            className="w-14 h-14 text-center text-2xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
           />
         ))}
       </div>
@@ -1096,20 +1097,20 @@ export default function LoginPage() {
           <div>
             <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
             <div className="flex mt-1">
-              <span className="px-3 py-3 bg-gray-100 rounded-l-xl text-sm font-medium text-gray-500 border border-r-0 border-gray-100">+977</span>
+              <span className="px-3 py-3 bg-gray-100 dark:bg-gray-800 rounded-l-xl text-sm font-medium text-gray-500 dark:text-gray-400 border border-r-0 border-gray-100 dark:border-gray-700">+977</span>
               <input
                 type="tel"
                 placeholder="9841234567"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                className="flex-1 px-4 py-3 bg-white rounded-r-xl text-lg font-mono border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+                className="flex-1 px-4 py-3 bg-[var(--color-surface)] rounded-r-xl text-lg font-mono border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
                 maxLength={10}
               />
             </div>
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
+            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>
           )}
           {phoneErrorAction && (
             <button
@@ -1154,7 +1155,10 @@ export default function LoginPage() {
             <label className="text-sm font-medium text-[var(--color-text)]">Enter OTP</label>
             <input
               ref={otpRef}
-              type="text"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
               placeholder="4-6 digit code"
               value={otp}
               onChange={(e) => {
@@ -1167,13 +1171,13 @@ export default function LoginPage() {
                   }
                 });
               }}
-              className="w-full mt-1 px-4 py-3 bg-white rounded-xl text-2xl font-mono text-center border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none tracking-widest"
+              className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl text-2xl font-mono text-center border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none tracking-widest"
               maxLength={6}
             />
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button
@@ -1213,7 +1217,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button
@@ -1244,7 +1248,10 @@ export default function LoginPage() {
             <label className="text-sm font-medium text-[var(--color-text)]">Enter OTP</label>
             <input
               ref={otpRef}
-              type="text"
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
               placeholder="4-6 digit code"
               value={otp}
               onChange={(e) => {
@@ -1257,7 +1264,7 @@ export default function LoginPage() {
                   }
                 });
               }}
-              className="w-full mt-1 px-4 py-3 bg-white rounded-xl text-2xl font-mono text-center border border-gray-100 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none tracking-widest"
+              className="w-full mt-1 px-4 py-3 bg-[var(--color-surface)] rounded-xl text-2xl font-mono text-center border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none tracking-widest"
               maxLength={6}
             />
           </div>
@@ -1269,7 +1276,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm px-4 py-2 rounded-xl">{error}</div>
+            <div className="bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400 text-sm px-4 py-2 rounded-xl">{error}</div>
           )}
 
           <button

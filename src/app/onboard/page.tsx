@@ -143,7 +143,7 @@ export default function OnboardPage() {
               placeholder="9841234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-              className="w-full px-4 py-3 bg-white rounded-xl text-lg font-mono border border-gray-200 text-center focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+              className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl text-lg font-mono border border-[var(--color-border)] text-center focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               maxLength={10}
             />
             {error && <p className="text-sm text-red-500">{error}</p>}
@@ -161,12 +161,14 @@ export default function OnboardPage() {
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-text-muted)]">Enter the OTP sent to +977{phone}</p>
             <input
-              type="text"
+              type="tel"
               inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
               placeholder="000000"
               value={otp}
               onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-              className="w-full px-4 py-3 bg-white rounded-xl text-2xl font-mono text-center tracking-[0.5em] border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
+              className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl text-2xl font-mono text-center tracking-[0.5em] border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
               maxLength={6}
               autoFocus
             />
@@ -183,11 +185,11 @@ export default function OnboardPage() {
               <button
                 onClick={handleResendOtp}
                 disabled={resendCooldown > 0 || loading}
-                className="text-sm font-medium text-[var(--color-primary)] active:opacity-70 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="text-sm font-medium text-[var(--color-primary)] active:opacity-70 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed transition-colors"
               >
                 {resendCooldown > 0 ? `Resend OTP (${resendCooldown}s)` : "Resend OTP"}
               </button>
-              <span className="text-gray-200">|</span>
+              <span className="text-gray-200 dark:text-gray-600">|</span>
               <button
                 onClick={handleChangePhone}
                 className="text-sm text-[var(--color-text-muted)] underline active:opacity-70"

@@ -198,7 +198,7 @@ export default function RegisterPage() {
 
         {/* Step: Phone */}
         {step === "phone" && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 space-y-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 shadow-sm border border-[var(--color-border)] space-y-4">
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Phone Number</label>
               <div className="flex items-center gap-2 mt-1">
@@ -229,7 +229,7 @@ export default function RegisterPage() {
 
         {/* Step: OTP */}
         {step === "otp" && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 space-y-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 shadow-sm border border-[var(--color-border)] space-y-4">
             <div className="flex justify-center gap-2">
               {otp.map((digit, idx) => (
                 <input
@@ -237,11 +237,13 @@ export default function RegisterPage() {
                   ref={(el) => { otpRefs.current[idx] = el; }}
                   type="tel"
                   inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="one-time-code"
                   maxLength={1}
                   value={digit}
                   onChange={(e) => handleOtpDigit(e.target.value, idx)}
                   onKeyDown={(e) => handleOtpKeyDown(e, idx)}
-                  className="w-12 h-14 text-center text-xl font-bold bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+                  className="w-12 h-14 text-center text-xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               ))}
             </div>
@@ -264,7 +266,7 @@ export default function RegisterPage() {
 
         {/* Step: Profile */}
         {step === "profile" && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-50 space-y-4">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-6 shadow-sm border border-[var(--color-border)] space-y-4">
             <div>
               <label className="text-sm font-medium text-[var(--color-text)]">Your Name *</label>
               <input
