@@ -35,17 +35,17 @@ interface HistoryEntry {
 }
 
 const statusConfig = {
-  pending: { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
-  unverified: { bg: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
-  approved: { bg: "bg-green-50 text-green-700 border-green-200", dot: "bg-green-500" },
-  rejected: { bg: "bg-slate-50 text-slate-500 border-slate-200", dot: "bg-slate-400" },
-  disputed: { bg: "bg-purple-50 text-purple-700 border-purple-200", dot: "bg-purple-500" },
+  pending: { bg: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
+  unverified: { bg: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
+  approved: { bg: "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800", dot: "bg-green-500" },
+  rejected: { bg: "bg-slate-50 dark:bg-slate-900/20 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700", dot: "bg-slate-400 dark:bg-slate-500" },
+  disputed: { bg: "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800", dot: "bg-purple-500" },
 } as const;
 
 function getStatusConfig(status: string) {
   return statusConfig[status as keyof typeof statusConfig] || {
-    bg: "bg-gray-50 text-gray-600 border-gray-200",
-    dot: "bg-gray-400",
+    bg: "bg-gray-50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-600",
+    dot: "bg-gray-400 dark:bg-gray-500",
   };
 }
 
@@ -244,7 +244,7 @@ export default function CustomerHistoryPage() {
     <CustomerPinGate phone={customerPhone || ""} onUnlocked={() => {}} onSignOut={handleSignOut}>
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="sticky top-0 z-40 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-700">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center">
             <a href="/customer/dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
@@ -258,7 +258,7 @@ export default function CustomerHistoryPage() {
           </div>
           <button
             onClick={handleSignOut}
-            className="text-xs text-[var(--color-text-muted)] px-2.5 py-1.5 rounded-lg hover:bg-gray-100 active:scale-95 transition-all"
+            className="text-xs text-[var(--color-text-muted)] px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-all"
           >
             Sign Out
           </button>
@@ -279,13 +279,13 @@ export default function CustomerHistoryPage() {
               className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-all ${
                 filter === tab.key
                   ? "bg-[var(--color-primary)] text-white shadow-sm"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
               }`}
             >
               {tab.label}
               {tab.count > 0 && (
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  filter === tab.key ? "bg-white/20" : "bg-gray-200 text-gray-500"
+                  filter === tab.key ? "bg-white/20" : "bg-gray-200 dark:bg-gray-700 text-[var(--color-text-muted)]"
                 }`}>
                   {tab.count}
                 </span>
@@ -299,20 +299,20 @@ export default function CustomerHistoryPage() {
       {!loading && (stats.pending > 0 || stats.unverified > 0) && (
         <a
           href="/customer/dashboard"
-          className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100 active:bg-amber-100 transition-colors"
+          className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 active:bg-amber-100 dark:active:bg-amber-900/30 transition-colors"
         >
-          <div className="w-6 h-6 rounded-full bg-amber-200 flex items-center justify-center flex-shrink-0">
-            <svg className="w-3.5 h-3.5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <div className="w-6 h-6 rounded-full bg-amber-200 dark:bg-amber-700 flex items-center justify-center flex-shrink-0">
+            <svg className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <span className="text-sm font-medium text-amber-800 flex-1 text-left">
+          <span className="text-sm font-medium text-amber-800 dark:text-amber-300 flex-1 text-left">
             {stats.pending > 0 && `${stats.pending} pending`}
             {stats.pending > 0 && stats.unverified > 0 && " · "}
             {stats.unverified > 0 && `${stats.unverified} unverified`}
             {' — review needed'}
           </span>
-          <svg className="w-4 h-4 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </a>
@@ -327,8 +327,8 @@ export default function CustomerHistoryPage() {
           </div>
         ) : logs.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-50 flex items-center justify-center">
-              <svg className="w-10 h-10 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-50 dark:bg-gray-800/50 flex items-center justify-center">
+              <svg className="w-10 h-10 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -343,7 +343,7 @@ export default function CustomerHistoryPage() {
             <div className="flex gap-3 justify-center mt-4">
               <a
                 href="/customer/dashboard"
-                className="px-5 py-2.5 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
+                className="px-5 py-2.5 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -383,16 +383,16 @@ export default function CustomerHistoryPage() {
                           timeZone: "Asia/Kathmandu",
                         })}
                       </span>
-                      <div className="flex-1 h-px bg-gray-100" />
+                      <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
                     </div>
                   )}
 
                   {/* Transaction card */}
-                  <div className={`bg-white rounded-xl p-4 shadow-sm border border-gray-50 active:scale-[0.99] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}>
+                  <div className={`bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-gray-50 dark:border-gray-700 active:scale-[0.99] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}>
                     <div className="flex items-start gap-3">
                       {/* Type icon */}
-                      <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50" : "bg-green-50"}`}>
-                        <TransactionIcon type={log.type} size={18} className={log.type === "debit" ? "text-red-600" : "text-green-600"} />
+                      <div className={`relative w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-50 dark:bg-red-900/20" : "bg-green-50 dark:bg-green-900/20"}`}>
+                        <TransactionIcon type={log.type} size={18} className={log.type === "debit" ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"} />
                         {new Date(log.created_at).getTime() > lastSeenAt && (
                           <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[var(--color-primary)] border-2 border-white text-[6px] font-bold text-white flex items-center justify-center">N</span>
                         )}
@@ -413,7 +413,7 @@ export default function CustomerHistoryPage() {
                           {log.description || "No description"}
                         </p>
                         <div className="flex items-center gap-2 mt-1.5">
-                          <svg className="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <svg className="w-3 h-3 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <p className="text-[10px] text-[var(--color-text-muted)]">
@@ -433,8 +433,8 @@ export default function CustomerHistoryPage() {
                           log.status === "rejected"
                             ? "text-slate-400 line-through"
                             : log.type === "debit"
-                              ? "text-red-600"
-                              : "text-green-600"
+                              ? "text-red-600 dark:text-red-400"
+                              : "text-green-600 dark:text-green-400"
                         }`}>
                           Rs. {log.amount.toLocaleString()}
                         </p>
@@ -445,7 +445,7 @@ export default function CustomerHistoryPage() {
                     </div>
 
                     {log.status === "pending" && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <button
                           onClick={() =>
                             setEditModal({
@@ -454,7 +454,7 @@ export default function CustomerHistoryPage() {
                               description: log.description || "",
                             })
                           }
-                          className="flex-1 py-2 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98]"
                         >
                           Edit
                         </button>
@@ -464,7 +464,7 @@ export default function CustomerHistoryPage() {
                             addToast("Entry cancelled.", "info");
                             loadLogs();
                           }}
-                          className="flex-1 py-2 bg-red-50 text-red-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium active:scale-[0.98]"
                         >
                           Cancel
                         </button>
@@ -472,14 +472,14 @@ export default function CustomerHistoryPage() {
                     )}
 
                     {log.status === "unverified" && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50">
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <button
                           onClick={async () => {
                             await disputeEntry(log.id);
                             addToast("Entry disputed. Merchant notified.", "warning");
                             loadLogs();
                           }}
-                          className="flex-1 py-2 bg-orange-50 text-orange-600 rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-medium active:scale-[0.98]"
                         >
                           Dispute
                         </button>
@@ -510,7 +510,7 @@ export default function CustomerHistoryPage() {
       {editModal && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end justify-center" onClick={() => setEditModal(null)}>
           <div
-            className="bg-white rounded-t-2xl w-full max-w-md p-6 animate-slide-up"
+            className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-md p-6 animate-slide-up"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-lg font-bold text-[var(--color-text)] mb-4">Edit Entry</h2>
@@ -521,7 +521,7 @@ export default function CustomerHistoryPage() {
               step="1"
               value={editModal.amount}
               onChange={(e) => setEditModal({ ...editModal, amount: Number(e.target.value) })}
-              className="w-full mt-1 mb-3 px-4 py-3 bg-white rounded-xl text-lg font-bold border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+              className="w-full mt-1 mb-3 px-4 py-3 bg-[var(--color-surface)] rounded-xl text-lg font-bold border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
             />
             <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
             <input
@@ -529,12 +529,12 @@ export default function CustomerHistoryPage() {
               value={editModal.description}
               onChange={(e) => setEditModal({ ...editModal, description: e.target.value })}
               placeholder="e.g. Rice 10kg, Milk 2L"
-              className="w-full mt-1 mb-4 px-4 py-3 bg-white rounded-xl border border-gray-200 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
+              className="w-full mt-1 mb-4 px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
             />
             <div className="flex gap-3">
               <button
                 onClick={() => setEditModal(null)}
-                className="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium active:scale-[0.98] transition-transform"
+                className="flex-1 py-3 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform"
               >
                 Cancel
               </button>
