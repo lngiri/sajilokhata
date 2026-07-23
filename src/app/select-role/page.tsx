@@ -54,7 +54,7 @@ export default function SelectRolePage() {
       <div className="w-full max-w-sm space-y-4">
         <button
           onClick={() => router.push("/merchant/dashboard")}
-          className="w-full p-6 rounded-xl border-2 border-[var(--color-primary)]/20 bg-white hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all text-left"
+          className="w-full p-6 rounded-xl border-2 border-[var(--color-primary)]/20 bg-[var(--color-surface)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5 transition-all text-left"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
@@ -63,15 +63,15 @@ export default function SelectRolePage() {
               </svg>
             </div>
             <div>
-              <p className="text-base font-semibold text-gray-900">Merchant View</p>
-              <p className="text-sm text-gray-500">Manage your shop, track sales, and view reports</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Merchant View</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Manage your shop, track sales, and view reports</p>
             </div>
           </div>
         </button>
 
         <button
           onClick={() => router.push("/customer/dashboard")}
-          className="w-full p-6 rounded-xl border-2 border-[var(--color-primary)]/20 bg-white hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5/50 transition-all text-left"
+          className="w-full p-6 rounded-xl border-2 border-[var(--color-primary)]/20 bg-[var(--color-surface)] hover:border-[var(--color-primary)] hover:bg-[var(--color-primary)]/5/50 transition-all text-left"
         >
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/50/10 flex items-center justify-center">
@@ -81,8 +81,8 @@ export default function SelectRolePage() {
               </svg>
             </div>
             <div>
-              <p className="text-base font-semibold text-gray-900">Customer View</p>
-              <p className="text-sm text-gray-500">View your transaction history and manage account</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-gray-100">Customer View</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">View your transaction history and manage account</p>
             </div>
           </div>
         </button>
