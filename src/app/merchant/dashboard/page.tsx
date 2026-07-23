@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import BottomNav from "@/components/BottomNav";
-import SyncStatus from "@/components/SyncStatus";
+
 import SmsReminderModal from "@/components/SmsReminderModal";
 import PullToRefresh from "@/components/PullToRefresh";
 import MerchantOnboardingModal from "@/components/MerchantOnboardingModal";
@@ -33,14 +33,6 @@ import OtherRolePrompt from "@/components/OtherRolePrompt";
 import LogoWithAbout from "@/components/LogoWithAbout";
 
 /** Polling interval for auto-refreshing pending approvals (in ms) */
-/** Get a friendly time-based greeting */
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
-}
-
 const POLL_INTERVAL = 300_000;
 
 /** Format a timestamp as a relative time string (e.g. "2 min ago") */
@@ -114,6 +106,7 @@ export default function MerchantDashboard() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [topReceivables, setTopReceivables] = useState<Array<{
     customer_id: string;
     customer_name: string | null;
@@ -255,6 +248,19 @@ export default function MerchantDashboard() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [loadData]);
+
+  // Track online status for avatar indicator
+  useEffect(() => {
+    setIsOnline(navigator.onLine);
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
 
   // Close notification dropdown on click outside (mobile & desktop)
   useEffect(() => {
@@ -433,88 +439,83 @@ export default function MerchantDashboard() {
       <div className="pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <LogoWithAbout size={36} showAnimation={false} />
+        <div className="flex items-center justify-between px-3 py-2.5 min-h-[56px]">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <LogoWithAbout size={32} showAnimation={false} />
             <button
               onClick={handleBrandingRefresh}
               className="text-left active:scale-95 transition-transform min-w-0"
             >
-              <div className="min-w-0">
-                <h1 className="text-base font-bold text-[var(--color-text)] truncate leading-tight">
-                  {getGreeting()}, {merchantProfile?.name?.split(" ")[0] || "there"} 👋
-                </h1>
-                <p className="text-[10px] text-[var(--color-primary)] truncate leading-tight flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block" />
-                  {merchantProfile?.business_name?.trim() || merchantProfile?.name || "Shop"}{merchantProfile?.address ? ` · ${merchantProfile.address}` : ""}
-                </p>
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-[var(--color-text)] truncate max-w-[180px] sm:max-w-[260px] leading-tight">
+                  {merchantProfile?.business_name?.trim() || merchantProfile?.name || "Shop"}
+                </span>
+                <RoleSwitcher compact />
               </div>
+              {merchantProfile?.address && (
+                <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight mt-0.5">
+                  {merchantProfile.address}
+                </p>
+              )}
             </button>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            {isRefreshing ? (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                <span className="text-[10px] font-medium text-blue-600">Syncing...</span>
+          <div className="flex items-center gap-0 flex-shrink-0">
+            <a
+              href="/merchant/billing"
+              className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform"
+              aria-label={`${smsBalance ?? 0} SMS credits`}
+            >
+              <div className="flex items-center gap-1 px-2 py-1.5 bg-[var(--color-primary)]/5 text-[var(--color-primary-dark)] rounded-full text-[10px] font-semibold border border-[var(--color-primary)]/20">
+                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
+                </svg>
+                {smsBalance ?? 0}
               </div>
-            ) : (
-              <>
-                {merchantProfile && (
-                  <button
-                    onClick={() => setShowProfileMenu(true)}
-                    className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden flex-shrink-0"
-                  >
-                    {merchantProfile.photo_url ? (
-                      <img
-                        src={merchantProfile.photo_url}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      (merchantProfile.name || "S").charAt(0).toUpperCase()
-                    )}
-                  </button>
+            </a>
+            <div ref={notificationRef}>
+              <button
+                onClick={() => {
+                  setShowNotifications(!showNotifications);
+                  if (!showNotifications && merchantId) {
+                    markAsRead(merchantId, "merchant").then(() => {
+                      setUnreadNotifCount(0);
+                      loadNotifications();
+                    }).catch(() => {});
+                  }
+                }}
+                className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
+                aria-label="Notifications"
+              >
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+                {unreadNotifCount > 0 && (
+                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+                    {unreadNotifCount}
+                  </span>
                 )}
-                <a
-                  href="/merchant/billing"
-                  className="flex items-center gap-1 px-2.5 py-1.5 bg-[var(--color-primary)]/5 text-[var(--color-primary-dark)] rounded-full text-[10px] font-semibold border border-[var(--color-primary)]/20 active:scale-95 transition-transform"
-                >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
-                  </svg>
-                  {smsBalance ?? 0} SMS
-                </a>
-                <div ref={notificationRef}>
-                  <button
-                    onClick={() => {
-                      setShowNotifications(!showNotifications);
-                      if (!showNotifications && merchantId) {
-                        markAsRead(merchantId, "merchant").then(() => {
-                          setUnreadNotifCount(0);
-                          loadNotifications();
-                        }).catch(() => {});
-                      }
-                    }}
-                    className="p-1.5 active:scale-90 transition-transform relative"
-                  >
-                    <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-                    </svg>
-                    {unreadNotifCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
-                        {unreadNotifCount}
-                      </span>
-                    )}
-                    {unreadNotifCount === 0 && pendingLogs.length > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
-                        {pendingLogs.length}
-                      </span>
-                    )}
-                  </button>
+                {unreadNotifCount === 0 && pendingLogs.length > 0 && (
+                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
+                    {pendingLogs.length}
+                  </span>
+                )}
+              </button>
+            </div>
+            {merchantProfile && (
+              <button
+                onClick={() => setShowProfileMenu(true)}
+                className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
+                aria-label="Profile"
+              >
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
+                  {merchantProfile.photo_url ? (
+                    <img src={merchantProfile.photo_url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (merchantProfile.name || "S").charAt(0).toUpperCase()
+                  )}
                 </div>
-                <SyncStatus />
-                <RoleSwitcher />
-              </>
+                <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg)] ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
+              </button>
             )}
           </div>
         </div>

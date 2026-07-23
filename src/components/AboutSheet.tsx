@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useCallback, useRef, useLayoutEffect } from "react";
+import { useEffect, useCallback, useRef, useLayoutEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { APP_VERSION } from "@/lib/version";
 import AppLogo from "./AppLogo";
@@ -38,6 +39,12 @@ export default function AboutSheet({ open, onClose }: Props) {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [open, onClose]);
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +95,7 @@ export default function AboutSheet({ open, onClose }: Props) {
     }
   }, []);
 
-  return (
+  const sheet = (
     <AnimatePresence>
       {open && (
         <motion.div
@@ -96,7 +103,7 @@ export default function AboutSheet({ open, onClose }: Props) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 bg-black/40"
+          className="fixed inset-0 z-[100] bg-black/40"
           onClick={onClose}
         >
           <motion.div
@@ -219,4 +226,8 @@ export default function AboutSheet({ open, onClose }: Props) {
       )}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+
+  return createPortal(sheet, document.body);
 }

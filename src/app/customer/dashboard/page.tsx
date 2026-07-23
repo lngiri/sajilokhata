@@ -1,15 +1,6 @@
 "use client";
-/** Get a friendly time-based greeting */
-function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good Morning";
-  if (hour < 17) return "Good Afternoon";
-  return "Good Evening";
-}
-
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import SyncStatus from "@/components/SyncStatus";
 import PullToRefresh from "@/components/PullToRefresh";
 import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
@@ -116,6 +107,7 @@ export default function CustomerDashboard() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
+  const [onlineStatus, setOnlineStatus] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
@@ -151,6 +143,18 @@ export default function CustomerDashboard() {
     });
 
   // On mount, restore customer session from localStorage (with cookie fallback)
+  useEffect(() => {
+    setOnlineStatus(navigator.onLine);
+    const goOnline = () => setOnlineStatus(true);
+    const goOffline = () => setOnlineStatus(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -584,20 +588,23 @@ export default function CustomerDashboard() {
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            <LogoWithAbout size={36} showAnimation={false} />
-            <div>
-              <h1 className="text-base font-bold text-[var(--color-text)]">{getGreeting()}, {customerName?.split(" ")[0] || "there"} 👋</h1>
-              <p className="text-[10px] text-[var(--color-primary)] flex items-center gap-1">
+        <div className="flex items-center justify-between px-3 py-2.5 min-h-[56px]">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <LogoWithAbout size={32} showAnimation={false} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-sm font-bold text-[var(--color-text)] truncate max-w-[160px] sm:max-w-[240px] leading-tight">
+                  {customerName || "Customer"}
+                </span>
+                <RoleSwitcher compact />
+              </div>
+              <p className="text-[10px] text-[var(--color-primary)] truncate leading-tight mt-0.5 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] inline-block" />
                 QR Hisab &middot; Active
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <SyncStatus />
-            <RoleSwitcher />
+          <div className="flex items-center gap-0 flex-shrink-0">
             <div ref={customerNotificationRef}>
               <button
                 onClick={() => {
@@ -609,18 +616,19 @@ export default function CustomerDashboard() {
                     }).catch(() => {});
                   }
                 }}
-                className="p-1.5 active:scale-90 transition-transform relative"
+                className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
+                aria-label="Notifications"
               >
                 <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
                 </svg>
                 {unreadNotifCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
+                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-blue-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1">
                     {unreadNotifCount}
                   </span>
                 )}
                 {unreadNotifCount === 0 && (stats?.pendingCount ?? 0) > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
+                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
                     {stats?.pendingCount}
                   </span>
                 )}
@@ -629,13 +637,17 @@ export default function CustomerDashboard() {
             {customerPhone && (
               <button
                 onClick={() => setShowProfileMenu(true)}
-                className="w-7 h-7 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm active:scale-90 transition-transform overflow-hidden"
+                className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
+                aria-label="Profile"
               >
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  (customerName || customerPhone).charAt(0).toUpperCase()
-                )}
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    (customerName || customerPhone).charAt(0).toUpperCase()
+                  )}
+                </div>
+                <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg)] ${onlineStatus ? "bg-green-500" : "bg-red-500"}`} />
               </button>
             )}
           </div>
