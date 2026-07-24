@@ -8,10 +8,10 @@ import { clearIndexedDB } from "@/lib/offline/db";
  * Get the current merchant ID.
  *
  * Preference order:
- *  1. localStorage (set by the custom login flow — source of truth)
+ *  1. localStorage (set by the custom login flow â€” source of truth)
  *  2. Supabase Auth session (legacy users before custom-auth migration)
  *
- * NEVER overwrites localStorage — that would create a cross-session leak
+ * NEVER overwrites localStorage â€” that would create a cross-session leak
  * if a stale Supabase session returns a different userId.
  */
 export async function getCurrentMerchantId(): Promise<string | null> {
@@ -73,7 +73,7 @@ export async function getCurrentUserPhone(): Promise<string | null> {
  */
 export async function signOut() {
   try {
-    // 1. Supabase signout (fire-and-forget — must not block redirect)
+    // 1. Supabase signout (fire-and-forget â€” must not block redirect)
     try {
       const supabase = createClient();
       supabase.auth.signOut().catch(() => {});
@@ -82,29 +82,10 @@ export async function signOut() {
     }
     clearCachedClient();
 
-    // 2. Preserve essential app config
+    // 2. Preserve essential app config only — do NOT save last session info
+    //    so the user gets a fresh login form after signing out
     const swVersion = localStorage.getItem("sw_version");
     const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
-
-    // 2b. Save last session info for quick re-login after sign-out
-    const lastMerchantPhone = localStorage.getItem("merchant_phone");
-    const lastCustomerSessionRaw = localStorage.getItem("sajilo_customer_session");
-    let lastSessionInfo: string | null = null;
-    try {
-      if (lastMerchantPhone) {
-        let isDualRole = false;
-        if (lastCustomerSessionRaw) {
-          const parsed = JSON.parse(lastCustomerSessionRaw);
-          isDualRole = !!parsed?.phone;
-        }
-        lastSessionInfo = JSON.stringify({ phone: lastMerchantPhone, isDualRole });
-      } else if (lastCustomerSessionRaw) {
-        const parsed = JSON.parse(lastCustomerSessionRaw);
-        if (parsed?.phone) {
-          lastSessionInfo = JSON.stringify({ phone: parsed.phone, isDualRole: false });
-        }
-      }
-    } catch { /* ignore parse errors */ }
 
     // 3. Wipe all client-side storage
     localStorage.clear();
@@ -113,8 +94,7 @@ export async function signOut() {
     // 4. Restore app config
     if (swVersion) localStorage.setItem("sw_version", swVersion);
     if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
-    if (lastSessionInfo) localStorage.setItem("qr_hisab_last_session", lastSessionInfo);
-    // Fire-and-forget: don't await — redirect must not be blocked
+    // Fire-and-forget: don't await â€” redirect must not be blocked
     clearIndexedDB().catch(() => {});
 
     // 5. Clear client-accessible cookies
@@ -133,7 +113,7 @@ export async function signOut() {
       navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
     }
   } catch {
-    // Ignore — proceed to redirect regardless
+    // Ignore â€” proceed to redirect regardless
   }
 
   // 8. LAST: Redirect to server-side signout which clears httpOnly session cookie

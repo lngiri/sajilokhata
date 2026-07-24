@@ -9,10 +9,9 @@ export async function GET() {
 
   const pastDate = new Date(0);
   const cookieDomain = process.env.COOKIE_DOMAIN;
-  console.log("[Signout] Clearing cookies. COOKIE_DOMAIN:", cookieDomain);
 
-  // Known cookies to clear — explicit names ensure the browser removes them
-  const cookiesToClear = [SESSION_COOKIE, ADMIN_SESSION_COOKIE, "auth_bypass", "auth_bypass_phone", "customer_session"];
+  // Known cookies to clear - explicit names ensure the browser removes them
+  const cookiesToClear = [SESSION_COOKIE, ADMIN_SESSION_COOKIE, "auth_bypass", "auth_bypass_phone", "customer_session", "otp_code", "otp_phone"];
 
   for (const name of cookiesToClear) {
     // Clear without domain (matches cookies set on the exact hostname)
@@ -20,6 +19,8 @@ export async function GET() {
       path: "/",
       expires: pastDate,
       maxAge: 0,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
     });
     // Clear with COOKIE_DOMAIN (matches cookies set with .qrhisab.com)
     if (cookieDomain) {
@@ -28,6 +29,8 @@ export async function GET() {
         expires: pastDate,
         maxAge: 0,
         domain: cookieDomain,
+        sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
       });
     }
   }
