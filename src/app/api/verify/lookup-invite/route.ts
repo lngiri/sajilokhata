@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
           id, customer_id, merchant_id, phone, expires_at, created_at, status,
           merchants!inner(business_name, name)
         `)
-        .eq("invite_token", inviteId)
+        .eq("id", inviteId)
         .not("status", "in", '("registration_completed","cancelled","expired")')
         .gt("expires_at", new Date().toISOString())
         .order("created_at", { ascending: false })

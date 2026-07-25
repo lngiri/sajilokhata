@@ -140,7 +140,6 @@ export async function addCustomerForMerchant(
   customer?: { id: string; name: string | null; phone: string };
   smsSent?: boolean;
   smsError?: string;
-  inviteToken?: string;
   smsStatus?: "pending" | "sms_sent" | "sms_failed";
 }> {
   const admin = getAdminClient();
@@ -192,7 +191,7 @@ export async function addCustomerForMerchant(
 
     // 4. Check for existing active invite (duplicate protection)
     const { data: rawExistingInvite } = await (admin.from("customer_invites") as any)
-      .select("id, status, resend_count, last_resent_at, invite_token, expires_at")
+      .select("id, status, resend_count, last_resent_at, expires_at")
       .eq("phone", normalized)
       .eq("merchant_id", merchantId)
       .is("used_at", null)
@@ -205,7 +204,6 @@ export async function addCustomerForMerchant(
       status: string;
       resend_count: number;
       last_resent_at: string | null;
-      invite_token: string;
       expires_at: string;
     } | null;
 
@@ -214,7 +212,6 @@ export async function addCustomerForMerchant(
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     let inviteId: string;
-    let inviteToken: string;
 
     if (existingInvite) {
       const activeStatuses = ["pending", "sms_sent"];
@@ -237,7 +234,6 @@ export async function addCustomerForMerchant(
         }
         // Reuse existing invite — update OTP, reset status
         inviteId = existingInvite.id;
-        inviteToken = existingInvite.invite_token;
         await (admin.from("customer_invites") as any)
           .update({
             otp,
@@ -255,7 +251,7 @@ export async function addCustomerForMerchant(
         return { success: false, error: "This invitation is already being processed." };
       }
     } else {
-      // 5. Create new invite with invite_token
+      // 5. Create new invite (id serves as external-facing invite token)
       const { data: insertedInvite, error: inviteError } = await (admin.from("customer_invites") as any)
         .insert({
           customer_id: customer.id,
@@ -265,13 +261,12 @@ export async function addCustomerForMerchant(
           expires_at: expiresAt,
           status: "pending",
         })
-        .select("id, invite_token")
+        .select("id")
         .single();
       if (inviteError) {
         return { success: false, error: `Invite error: ${inviteError.message}` };
       }
       inviteId = insertedInvite.id;
-      inviteToken = insertedInvite.invite_token;
     }
 
     // 6. Send SMS
@@ -281,7 +276,7 @@ export async function addCustomerForMerchant(
 
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
-      const inviteLink = `${siteUrl}/register?invite=${inviteToken}`;
+      const inviteLink = `${siteUrl}/register?invite=${inviteId}`;
       const message = [
         `${businessName} invited you to join Digital Khata.`,
         ``,
@@ -338,7 +333,6 @@ export async function addCustomerForMerchant(
       customer: { id: customer.id, name: customer.name, phone: normalized },
       smsSent,
       smsError,
-      inviteToken,
       smsStatus,
     };
   } catch (err) {

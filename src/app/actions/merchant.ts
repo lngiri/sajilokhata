@@ -1599,7 +1599,6 @@ export interface InvitationRecord {
   resend_count: number;
   last_resent_at: string | null;
   expires_at: string;
-  invite_token: string;
 }
 
 export async function getMerchantInvitations(
@@ -1612,7 +1611,7 @@ export async function getMerchantInvitations(
   if (!admin) return { invites: [], counts: { registered: 0, pending: 0, smsFailed: 0, expired: 0 } };
 
   const { data } = await (admin.from("customer_invites") as any)
-    .select("id, phone, status, created_at, completed_at, sms_sent_at, sms_error, resend_count, last_resent_at, expires_at, invite_token")
+    .select("id, phone, status, created_at, completed_at, sms_sent_at, sms_error, resend_count, last_resent_at, expires_at")
     .eq("merchant_id", merchantId)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -1628,7 +1627,6 @@ export async function getMerchantInvitations(
     resend_count: inv.resend_count,
     last_resent_at: inv.last_resent_at,
     expires_at: inv.expires_at,
-    invite_token: inv.invite_token,
   }));
 
   const counts = {
@@ -1690,7 +1688,7 @@ export async function resendInvitation(
     const businessName = merchant?.business_name || merchant?.name || "Shop";
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
-    const inviteLink = `${siteUrl}/register?invite=${invite.invite_token}`;
+    const inviteLink = `${siteUrl}/register?invite=${invite.id}`;
     const message = [
       `Reminder: ${businessName} invited you to join Digital Khata.`,
       ``,

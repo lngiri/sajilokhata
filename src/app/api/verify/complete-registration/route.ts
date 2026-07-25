@@ -35,12 +35,17 @@ export async function POST(req: NextRequest) {
 
     // Find customer by phone
     const { data: customer } = await (admin.from("customers") as any)
-      .select("id")
+      .select("id, registration_status")
       .eq("phone", normalized)
       .maybeSingle();
 
     if (!customer) {
       return NextResponse.json({ success: false, error: "Customer not found" }, { status: 404 });
+    }
+
+    // Idempotency: if already registered, skip updates and notification
+    if (customer.registration_status === "registered") {
+      return NextResponse.json({ success: true });
     }
 
     // Update customer profile + registration status
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
       .eq("phone", normalized)
       .is("used_at", null);
 
-    // Notify merchant
+    // Notify merchant exactly once
     try {
       await createNotification({
         userId: usedInvite.merchant_id,
