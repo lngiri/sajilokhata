@@ -22,11 +22,11 @@ describe("getCurrentUserPhone", () => {
     expect(result).toBeNull();
   });
 
-  it("returns phone from auth_bypass_phone cookie as fallback", async () => {
+  it("does not read auth_bypass_phone cookie in production flows", async () => {
     document.cookie = "auth_bypass_phone=%2B9779841234567; path=/";
     const { getCurrentUserPhone } = await import("./auth");
     const result = await getCurrentUserPhone();
-    expect(result).toBe("+9779841234567");
+    expect(result).toBeNull();
   });
 });
 

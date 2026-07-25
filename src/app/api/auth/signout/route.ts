@@ -16,12 +16,12 @@ export async function GET() {
   for (const name of cookiesToClear) {
     // Clear without domain (matches cookies set on the exact hostname)
     response.cookies.set(name, "", {
-      path: "/",
-      expires: pastDate,
-      maxAge: 0,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
+        path: "/",
+        expires: pastDate,
+        maxAge: 0,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+      });
     // Clear with COOKIE_DOMAIN (matches cookies set with .qrhisab.com)
     if (cookieDomain) {
       response.cookies.set(name, "", {

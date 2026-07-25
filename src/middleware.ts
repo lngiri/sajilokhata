@@ -106,11 +106,8 @@ export default async function middleware(request: NextRequest) {
     console.warn("[Middleware] Session cookie verify threw exception:", err instanceof Error ? err.message : String(err));
   }
 
-  const bypassCookie = request.cookies.get("auth_bypass");
-  const isBypassed = bypassCookie?.value === "true";
-
-  const isAuthenticated = !!user || !!validUserId || isBypassed;
-  console.log("[Middleware] Auth state:", { isAuthenticated, hasSupabaseUser: !!user, hasSessionUser: !!validUserId, isBypassed });
+  const isAuthenticated = !!user || !!validUserId;
+  console.log("[Middleware] Auth state:", { isAuthenticated, hasSupabaseUser: !!user, hasSessionUser: !!validUserId });
 
   // ── Determine user roles from DB for session-based users ──
   let userRoles: ("merchant" | "customer")[] = [];
@@ -190,11 +187,10 @@ export default async function middleware(request: NextRequest) {
             ? "NO_SESSION_COOKIE"
             : !validUserId
               ? "INVALID_TOKEN"
-              : "NO_USER_NO_BYPASS",
+              : "NO_USER",
           rawCookiePrefix: rawSession?.slice(0, 20) || "(none)",
           hasSupabaseUser: !!user,
           hasValidUserId: !!validUserId,
-          isBypassed,
           supabaseUserId: user?.id || null,
         })
       );

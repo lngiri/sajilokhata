@@ -39,7 +39,6 @@ export async function getCurrentMerchantId(): Promise<string | null> {
  * Preference order:
  *  1. localStorage (set by the custom login flow)
  *  2. Supabase Auth session (legacy)
- *  3. auth_bypass_phone cookie
  */
 export async function getCurrentUserPhone(): Promise<string | null> {
   // localStorage is the authoritative source for our custom auth flow
@@ -55,14 +54,6 @@ export async function getCurrentUserPhone(): Promise<string | null> {
     if (user?.phone) return user.phone;
   } catch {
     // Supabase not available
-  }
-
-  // Fallback: read from auth_bypass_phone cookie (set by bypass login)
-  if (typeof document !== "undefined") {
-    const match = document.cookie.match(/(?:^|;\s*)auth_bypass_phone=([^;]*)/);
-    if (match) {
-      return decodeURIComponent(match[1]);
-    }
   }
 
   return null;

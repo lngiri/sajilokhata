@@ -317,25 +317,18 @@ export async function submitCustomerEntry(
   if (!admin) return { success: false, error: "Server config" };
 
   try {
-    // Read the verified phone from the httpOnly customer_session cookie
     const cookieStore = await cookies();
     const rawCookie = cookieStore.get("customer_session")?.value;
     if (!rawCookie) {
       return { success: false, error: "No session — please scan a QR code first" };
     }
 
-    let session: { phone?: string; name?: string };
-    try {
-      session = JSON.parse(decodeURIComponent(rawCookie));
-    } catch {
-      return { success: false, error: "Invalid session data" };
-    }
-
-    const phone = session.phone;
-    if (!phone || String(phone).replace(/\D/g, "").length < 10) {
+    const session = await verifyCustomerSessionToken(rawCookie);
+    if (!session?.phone || String(session.phone).replace(/\D/g, "").length < 10) {
       return { success: false, error: "Invalid session — missing phone" };
     }
 
+    const phone = session.phone;
     const normalized = normalizePhone(phone);
 
     // Find or create customer
