@@ -424,8 +424,10 @@ export async function submitCustomerEntry(
 // Cookie-validated customer identity helper
 // Every transaction-history server action calls this first.
 // The browser-supplied customerPhone parameter is NEVER used
-// for identity — only the httpOnly customer_session cookie.
+// for identity — only the customer_session cookie.
 // ============================================================
+
+import { verifyCustomerSessionToken } from "@/lib/session";
 
 async function getAuthenticatedCustomer(): Promise<
   | { id: string; name: string | null; phone: string }
@@ -436,20 +438,13 @@ async function getAuthenticatedCustomer(): Promise<
     const rawCookie = cookieStore.get("customer_session")?.value;
     if (!rawCookie) return null;
 
-    let session: { phone?: string; name?: string };
-    try {
-      session = JSON.parse(decodeURIComponent(rawCookie));
-    } catch {
-      return null;
-    }
-
-    const phone = session.phone;
-    if (!phone || String(phone).replace(/\D/g, "").length < 10) return null;
+    const session = await verifyCustomerSessionToken(rawCookie);
+    if (!session?.phone || String(session.phone).replace(/\D/g, "").length < 10) return null;
 
     const admin = getAdminClient();
     if (!admin) return null;
 
-    const normalized = normalizePhone(phone);
+    const normalized = normalizePhone(session.phone);
     const { data } = await admin
       .from("customers")
       .select("id, name, phone")

@@ -138,14 +138,22 @@ export default function VerifyPage() {
     }
   };
 
-  const handleGoToDashboard = () => {
+  const handleGoToDashboard = async () => {
     if (log?.customers?.phone) {
       const session = JSON.stringify({
         phone: log.customers.phone,
         name: log.customers.name || "",
       });
       localStorage.setItem("sajilo_customer_session", session);
-      document.cookie = `customer_session=${encodeURIComponent(session)}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      try {
+        await fetch("/api/customer/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: log.customers.phone, name: log.customers.name || "" }),
+        });
+      } catch {
+        // cookie sync failed, but localStorage remains
+      }
     }
     window.location.replace("/customer/dashboard");
   };

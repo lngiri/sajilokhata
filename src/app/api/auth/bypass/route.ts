@@ -17,6 +17,10 @@ interface UserMatch {
  * supabase.auth.signInWithOtp().
  */
 export async function POST(request: Request) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Development auth bypass is disabled in production" }, { status: 403 });
+  }
+
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   const { allowed, retryAfter } = await checkRateLimit(`bypass:${ip}`);
   if (!allowed) {
@@ -120,7 +124,7 @@ export async function POST(request: Request) {
     }
 
     if (!foundUser) {
-      console.error("Could not find existing user with phone:", phone);
+      console.error("[Bypass] Could not find existing user");
       return NextResponse.json(
         { error: "User already exists but could not be found" },
         { status: 500 }

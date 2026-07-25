@@ -18,7 +18,7 @@ import { sendTransactionSMS } from "./sms";
 export async function sendRegistrationOtp(
   phone: string
 ): Promise<{ success: boolean; error?: string }> {
-  console.log("[OTP] sendRegistrationOtp called with phone:", phone);
+  console.log("[OTP] sendRegistrationOtp called");
 
   try {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
@@ -33,7 +33,6 @@ export async function sendRegistrationOtp(
     }
 
     const code = String(Math.floor(100000 + Math.random() * 900000));
-    console.log("[OTP] Generated code:", code, "for phone:", cleanPhone);
 
     const cookieStore = await cookies();
     cookieStore.set("otp_code", code, {
@@ -53,9 +52,9 @@ export async function sendRegistrationOtp(
 
     // Send SMS
     const message = `Your QR Hisab OTP is ${code}. Use this to complete your registration on QR Hisab.`;
-    console.log("[OTP] Sending SMS to", cleanPhone, "with message:", message);
+    console.log("[OTP] SMS dispatched");
     const smsResult = await sendTransactionSMS(cleanPhone, message);
-    console.log("[OTP] SMS result:", JSON.stringify(smsResult));
+    console.log("[OTP] SMS result status:", smsResult?.success ? "sent" : "failed");
     return smsResult;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -86,7 +85,7 @@ export async function verifyRegistrationOtp(
   hasPin?: boolean;
   name?: string;
 }> {
-  console.log("[OTP] verifyRegistrationOtp called for phone:", phone);
+  console.log("[OTP] verifyRegistrationOtp called");
 
   try {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
@@ -96,7 +95,7 @@ export async function verifyRegistrationOtp(
     const storedCode = cookieStore.get("otp_code")?.value;
     const storedPhone = cookieStore.get("otp_phone")?.value;
 
-    console.log("[OTP] Verifying OTP, storedCode:", !!storedCode, "storedPhone:", storedPhone, "inputPhone:", cleanPhone, "inputCode:", code);
+    console.log("[OTP] Verifying OTP, hasToken:", !!storedCode, "hasPhone:", !!storedPhone);
 
     if (!storedCode || !storedPhone) {
       console.log("[OTP] No stored OTP cookies (expired)");
@@ -104,19 +103,19 @@ export async function verifyRegistrationOtp(
     }
 
     if (storedPhone !== cleanPhone) {
-      console.log("[OTP] Phone mismatch: stored:", storedPhone, "input:", cleanPhone);
+      console.log("[OTP] Phone mismatch");
       return { success: false, error: "Phone number mismatch.", exists: false };
     }
 
     if (storedCode !== code) {
-      console.log("[OTP] Code mismatch: stored:", storedCode, "input:", code);
+      console.log("[OTP] Code mismatch");
       return { success: false, error: "Invalid OTP. Please try again.", exists: false };
     }
 
     // Clear OTP cookies
     cookieStore.delete("otp_code");
     cookieStore.delete("otp_phone");
-    console.log("[OTP] OTP verified successfully for phone:", cleanPhone);
+    console.log("[OTP] OTP verified successfully");
 
     // ---- 2. Check if user already exists ----
     const admin = getAdminClient();
@@ -126,7 +125,7 @@ export async function verifyRegistrationOtp(
     }
 
     const existing = await findUserByPhone(cleanPhone);
-    console.log("[OTP] Existing user lookup:", JSON.stringify(existing));
+    console.log("[OTP] Existing user lookup roles:", existing.merchant ? "merchant" : "", existing.customer ? "customer" : "");
 
     if (existing.merchant && existing.customer) {
       const hasPin = !!(existing.merchant.pin_hash || existing.customer.pin_hash);

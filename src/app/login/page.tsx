@@ -173,7 +173,6 @@ export default function LoginPage() {
           }
           if (data.customerPhone) {
             localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: data.customerPhone, name: data.customerName || "" }));
-            document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone: data.customerPhone, name: data.customerName || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
           }
 
           if (data.roles.length === 0) {
@@ -209,7 +208,7 @@ export default function LoginPage() {
     setError("");
 
     const cleanPhone = digitsOnly.slice(-10);
-    console.log("[Login] Phone submit, checking existence for:", cleanPhone);
+    console.log("[Login] Phone submit, checking existence");
     let exists = false;
     let users: Awaited<ReturnType<typeof checkUserExists>>["users"] = [];
     try {
@@ -217,7 +216,7 @@ export default function LoginPage() {
       if (!mountedRef.current) return;
       exists = result.exists;
       users = result.users;
-      console.log("[Login] checkUserExists result:", { exists, users });
+      console.log("[Login] checkUserExists result:", { exists, count: users.length });
     } catch (e: any) {
       if (!mountedRef.current) return;
       const errorDetail = {
@@ -354,7 +353,6 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (info.userType === "customer" || info.userType === "both") {
@@ -405,7 +403,6 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (info.userType === "customer" || info.userType === "both") {
@@ -432,7 +429,6 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: info.name || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
         // Mark as unlocked so CustomerPinGate shows dashboard directly
         // (user can set PIN later in profile settings)
@@ -456,7 +452,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      console.log("[Login] Verifying OTP for phone:", phone);
+      console.log("[Login] Verifying OTP");
       const result = await verifyRegistrationOtp(phone, otp);
       console.log("[Login] verifyRegistrationOtp result:", JSON.stringify(result));
       if (!result.success) {
@@ -493,7 +489,6 @@ export default function LoginPage() {
           localStorage.setItem("merchant_phone", regResult.phone);
           if (addRoleTarget === "customer") {
             localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: regResult.phone, name: registerName.trim() || "" }));
-            document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone: regResult.phone, name: registerName.trim() || "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
           }
         }
         userInfoRef.current = { userId: regResult.userId!, userType: addRoleTarget, name: registerName.trim() || "" };
@@ -597,7 +592,7 @@ export default function LoginPage() {
     if (selectRoleMode === "register") {
       // New user â€” create account with chosen role
       const shopName = registerName.trim() || undefined;
-      console.log("[Login] Creating new", role, "account for phone:", phone, "name:", shopName);
+      console.log("[Login] Creating new", role, "account");
       const regResult = await registerNewUser(phone, role, shopName);
       if (!mountedRef.current) return;
       console.log("[Login] registerNewUser result:", JSON.stringify(regResult));
@@ -643,8 +638,7 @@ export default function LoginPage() {
       if (regResult.phone) {
         localStorage.setItem("merchant_phone", regResult.phone);
         if (role === "customer") {
-          localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: regResult.phone, name: registerName.trim() }));
-          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone: regResult.phone, name: registerName.trim() }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+            localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone: regResult.phone, name: registerName.trim() }));
         }
       }
 
@@ -732,7 +726,7 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      console.log("[Login] Forgot PIN: sending OTP to", phone);
+      console.log("[Login] Forgot PIN: sending OTP");
       const result = await forgotPinSendOtp(phone);
       if (!mountedRef.current) return;
       console.log("[Login] Forgot PIN OTP result:", JSON.stringify(result));
@@ -773,7 +767,6 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (forgotType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
-          document.cookie = `customer_session=${encodeURIComponent(JSON.stringify({ phone, name: "" }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (forgotType === "customer") {

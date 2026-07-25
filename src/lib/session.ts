@@ -99,3 +99,56 @@ const SESSION_COOKIE_OPTIONS = {
 };
 
 export { SESSION_COOKIE, SESSION_DURATION, SESSION_COOKIE_OPTIONS, COOKIE_DOMAIN };
+
+// ──────────────────────────────────────────────────────────────
+// Customer Session Token (HMAC-signed for security)
+// Unlike the old JSON-based cookie, this cannot be forged.
+// ──────────────────────────────────────────────────────────────
+
+const CUSTOMER_SESSION_COOKIE = "customer_session";
+const CUSTOMER_SESSION_DURATION = 30 * 24 * 60 * 60; // 30 days
+
+export async function createCustomerSessionToken(
+  phone: string,
+  name?: string
+): Promise<{ token: string; maxAge: number }> {
+  const issuedAt = Date.now();
+  const expiresAt = issuedAt + CUSTOMER_SESSION_DURATION * 1000;
+  const payload = `${phone}.${issuedAt}.${expiresAt}${name ? `.${name}` : ""}`;
+  const signature = await hmacSign(payload);
+  return { token: `${payload}.${signature}`, maxAge: CUSTOMER_SESSION_DURATION };
+}
+
+export async function verifyCustomerSessionToken(
+  token: string
+): Promise<{ phone: string; name?: string; iat: number | null } | null> {
+  const parts = token.split(".");
+
+  // New format: phone.iat.expiresAt[.name].signature (4-5 parts)
+  if (parts.length >= 4) {
+    const signature = parts[parts.length - 1];
+    const payload = parts.slice(0, -1).join(".");
+    const expected = await hmacSign(payload);
+    if (signature !== expected) return null;
+
+    const expiresAt = Number(parts[3]);
+    if (Date.now() > expiresAt) return null;
+
+    const phone = parts[0];
+    const iat = Number(parts[1]);
+    const name = parts[4]; // Optional
+
+    return { phone, name, iat };
+  }
+
+  return null;
+}
+
+const CUSTOMER_SESSION_COOKIE_OPTIONS = {
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+  ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
+};
+
+export { CUSTOMER_SESSION_COOKIE, CUSTOMER_SESSION_COOKIE_OPTIONS };

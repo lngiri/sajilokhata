@@ -11,8 +11,8 @@ export async function sendTransactionSMS(
 
   console.log("[SMS] Starting send...");
   console.log("[SMS] Token present:", !!authToken);
-  console.log("[SMS] Target number:", to);
-  console.log("[SMS] Message:", message);
+  console.log("[SMS] Target number length:", to.replace(/\D/g, "").length);
+  console.log("[SMS] Message length:", message.length);
 
   if (!authToken) {
     console.warn("[SMS] AAKASH_SMS_TOKEN not configured — skipping SMS");
@@ -22,7 +22,7 @@ export async function sendTransactionSMS(
   const cleanNumber = to.replace(/\D/g, "").slice(-10);
 
   if (cleanNumber.length !== 10) {
-    console.warn(`[SMS] Invalid phone number: ${to} — cleaned: ${cleanNumber}`);
+    console.warn("[SMS] Invalid phone number format");
     return { success: false, error: "Invalid phone number" };
   }
 

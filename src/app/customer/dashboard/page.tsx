@@ -172,23 +172,26 @@ export default function CustomerDashboard() {
       // Corrupted localStorage — fall through to cookie
     }
 
-    // Fallback: try to read session from cookie
+    // Fallback: try to read HMAC-signed customer_session cookie
     try {
       const match = document.cookie
         .split("; ")
         .find((c) => c.startsWith("customer_session="));
       if (match) {
-        const val = decodeURIComponent(match.split("=").slice(1).join("="));
-        const session = JSON.parse(val);
-        if (session.phone) {
-          setCustomerPhone(session.phone);
-          setCustomerName(session.name || "");
-          // Persist back to localStorage so future reads work
-          try {
-            localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone: session.phone, name: session.name || "" }));
-          } catch {}
-          setInitialized(true);
-          return;
+        const raw = decodeURIComponent(match.split("=").slice(1).join("="));
+        const parts = raw.split(".");
+        if (parts.length >= 4) {
+          const phone = parts[0];
+          const name = parts.length > 4 ? parts.slice(3, -1).join(".") : "";
+          if (phone && String(phone).replace(/\D/g, "").length >= 10) {
+            setCustomerPhone(phone);
+            setCustomerName(name || "");
+            try {
+              localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone, name: name || "" }));
+            } catch {}
+            setInitialized(true);
+            return;
+          }
         }
       }
     } catch {

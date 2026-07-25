@@ -55,7 +55,7 @@ export async function checkUserExists(phone: string): Promise<{
   exists: boolean;
   users: UserInfo[];
 }> {
-  console.log("[checkUserExists] Looking up phone:", phone);
+  console.log("[checkUserExists] Looking up user");
   try {
     const { merchant, customer } = await findUserByPhone(phone);
     const users: UserInfo[] = [];
@@ -87,7 +87,7 @@ export async function checkUserExists(phone: string): Promise<{
       }
     }
 
-    console.log("[checkUserExists] Result:", { exists: users.length > 0, users });
+    console.log("[checkUserExists] Result:", { exists: users.length > 0, count: users.length });
     return { exists: users.length > 0, users };
   } catch (e: any) {
     const errorDetail = {
@@ -317,7 +317,7 @@ export async function registerNewUser(
   role: "merchant" | "customer",
   name?: string
 ): Promise<{ success: boolean; error?: string; userId?: string; phone?: string; userType?: string }> {
-  console.log("[registerNewUser] Registering new", role, "with phone:", phone, "name:", name);
+  console.log("[registerNewUser] Registering new", role);
 
   try {
     const cleanPhone = phone.replace(/\D/g, "").slice(-10);
@@ -425,7 +425,7 @@ export async function forgotPinVerifyOtp(
   otp: string,
   newPin: string
 ): Promise<{ success: boolean; error?: string; redirect?: string; userId?: string }> {
-  console.log("[forgotPinVerifyOtp] Starting for phone:", phone);
+  console.log("[forgotPinVerifyOtp] Starting");
   const { verifyRegistrationOtp } = await import("./otp");
   const verified = await verifyRegistrationOtp(phone, otp);
   if (!verified.success) {

@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { verifySessionToken, SESSION_COOKIE, verifyCustomerSessionToken } from "@/lib/session";
 import { verifyAdminSessionToken, ADMIN_SESSION_COOKIE } from "@/lib/admin-session";
 
 export default async function middleware(request: NextRequest) {
@@ -265,32 +265,31 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // === Customer Protection (Cookie-based) ===
-  // Validates customer_session cookie has a valid phone number.
-  const customerSessionCookie = request.cookies.get("customer_session");
-  const isCustomerPath = request.nextUrl.pathname.startsWith("/customer/");
+// === Customer Protection (Cookie-based, HMAC-signed) ===
+   // Validates customer_session cookie contains a valid HMAC-signed token.
+   const customerSessionCookie = request.cookies.get("customer_session");
+   const isCustomerPath = request.nextUrl.pathname.startsWith("/customer/");
 
-  if (isCustomerPath) {
-    if (!customerSessionCookie) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/scan";
-      return NextResponse.redirect(url);
-    }
-    // Validate phone in cookie is present and >= 10 digits
-    try {
-      const session = JSON.parse(decodeURIComponent(customerSessionCookie.value));
-      const phone = session?.phone;
-      if (!phone || String(phone).replace(/\D/g, "").length < 10) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/scan";
-        return NextResponse.redirect(url);
-      }
-    } catch {
-      const url = request.nextUrl.clone();
-      url.pathname = "/scan";
-      return NextResponse.redirect(url);
-    }
-  }
+   if (isCustomerPath) {
+     if (!customerSessionCookie) {
+       const url = request.nextUrl.clone();
+       url.pathname = "/scan";
+       return NextResponse.redirect(url);
+     }
+     // Verify HMAC signature and extract phone
+     try {
+       const session = await verifyCustomerSessionToken(customerSessionCookie.value);
+       if (!session?.phone || String(session.phone).replace(/\D/g, "").length < 10) {
+         const url = request.nextUrl.clone();
+         url.pathname = "/scan";
+         return NextResponse.redirect(url);
+       }
+     } catch {
+       const url = request.nextUrl.clone();
+       url.pathname = "/scan";
+       return NextResponse.redirect(url);
+     }
+   }
 
   return supabaseResponse;
 }

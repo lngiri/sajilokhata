@@ -40,12 +40,19 @@ function loadCustomerSession(): CustomerSession | null {
 /** Cookie name used by middleware to protect /customer/* routes server-side */
 const CUSTOMER_COOKIE_NAME = "customer_session";
 
-function saveCustomerSession(phone: string, name: string) {
+async function saveCustomerSession(phone: string, name: string) {
   try {
     localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone, name }));
-    // Also set a cookie so middleware can verify the session server-side
-    // This prevents flash-of-content when navigating directly to /customer/*
-    document.cookie = `${CUSTOMER_COOKIE_NAME}=${encodeURIComponent(JSON.stringify({ phone, name }))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+    // Set httpOnly signed cookie via API endpoint for middleware verification
+    try {
+      await fetch("/api/customer/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, name }),
+      });
+    } catch {
+      // Cookie not set, but localStorage works for client-side
+    }
   } catch {
     // localStorage full or unavailable
   }
@@ -54,10 +61,17 @@ function saveCustomerSession(phone: string, name: string) {
 function clearCustomerSession() {
   try {
     localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-    // Expire the cookie immediately
-    document.cookie = `${CUSTOMER_COOKIE_NAME}=; path=/; max-age=0`;
+    clearCustomerSessionCookie();
   } catch {
     // Ignore
+  }
+}
+
+async function clearCustomerSessionCookie() {
+  try {
+    await fetch("/api/customer/clear-session", { method: "POST" });
+  } catch {
+    // ignore
   }
 }
 
@@ -89,37 +103,17 @@ export default function ScanPage() {
       setPhone(fromStorage.phone);
       setName(fromStorage.name);
       setStep("scan");
-      // Re-sync the cookie so middleware can verify the session server-side
-      document.cookie = `customer_session=${encodeURIComponent(JSON.stringify(fromStorage))}; path=/; max-age=${365 * 24 * 60 * 60}; SameSite=Lax`;
+      // Trigger cookie sync via API (for middleware verification)
+      fetch("/api/customer/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: fromStorage.phone, name: fromStorage.name }),
+      }).catch(() => {});
       setInitialized(true);
       return;
     }
 
-    // 2. Fallback: try reading the customer_session cookie
-    try {
-      const match = document.cookie
-        .split("; ")
-        .find((c) => c.startsWith("customer_session="));
-      if (match) {
-        const val = decodeURIComponent(match.split("=").slice(1).join("="));
-        const session = JSON.parse(val) as CustomerSession;
-        if (session.phone && session.phone.length >= 10) {
-          setPhone(session.phone);
-          setName(session.name || "");
-          setStep("scan");
-          // Persist back to localStorage for future reads
-          try {
-            localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
-          } catch {}
-          setInitialized(true);
-          return;
-        }
-      }
-    } catch {
-      // Ignore corrupted cookie
-    }
-
-    // 3. No session at all — send to login
+    // 2. No session at all — send to login
     window.location.replace("/login");
   }, []);
 
@@ -134,13 +128,13 @@ export default function ScanPage() {
     });
 
     // Persist session so they never see the phone screen again
-    saveCustomerSession(phone, name);
+    await saveCustomerSession(phone, name);
 
     setStep("scan");
   };
 
-  const handleResetPhone = () => {
-    clearCustomerSession();
+  const handleResetPhone = async () => {
+    await clearCustomerSession();
     setPhone("");
     setName("");
     setStep("phone");
