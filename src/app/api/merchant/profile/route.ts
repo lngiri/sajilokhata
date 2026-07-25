@@ -1,47 +1,28 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { merchant_id, name, business_name, business_type, address, photo_url } = body;
+    const { name, business_name, business_type, address, photo_url } = body;
 
-    console.log("[Profile] POST called — body merchant_id:", merchant_id);
-
-    // ── Auth: verify via custom session cookie (works with our custom OTP) ──
-    const cookieHeader = request.headers.get("cookie") || "";
-    const sessionCookie = parseCookie(cookieHeader, SESSION_COOKIE);
-    let sessionUserId: string | null = null;
-    if (sessionCookie) {
-      const session = await verifySessionToken(sessionCookie);
-      sessionUserId = session?.userId ?? null;
-      console.log("[Profile] Session cookie valid — userId:", sessionUserId);
-    } else {
-      console.log("[Profile] No session cookie found");
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(SESSION_COOKIE)?.value;
+    if (!raw) {
+      return NextResponse.json({ error: "Not logged in" }, { status: 401 });
     }
 
-    if (!merchant_id && !sessionUserId) {
-      console.warn("[Profile] No merchant_id provided and no valid session");
-      return NextResponse.json(
-        { error: "Not logged in" },
-        { status: 401 }
-      );
+    const session = await verifySessionToken(raw);
+    const sessionUserId = session?.userId ?? null;
+    if (!sessionUserId) {
+      return NextResponse.json({ error: "Session expired" }, { status: 401 });
     }
 
-    // ── Use admin client (service_role key bypasses RLS) ──
-    const admin = getAdminClient();
-    if (!admin) {
-      console.error("[Profile] Admin client unavailable — service_role key not configured");
-      return NextResponse.json(
-        { error: "Server configuration error. Please contact support." },
-        { status: 500 }
-      );
-    }
-
-    // Resolve the merchant ID: prefer the session userId as authoritative
-    const resolvedId = sessionUserId || merchant_id;
-    console.log("[Profile] Using resolved merchant_id:", resolvedId);
+    // Use the session userId as authoritative — ignore any caller-supplied merchant_id
+    const resolvedId = sessionUserId;
+    console.log("[Profile] Using session merchant_id:", resolvedId);
 
     // Dynamic partial update — only include explicitly provided fields
     // Immutable fields like phone are never included
@@ -56,6 +37,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "No fields to update" },
         { status: 400 }
+      );
+    }
+
+    const admin = getAdminClient();
+    if (!admin) {
+      console.error("[Profile] Admin client unavailable — service_role key not configured");
+      return NextResponse.json(
+        { error: "Server configuration error. Please contact support." },
+        { status: 500 }
       );
     }
 
@@ -114,10 +104,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
-
-/** Simple cookie parser — reads a named cookie from a raw Cookie header string */
-function parseCookie(cookie: string, name: string): string | null {
-  const match = cookie.match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
-  return match ? decodeURIComponent(match[1]) : null;
 }

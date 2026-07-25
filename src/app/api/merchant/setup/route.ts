@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { normalizePhone } from "@/lib/phone";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
@@ -14,25 +16,35 @@ export async function POST(request: Request) {
   }
 
   try {
-    let { merchant_id, phone } = await request.json();
+    // Require authenticated merchant session
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(SESSION_COOKIE)?.value;
+    if (!raw) {
+      return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+    }
+    const session = await verifySessionToken(raw);
+    const merchantId = session?.userId ?? null;
+    if (!merchantId) {
+      return NextResponse.json({ error: "Session expired" }, { status: 401 });
+    }
+
+    let { phone } = await request.json();
     phone = normalizePhone(phone);
 
-    if (!merchant_id || !phone) {
+    if (!phone) {
       return NextResponse.json(
-        { error: "merchant_id and phone are required" },
+        { error: "phone is required" },
         { status: 400 }
       );
     }
 
-    let client: any = getAdminClient();
-    let isAdmin = true;
-
+    const client = getAdminClient();
     if (!client) {
       // If admin client is unavailable, return a fallback signal
       // The caller will use localStorage-based auth instead
       return NextResponse.json({
         admin_unavailable: true,
-        merchant_id,
+        merchant_id: merchantId,
         existed: false,
       });
     }
@@ -57,7 +69,7 @@ export async function POST(request: Request) {
     const { error: upsertError } = await (client.from("merchants") as any)
       .upsert(
         {
-          id: merchant_id,
+          id: merchantId,
           phone,
           name: "Shop",
           business_type: "kirana",
@@ -75,7 +87,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      merchant_id,
+      merchant_id: merchantId,
       existed: false,
     });
   } catch (err) {

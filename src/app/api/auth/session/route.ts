@@ -104,10 +104,9 @@ export async function GET() {
       });
     }
   } catch (err) {
-    // DB unavailable — rely on cookie auth alone (fail open)
-    console.warn("[API::session] DB lookup failed (fail-open):", err);
+    console.warn("[API::session] DB lookup failed:", err);
   }
 
   console.log("[API::session] Fallback (no DB or catch) — returning userId from cookie:", userId);
-  return NextResponse.json({ userId, forceLogout: false, roles: ["merchant"] });
+  return NextResponse.json({ userId, forceLogout: false, roles: userId ? ["merchant"] : [] });
 }

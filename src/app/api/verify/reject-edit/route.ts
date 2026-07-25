@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
+
+const VERIFICATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,17 +12,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "logId is required" }, { status: 400 });
     }
 
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { allowed, retryAfter } = await checkRateLimit(`verify:${ip}`);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${retryAfter}s.` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
+
     const supabase = await createClient();
     const admin = getAdminClient();
 
     const { data: rawLog, error: fetchError } = await supabase
       .from("credit_logs")
-      .select("id, amount, proposed_amount, status, customer_id")
+      .select("id, amount, proposed_amount, status, customer_id, created_at")
       .eq("id", logId)
       .single();
 
     const log = rawLog as unknown as {
-      id: string; amount: number; proposed_amount: number | null; status: string; customer_id: string;
+      id: string; amount: number; proposed_amount: number | null;
+      status: string; customer_id: string; created_at: string;
     } | null;
 
     if (fetchError || !log) {
@@ -30,11 +43,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No pending edit request for this transaction" }, { status: 400 });
     }
 
+    const createdAt = new Date(log.created_at).getTime();
+    if (Number.isFinite(createdAt) && Date.now() - createdAt > VERIFICATION_TOKEN_TTL_MS) {
+      return NextResponse.json({ error: "Transaction verification window expired" }, { status: 400 });
+    }
+
     const { error: updateError } = await supabase
       .from("credit_logs")
       .update({
         proposed_amount: null,
         status: "unverified",
+        verification_token: null,
       })
       .eq("id", log.id);
 

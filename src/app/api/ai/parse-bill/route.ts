@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const MODEL = "gemini-2.5-flash";
 const MAX_DAILY_PARSES = 50;
@@ -26,6 +27,15 @@ export async function POST(request: NextRequest) {
 
   // Track usage if merchantId is provided
   if (body.merchantId && admin) {
+    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { allowed, retryAfter } = await checkRateLimit(`ai:${body.merchantId}:${ip}`);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `AI parse limit reached. Try again in ${retryAfter}s.` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
+
     const today = new Date().toISOString().slice(0, 10);
     const { data: usageData } = await admin
       .from("merchant_ai_usage")
