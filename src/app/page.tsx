@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import LogoWithAbout from "@/components/LogoWithAbout";
 import AboutSheet from "@/components/AboutSheet";
@@ -221,44 +221,37 @@ function AnimatedStat({ value, label }: { value: string; label: string }) {
   );
 }
 
-export default function LandingPage() {
-  useScrollReveal();
+function SessionBlock() {
+  const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<SessionInfo | null>(null);
-  const [loading, setLoading] = useState(true);
   const [redirecting, setRedirecting] = useState<string | null>(null);
-  const [aboutOpen, setAboutOpen] = useState(false);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    setMounted(true);
+    try {
+      const merchantId = localStorage.getItem("merchant_id");
+      const merchantPhone = localStorage.getItem("merchant_phone");
+      const customerRaw = localStorage.getItem("sajilo_customer_session");
+      let customerSession: { phone?: string; name?: string } | null = null;
       try {
-        const merchantId = localStorage.getItem("merchant_id");
-        const merchantPhone = localStorage.getItem("merchant_phone");
-        const customerRaw = localStorage.getItem("sajilo_customer_session");
-        let customerSession: { phone?: string; name?: string } | null = null;
-        try {
-          customerSession = customerRaw ? JSON.parse(customerRaw) : null;
-        } catch { /* ignore */ }
+        customerSession = customerRaw ? JSON.parse(customerRaw) : null;
+      } catch { /* ignore */ }
 
-        const hasMerchant = !!(merchantId && merchantPhone);
-        const hasCustomer = !!(customerSession?.phone);
+      const hasMerchant = !!(merchantId && merchantPhone);
+      const hasCustomer = !!(customerSession?.phone);
 
-        if (!cancelled) {
-          setSession({
-            hasMerchant,
-            hasCustomer,
-            merchantPhone: merchantPhone ?? undefined,
-            customerPhone: customerSession?.phone,
-            customerName: customerSession?.name,
-          });
-        }
-      } catch {
-        if (!cancelled) setSession({ hasMerchant: false, hasCustomer: false });
-      } finally {
-        if (!cancelled) setLoading(false);
+      if (hasMerchant || hasCustomer) {
+        setSession({
+          hasMerchant,
+          hasCustomer,
+          merchantPhone: merchantPhone ?? undefined,
+          customerPhone: customerSession?.phone,
+          customerName: customerSession?.name,
+        });
       }
-    })();
-    return () => { cancelled = true; };
+    } catch {
+      // ignore
+    }
   }, []);
 
   const handleContinue = async (role: "merchant" | "customer") => {
@@ -299,7 +292,85 @@ export default function LandingPage() {
     return `${phone.slice(0, 3)}****${phone.slice(-2)}`;
   };
 
-  const hasAnySession = session && (session.hasMerchant || session.hasCustomer);
+  if (!mounted || !session) return null;
+
+  return (
+    <section className="py-16 bg-[var(--color-surface)]">
+      <div className="max-w-lg mx-auto px-4">
+        <div className="bg-[var(--color-surface)] rounded-[var(--radius-dialog)] shadow-lg border border-[var(--color-border)] p-6 sm:p-8 space-y-4">
+          <div className="text-center mb-2">
+            <h2 className="text-xl font-extrabold text-[var(--color-text)]">Welcome back! 👋</h2>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">Choose an account to continue</p>
+          </div>
+
+          {session.hasMerchant && (
+            <button
+              onClick={() => handleContinue("merchant")}
+              disabled={!!redirecting}
+              className="w-full p-4 bg-gradient-to-r from-blue-50 dark:from-blue-950/30 dark:to-[var(--color-surface)] rounded-[var(--radius-button)] border border-blue-100 dark:border-blue-900/50 hover:border-blue-300 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
+            >
+              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0">
+                <span className="text-blue-600">{Icons.store}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-[var(--color-text)]">Continue as Merchant</p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{maskPhone(session.merchantPhone)}</p>
+              </div>
+              {redirecting === "merchant" ? (
+                <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="text-gray-300">{Icons.arrow}</span>
+              )}
+            </button>
+          )}
+
+          {session.hasCustomer && (
+            <button
+              onClick={() => handleContinue("customer")}
+              disabled={!!redirecting}
+              className="w-full p-4 bg-gradient-to-r from-[var(--color-primary)]/5 dark:to-[var(--color-surface)] rounded-[var(--radius-button)] border border-[var(--color-primary)]/15 hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
+            >
+              <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
+                <span className="text-[var(--color-primary)]">{Icons.users}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-[var(--color-text)]">Continue as Customer</p>
+                <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                  {session.customerName ? `${session.customerName} · ` : ""}{maskPhone(session.customerPhone)}
+                </p>
+              </div>
+              {redirecting === "customer" ? (
+                <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <span className="text-gray-300">{Icons.arrow}</span>
+              )}
+            </button>
+          )}
+
+          <div className="relative my-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[var(--color-border)]" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-3 bg-[var(--color-surface)] text-[var(--color-text-muted)]">or</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDifferentAccount}
+            className="w-full py-3 text-sm font-bold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors rounded-xl hover:bg-[var(--color-primary)]/5 active:scale-[0.98]"
+          >
+            Sign in with a different account
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+export default function LandingPage() {
+  useScrollReveal();
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   /* ──────────────────────────────────────────────────────── */
   /*  DATA — Friendly, human, warm language                  */
@@ -681,79 +752,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ SESSION CARDS / SIGN IN ══════ */}
-      {hasAnySession && (
-        <section className="py-16 bg-[var(--color-surface)]">
-          <div className="max-w-lg mx-auto px-4">
-            <div className="bg-[var(--color-surface)] rounded-[var(--radius-dialog)] shadow-lg border border-[var(--color-border)] p-6 sm:p-8 space-y-4">
-              <div className="text-center mb-2">
-                <h2 className="text-xl font-extrabold text-[var(--color-text)]">Welcome back! 👋</h2>
-                <p className="text-sm text-[var(--color-text-muted)] mt-1">Choose an account to continue</p>
-              </div>
-
-              {session?.hasMerchant && (
-                <button
-                  onClick={() => handleContinue("merchant")}
-                  disabled={!!redirecting}
-                  className="w-full p-4 bg-gradient-to-r from-blue-50 dark:from-blue-950/30 dark:to-[var(--color-surface)] rounded-[var(--radius-button)] border border-blue-100 dark:border-blue-900/50 hover:border-blue-300 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-950/30 flex items-center justify-center flex-shrink-0">
-                    <span className="text-blue-600">{Icons.store}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[var(--color-text)]">Continue as Merchant</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{maskPhone(session.merchantPhone)}</p>
-                  </div>
-                  {redirecting === "merchant" ? (
-                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span className="text-gray-300">{Icons.arrow}</span>
-                  )}
-                </button>
-              )}
-
-              {session?.hasCustomer && (
-                <button
-                  onClick={() => handleContinue("customer")}
-                  disabled={!!redirecting}
-                  className="w-full p-4 bg-gradient-to-r from-[var(--color-primary)]/5 dark:to-[var(--color-surface)] rounded-[var(--radius-button)] border border-[var(--color-primary)]/15 hover:border-[var(--color-primary)]/40 hover:shadow-md active:scale-[0.98] transition-all flex items-center gap-4 text-left disabled:opacity-60"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[var(--color-primary)]">{Icons.users}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-[var(--color-text)]">Continue as Customer</p>
-                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                      {session.customerName ? `${session.customerName} · ` : ""}{maskPhone(session.customerPhone)}
-                    </p>
-                  </div>
-                  {redirecting === "customer" ? (
-                    <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <span className="text-gray-300">{Icons.arrow}</span>
-                  )}
-                </button>
-              )}
-
-              <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-[var(--color-border)]" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-[var(--color-surface)] text-[var(--color-text-muted)]">or</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleDifferentAccount}
-                className="w-full py-3 text-sm font-bold text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] transition-colors rounded-xl hover:bg-[var(--color-primary)]/5 active:scale-[0.98]"
-              >
-                Sign in with a different account
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
+      <SessionBlock />
 
       {/* ══════ FINAL CTA ══════ */}
       <section className="py-24 sm:py-32 bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] text-[var(--color-primary-foreground)] relative overflow-hidden">
