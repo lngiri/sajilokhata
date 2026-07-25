@@ -60,6 +60,7 @@ export default function MerchantScanPage() {
   const [customerLookup, setCustomerLookup] = useState<"idle" | "looking" | "found" | "not_found">("idle");
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
+  const [smsError, setSmsError] = useState<string | null>(null);
   const [recentDescriptions, setRecentDescriptions] = useState<string[]>([]);
   const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [attachmentPreview, setAttachmentPreview] = useState<string | null>(null);
@@ -326,6 +327,7 @@ export default function MerchantScanPage() {
     setSearchQuery("");
     setCustomerLookup("idle");
     setSmsSent(false);
+    setSmsError(null);
     setQuantity("");
     setUnit("");
     setSelectedProductId(null);
@@ -455,9 +457,14 @@ export default function MerchantScanPage() {
                             setCustomerId(result.customer.id);
                             setCustomerPhone(result.customer.phone);
                             setCustomerName(result.customer.name || "");
-                            setSmsSent(true);
+                            setSmsSent(result.smsSent ?? false);
+                            setSmsError(result.smsError || null);
                             setCustomerLookup("found");
-                            addToast("Customer added! SMS sent with registration link.", "success");
+                            if (result.smsSent) {
+                              addToast("Invitation sent successfully.", "success");
+                            } else {
+                              addToast(`Invitation created but SMS delivery failed: ${result.smsError || "Unknown error"}`, "error");
+                            }
                             if (merchantId) {
                               try {
                                 const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
@@ -475,15 +482,19 @@ export default function MerchantScanPage() {
                         {addingCustomer ? (
                           <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Adding...</>
                         ) : (
-                          <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg> Add & Send SMS</>
+                          <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg> Send Invitation</>
                         )}
                       </button>
                     ) : (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/40 rounded-lg text-sm text-green-700 dark:text-green-300">
-                        <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <div className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm ${smsSent ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" : "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"}`}>
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          {smsSent ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          ) : (
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                          )}
                         </svg>
-                        <span>SMS sent with registration link</span>
+                        <span>{smsSent ? "Invitation sent successfully." : `SMS failed: ${smsError || "Delivery error"}`}</span>
                       </div>
                     )}
                   </div>
@@ -508,6 +519,8 @@ export default function MerchantScanPage() {
                       setCustomerName(null);
                       setCustomerLookup("idle");
                       setCustomerBalance(null);
+                      setSmsSent(false);
+                      setSmsError(null);
                     }}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Cash Sale

@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     // Mark invite as verified (prevent reuse between OTP and profile completion)
     await (admin.from("customer_invites") as any)
-      .update({ used_at: new Date().toISOString() })
+      .update({ used_at: new Date().toISOString(), status: "otp_verified" })
       .eq("id", invite.id);
 
     // Get customer name if available

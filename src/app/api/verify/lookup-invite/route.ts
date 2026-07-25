@@ -4,20 +4,66 @@ import { normalizePhone } from "@/lib/phone";
 
 /**
  * POST /api/verify/lookup-invite
- * Check if a customer has a pending registration invite
+ * Check if a customer has a pending registration invite.
+ * Accepts either phone OR inviteId.
  */
 export async function POST(req: NextRequest) {
   try {
-    const { phone } = await req.json();
-    if (!phone) {
-      return NextResponse.json({ error: "Phone required" }, { status: 400 });
-    }
+    const body = await req.json();
+    const { phone, inviteId } = body;
 
-    const normalized = normalizePhone(phone);
     const admin = getAdminClient();
     if (!admin) {
       return NextResponse.json({ error: "Server config" }, { status: 500 });
     }
+
+    // ── Lookup by inviteId (from invite link) ──
+    if (inviteId) {
+      const { data: invite } = await (admin.from("customer_invites") as any)
+        .select(`
+          id, customer_id, merchant_id, phone, expires_at, created_at, status,
+          merchants!inner(business_name, name)
+        `)
+        .eq("invite_token", inviteId)
+        .not("status", "in", '("registration_completed","cancelled","expired")')
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!invite) {
+        return NextResponse.json({ invite: null });
+      }
+
+      const merchantName = invite.merchants?.business_name || invite.merchants?.name || "Shop";
+
+      // Update status to invitation_opened (only for initial open)
+      if (invite.status === "sms_sent" || invite.status === "pending") {
+        await (admin.from("customer_invites") as any)
+          .update({ status: "invitation_opened", opened_at: new Date().toISOString() })
+          .eq("id", invite.id);
+      }
+
+      return NextResponse.json({
+        invite: {
+          id: invite.id,
+          customerId: invite.customer_id,
+          merchantId: invite.merchant_id,
+          phone: invite.phone,
+          expiresAt: invite.expires_at,
+          createdAt: invite.created_at,
+          status: invite.status,
+          merchantName,
+        },
+      });
+    }
+
+    // ── Lookup by phone (existing flow) ──
+    if (!phone) {
+      return NextResponse.json({ error: "Phone or inviteId required" }, { status: 400 });
+    }
+
+    const normalized = normalizePhone(phone);
 
     // Find customer by phone
     const { data: customer } = await (admin.from("customers") as any)
@@ -29,9 +75,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ invite: null });
     }
 
-    // Check for unused invite
+    // Check for unused invite with merchant name
     const { data: invite } = await (admin.from("customer_invites") as any)
-      .select("id, customer_id, merchant_id, expires_at, created_at")
+      .select(`
+        id, customer_id, merchant_id, expires_at, created_at,
+        merchants!inner(business_name, name)
+      `)
       .eq("phone", normalized)
       .is("used_at", null)
       .gt("expires_at", new Date().toISOString())
@@ -39,8 +88,21 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
+    if (!invite) {
+      return NextResponse.json({ invite: null });
+    }
+
+    const merchantName = invite.merchants?.business_name || invite.merchants?.name || "Shop";
+
+    // Update status to invitation_opened
+    if (invite.status === "sms_sent" || invite.status === "pending") {
+      await (admin.from("customer_invites") as any)
+        .update({ status: "invitation_opened", opened_at: new Date().toISOString() })
+        .eq("id", invite.id);
+    }
+
     return NextResponse.json({
-      invite: invite ? {
+      invite: {
         id: invite.id,
         customerId: invite.customer_id,
         merchantId: invite.merchant_id,
@@ -48,7 +110,8 @@ export async function POST(req: NextRequest) {
         createdAt: invite.created_at,
         customerName: customer.name,
         registrationStatus: customer.registration_status,
-      } : null,
+        merchantName,
+      },
     });
   } catch (err) {
     console.error("[lookup-invite] error:", err);

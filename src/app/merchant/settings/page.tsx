@@ -22,6 +22,8 @@ import {
 import { changePin } from "@/app/actions/pin";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import { isFabHidden, setFabHidden } from "@/lib/ui/fabVisibility";
+import { getMerchantInvitations, resendInvitation, cancelInvitation } from "@/app/actions/merchant";
+import type { InvitationRecord } from "@/app/actions/merchant";
 
 export default function SettingsPage() {
   const { addToast } = useToast();
@@ -114,6 +116,11 @@ export default function SettingsPage() {
       img.src = URL.createObjectURL(file);
     });
 
+  // Invitation History state
+  const [invitations, setInvitations] = useState<InvitationRecord[]>([]);
+  const [inviteCounts, setInviteCounts] = useState({ registered: 0, pending: 0, smsFailed: 0, expired: 0 });
+  const [invitesLoading, setInvitesLoading] = useState(true);
+
   // SMS Balance state
   const [smsBalance, setSmsBalance] = useState<number | null>(null);
 
@@ -187,6 +194,9 @@ export default function SettingsPage() {
         } catch {
           // Non-critical
         }
+
+        // Load invitation history
+        loadInvitations(id);
       }
     } catch (err) {
       console.error("Failed to load merchant profile:", err);
@@ -210,6 +220,18 @@ export default function SettingsPage() {
     }
   };
 
+  const loadInvitations = async (id: string) => {
+    try {
+      const data = await getMerchantInvitations(id);
+      setInvitations(data.invites);
+      setInviteCounts(data.counts);
+    } catch (err) {
+      console.error("Failed to load invitation history:", err);
+    } finally {
+      setInvitesLoading(false);
+    }
+  };
+
   const loadReminderSettings = async (id: string) => {
     try {
       const settings = await getMerchantReminderSettings(id);
@@ -225,6 +247,12 @@ export default function SettingsPage() {
     } finally {
       setReminderSettingsLoading(false);
     }
+  };
+
+  const maskPhone = (phone: string): string => {
+    if (phone.length < 8) return phone;
+    const cleaned = phone.replace(/^\+977/, "");
+    return cleaned.slice(0, 4) + "****" + cleaned.slice(-2);
   };
 
   const formatPhone = (p: string) => {
@@ -1194,6 +1222,120 @@ export default function SettingsPage() {
                 "Save Reminder Settings"
               )}
             </button>
+          </div>
+        </section>
+
+        {/* Invitation History Section */}
+        <section>
+          <h2 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+            Invitation History
+          </h2>
+          <div className="bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] p-4">
+            {invitesLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : invitations.length === 0 ? (
+              <p className="text-sm text-[var(--color-text-muted)] text-center py-4">
+                No invitations sent yet.
+              </p>
+            ) : (
+              <>
+                {/* Counters */}
+                <div className="flex gap-3 text-sm mb-4 flex-wrap">
+                  <span className="text-green-600 dark:text-green-400 font-medium">Registered ({inviteCounts.registered})</span>
+                  <span className="text-blue-600 dark:text-blue-400 font-medium">Pending ({inviteCounts.pending})</span>
+                  <span className="text-red-600 dark:text-red-400 font-medium">Failed ({inviteCounts.smsFailed})</span>
+                  <span className="text-gray-500 dark:text-gray-400 font-medium">Expired ({inviteCounts.expired})</span>
+                </div>
+
+                {/* Invite list */}
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {invitations.map((inv) => (
+                    <div key={inv.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-[var(--color-text)]">
+                          {maskPhone(inv.phone)}
+                        </p>
+                        <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                          {new Date(inv.created_at).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                          {inv.completed_at && (
+                            <> · Registered {new Date(inv.completed_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                          inv.status === "registration_completed" ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300" :
+                          ["sms_sent", "invitation_opened", "otp_verified"].includes(inv.status) ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" :
+                          inv.status === "sms_failed" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" :
+                          inv.status === "expired" || (inv.status === "pending" && new Date(inv.expires_at) < new Date()) ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" :
+                          inv.status === "cancelled" ? "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400" :
+                          "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300"
+                        }`}>
+                          {inv.status === "registration_completed" ? "Registered" :
+                           inv.status === "sms_sent" ? "Sent" :
+                           inv.status === "invitation_opened" ? "Opened" :
+                           inv.status === "otp_verified" ? "OTP Done" :
+                           inv.status === "sms_failed" ? "Failed" :
+                           inv.status === "expired" || (inv.status === "pending" && new Date(inv.expires_at) < new Date()) ? "Expired" :
+                           inv.status === "cancelled" ? "Cancelled" :
+                           "Pending"}
+                        </span>
+                        {["sms_failed", "expired"].includes(inv.status) && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const result = await resendInvitation(merchantId!, inv.id);
+                                if (result.success) {
+                                  addToast("Invitation resent successfully!", "success");
+                                  if (merchantId) loadInvitations(merchantId);
+                                } else {
+                                  addToast(result.error || "Failed to resend", "error");
+                                }
+                              } catch {
+                                addToast("Failed to resend invitation", "error");
+                              }
+                            }}
+                            className="text-xs text-[var(--color-primary)] font-medium active:opacity-70"
+                          >
+                            Resend
+                          </button>
+                        )}
+                        {inv.status === "pending" && (
+                          <button
+                            onClick={async () => {
+                              try {
+                                const result = await cancelInvitation(merchantId!, inv.id);
+                                if (result.success) {
+                                  addToast("Invitation cancelled", "success");
+                                  if (merchantId) loadInvitations(merchantId);
+                                } else {
+                                  addToast(result.error || "Failed to cancel", "error");
+                                }
+                              } catch {
+                                addToast("Failed to cancel invitation", "error");
+                              }
+                            }}
+                            className="text-xs text-red-500 dark:text-red-400 font-medium active:opacity-70"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </section>
 

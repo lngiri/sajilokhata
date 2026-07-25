@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import { createNotification } from "@/app/actions/notifications";
 
 /**
  * POST /api/verify/complete-registration
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     // Verify that OTP was actually confirmed (invite must be marked as used)
     const { data: usedInvite } = await (admin.from("customer_invites") as any)
-      .select("id")
+      .select("id, merchant_id")
       .eq("phone", normalized)
       .not("used_at", "is", null)
       .order("used_at", { ascending: false })
@@ -60,11 +61,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Failed to update profile" }, { status: 500 });
     }
 
-    // Mark the invite as used
+    // Mark the invite as used + registration_completed
     await (admin.from("customer_invites") as any)
-      .update({ used_at: new Date().toISOString() })
+      .update({
+        used_at: new Date().toISOString(),
+        status: "registration_completed",
+        completed_at: new Date().toISOString(),
+      })
       .eq("phone", normalized)
       .is("used_at", null);
+
+    // Notify merchant
+    try {
+      await createNotification({
+        userId: usedInvite.merchant_id,
+        userType: "merchant",
+        type: "customer_registered_from_invitation",
+        title: "Customer registered",
+        body: `${name.trim()} accepted your invitation. You can now create Digital Khata transactions.`,
+        referenceId: customer.id,
+        referenceType: "customer",
+      });
+    } catch (err) {
+      console.warn("[complete-registration] notification error:", err);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err) {

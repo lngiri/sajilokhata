@@ -5,6 +5,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { createNotification } from "@/app/actions/notifications";
 import { normalizePhone } from "@/lib/phone";
+import { sendTransactionSMS } from "@/app/actions/sms";
 
 const SEARCH_RESULT_LIMIT = 50;
 const SEARCH_MIN_LENGTH = 2;
@@ -1581,4 +1582,179 @@ export async function getMerchantDashboardData(merchantId: string) {
     recentActivity,
     topReceivables,
   };
+}
+
+// ──────────────────────────────────────────────
+// Invitation History
+// ──────────────────────────────────────────────
+
+export interface InvitationRecord {
+  id: string;
+  phone: string;
+  status: string;
+  created_at: string;
+  completed_at: string | null;
+  sms_sent_at: string | null;
+  sms_error: string | null;
+  resend_count: number;
+  last_resent_at: string | null;
+  expires_at: string;
+  invite_token: string;
+}
+
+export async function getMerchantInvitations(
+  merchantId: string
+): Promise<{
+  invites: InvitationRecord[];
+  counts: { registered: number; pending: number; smsFailed: number; expired: number };
+}> {
+  const admin = getAdminClient();
+  if (!admin) return { invites: [], counts: { registered: 0, pending: 0, smsFailed: 0, expired: 0 } };
+
+  const { data } = await (admin.from("customer_invites") as any)
+    .select("id, phone, status, created_at, completed_at, sms_sent_at, sms_error, resend_count, last_resent_at, expires_at, invite_token")
+    .eq("merchant_id", merchantId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  const invites: InvitationRecord[] = (data || []).map((inv: any) => ({
+    id: inv.id,
+    phone: inv.phone,
+    status: inv.status,
+    created_at: inv.created_at,
+    completed_at: inv.completed_at,
+    sms_sent_at: inv.sms_sent_at,
+    sms_error: inv.sms_error,
+    resend_count: inv.resend_count,
+    last_resent_at: inv.last_resent_at,
+    expires_at: inv.expires_at,
+    invite_token: inv.invite_token,
+  }));
+
+  const counts = {
+    registered: invites.filter((i) => i.status === "registration_completed").length,
+    pending: invites.filter((i) => ["pending", "sms_sent", "invitation_opened", "otp_verified"].includes(i.status)).length,
+    smsFailed: invites.filter((i) => i.status === "sms_failed").length,
+    expired: invites.filter((i) => i.status === "expired" || (i.status === "pending" && new Date(i.expires_at) < new Date())).length,
+  };
+
+  return { invites, counts };
+}
+
+export async function resendInvitation(
+  merchantId: string,
+  inviteId: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const { data: rawInvite } = await (admin.from("customer_invites") as any)
+      .select("*")
+      .eq("id", inviteId)
+      .eq("merchant_id", merchantId)
+      .maybeSingle();
+
+    if (!rawInvite) return { success: false, error: "Invitation not found" };
+
+    const invite = rawInvite as InvitationRecord;
+
+    // Check if retryable
+    if (!["sms_failed", "expired", "cancelled"].includes(invite.status)) {
+      return { success: false, error: "Cannot resend invitation in current status" };
+    }
+
+    // Check resend count
+    if (invite.resend_count >= 3) {
+      return { success: false, error: "Maximum resend attempts reached" };
+    }
+
+    // Check cooldown
+    if (invite.last_resent_at) {
+      const elapsed = Date.now() - new Date(invite.last_resent_at).getTime();
+      if (elapsed < 5 * 60 * 1000) {
+        const remaining = Math.ceil((5 * 60 * 1000 - elapsed) / 60000);
+        return { success: false, error: `Please wait ${remaining} minute(s) before resending.` };
+      }
+    }
+
+    // Generate new OTP and resend
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    // Get merchant business name
+    const { data: merchant } = await (admin.from("merchants") as any)
+      .select("business_name, name")
+      .eq("id", merchantId)
+      .single();
+    const businessName = merchant?.business_name || merchant?.name || "Shop";
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
+    const inviteLink = `${siteUrl}/register?invite=${invite.invite_token}`;
+    const message = [
+      `Reminder: ${businessName} invited you to join Digital Khata.`,
+      ``,
+      `Complete your registration here:`,
+      `${inviteLink}`,
+    ].join("\n");
+
+    // Send SMS
+    const smsResult = await sendTransactionSMS(
+      invite.phone.replace(/\D/g, "").slice(-10),
+      message,
+      merchantId
+    );
+
+    // Update invite record
+    await (admin.from("customer_invites") as any)
+      .update({
+        otp,
+        expires_at: expiresAt,
+        status: smsResult.success ? "sms_sent" : "sms_failed",
+        used_at: null,
+        sms_sent_at: smsResult.success ? new Date().toISOString() : null,
+        sms_error: smsResult.success ? null : (smsResult.error || "SMS failed"),
+        last_resent_at: new Date().toISOString(),
+        resend_count: invite.resend_count + 1,
+      })
+      .eq("id", inviteId);
+
+    return { success: smsResult.success, error: smsResult.error };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+export async function cancelInvitation(
+  merchantId: string,
+  inviteId: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const { data: rawInvite } = await (admin.from("customer_invites") as any)
+      .select("status")
+      .eq("id", inviteId)
+      .eq("merchant_id", merchantId)
+      .maybeSingle();
+
+    if (!rawInvite) return { success: false, error: "Invitation not found" };
+
+    const invite = rawInvite as { status: string };
+
+    if (invite.status !== "pending" && invite.status !== "sms_sent") {
+      return { success: false, error: "Can only cancel pending invitations" };
+    }
+
+    await (admin.from("customer_invites") as any)
+      .update({ status: "cancelled" })
+      .eq("id", inviteId);
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
 }

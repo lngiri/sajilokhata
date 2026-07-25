@@ -68,38 +68,29 @@ export async function sendOnboardingSMS(
   phone: string,
   _customerName?: string,
   customerId?: string,
-  merchantId?: string
+  merchantId?: string,
+  inviteToken?: string,
+  businessName?: string
 ): Promise<{ success: boolean; error?: string; otp?: string }> {
   const cleanPhone = phone.replace(/\D/g, "").slice(-10);
   if (cleanPhone.length !== 10) {
     return { success: false, error: "Invalid phone" };
   }
 
-  // Generate 6-digit OTP
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
-  const domain = new URL(siteUrl).hostname;
-  const message = `Welcome to QR Hisab! Your verification code is: ${otp}. Register now at ${domain} to track your ledger and transaction history.`;
+  const shopName = businessName || "A shop";
+  const inviteLink = `${siteUrl}/register?invite=${inviteToken}`;
 
-  // Send SMS first — only store invite after SMS succeeds
+  const message = [
+    `${shopName} invited you to join Digital Khata.`,
+    ``,
+    `Complete your registration here:`,
+    `${inviteLink}`,
+  ].join("\n");
+
   const result = await sendTransactionSMS(cleanPhone, message);
 
-  if (result.success && customerId && merchantId) {
-    const admin = getAdminClient();
-    if (admin) {
-      await (admin.from("customer_invites") as any).insert({
-        customer_id: customerId,
-        merchant_id: merchantId,
-        phone: cleanPhone,
-        otp,
-        expires_at: expiresAt,
-      });
-    }
-  }
-
-  return { ...result, otp };
+  return { ...result, otp: "" };
 }
 
 export async function updateCustomerProfile(
@@ -143,15 +134,29 @@ export async function addCustomerForMerchant(
   merchantId: string,
   phone: string,
   name?: string
-): Promise<{ success: boolean; error?: string; customer?: { id: string; name: string | null; phone: string }; smsSent?: boolean; smsError?: string }> {
+): Promise<{
+  success: boolean;
+  error?: string;
+  customer?: { id: string; name: string | null; phone: string };
+  smsSent?: boolean;
+  smsError?: string;
+  inviteToken?: string;
+  smsStatus?: "pending" | "sms_sent" | "sms_failed";
+}> {
   const admin = getAdminClient();
   if (!admin) return { success: false, error: "Admin client unavailable" };
 
   try {
     const normalized = normalizePhone(phone);
-    let isNewCustomer = false;
 
-    // Find or create customer
+    // 1. Look up merchant's business name
+    const { data: merchant } = await (admin.from("merchants") as any)
+      .select("business_name, name")
+      .eq("id", merchantId)
+      .single();
+    const businessName = merchant?.business_name || merchant?.name || "Shop";
+
+    // 2. Find or create customer
     const { data: rawCustomer } = await admin.from("customers")
       .select("id, name, phone")
       .eq("phone", normalized)
@@ -159,19 +164,17 @@ export async function addCustomerForMerchant(
     let customer = rawCustomer as Pick<CustomerRow, "id" | "name" | "phone"> | null;
 
     if (!customer) {
-      isNewCustomer = true;
       const { data: inserted, error } = await admin.from("customers")
         .insert({ phone: normalized, name: name || null, registration_status: "invited" })
         .select("id, name, phone")
         .single();
       if (error) {
-        console.error("[Customer] addCustomerForMerchant insert error:", error);
         return { success: false, error: `DB error: ${error.message}` };
       }
       customer = inserted as Pick<CustomerRow, "id" | "name" | "phone">;
     }
 
-    // Link to merchant
+    // 3. Link to merchant
     const { data: rawExisting } = await admin.from("merchant_customers")
       .select("id")
       .eq("merchant_id", merchantId)
@@ -183,28 +186,143 @@ export async function addCustomerForMerchant(
       const { error } = await admin.from("merchant_customers")
         .insert({ merchant_id: merchantId, customer_id: customer.id, credit_limit: 5000 });
       if (error) {
-        console.error("[Customer] addCustomerForMerchant link error:", error);
         return { success: false, error: `Link error: ${error.message}` };
       }
     }
 
-    // Send onboarding SMS (registration link with OTP) — track delivery status
-    let smsSent = false;
-    let smsError: string | undefined;
-    if (isNewCustomer) {
-      try {
-        const smsResult = await sendOnboardingSMS(normalized, name, customer.id, merchantId);
-        smsSent = smsResult.success;
-        smsError = smsResult.error;
-        if (!smsResult.success) {
-          console.warn("[Customer] Onboarding SMS failed:", smsResult.error);
-        }
-      } catch (err) {
-        smsError = err instanceof Error ? err.message : "SMS delivery failed";
-        console.error("[Customer] Onboarding SMS exception:", err);
+    // 4. Check for existing active invite (duplicate protection)
+    const { data: rawExistingInvite } = await (admin.from("customer_invites") as any)
+      .select("id, status, resend_count, last_resent_at, invite_token, expires_at")
+      .eq("phone", normalized)
+      .eq("merchant_id", merchantId)
+      .is("used_at", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const existingInvite = rawExistingInvite as {
+      id: string;
+      status: string;
+      resend_count: number;
+      last_resent_at: string | null;
+      invite_token: string;
+      expires_at: string;
+    } | null;
+
+    // Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    let inviteId: string;
+    let inviteToken: string;
+
+    if (existingInvite) {
+      const activeStatuses = ["pending", "sms_sent"];
+      if (activeStatuses.includes(existingInvite.status)) {
+        return { success: false, error: "Invitation already sent. Waiting for customer registration." };
       }
+
+      const retryableStatuses = ["sms_failed", "expired", "cancelled"];
+      if (retryableStatuses.includes(existingInvite.status)) {
+        // Check resend limits
+        if (existingInvite.resend_count >= 3) {
+          return { success: false, error: "Maximum resend attempts reached. Invitation expired." };
+        }
+        if (existingInvite.last_resent_at) {
+          const elapsed = Date.now() - new Date(existingInvite.last_resent_at).getTime();
+          if (elapsed < 5 * 60 * 1000) {
+            const remaining = Math.ceil((5 * 60 * 1000 - elapsed) / 60000);
+            return { success: false, error: `Please wait ${remaining} minute(s) before resending.` };
+          }
+        }
+        // Reuse existing invite — update OTP, reset status
+        inviteId = existingInvite.id;
+        inviteToken = existingInvite.invite_token;
+        await (admin.from("customer_invites") as any)
+          .update({
+            otp,
+            expires_at: expiresAt,
+            status: "pending",
+            used_at: null,
+            sms_sent_at: null,
+            sms_error: null,
+            last_resent_at: new Date().toISOString(),
+            resend_count: existingInvite.resend_count + 1,
+          })
+          .eq("id", inviteId);
+      } else {
+        // Status not retryable (otp_verified, registration_completed) — shouldn't reach here
+        return { success: false, error: "This invitation is already being processed." };
+      }
+    } else {
+      // 5. Create new invite with invite_token
+      const { data: insertedInvite, error: inviteError } = await (admin.from("customer_invites") as any)
+        .insert({
+          customer_id: customer.id,
+          merchant_id: merchantId,
+          phone: normalized,
+          otp,
+          expires_at: expiresAt,
+          status: "pending",
+        })
+        .select("id, invite_token")
+        .single();
+      if (inviteError) {
+        return { success: false, error: `Invite error: ${inviteError.message}` };
+      }
+      inviteId = insertedInvite.id;
+      inviteToken = insertedInvite.invite_token;
     }
 
+    // 6. Send SMS
+    let smsSent = false;
+    let smsError: string | undefined;
+    let smsStatus: "pending" | "sms_sent" | "sms_failed" = "pending";
+
+    try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
+      const inviteLink = `${siteUrl}/register?invite=${inviteToken}`;
+      const message = [
+        `${businessName} invited you to join Digital Khata.`,
+        ``,
+        `Complete your registration here:`,
+        `${inviteLink}`,
+      ].join("\n");
+
+      const smsResult = await sendTransactionSMS(normalized, message, merchantId);
+
+      if (smsResult.success) {
+        smsSent = true;
+        smsStatus = "sms_sent";
+        await (admin.from("customer_invites") as any)
+          .update({
+            status: "sms_sent",
+            sms_sent_at: new Date().toISOString(),
+            sms_error: null,
+          })
+          .eq("id", inviteId);
+      } else {
+        smsError = smsResult.error;
+        smsStatus = "sms_failed";
+        await (admin.from("customer_invites") as any)
+          .update({
+            status: "sms_failed",
+            sms_error: smsResult.error,
+          })
+          .eq("id", inviteId);
+      }
+    } catch (err) {
+      smsError = err instanceof Error ? err.message : "SMS delivery failed";
+      smsStatus = "sms_failed";
+      await (admin.from("customer_invites") as any)
+        .update({
+          status: "sms_failed",
+          sms_error: smsError,
+        })
+        .eq("id", inviteId);
+    }
+
+    // 7. Merchant notification
     createNotification({
       userId: merchantId,
       userType: "merchant",
@@ -220,10 +338,11 @@ export async function addCustomerForMerchant(
       customer: { id: customer.id, name: customer.name, phone: normalized },
       smsSent,
       smsError,
+      inviteToken,
+      smsStatus,
     };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Customer] addCustomerForMerchant error:", msg);
     return { success: false, error: msg };
   }
 }

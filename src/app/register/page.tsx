@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/components/Toast";
 import LogoWithAbout from "@/components/LogoWithAbout";
+import { useSearchParams } from "next/navigation";
 
 function maskPhone(phone: string): string {
   if (phone.length < 8) return phone;
@@ -11,6 +12,7 @@ function maskPhone(phone: string): string {
 
 export default function RegisterPage() {
   const { addToast } = useToast();
+  const searchParams = useSearchParams();
 
   // Steps: phone → otp → profile → done
   const [step, setStep] = useState<"phone" | "otp" | "profile" | "done" | "error">("phone");
@@ -23,7 +25,48 @@ export default function RegisterPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [inviteData, setInviteData] = useState<any>(null);
+  const [merchantName, setMerchantName] = useState<string | null>(null);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const inviteCheckRef = useRef(false);
+
+  // Check for invite link on mount
+  useEffect(() => {
+    if (inviteCheckRef.current) return;
+    inviteCheckRef.current = true;
+
+    const inviteToken = searchParams?.get("invite");
+    if (inviteToken) {
+      setLoading(true);
+      fetch("/api/verify/lookup-invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteId: inviteToken }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.invite) {
+            setInviteData(data.invite);
+            setPhone(data.invite.phone ? data.invite.phone.replace(/^\+977/, "") : "");
+            setMerchantName(data.invite.merchantName || null);
+            if (data.invite.status === "otp_verified") {
+              setStep("profile");
+              addToast("OTP already verified. Complete your profile.", "info");
+            } else {
+              setStep("otp");
+              addToast("You have a pending invitation!", "success");
+            }
+          } else {
+            addToast("Invalid or expired invitation link.", "error");
+          }
+        })
+        .catch(() => {
+          addToast("Network error. Please try again.", "error");
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [searchParams]);
 
   // Focus first OTP input on mount
   useEffect(() => {
@@ -62,6 +105,7 @@ export default function RegisterPage() {
         const data = await inviteRes.json();
         if (data.invite) {
           setInviteData(data.invite);
+          setMerchantName(data.invite.merchantName || null);
           setStep("otp");
           addToast("Verification code sent to your phone!", "success");
         } else {
@@ -230,6 +274,16 @@ export default function RegisterPage() {
         {/* Step: OTP */}
         {step === "otp" && (
           <div className="bg-[var(--color-surface)] rounded-2xl p-6 shadow-sm border border-[var(--color-border)] space-y-4">
+            {merchantName && (
+              <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 text-center">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                  You were invited by {merchantName}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  Your personal information will only be shared after you complete registration.
+                </p>
+              </div>
+            )}
             <div className="flex justify-center gap-1.5">
               {otp.map((digit, idx) => (
                 <input

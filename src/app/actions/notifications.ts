@@ -13,7 +13,8 @@ export type NotificationType =
   | "payment_voucher"
   | "customer_linked"
   | "credit_limit_changed"
-  | "payment_reminder";
+  | "payment_reminder"
+  | "customer_registered_from_invitation";
 
 interface CreateNotificationParams {
   userId: string;
