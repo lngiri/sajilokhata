@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
 import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp, registerNewUser } from "@/app/actions/pin";
+import { setCustomerSession } from "@/lib/customer-session";
 import LogoWithAbout from "@/components/LogoWithAbout";
 
 type Step =
@@ -183,6 +184,9 @@ export default function LoginPage() {
           if (data.roles.length === 1) {
             const target = data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
             console.log("[Login] Single role, redirecting to", target);
+            if (data.roles[0] === "customer" && data.customerPhone) {
+              await setCustomerSession(data.customerPhone, data.customerName || "");
+            }
             window.location.replace(target);
             return;
           }
@@ -353,6 +357,7 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+          await setCustomerSession(phone, info.name || "");
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (info.userType === "customer" || info.userType === "both") {
@@ -403,6 +408,7 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+          await setCustomerSession(phone, info.name || "");
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (info.userType === "customer" || info.userType === "both") {
@@ -421,7 +427,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleSkipPin = () => {
+  const handleSkipPin = async () => {
     const info = userInfoRef.current;
     if (info?.userId) {
       localStorage.setItem("merchant_id", info.userId);
@@ -429,6 +435,7 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
+          await setCustomerSession(phone, info.name || "");
         }
         // Mark as unlocked so CustomerPinGate shows dashboard directly
         // (user can set PIN later in profile settings)
@@ -570,6 +577,9 @@ export default function LoginPage() {
       if (hasPin) {
         const target = userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
         console.log("[Login] PIN already set, redirecting to", target);
+        if (userType === "customer") {
+          await setCustomerSession(phone, result.name || "");
+        }
         window.location.assign(target);
       } else {
         console.log("[Login] No PIN set, transitioning to set_pin step");
@@ -767,6 +777,7 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (forgotType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
+          await setCustomerSession(phone, "");
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (forgotType === "customer") {

@@ -12,68 +12,9 @@ import {
 } from "@/lib/actions";
 import { isOnline, saveOfflineCustomer, savePendingLog } from "@/lib/offline/db";
 
+import { setCustomerSession, clearCustomerSession, loadCustomerSession } from "@/lib/customer-session";
+
 type Step = "phone" | "scan" | "enter" | "reverse" | "done";
-
-/** Key used to persist customer session in localStorage */
-const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
-
-interface CustomerSession {
-  phone: string;
-  name: string;
-}
-
-function loadCustomerSession(): CustomerSession | null {
-  try {
-    const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
-    if (raw) {
-      const session = JSON.parse(raw) as CustomerSession;
-      if (session.phone && session.phone.length >= 10) {
-        return session;
-      }
-    }
-  } catch {
-    // Corrupted data — ignore
-  }
-  return null;
-}
-
-/** Cookie name used by middleware to protect /customer/* routes server-side */
-const CUSTOMER_COOKIE_NAME = "customer_session";
-
-async function saveCustomerSession(phone: string, name: string) {
-  try {
-    localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ phone, name }));
-    // Set httpOnly signed cookie via API endpoint for middleware verification
-    try {
-      await fetch("/api/customer/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, name }),
-      });
-    } catch {
-      // Cookie not set, but localStorage works for client-side
-    }
-  } catch {
-    // localStorage full or unavailable
-  }
-}
-
-function clearCustomerSession() {
-  try {
-    localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-    clearCustomerSessionCookie();
-  } catch {
-    // Ignore
-  }
-}
-
-async function clearCustomerSessionCookie() {
-  try {
-    await fetch("/api/customer/clear-session", { method: "POST" });
-  } catch {
-    // ignore
-  }
-}
 
 export default function ScanPage() {
   const { addToast } = useToast();
@@ -128,7 +69,7 @@ export default function ScanPage() {
     });
 
     // Persist session so they never see the phone screen again
-    await saveCustomerSession(phone, name);
+    await setCustomerSession(phone, name);
 
     setStep("scan");
   };
