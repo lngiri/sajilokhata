@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+
 import LogoWithAbout from "@/components/LogoWithAbout";
 import AboutSheet from "@/components/AboutSheet";
 
@@ -436,14 +436,14 @@ export default function LandingPage() {
             <span className="text-lg font-extrabold text-[var(--color-text)]">QR Hisab</span>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/login?signedOut=1" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors hidden sm:block">
+            <a href="https://app.qrhisab.com/login?signedOut=1" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors hidden sm:block">
               Log in
-            </Link>            <Link
-              href="/login?signedOut=1"
+            </a>            <a
+              href="https://app.qrhisab.com/login?signedOut=1"
               className="btn-bounce px-5 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] text-sm font-bold hover:bg-[var(--color-primary-surface-hover)] transition-all active:scale-[0.97] shadow-sm"
             >
               Get Started Free
-            </Link>
+            </a>
           </div>
         </div>
       </nav>
@@ -482,13 +482,13 @@ export default function LandingPage() {
 
             {/* CTA Buttons */}
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-entrance-delay-2">
-              <Link
-                href="/login?signedOut=1"
+              <a
+                href="https://app.qrhisab.com/login?signedOut=1"
                 className="btn-bounce w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-[var(--color-primary-surface-hover)] transition-all shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 active:scale-[0.98]"
               >
                 Start Free
                 {Icons.arrow}
-              </Link>
+              </a>
               <a
                 href="#how-it-works"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-[var(--color-surface)] text-[var(--color-text)] rounded-[var(--radius-button)] font-bold text-lg border border-[var(--color-border)] hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-primary)]/5 transition-all active:scale-[0.98]"
@@ -768,13 +768,13 @@ export default function LandingPage() {
             Start in under 60 seconds — it&apos;s free!
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/login?signedOut=1"
+            <a
+              href="https://app.qrhisab.com/login?signedOut=1"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-[var(--color-surface)] text-[var(--color-primary-dark)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-white/90 dark:hover:bg-[var(--color-surface)] transition-all shadow-xl active:scale-[0.98]"
             >
               Start Using QR Hisab
               {Icons.arrow}
-            </Link>
+            </a>
           </div>
           <p className="mt-6 text-sm text-white/50">No credit card required · Free for basic use · Works on any phone</p>
         </div>
@@ -801,8 +801,8 @@ export default function LandingPage() {
               <h4 className="font-bold text-[var(--color-text)] mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
                 <li><a href="#how-it-works" className="hover:text-[var(--color-primary)] transition-colors">How It Works</a></li>
-                <li><Link href="/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Get Started</Link></li>
-                <li><Link href="/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Login</Link></li>
+                <li><a href="https://app.qrhisab.com/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Get Started</a></li>
+                <li><a href="https://app.qrhisab.com/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Login</a></li>
               </ul>
             </div>
 

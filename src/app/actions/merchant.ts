@@ -676,8 +676,8 @@ export async function updateCreditLogStatus(
 
   if (data?.customer_id && (status === "approved" || status === "rejected")) {
     const [custResult, shopResult] = await Promise.all([
-      (admin.from("customers") as any).select("name").eq("id", data.customer_id).single().catch(() => ({ data: null })),
-      (admin.from("merchants") as any).select("name").eq("id", sessionUserId).single().catch(() => ({ data: null })),
+      (admin.from("customers") as any).select("name").eq("id", data.customer_id).maybeSingle(),
+      (admin.from("merchants") as any).select("name").eq("id", sessionUserId).maybeSingle(),
     ]);
     const customerName = custResult?.data?.name || "Customer";
     const shopName = shopResult?.data?.name || "Shop";
@@ -1431,8 +1431,8 @@ export async function submitPaymentVoucher(
     }
 
     const [custResult, shopResult] = await Promise.all([
-      (admin.from("customers") as any).select("name").eq("id", customerId).single().catch(() => ({ data: null })),
-      (admin.from("merchants") as any).select("name").eq("id", merchantId).single().catch(() => ({ data: null })),
+      (admin.from("customers") as any).select("name").eq("id", customerId).maybeSingle(),
+      (admin.from("merchants") as any).select("name").eq("id", merchantId).maybeSingle(),
     ]);
     const customerName = custResult?.data?.name || "Customer";
     const shopName = shopResult?.data?.name || "Shop";

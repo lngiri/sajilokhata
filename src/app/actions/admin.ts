@@ -883,7 +883,7 @@ export async function getSystemHealth(): Promise<{
       const payload = new URLSearchParams({ auth_token: smsToken, to: "9800000000", text: "healthcheck" }).toString();
       const res = await fetch("https://sms.aakashsms.com/sms/v3/send", {
         method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" },
         body: payload,
         signal: controller.signal,
       });

@@ -64,7 +64,7 @@ export default function LoginPage() {
     if (digit && idx < 3) {
       focusPinInput(refs, idx + 1);
     } else if (digit && idx === 3) {
-      // All 4 digits entered â€” auto-submit after a brief delay for visual feedback
+      // All 4 digits entered — auto-submit after a brief delay for visual feedback
       if (autoSubmit) {
         setTimeout(() => autoSubmit(), 150);
       }
@@ -88,7 +88,7 @@ export default function LoginPage() {
 
   const pinArrayToString = (arr: string[]) => arr.join("");
 
-  // â”€â”€ Silent session check on mount â”€â”€
+  // ── Silent session check on mount ──
   useEffect(() => {
     mountedRef.current = true;
     let cancelled = false;
@@ -148,7 +148,7 @@ export default function LoginPage() {
       // (means they explicitly navigated to /login, not redirected from middleware)
       const hasLocalSession = localStorage.getItem("merchant_id") || localStorage.getItem("sajilo_customer_session");
       if (!hasLocalSession) {
-        console.log("[Login] No local session data â†’ showing welcome");
+        console.log("[Login] No local session data → showing welcome");
         if (!cancelled) setStep("welcome");
         return;
       }
@@ -176,7 +176,7 @@ export default function LoginPage() {
           }
 
           if (data.roles.length === 0) {
-            console.log("[Login] Session exists but no roles â†’ showing welcome");
+            console.log("[Login] Session exists but no roles → showing welcome");
             if (!cancelled) setStep("welcome");
             return;
           }
@@ -200,7 +200,7 @@ export default function LoginPage() {
     };
   }, []);
 
-  // â”€â”€ Phone Submit â”€â”€
+  // ── Phone Submit ──
   const handlePhoneSubmit = async () => {
     const digitsOnly = phone.replace(/\D/g, "");
     if (digitsOnly.length < 10) return;
@@ -278,7 +278,7 @@ export default function LoginPage() {
     }
 
     if (!exists) {
-      console.log("[Login] New user â†’ sending OTP");
+      console.log("[Login] New user → sending OTP");
       try {
         const otpResult = await sendRegistrationOtp(cleanPhone);
         if (!mountedRef.current) return;
@@ -301,9 +301,9 @@ export default function LoginPage() {
       return;
     }
 
-    // Existing user â€” check for multi-role
+    // Existing user — check for multi-role
     if (users.length > 1 || users[0]?.userType === "both") {
-      console.log("[Login] Multi-role user â†’ showing role selector");
+      console.log("[Login] Multi-role user → showing role selector");
       userInfoRef.current = { userId: users[0].userId, userType: users[0].userType, name: users[0].name };
       setAvailableRoles(["merchant", "customer"]);
       setSelectRoleMode("login");
@@ -317,16 +317,16 @@ export default function LoginPage() {
     console.log("[Login] Existing user:", userInfoRef.current);
 
     if (user.hasPin) {
-      console.log("[Login] User has PIN â†’ showing PIN entry");
+      console.log("[Login] User has PIN → showing PIN entry");
       setStep("pin");
     } else {
-      console.log("[Login] User has no PIN â†’ showing set_pin");
+      console.log("[Login] User has no PIN → showing set_pin");
       setStep("set_pin");
     }
     setLoading(false);
   };
 
-  // â”€â”€ PIN Entry â”€â”€
+  // ── PIN Entry ──
   const handlePinSubmit = async () => {
     const pinStr = pinArrayToString(pin);
     if (pinStr.length < 4) return;
@@ -370,7 +370,7 @@ export default function LoginPage() {
     }
   };
 
-  // â”€â”€ Set PIN (legacy user or after OTP) â”€â”€
+  // ── Set PIN (legacy user or after OTP) ──
   const handleSetPin = async () => {
     const newPinStr = pinArrayToString(newPin);
     const confirmStr = pinArrayToString(confirmPin);
@@ -445,7 +445,7 @@ export default function LoginPage() {
     window.location.assign(target);
   };
 
-  // â”€â”€ OTP Verify (new user registration) â”€â”€
+  // ── OTP Verify (new user registration) ──
   const handleOtpSubmit = async () => {
     if (otp.length < 4) return;
     setLoading(true);
@@ -481,7 +481,7 @@ export default function LoginPage() {
           return;
         }
 
-        // Preserve existing session data â€” do NOT wipe localStorage
+        // Preserve existing session data — do NOT wipe localStorage
         if (regResult.userId) {
           localStorage.setItem("merchant_id", regResult.userId);
         }
@@ -499,8 +499,8 @@ export default function LoginPage() {
       }
 
       if (!result.exists) {
-        // New user â€” need role selection before creating account
-        console.log("[Login] New user, no existing account â†’ role selection");
+        // New user — need role selection before creating account
+        console.log("[Login] New user, no existing account → role selection");
         if (!mountedRef.current) return;
         setSelectRoleMode("register");
         setAvailableRoles(["merchant", "customer"]);
@@ -559,8 +559,8 @@ export default function LoginPage() {
       console.log("[Login] PIN check after OTP:", { hasPin, userType });
       if (!mountedRef.current) return;
       if (userType === "both") {
-        // Multi-role existing user â€” let them choose
-        console.log("[Login] Multi-role after OTP â†’ role selection");
+        // Multi-role existing user — let them choose
+        console.log("[Login] Multi-role after OTP → role selection");
         setSelectRoleMode("login");
         setAvailableRoles(["merchant", "customer"]);
         setStep("select_role");
@@ -584,13 +584,13 @@ export default function LoginPage() {
     }
   };
 
-  // â”€â”€ Role Selection (new user or multi-role existing) â”€â”€
+  // ── Role Selection (new user or multi-role existing) ──
   const handleRoleSelect = async (role: "merchant" | "customer") => {
     setLoading(true);
     setError("");
 
     if (selectRoleMode === "register") {
-      // New user â€” create account with chosen role
+      // New user — create account with chosen role
       const shopName = registerName.trim() || undefined;
       console.log("[Login] Creating new", role, "account");
       const regResult = await registerNewUser(phone, role, shopName);
@@ -649,7 +649,7 @@ export default function LoginPage() {
       return;
     }
 
-    // Existing multi-role user â€” login with chosen role
+    // Existing multi-role user — login with chosen role
     console.log("[Login] Logging in as", role, "for user:", userInfoRef.current?.userId);
     if (!userInfoRef.current?.userId) {
       setError("Session expired. Please re-enter your phone.");
@@ -667,16 +667,16 @@ export default function LoginPage() {
     const hasPin = userForRole?.hasPin ?? false;
 
     if (hasPin) {
-      console.log("[Login] Multi-role user has PIN â†’ showing PIN entry");
+      console.log("[Login] Multi-role user has PIN → showing PIN entry");
       setStep("pin");
     } else {
-      console.log("[Login] Multi-role user has no PIN â†’ set_pin");
+      console.log("[Login] Multi-role user has no PIN → set_pin");
       setStep("set_pin");
     }
     setLoading(false);
   };
 
-  // â”€â”€ Post sign-out role selection â”€â”€
+  // ── Post sign-out role selection ──
   const handlePostSignoutRoleSelect = async (role: "merchant" | "customer") => {
     setLoading(true);
     setError("");
@@ -720,7 +720,7 @@ export default function LoginPage() {
     }
   };
 
-  // â”€â”€ Forgot PIN â”€â”€
+  // ── Forgot PIN ──
   const handleForgotPhoneSubmit = async () => {
     if (!phone || phone.length < 10) return;
     setLoading(true);
@@ -829,7 +829,7 @@ export default function LoginPage() {
         <div className="mx-auto mb-4">
           <LogoWithAbout size={64} showAnimation />
         </div>
-        <h1 className="text-2xl font-extrabold text-[var(--color-text)]">Welcome! ðŸ‘‹</h1>
+        <h1 className="text-2xl font-extrabold text-[var(--color-text)]">Welcome! 👋</h1>
         <p className="text-sm text-[var(--color-text-muted)] mt-1">Your digital khata awaits</p>
         {(step === "pin" || step === "set_pin") && userInfoRef.current?.userType && (
           <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
@@ -853,7 +853,7 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* â”€â”€ PIN Entry â”€â”€ */}
+      {/* ── PIN Entry ── */}
       {step === "pin" && (
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
           {renderPinDots(pin, setPin, pinRefs, "Enter your PIN", handlePinSubmit)}
@@ -881,7 +881,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ Set PIN (legacy user or after OTP) â”€â”€ */}
+      {/* ── Set PIN (legacy user or after OTP) ── */}
       {step === "set_pin" && (
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
           <p className="text-sm text-[var(--color-text-muted)] text-center">
@@ -910,7 +910,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ Role Selection â€” new user or multi-role existing â”€â”€ */}
+      {/* ── Role Selection — new user or multi-role existing ── */}
       {step === "select_role" && (
         <div className="w-full max-w-xs space-y-6 animate-fade-in">
           {selectRoleMode === "register" && (
@@ -983,7 +983,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ Welcome Modal â”€â”€ */}
+      {/* ── Welcome Modal ── */}
       {step === "welcome" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
           <p className="text-sm text-[var(--color-text-muted)] text-center">How would you like to continue?</p>
@@ -1010,7 +1010,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ Post Sign-out Role Selection â”€â”€ */}
+      {/* ── Post Sign-out Role Selection ── */}
       {step === "post_signout_role" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
           <p className="text-sm text-[var(--color-text-muted)] text-center">Choose which account to continue with</p>
@@ -1081,7 +1081,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ Phone Entry â”€â”€ */}
+      {/* ── Phone Entry ── */}
       {step === "phone" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
           <p className="text-sm text-[var(--color-text-muted)] text-center">
@@ -1136,7 +1136,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ OTP Verify (new user) â”€â”€ */}
+      {/* ── OTP Verify (new user) ── */}
       {step === "otp" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
           <div className="bg-[var(--color-primary)]/5 rounded-xl p-3 text-center">
@@ -1190,7 +1190,7 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* â”€â”€ Forgot PIN â”€â”€ */}
+      {/* ── Forgot PIN ── */}
       {step === "forgot_phone" && (
         <div className="w-full max-w-xs space-y-4 animate-fade-in">
           <p className="text-sm text-[var(--color-text-muted)] text-center">Enter your registered phone to reset PIN</p>

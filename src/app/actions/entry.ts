@@ -234,8 +234,7 @@ export async function saveEntry(params: {
       const { data: shop } = await (admin.from("merchants") as any)
         .select("name")
         .eq("id", params.merchant_id)
-        .single()
-        .catch(() => ({ data: null }));
+        .maybeSingle();
       const shopName = shop?.name || "Shop";
       createNotification({
         userId: resolvedCustomerId,

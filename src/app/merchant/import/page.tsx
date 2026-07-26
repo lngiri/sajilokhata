@@ -63,7 +63,16 @@ export default function ImportPage() {
       let parsed: Record<string, string>[] = [];
 
       if (ext === "csv") {
-        const text = await file.text();
+        const buf = await file.arrayBuffer();
+        const bytes = new Uint8Array(buf);
+        let text: string;
+        const hasBOM = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
+        const rawBytes = hasBOM ? bytes.slice(3) : bytes;
+        try {
+          text = new TextDecoder("utf-8", { fatal: true }).decode(rawBytes);
+        } catch {
+          text = new TextDecoder("windows-1252").decode(rawBytes);
+        }
         const Papa = await import("papaparse");
         const result = Papa.default.parse(text, { header: true, skipEmptyLines: true });
         parsed = result.data as Record<string, string>[];

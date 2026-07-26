@@ -29,7 +29,7 @@ export async function sendTransactionSMS(
   try {
     const res = await fetch("https://sms.aakashsms.com/sms/v3/send", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: { "Content-Type": "application/x-www-form-urlencoded; charset=utf-8" },
       body: payload.toString(),
     });
 

@@ -8,10 +8,10 @@ import { clearIndexedDB } from "@/lib/offline/db";
  * Get the current merchant ID.
  *
  * Preference order:
- *  1. localStorage (set by the custom login flow â€” source of truth)
+ *  1. localStorage (set by the custom login flow — source of truth)
  *  2. Supabase Auth session (legacy users before custom-auth migration)
  *
- * NEVER overwrites localStorage â€” that would create a cross-session leak
+ * NEVER overwrites localStorage — that would create a cross-session leak
  * if a stale Supabase session returns a different userId.
  */
 export async function getCurrentMerchantId(): Promise<string | null> {
@@ -64,7 +64,7 @@ export async function getCurrentUserPhone(): Promise<string | null> {
  */
 export async function signOut() {
   try {
-    // 1. Supabase signout (fire-and-forget â€” must not block redirect)
+    // 1. Supabase signout (fire-and-forget — must not block redirect)
     try {
       const supabase = createClient();
       supabase.auth.signOut().catch(() => {});
@@ -85,7 +85,7 @@ export async function signOut() {
     // 4. Restore app config
     if (swVersion) localStorage.setItem("sw_version", swVersion);
     if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
-    // Fire-and-forget: don't await â€” redirect must not be blocked
+    // Fire-and-forget: don't await — redirect must not be blocked
     clearIndexedDB().catch(() => {});
 
     // 5. Clear client-accessible cookies
@@ -104,7 +104,7 @@ export async function signOut() {
       navigator.serviceWorker.controller.postMessage({ type: "SKIP_WAITING" });
     }
   } catch {
-    // Ignore â€” proceed to redirect regardless
+    // Ignore — proceed to redirect regardless
   }
 
   // 8. LAST: Redirect to server-side signout which clears httpOnly session cookie
