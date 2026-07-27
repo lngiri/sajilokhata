@@ -1173,7 +1173,7 @@ export default function LoginPage() {
               onClick={() => { setStep("welcome"); setError(""); setPhoneErrorAction(null); setAuthMode(null); }}
               className="w-full text-center text-sm text-[var(--color-text-muted)] active:text-[var(--color-primary)] transition-colors"
             >
-              â† Back
+              ← Back
             </button>
           )}
         </div>

@@ -133,13 +133,25 @@ export async function saveEntry(params: {
         const cust = await findOrCreateCustomerAdmin(params.customer_phone, params.customer_name);
         resolvedCustomerId = cust.id;
         resolvedCustomerName = cust.name;
-        await linkCustomerToMerchantAdmin(params.merchant_id, cust.id);
       } catch (custErr) {
         const msg = custErr instanceof Error ? custErr.message : String(custErr);
-        console.error("[Entry] Customer creation/linking failed:", msg);
+        console.error("[Entry] Customer creation failed:", msg);
         // For cash sales, proceed without customer
         if (!isCash) {
           return { success: false, error: `Customer error: ${msg}` };
+        }
+      }
+    }
+
+    // Ensure merchant_customers link exists (idempotent — checks for existing row first)
+    if (resolvedCustomerId) {
+      try {
+        await linkCustomerToMerchantAdmin(params.merchant_id, resolvedCustomerId);
+      } catch (linkErr) {
+        const msg = linkErr instanceof Error ? linkErr.message : String(linkErr);
+        console.error("[Entry] Customer linking failed:", msg);
+        if (!isCash) {
+          return { success: false, error: `Customer link error: ${msg}` };
         }
       }
     }
