@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
+import jsQR from "jsqr";
 
 interface QRDisplayProps {
   merchantId: string;
@@ -93,6 +94,8 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const scanningRef = useRef(false);
+  const detectorRef = useRef<BarcodeDetector | null>(null);
+  const decodeLockRef = useRef(false);
 
   const stopScanning = useCallback(() => {
     scanningRef.current = false;
@@ -131,12 +134,16 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0);
 
-          // Use BarcodeDetector API if available
+          // BarcodeDetector is native on Chrome/Edge/Android Chromium.
+          // jsQR is the pure-JS fallback for Safari (iPhone/iPad) where
+          // BarcodeDetector is not available.
           if ("BarcodeDetector" in window) {
-            const detector = new BarcodeDetector({
-              formats: ["qr_code"],
-            });
-            detector
+            if (!detectorRef.current) {
+              detectorRef.current = new BarcodeDetector({
+                formats: ["qr_code"],
+              });
+            }
+            detectorRef.current
               .detect(canvas)
               .then((results) => {
                 if (results.length > 0) {
@@ -145,6 +152,18 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
                 }
               })
               .catch(() => {});
+          } else if (!decodeLockRef.current) {
+            decodeLockRef.current = true;
+            try {
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const code = jsQR(imageData.data, imageData.width, imageData.height);
+              if (code) {
+                onScan(code.data);
+                stopScanning();
+              }
+            } finally {
+              decodeLockRef.current = false;
+            }
           }
         }
 
