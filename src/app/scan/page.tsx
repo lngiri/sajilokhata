@@ -69,7 +69,10 @@ export default function ScanPage() {
     });
 
     // Persist session so they never see the phone screen again
-    await setCustomerSession(phone, name);
+    const sr = await setCustomerSession(phone, name);
+    if (!sr.success) {
+      addToast("Session setup failed — dashboard access may be limited", "warning");
+    }
 
     setStep("scan");
   };

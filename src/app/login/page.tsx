@@ -185,7 +185,11 @@ export default function LoginPage() {
             const target = data.roles[0] === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
             console.log("[Login] Single role, redirecting to", target);
             if (data.roles[0] === "customer" && data.customerPhone) {
-              await setCustomerSession(data.customerPhone, data.customerName || "");
+              const sr = await setCustomerSession(data.customerPhone, data.customerName || "");
+              if (!sr.success) {
+                if (!cancelled) setStep("welcome");
+                return;
+              }
             }
             window.location.replace(target);
             return;
@@ -357,7 +361,13 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-          await setCustomerSession(phone, info.name || "");
+          const sr = await setCustomerSession(phone, info.name || "");
+          if (!sr.success) {
+            if (!mountedRef.current) return;
+            setError("Unable to complete login. Please try again.");
+            setLoading(false);
+            return;
+          }
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (info.userType === "customer" || info.userType === "both") {
@@ -408,7 +418,13 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-          await setCustomerSession(phone, info.name || "");
+          const sr = await setCustomerSession(phone, info.name || "");
+          if (!sr.success) {
+            if (!mountedRef.current) return;
+            setError("Unable to complete login. Please try again.");
+            setLoading(false);
+            return;
+          }
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (info.userType === "customer" || info.userType === "both") {
@@ -435,7 +451,11 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (info.userType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: info.name || "" }));
-          await setCustomerSession(phone, info.name || "");
+          const sr = await setCustomerSession(phone, info.name || "");
+          if (!sr.success) {
+            setError("Unable to complete login. Please try again.");
+            return;
+          }
         }
         // Mark as unlocked so CustomerPinGate shows dashboard directly
         // (user can set PIN later in profile settings)
@@ -578,7 +598,13 @@ export default function LoginPage() {
         const target = userType === "customer" ? "/customer/dashboard" : "/merchant/dashboard";
         console.log("[Login] PIN already set, redirecting to", target);
         if (userType === "customer") {
-          await setCustomerSession(phone, result.name || "");
+          const sr = await setCustomerSession(phone, result.name || "");
+          if (!sr.success) {
+            if (!mountedRef.current) return;
+            setError("Unable to complete login. Please try again.");
+            setLoading(false);
+            return;
+          }
         }
         window.location.assign(target);
       } else {
@@ -777,7 +803,13 @@ export default function LoginPage() {
         localStorage.setItem("merchant_phone", phone);
         if (forgotType === "customer") {
           localStorage.setItem("sajilo_customer_session", JSON.stringify({ phone, name: "" }));
-          await setCustomerSession(phone, "");
+          const sr = await setCustomerSession(phone, "");
+          if (!sr.success) {
+            if (!mountedRef.current) return;
+            setError("Unable to complete login. Please try again.");
+            setLoading(false);
+            return;
+          }
         }
         // Mark PIN as unlocked so CustomerPinGate skips re-prompt on dashboard
         if (forgotType === "customer") {
