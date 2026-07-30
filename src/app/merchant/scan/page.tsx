@@ -149,7 +149,8 @@ export default function MerchantScanPage() {
   );
 
   const handleEnterNext = () => {
-    if (entryType !== "cash" && (!customerId || !customerPhone)) {
+    // In QR scan mode customerId is null (server resolves via phone)
+    if (entryType !== "cash" && !customerPhone) {
       addToast("Please select or enter a valid customer.", "error");
       return;
     }

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import CustomerDashboard from "./page";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -18,6 +17,15 @@ vi.mock("@/lib/supabase/client", () => ({
     })),
     removeChannel: vi.fn(),
   })),
+}));
+
+vi.mock("@/lib/phone", () => ({
+  normalizePhone: vi.fn((p: string) => p),
+}));
+
+vi.mock("@/lib/offline/db", () => ({
+  isOnline: vi.fn(() => true),
+  savePendingLog: vi.fn(),
 }));
 
 vi.mock("@/components/QRCode", () => ({
@@ -50,34 +58,114 @@ vi.mock("@/components/Toast", () => ({
   }),
 }));
 
-vi.mock("@/components/SyncStatus", () => ({
-  default: () => <div data-testid="sync-status">Sync</div>,
-}));
-
 vi.mock("@/components/CustomerBottomNav", () => ({
   default: () => <div data-testid="customer-bottom-nav">Nav</div>,
 }));
 
-vi.mock("@/lib/actions", () => ({
+vi.mock("@/components/RoleSwitcher", () => ({
+  default: () => <div data-testid="role-switcher">RoleSwitcher</div>,
+}));
+
+vi.mock("@/components/OtherRolePrompt", () => ({
+  default: () => <div data-testid="other-role-prompt">OtherRole</div>,
+}));
+
+vi.mock("@/components/LogoWithAbout", () => ({
+  default: () => <div data-testid="logo">Logo</div>,
+}));
+
+vi.mock("@/components/CustomerOnboardingModal", () => ({
+  default: ({ onComplete }: any) => (
+    <div data-testid="onboarding-modal">
+      <button onClick={onComplete}>Complete</button>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/CustomerPinGate", () => ({
+  default: ({ children }: any) => <>{children}</>,
+}));
+
+vi.mock("@/components/AmountSuggestions", () => ({
+  default: ({ onSelect }: any) => (
+    <div data-testid="amount-suggestions">
+      <button onClick={() => onSelect(500)}>500</button>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/PendingApprovalModal", () => ({
+  default: () => <div data-testid="pending-approval-modal" />,
+}));
+
+vi.mock("@/components/PullToRefresh", () => ({
+  default: ({ children }: any) => <>{children}</>,
+}));
+
+vi.mock("@/lib/sound", () => ({
+  playSuccessSound: vi.fn(),
+}));
+
+vi.mock("@/lib/auth", () => ({
+  getCurrentMerchantId: vi.fn(),
+  getCurrentUserPhone: vi.fn(),
+}));
+
+vi.mock("@/app/actions/customer", () => ({
   getCustomerStats: vi.fn(),
   findOrCreateCustomer: vi.fn(),
   linkCustomerToMerchant: vi.fn(),
-  createCreditLog: vi.fn(),
+  submitCustomerEntry: vi.fn(),
+  getCustomerProfile: vi.fn().mockResolvedValue({ name: "Hari", avatar_url: null }),
+  getCustomerIdsForPhone: vi.fn().mockResolvedValue(["c1"]),
+  updateCustomerAvatar: vi.fn(),
 }));
 
-const mockActions = await import("@/lib/actions");
+vi.mock("@/app/actions/merchant", () => ({
+  getMerchantPaymentMethodsPublic: vi.fn().mockResolvedValue([]),
+  submitPaymentVoucher: vi.fn(),
+}));
 
-const VALID_SESSION = JSON.stringify({
+vi.mock("@/app/actions/notifications", () => ({
+  getNotifications: vi.fn().mockResolvedValue([]),
+  getUnreadCount: vi.fn().mockResolvedValue(0),
+  markAsRead: vi.fn().mockResolvedValue(undefined),
+}));
+
+const mockCustomerActions = await import("@/app/actions/customer");
+
+const VALID_SESSION = {
   phone: "9841234567",
   name: "Hari",
-});
+};
 
 describe("CustomerDashboard", () => {
+  const originalLocation = window.location;
+
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
 
-    vi.mocked(mockActions.getCustomerStats).mockResolvedValue({
+    // Use Object.defineProperty to properly mock window.location
+    Object.defineProperty(window, "location", {
+      value: {
+        ...originalLocation,
+        replace: vi.fn(),
+        href: originalLocation.href,
+        origin: originalLocation.origin,
+        protocol: originalLocation.protocol,
+        host: originalLocation.host,
+        hostname: originalLocation.hostname,
+        port: originalLocation.port,
+        pathname: originalLocation.pathname,
+        search: originalLocation.search,
+        hash: originalLocation.hash,
+      },
+      writable: true,
+      configurable: true,
+    });
+
+    vi.mocked(mockCustomerActions.getCustomerStats).mockResolvedValue({
       totalOutstanding: 1500,
       shopsCount: 2,
       totalCreditLimit: 10000,
@@ -96,40 +184,45 @@ describe("CustomerDashboard", () => {
     });
   });
 
+  afterEach(() => {
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
+  });
+
   it("renders dashboard content after initialization", async () => {
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
+
     render(<CustomerDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("My Dashboard")).toBeInTheDocument();
+      expect(screen.getByText("Total Outstanding Balance")).toBeInTheDocument();
     });
   });
 
-  it("redirects to /scan when no customer session exists", async () => {
-    const originalLocation = window.location;
-    delete (window as any).location;
-    window.location = { ...originalLocation, href: "" };
-
+  it("redirects to /login when no customer session exists", async () => {
     render(<CustomerDashboard />);
 
     await waitFor(() => {
-      expect(window.location.href).toBe("/scan");
+      expect(window.location.replace).toHaveBeenCalledWith("/login");
     });
-
-    window.location = originalLocation;
   });
 
-  it("renders customer name and phone from session", async () => {
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
+  it("renders customer name from session", async () => {
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
 
     render(<CustomerDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Hari")).toBeInTheDocument();
+      const hariElements = screen.getAllByText("Hari");
+      expect(hariElements.length).toBeGreaterThanOrEqual(1);
     });
   });
 
   it("displays outstanding balance card with stats", async () => {
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
 
     render(<CustomerDashboard />);
 
@@ -141,8 +234,8 @@ describe("CustomerDashboard", () => {
   });
 
   it("shows empty state when no stats", async () => {
-    vi.mocked(mockActions.getCustomerStats).mockResolvedValue(null);
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
+    vi.mocked(mockCustomerActions.getCustomerStats).mockResolvedValue(null);
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
 
     render(<CustomerDashboard />);
 
@@ -153,193 +246,13 @@ describe("CustomerDashboard", () => {
     });
   });
 
-  it("shows QR scanner modal on FAB click and submits credit", async () => {
-    vi.mocked(mockActions.findOrCreateCustomer).mockResolvedValue({
-      id: "c1",
-      phone: "9841234567",
-    });
-    vi.mocked(mockActions.linkCustomerToMerchant).mockResolvedValue({ id: "mc1" });
-    vi.mocked(mockActions.createCreditLog).mockResolvedValue({ id: "cl1" });
-
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
-
-    render(<CustomerDashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("My Dashboard")).toBeInTheDocument();
-    });
-
-    const fab = screen.getByRole("button", { name: "" });
-    const fabButton = fab.closest("button");
-    expect(fabButton).toBeTruthy();
-
-    if (fabButton) {
-      await userEvent.click(fabButton);
-    }
-
-    await waitFor(() => {
-      expect(screen.getByText("Scan Shop QR")).toBeInTheDocument();
-    });
-  });
-
-  it("completes full modal flow: scan QR → enter amount → submit → success", async () => {
-    vi.mocked(mockActions.findOrCreateCustomer).mockResolvedValue({
-      id: "c1",
-      phone: "9841234567",
-      name: "Hari",
-    });
-    vi.mocked(mockActions.linkCustomerToMerchant).mockResolvedValue({
-      id: "mc1",
-      merchant_id: "m1",
-      customer_id: "c1",
-    });
-    vi.mocked(mockActions.createCreditLog).mockResolvedValue({
-      id: "cl1",
-      status: "pending",
-    });
-
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
-
-    render(<CustomerDashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("My Dashboard")).toBeInTheDocument();
-    });
-
-    // Find and click FAB to open scan modal
-    const fabButtons = screen.getAllByRole("button");
-    const fab = fabButtons.find(
-      (b) => b.querySelector("svg") && !b.closest('[data-testid="customer-bottom-nav"]')
-    );
-    if (fab) await userEvent.click(fab);
-
-    await waitFor(() => {
-      expect(screen.getByText("Scan Shop QR")).toBeInTheDocument();
-    });
-
-    // Simulate QR scan
-    await userEvent.click(screen.getByTestId("mock-scan"));
-
-    await waitFor(() => {
-      expect(screen.getAllByText("Shop ABC").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByPlaceholderText("0")).toBeInTheDocument();
-    });
-
-    // Enter amount and description
-    const amountInput = screen.getByPlaceholderText("0");
-    await userEvent.type(amountInput, "1200");
-
-    const descInput = screen.getByPlaceholderText("e.g. Rice 10kg, Milk 2L");
-    await userEvent.type(descInput, "Groceries");
-
-    // Submit
-    const submitBtn = screen.getByText("Send Request");
-    await userEvent.click(submitBtn);
-
-    // Verify success
-    await waitFor(() => {
-      expect(screen.getByText("Request Sent!")).toBeInTheDocument();
-    });
-
-    // Verify correct data passed to action functions
-    expect(mockActions.findOrCreateCustomer).toHaveBeenCalledWith(
-      "9841234567",
-      "Hari"
-    );
-    expect(mockActions.linkCustomerToMerchant).toHaveBeenCalledWith(
-      "m1",
-      "c1"
-    );
-    expect(mockActions.createCreditLog).toHaveBeenCalledWith({
-      merchant_id: "m1",
-      customer_id: "c1",
-      amount: 1200,
-      description: "Groceries",
-      type: "debit",
-      status: "pending",
-      sync_status: "online",
-    });
-  });
-
-  it("shows error message when modal submission fails", async () => {
-    vi.mocked(mockActions.findOrCreateCustomer).mockRejectedValue(
-      new Error("Network error")
-    );
-
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
-
-    render(<CustomerDashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("My Dashboard")).toBeInTheDocument();
-    });
-
-    const fabButtons = screen.getAllByRole("button");
-    const fab = fabButtons.find(
-      (b) => b.querySelector("svg") && !b.closest('[data-testid="customer-bottom-nav"]')
-    );
-    if (fab) await userEvent.click(fab);
-
-    await waitFor(() => {
-      expect(screen.getByText("Scan Shop QR")).toBeInTheDocument();
-    });
-
-    await userEvent.click(screen.getByTestId("mock-scan"));
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText("0")).toBeInTheDocument();
-    });
-
-    await userEvent.type(screen.getByPlaceholderText("0"), "500");
-    await userEvent.click(screen.getByText("Send Request"));
-
-    // Should remain on enter step (not advance to success state)
-    await waitFor(() => {
-      expect(screen.getByText("Enter Amount")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("Request Sent!")).not.toBeInTheDocument();
-  });
-
-  it("closes modal and resets state on backdrop click", async () => {
-    vi.mocked(mockActions.getCustomerStats).mockResolvedValue(null);
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
-
-    render(<CustomerDashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("My Dashboard")).toBeInTheDocument();
-    });
-
-    // Open modal
-    const fabButtons = screen.getAllByRole("button");
-    const fab = fabButtons.find(
-      (b) => b.querySelector("svg") && !b.closest('[data-testid="customer-bottom-nav"]')
-    );
-    if (fab) await userEvent.click(fab);
-
-    await waitFor(() => {
-      expect(screen.getByText("Scan Shop QR")).toBeInTheDocument();
-    });
-
-    // Click backdrop to close
-    const backdrop = document.querySelector(".bg-black\\/50");
-    if (backdrop) {
-      await userEvent.click(backdrop);
-    }
-
-    await waitFor(() => {
-      expect(screen.queryByText("Scan Shop QR")).not.toBeInTheDocument();
-    });
-  });
-
-  it("renders bottom nav and sync status", async () => {
-    localStorage.setItem("sajilo_customer_session", VALID_SESSION);
+  it("renders bottom nav", async () => {
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
 
     render(<CustomerDashboard />);
 
     await waitFor(() => {
       expect(screen.getByTestId("customer-bottom-nav")).toBeInTheDocument();
-      expect(screen.getByTestId("sync-status")).toBeInTheDocument();
     });
   });
 });

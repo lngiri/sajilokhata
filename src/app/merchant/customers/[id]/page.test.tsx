@@ -7,33 +7,28 @@ vi.mock("@/components/Toast", () => ({
   useToast: () => ({ addToast: vi.fn() }),
 }));
 
-vi.mock("@/lib/supabase/client", () => ({
-  createClient: vi.fn(() => ({
-    from: vi.fn(() => ({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          id: "mc1",
-          merchant_id: "m1",
-          customer_id: "c1",
-          credit_limit: 5000,
-          current_balance: 2500,
-          customers: { id: "c1", name: "Hari", phone: "9841234567" },
-        },
-        error: null,
-      }),
-    })),
-  })),
+vi.mock("@/components/TransactionIcon", () => ({
+  default: ({ type }: any) => <div data-testid="transaction-icon">{type}</div>,
 }));
 
-vi.mock("@/lib/actions", () => ({
-  getMerchantCreditLogs: vi.fn(),
-  updateCustomerCreditLimit: vi.fn(),
+vi.mock("@/components/SmsReminderModal", () => ({
+  default: () => <div data-testid="sms-reminder-modal" />,
 }));
 
 vi.mock("@/lib/auth", () => ({
   getCurrentMerchantId: vi.fn(),
+}));
+
+vi.mock("@/app/actions/merchant", () => ({
+  getMerchantCustomerDetail: vi.fn(),
+  updateCustomerCreditLimit: vi.fn(),
+  updateCustomerTrustStatus: vi.fn(),
+  getAuditLogsForCreditLog: vi.fn(),
+  getMerchantProfile: vi.fn(),
+}));
+
+vi.mock("@/app/actions/sms-billing", () => ({
+  getMerchantSmsBalance: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -41,7 +36,7 @@ vi.mock("next/navigation", () => ({
   useRouter: vi.fn(() => ({ back: vi.fn() })),
 }));
 
-const mockActions = await import("@/lib/actions");
+const mockMerchantActions = await import("@/app/actions/merchant");
 const mockAuth = await import("@/lib/auth");
 
 const mockLogs = [
@@ -52,6 +47,10 @@ const mockLogs = [
     status: "approved",
     description: "Rice 10kg",
     created_at: "2025-01-15T10:00:00Z",
+    attachment_url: null,
+    initiated_by: null,
+    ip_address: null,
+    device_info: null,
   },
   {
     id: "cl2",
@@ -60,6 +59,10 @@ const mockLogs = [
     status: "approved",
     description: "Payment received",
     created_at: "2025-01-14T10:00:00Z",
+    attachment_url: null,
+    initiated_by: null,
+    ip_address: null,
+    device_info: null,
   },
   {
     id: "cl3",
@@ -68,15 +71,33 @@ const mockLogs = [
     status: "pending",
     description: "Milk 5L",
     created_at: "2025-01-13T10:00:00Z",
+    attachment_url: null,
+    initiated_by: null,
+    ip_address: null,
+    device_info: null,
   },
 ];
+
+const mockCustomerDetail = {
+  id: "c1",
+  name: "Hari",
+  phone: "9841234567",
+  credit_limit: 5000,
+  current_balance: 2500,
+  total_debit_amount: 3000,
+  total_credit_amount: 500,
+  transactions: mockLogs,
+  trust_status: "good",
+  trust_notes: null,
+};
 
 describe("CustomerDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
-    vi.mocked(mockActions.getMerchantCreditLogs).mockResolvedValue(mockLogs);
-    vi.mocked(mockActions.updateCustomerCreditLimit).mockResolvedValue({});
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue(mockCustomerDetail);
+    vi.mocked(mockMerchantActions.updateCustomerCreditLimit).mockResolvedValue({});
+    vi.mocked(mockMerchantActions.getMerchantProfile).mockResolvedValue({ name: "Shop" });
   });
 
   it("renders customer name and phone", async () => {
@@ -123,7 +144,10 @@ describe("CustomerDetailPage", () => {
   });
 
   it("shows 'No transactions yet' when no logs", async () => {
-    vi.mocked(mockActions.getMerchantCreditLogs).mockResolvedValue([]);
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue({
+      ...mockCustomerDetail,
+      transactions: [],
+    });
 
     render(<CustomerDetailPage />);
 
@@ -164,7 +188,7 @@ describe("CustomerDetailPage", () => {
 
     await userEvent.click(screen.getByText("Save Limit"));
 
-    expect(mockActions.updateCustomerCreditLimit).toHaveBeenCalledWith(
+    expect(mockMerchantActions.updateCustomerCreditLimit).toHaveBeenCalledWith(
       "m1",
       "c1",
       8000

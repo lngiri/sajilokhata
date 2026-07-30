@@ -28,15 +28,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Session expired" }, { status: 401 });
     }
 
-    let { phone } = await request.json();
-    phone = normalizePhone(phone);
+    const body = await request.json();
+    let phone = body?.phone;
 
-    if (!phone) {
+    if (!phone || typeof phone !== "string") {
       return NextResponse.json(
         { error: "phone is required" },
         { status: 400 }
       );
     }
+
+    phone = normalizePhone(phone);
 
     const client = getAdminClient();
     if (!client) {

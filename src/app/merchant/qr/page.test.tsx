@@ -21,15 +21,15 @@ vi.mock("@/components/BottomNav", () => ({
   default: () => <div data-testid="bottom-nav">Nav</div>,
 }));
 
-vi.mock("@/lib/actions", () => ({
-  getMerchantProfile: vi.fn(),
-}));
-
 vi.mock("@/lib/auth", () => ({
   getCurrentMerchantId: vi.fn(),
 }));
 
-const mockActions = await import("@/lib/actions");
+vi.mock("@/app/actions/merchant", () => ({
+  getMerchantProfile: vi.fn(),
+}));
+
+const mockMerchantActions = await import("@/app/actions/merchant");
 const mockAuth = await import("@/lib/auth");
 
 describe("MerchantQRPage", () => {
@@ -39,7 +39,7 @@ describe("MerchantQRPage", () => {
 
   it("renders merchant info and QR code after loading", async () => {
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
-    vi.mocked(mockActions.getMerchantProfile).mockResolvedValue({
+    vi.mocked(mockMerchantActions.getMerchantProfile).mockResolvedValue({
       id: "m1",
       name: "Shop ABC",
       business_type: "kirana",
@@ -58,7 +58,7 @@ describe("MerchantQRPage", () => {
 
   it("falls back to default data when profile fetch fails", async () => {
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
-    vi.mocked(mockActions.getMerchantProfile).mockRejectedValue(
+    vi.mocked(mockMerchantActions.getMerchantProfile).mockRejectedValue(
       new Error("fail")
     );
 
@@ -71,7 +71,7 @@ describe("MerchantQRPage", () => {
 
   it("renders instructions and print button", async () => {
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
-    vi.mocked(mockActions.getMerchantProfile).mockResolvedValue({
+    vi.mocked(mockMerchantActions.getMerchantProfile).mockResolvedValue({
       id: "m1",
       name: "Shop ABC",
       business_type: "kirana",
@@ -89,7 +89,7 @@ describe("MerchantQRPage", () => {
 
   it("renders bottom navigation", async () => {
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
-    vi.mocked(mockActions.getMerchantProfile).mockResolvedValue({
+    vi.mocked(mockMerchantActions.getMerchantProfile).mockResolvedValue({
       id: "m1",
       name: "Shop ABC",
       business_type: "kirana",

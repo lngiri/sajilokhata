@@ -27,15 +27,27 @@ describe("signOut", () => {
   beforeEach(() => {
     vi.resetModules();
 
-    // Replace window.location with a mock (proven pattern from customer/dashboard tests)
+    // Replace window.location with a mock using Object.defineProperty
     replaceSpy = vi.fn();
-    delete (window as any).location;
-    window.location = {
-      ...originalLocation,
-      replace: replaceSpy,
-      assign: vi.fn(),
-      reload: vi.fn(),
-    } as any;
+    Object.defineProperty(window, "location", {
+      value: {
+        ...originalLocation,
+        replace: replaceSpy,
+        assign: vi.fn(),
+        reload: vi.fn(),
+        href: originalLocation.href,
+        origin: originalLocation.origin,
+        protocol: originalLocation.protocol,
+        host: originalLocation.host,
+        hostname: originalLocation.hostname,
+        port: originalLocation.port,
+        pathname: originalLocation.pathname,
+        search: originalLocation.search,
+        hash: originalLocation.hash,
+      },
+      writable: true,
+      configurable: true,
+    });
 
     // Set up localStorage with test data
     localStorage.setItem("merchant_id", "test-user-id");
@@ -52,7 +64,11 @@ describe("signOut", () => {
   });
 
   afterEach(() => {
-    window.location = originalLocation;
+    Object.defineProperty(window, "location", {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
     vi.restoreAllMocks();
     localStorage.clear();
     sessionStorage.clear();

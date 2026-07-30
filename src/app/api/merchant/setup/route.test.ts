@@ -5,33 +5,44 @@ vi.mock("@/lib/supabase/admin", () => ({
   getAdminClient: vi.fn(() => null),
 }));
 
+vi.mock("@/lib/session", () => ({
+  verifySessionToken: vi.fn(() => ({ userId: "m1" })),
+  SESSION_COOKIE: "sb-session",
+}));
+
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(() =>
+    Promise.resolve({
+      get: vi.fn((name: string) => {
+        if (name === "sb-session") return { value: "valid-token" };
+        return undefined;
+      }),
+      set: vi.fn(),
+      getAll: vi.fn(() => []),
+      delete: vi.fn(),
+    })
+  ),
+}));
+
+vi.mock("@/lib/rate-limit", () => ({
+  checkRateLimit: vi.fn(() => Promise.resolve({ allowed: true, retryAfter: 0 })),
+}));
+
 describe("POST /api/merchant/setup", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it("rejects missing merchant_id", async () => {
-    const req = new Request("http://localhost/api/merchant/setup", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: "+9779841234567" }),
-    });
-    const res = await POST(req);
-    const json = await res.json();
-    expect(res.status).toBe(400);
-    expect(json.error).toBe("merchant_id and phone are required");
   });
 
   it("rejects missing phone", async () => {
     const req = new Request("http://localhost/api/merchant/setup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ merchant_id: crypto.randomUUID() }),
+      body: JSON.stringify({}),
     });
     const res = await POST(req);
     const json = await res.json();
     expect(res.status).toBe(400);
-    expect(json.error).toBe("merchant_id and phone are required");
+    expect(json.error).toBe("phone is required");
   });
 
   it("returns admin_unavailable signal when admin client unavailable", async () => {
@@ -39,7 +50,6 @@ describe("POST /api/merchant/setup", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        merchant_id: crypto.randomUUID(),
         phone: "+9779841234567",
       }),
     });

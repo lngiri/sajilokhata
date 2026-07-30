@@ -7,20 +7,48 @@ vi.mock("@/components/BottomNav", () => ({
   default: () => <div data-testid="bottom-nav">Nav</div>,
 }));
 
+vi.mock("@/components/PullToRefresh", () => ({
+  default: ({ children }: any) => <>{children}</>,
+}));
+
+vi.mock("@/components/PendingApprovalModal", () => ({
+  default: ({ show, entries, onApprove, onReject, onClose }: any) =>
+    show ? (
+      <div data-testid="approval-modal">
+        <button onClick={() => entries?.[0] && onApprove(entries[0].id)}>
+          Approve All
+        </button>
+        <button onClick={() => entries?.[0] && onReject(entries[0].id)}>
+          Reject All
+        </button>
+        <button onClick={onClose}>Close Modal</button>
+      </div>
+    ) : null,
+}));
+
 vi.mock("@/components/Toast", () => ({
   useToast: () => ({ addToast: vi.fn() }),
 }));
 
-vi.mock("@/lib/actions", () => ({
-  getMerchantCreditLogs: vi.fn(),
-  updateCreditLogStatus: vi.fn(),
+vi.mock("@/components/TransactionIcon", () => ({
+  default: ({ type }: any) => <div data-testid="transaction-icon">{type}</div>,
 }));
 
 vi.mock("@/lib/auth", () => ({
   getCurrentMerchantId: vi.fn(),
 }));
 
-const mockActions = await import("@/lib/actions");
+vi.mock("@/lib/sound", () => ({
+  playSuccessSound: vi.fn(),
+}));
+
+// Mock @/app/actions/merchant (where the page actually imports from)
+vi.mock("@/app/actions/merchant", () => ({
+  getMerchantCreditLogs: vi.fn(),
+  updateCreditLogStatus: vi.fn(),
+}));
+
+const mockMerchantActions = await import("@/app/actions/merchant");
 const mockAuth = await import("@/lib/auth");
 
 const pendingLogs = [
@@ -57,7 +85,7 @@ describe("LedgerPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
-    vi.mocked(mockActions.getMerchantCreditLogs).mockImplementation(
+    vi.mocked(mockMerchantActions.getMerchantCreditLogs).mockImplementation(
       (_id: string, options?: { status?: string }) => {
         if (options?.status === "pending") return Promise.resolve(pendingLogs);
         if (options?.status === "approved") return Promise.resolve(approvedLogs);
@@ -70,7 +98,7 @@ describe("LedgerPage", () => {
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Ledger")).toBeInTheDocument();
+      expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
     expect(screen.getByText("Hari")).toBeInTheDocument();
@@ -98,7 +126,7 @@ describe("LedgerPage", () => {
   });
 
   it("calls updateCreditLogStatus with 'approved' on Approve click", async () => {
-    vi.mocked(mockActions.updateCreditLogStatus).mockResolvedValue({});
+    vi.mocked(mockMerchantActions.updateCreditLogStatus).mockResolvedValue({});
 
     render(<LedgerPage />);
 
@@ -108,14 +136,14 @@ describe("LedgerPage", () => {
 
     await userEvent.click(screen.getByText("Approve"));
 
-    expect(mockActions.updateCreditLogStatus).toHaveBeenCalledWith(
+    expect(mockMerchantActions.updateCreditLogStatus).toHaveBeenCalledWith(
       "cl1",
       "approved"
     );
   });
 
   it("calls updateCreditLogStatus with 'rejected' on Reject click", async () => {
-    vi.mocked(mockActions.updateCreditLogStatus).mockResolvedValue({});
+    vi.mocked(mockMerchantActions.updateCreditLogStatus).mockResolvedValue({});
 
     render(<LedgerPage />);
 
@@ -125,7 +153,7 @@ describe("LedgerPage", () => {
 
     await userEvent.click(screen.getByText("Reject"));
 
-    expect(mockActions.updateCreditLogStatus).toHaveBeenCalledWith(
+    expect(mockMerchantActions.updateCreditLogStatus).toHaveBeenCalledWith(
       "cl1",
       "rejected"
     );
@@ -135,19 +163,19 @@ describe("LedgerPage", () => {
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Ledger")).toBeInTheDocument();
+      expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getAllByText("pending")[0]);
 
-    expect(mockActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
+    expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
       status: "pending",
       limit: 50,
     });
 
     await userEvent.click(screen.getAllByText("approved")[0]);
 
-    expect(mockActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
+    expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
       status: "approved",
       limit: 50,
     });
@@ -157,24 +185,24 @@ describe("LedgerPage", () => {
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("Ledger")).toBeInTheDocument();
+      expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getAllByText("pending")[0]);
     await userEvent.click(screen.getByText("all"));
 
-    expect(mockActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
+    expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
       limit: 50,
     });
   });
 
   it("shows empty state when no logs exist", async () => {
-    vi.mocked(mockActions.getMerchantCreditLogs).mockResolvedValue([]);
+    vi.mocked(mockMerchantActions.getMerchantCreditLogs).mockResolvedValue([]);
 
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("No entries found")).toBeInTheDocument();
+      expect(screen.getByText(/No entries yet/)).toBeInTheDocument();
     });
   });
 

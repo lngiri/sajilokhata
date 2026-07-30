@@ -31,10 +31,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    let { phone } = await request.json();
+    const body = await request.json();
+    let phone = body?.phone;
+
+    if (!phone || typeof phone !== "string") {
+      return NextResponse.json(
+        { error: "Valid phone number is required" },
+        { status: 400 }
+      );
+    }
+
     phone = normalizePhone(phone);
 
-    if (!phone || typeof phone !== "string" || phone.length < 10) {
+    if (phone.length < 10) {
       return NextResponse.json(
         { error: "Valid phone number is required" },
         { status: 400 }
