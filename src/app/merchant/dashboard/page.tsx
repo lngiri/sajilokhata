@@ -73,12 +73,13 @@ export default function MerchantDashboard() {
     totalSales: number;
     cashInHand: number;
     todayCreditSales: number;
+    totalExpenses: number;
   } | null>(null);
   const [awaitingLogs, setPendingLogs] = useState<
     {
       id: string;
       amount: number;
-      type: "debit" | "credit" | "cash";
+      type: "debit" | "credit" | "cash" | "expense";
       status: string;
       description: string | null;
       proposed_amount: number | null;
@@ -92,7 +93,7 @@ export default function MerchantDashboard() {
     {
       id: string;
       amount: number;
-      type: "debit" | "credit" | "cash";
+      type: "debit" | "credit" | "cash" | "expense";
       status: string;
       description: string | null;
       created_at: string;
@@ -838,7 +839,7 @@ export default function MerchantDashboard() {
 
             {/* Add Cash Out (Purchase / Expense) */}
             <a
-              href="/merchant/scan?manual=true&type=cash"
+              href="/merchant/scan?manual=true&type=expense"
               className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -947,13 +948,13 @@ export default function MerchantDashboard() {
                         href={href}
                         className={`block bg-[var(--color-surface)] rounded-xl p-3.5 shadow-sm border border-[var(--color-border)] flex items-center gap-3 active:scale-[0.98] transition-transform ${log.status === "rejected" ? "opacity-60" : ""}`}
                       >
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-green-100 dark:bg-green-900/40"}`}>
-                          <TransactionIcon type={log.type} size={14} className={log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"} />
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40" : log.type === "expense" ? "bg-orange-100 dark:bg-orange-900/40" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-green-100 dark:bg-green-900/40"}`}>
+                          <TransactionIcon type={log.type} size={14} className={log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "expense" ? "text-orange-700 dark:text-orange-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"} />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                              {log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
+                              {log.type === "expense" ? "Cash Out" : log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
                             </p>
                             <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-medium capitalize ${statusColor(log.status)}`}>
                               {log.status}
@@ -964,8 +965,8 @@ export default function MerchantDashboard() {
                           </p>
                         </div>
                         <div className="text-right flex-shrink-0">
-                          <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 dark:text-slate-500 line-through" : log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"}`}>
-                            {log.type === "cash" ? "" : (log.type === "debit" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
+                          <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 dark:text-slate-500 line-through" : log.type === "expense" ? "text-orange-700 dark:text-orange-400" : log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"}`}>
+                            {log.type === "cash" || log.type === "expense" ? "" : (log.type === "debit" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
                           </p>
                           <p className="text-[9px] text-[var(--color-text-muted)]">
                             {timeAgo(log.created_at)}

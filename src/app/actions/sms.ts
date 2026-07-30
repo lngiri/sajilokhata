@@ -118,7 +118,7 @@ export async function sendTransactionNotification(params: {
   to: string;
   merchantId: string;
   amount: number;
-  type: "debit" | "credit" | "cash";
+  type: "debit" | "credit" | "cash" | "expense";
   customerName?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
   const { to, merchantId, amount, type, customerName } = params;

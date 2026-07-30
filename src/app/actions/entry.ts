@@ -80,7 +80,7 @@ export async function saveEntry(params: {
   customer_phone?: string | null;
   customer_name?: string | null;
   amount: number;
-  type: "debit" | "credit" | "cash";
+  type: "debit" | "credit" | "cash" | "expense";
   description?: string | null;
   quantity?: number | null;
   unit?: "liter" | "jar" | "kg" | "piece" | "npr" | null;
@@ -113,11 +113,13 @@ export async function saveEntry(params: {
     if (!params.amount || typeof params.amount !== "number" || params.amount <= 0) {
       return { success: false, error: "Amount must be a positive number" };
     }
-    if (!["debit", "credit", "cash"].includes(params.type)) {
+    if (!["debit", "credit", "cash", "expense"].includes(params.type)) {
       return { success: false, error: "Invalid transaction type" };
     }
 
     const isCash = params.type === "cash";
+    const isExpense = params.type === "expense";
+    const isImmediate = isCash || isExpense; // both approved immediately, no customer needed
     const admin = getAdminClient();
     if (!admin) {
       return { success: false, error: "Database connection unavailable" };
@@ -136,8 +138,8 @@ export async function saveEntry(params: {
       } catch (custErr) {
         const msg = custErr instanceof Error ? custErr.message : String(custErr);
         console.error("[Entry] Customer creation failed:", msg);
-        // For cash sales, proceed without customer
-        if (!isCash) {
+        // For cash/expense, proceed without customer
+        if (!isImmediate) {
           return { success: false, error: `Customer error: ${msg}` };
         }
       }
@@ -150,14 +152,14 @@ export async function saveEntry(params: {
       } catch (linkErr) {
         const msg = linkErr instanceof Error ? linkErr.message : String(linkErr);
         console.error("[Entry] Customer linking failed:", msg);
-        if (!isCash) {
+        if (!isImmediate) {
           return { success: false, error: `Customer link error: ${msg}` };
         }
       }
     }
 
-    // Non-cash must have a customer at this point
-    if (!isCash && !resolvedCustomerId) {
+    // Non-cash/non-expense must have a customer at this point
+    if (!isImmediate && !resolvedCustomerId) {
       return { success: false, error: "Customer is required for debit/credit transactions" };
     }
 
@@ -184,12 +186,12 @@ export async function saveEntry(params: {
     // ── Step 3: Insert credit_log entry ──
     const insertData: Record<string, unknown> = {
       merchant_id: params.merchant_id,
-      customer_id: isCash ? null : resolvedCustomerId,
+      customer_id: isImmediate ? null : resolvedCustomerId,
       amount: params.amount,
       type: params.type,
       description: params.description || null,
-      status: isCash ? "approved" : "awaiting_confirmation",
-      approved_at: isCash ? new Date().toISOString() : null,
+      status: isImmediate ? "approved" : "awaiting_confirmation",
+      approved_at: isImmediate ? new Date().toISOString() : null,
     };
     if (params.quantity != null) {
       insertData.quantity = params.quantity;
@@ -242,7 +244,7 @@ export async function saveEntry(params: {
       }
     }
 
-    if (!isCash && resolvedCustomerId) {
+    if (!isImmediate && resolvedCustomerId) {
       const { data: shop } = await (admin.from("merchants") as any)
         .select("name")
         .eq("id", params.merchant_id)

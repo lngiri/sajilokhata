@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
 interface Transaction {
   id: string;
   amount: number;
-  type: "debit" | "credit" | "cash";
+  type: "debit" | "credit" | "cash" | "expense";
   status: string;
   description: string | null;
   created_at: string;

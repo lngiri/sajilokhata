@@ -49,7 +49,7 @@ export default function MerchantScanPage() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [entryType, setEntryType] = useState<"debit" | "credit" | "cash">("debit");
+  const [entryType, setEntryType] = useState<"debit" | "credit" | "cash" | "expense">("debit");
   const [saving, setSaving] = useState(false);
   const [merchantId, setMerchantId] = useState<string | null>(null);
 
@@ -96,12 +96,18 @@ export default function MerchantScanPage() {
     }
   }, [merchantId]);
 
+  // Read the type query param to set the correct entry type
   useEffect(() => {
     if (isManual && step === "scan") {
       setStep("enter");
-      setEntryType("cash");
+      const typeParam = searchParams?.get("type");
+      if (typeParam === "expense") {
+        setEntryType("expense");
+      } else {
+        setEntryType("cash");
+      }
     }
-  }, [isManual, step]);
+  }, [isManual, step, searchParams]);
 
   useEffect(() => {
     if (isManual && merchantId) {
@@ -150,7 +156,9 @@ export default function MerchantScanPage() {
 
   const handleEnterNext = () => {
     // In QR scan mode customerId is null (server resolves via phone)
-    if (entryType !== "cash" && !customerPhone) {
+    // Expense and cash don't require a customer
+    const isImmediate = entryType === "cash" || entryType === "expense";
+    if (!isImmediate && !customerPhone) {
       addToast("Please select or enter a valid customer.", "error");
       return;
     }
@@ -174,7 +182,9 @@ export default function MerchantScanPage() {
       console.log("[Entry] handleConfirm — merchantId:", mId);
 
       const isCash = entryType === "cash";
-      const cId = customerId; // may be null for cash or new customers
+      const isExpense = entryType === "expense";
+      const isImmediate = isCash || isExpense;
+      const cId = customerId; // may be null for cash/expense or new customers
       const cPhone = customerPhone || null;
       const cName = customerName;
 
@@ -201,7 +211,7 @@ export default function MerchantScanPage() {
           const result = await saveEntry({
             merchant_id: mId,
             customer_id: cId ?? null,
-            customer_phone: isCash ? cPhone : null,
+            customer_phone: isImmediate ? cPhone : null,
             customer_name: cName,
             amount: Number(amount),
             type: entryType,
@@ -262,7 +272,7 @@ export default function MerchantScanPage() {
             quantity: quantity ? Number(quantity) : null,
             unit: (unit || null) as any,
             attachment_url: attachmentUrl ?? null,
-            status: entryType === "cash" ? "approved" : "awaiting_confirmation",
+            status: isImmediate ? "approved" : "awaiting_confirmation",
             items: selectedProductId && quantity && unit ? [{
               productId: selectedProductId,
               productName: description || "Item",
@@ -302,7 +312,9 @@ export default function MerchantScanPage() {
       addToast(
         wasOffline
           ? "Entry saved offline. Will sync when internet returns."
-          : isCash
+          : isExpense
+            ? "Expense recorded!"
+            : isCash
             ? "Cash sale recorded!"
             : "Entry saved! Customer notified.",
         "success"
@@ -364,7 +376,7 @@ export default function MerchantScanPage() {
               {/* Customer phone input with auto-detect */}
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">
-                  {entryType === "cash" ? "Customer Phone (Optional)" : "Customer Phone Number"}
+                  {(entryType === "cash" || entryType === "expense") ? (entryType === "expense" ? "Supplier Phone (Optional)" : "Customer Phone (Optional)") : "Customer Phone Number"}
                 </label>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-sm font-medium text-[var(--color-text-muted)]">+977</span>
@@ -372,13 +384,13 @@ export default function MerchantScanPage() {
                       type="tel"
                       placeholder="98XXXXXXXX"
                       value={searchQuery}
-                      disabled={entryType === "cash"}
+                      disabled={entryType === "cash" || entryType === "expense"}
                       onChange={async (e) => {
                         const val = e.target.value.replace(/\D/g, "").slice(0, 10);
                         setSearchQuery(val);
                         setCustomerLookup("idle");
                         setSmsSent(false);
-                        if (val.length === 10 && entryType !== "cash") {
+                        if (val.length === 10 && entryType !== "cash" && entryType !== "expense") {
                           setCustomerLookup("looking");
                           try {
                             const result = await checkCustomerByPhone(val);
@@ -412,13 +424,13 @@ export default function MerchantScanPage() {
                     }}
                     className="flex-1 px-4 py-3 bg-white rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:bg-gray-800/50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                   />
-                  {customerLookup === "looking" && entryType !== "cash" && (
+                  {customerLookup === "looking" && entryType !== "cash" && entryType !== "expense" && (
                     <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
                   )}
                 </div>
 
                 {/* Lookup result */}
-                {entryType !== "cash" && customerLookup === "found" && (
+                {entryType !== "cash" && entryType !== "expense" && customerLookup === "found" && (
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/40 rounded-lg text-sm font-medium text-green-700 dark:text-green-300">
                       <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -434,7 +446,7 @@ export default function MerchantScanPage() {
                   </div>
                 )}
 
-                {entryType !== "cash" && customerLookup === "not_found" && (
+                {entryType !== "cash" && entryType !== "expense" && customerLookup === "not_found" && (
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-300">
                       <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -526,6 +538,19 @@ export default function MerchantScanPage() {
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Cash Sale
                   </button>
+                  <button onClick={() => {
+                      setEntryType("expense");
+                      setCustomerId(null);
+                      setCustomerPhone("");
+                      setCustomerName(null);
+                      setCustomerLookup("idle");
+                      setCustomerBalance(null);
+                      setSmsSent(false);
+                      setSmsError(null);
+                    }}
+                    className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "expense" ? "bg-orange-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
+                    Cash Out
+                  </button>
                 </div>
               </div>
 
@@ -611,7 +636,7 @@ export default function MerchantScanPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
-                  <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grossery items" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
+                  <input type="text" maxLength={200} placeholder={entryType === "expense" ? "e.g. Transport, Rent, Supplier payment" : entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grocery items" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
                     className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
                   <DescriptionSuggestions
                     descriptions={recentDescriptions}
@@ -719,20 +744,20 @@ export default function MerchantScanPage() {
                   <div>
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Customer</p>
                     <p className="font-medium text-[var(--color-text)]">
-                      {entryType === "cash" && !customerName && !customerPhone
-                        ? "Walk-in Customer"
+                      {(entryType === "cash" || entryType === "expense") && !customerName && !customerPhone
+                        ? (entryType === "expense" ? "N/A (Business Expense)" : "Walk-in Customer")
                         : (customerName || customerPhone || "—")}
                     </p>
                   </div>
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : entryType === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>Rs. {Number(amount).toLocaleString()}</p>
+                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : entryType === "expense" ? "text-orange-600 dark:text-orange-400" : entryType === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>Rs. {Number(amount).toLocaleString()}</p>
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
-                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : entryType === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
-                        {entryType === "debit" ? "Credit Given" : entryType === "cash" ? "Cash Sale" : "Amount Received"}
+                      <span className={`inline-block px-2.5 py-1 text-xs font-medium rounded-full ${entryType === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : entryType === "expense" ? "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" : entryType === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
+                        {entryType === "debit" ? "Credit Given" : entryType === "expense" ? "Cash Out" : entryType === "cash" ? "Cash Sale" : "Amount Received"}
                       </span>
                     </div>
                   </div>
@@ -748,7 +773,14 @@ export default function MerchantScanPage() {
                       <p className="text-sm font-medium text-[var(--color-text)]">{quantity} {unit}</p>
                     </div>
                   )}
-                  {entryType === "cash" ? (
+                  {entryType === "expense" ? (
+                    <div className="bg-orange-100 dark:bg-orange-900/40 rounded-xl p-3 flex items-start gap-2">
+                      <svg className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                      </svg>
+                      <p className="text-xs text-orange-800 dark:text-orange-300">Expense will be recorded immediately. This amount will be deducted from Cash in Hand.</p>
+                    </div>
+                  ) : entryType === "cash" ? (
                     <div className="bg-blue-100 dark:bg-blue-900/40 rounded-xl p-3 flex items-start gap-2">
                       <svg className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
@@ -785,16 +817,20 @@ export default function MerchantScanPage() {
               <div>
                 <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved! 🎉</h2>
                 <p className="text-sm text-[var(--color-text-muted)]">
-                  {entryType === "cash"
+                  {entryType === "expense"
+                    ? `Expense of Rs. ${Number(amount).toLocaleString()} recorded`
+                    : entryType === "cash"
                     ? `Cash Sale of Rs. ${Number(amount).toLocaleString()}${customerName ? ` from ${customerName}` : ""}`
                     : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${Number(amount).toLocaleString()} for ${customerName}` : `Rs. ${Number(amount).toLocaleString()} saved`}`}
                 </p>
-                {entryType === "cash" ? (
+                {entryType === "expense" ? (
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">Expense recorded and deducted from cash in hand</p>
+                ) : entryType === "cash" ? (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-2">Cash sale recorded and approved</p>
                 ) : (
                   <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Waiting for customer confirmation</p>
                 )}
-                {verificationToken && customerPhone && entryType !== "cash" && (
+                {verificationToken && customerPhone && entryType !== "cash" && entryType !== "expense" && (
                   <>
                     <div className="flex gap-2 mt-3">
                       <a
