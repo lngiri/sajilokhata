@@ -118,12 +118,13 @@ const mockDashboardData = {
     totalOutstanding: 2500,
     totalCreditLimit: 15000,
     customerCount: 3,
-    pendingCount: 2,
+    awaitingCount: 2,
     todayTotal: 800,
     totalCashSales: 500,
     totalSales: 1300,
     cashInHand: 700,
     todayCreditSales: 800,
+    totalExpenses: 150,
   },
   awaitingLogs: [
     {
@@ -196,7 +197,7 @@ describe("MerchantDashboard", () => {
       ...mockDashboardData,
       recentActivity: [],
       awaitingLogs: [],
-      stats: { ...mockDashboardData.stats, pendingCount: 0 },
+      stats: { ...mockDashboardData.stats, awaitingCount: 0 },
     });
 
     render(<MerchantsDashboard />);

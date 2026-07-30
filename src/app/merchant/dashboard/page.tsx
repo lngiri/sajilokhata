@@ -775,16 +775,24 @@ export default function MerchantDashboard() {
               ))}
             </div>
           ) : stats && (
-            <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
-                <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
-              </a>
-              <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
-                <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
-              </a>
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
+                </a>
+                <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
+                  <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
+                </a>
+              </div>
+              {stats.totalExpenses > 0 && (
+                <a href="/merchant/logs?filter=expense" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Expenses</p>
+                  <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {stats.totalExpenses.toLocaleString()}</p>
+                </a>
+              )}
+            </>
           )}
 
             {/* Low SMS Balance Warning */}

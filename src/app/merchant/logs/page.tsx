@@ -26,7 +26,7 @@ export default function LedgerPage() {
   const { addToast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "awaiting_confirmation" | "approved" | "disputed">("all");
+  const [filter, setFilter] = useState<"all" | "awaiting_confirmation" | "approved" | "disputed" | "expense">("all");
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [pendingEntries, setPendingEntries] = useState<{ id: string; customerName: string; amount: number; description: string | null }[]>([]);
 
@@ -40,10 +40,13 @@ export default function LedgerPage() {
       const id = await getCurrentMerchantId();
       if (id) {
         const data = await getMerchantCreditLogs(id, {
-          status: filter === "all" ? undefined : filter,
+          status: filter === "expense" ? undefined : (filter === "all" ? undefined : filter),
           limit: 50,
         });
-        setLogs(data as LogEntry[]);
+        const filtered = filter === "expense"
+          ? (data as LogEntry[]).filter((l) => l.type === "expense")
+          : data as LogEntry[];
+        setLogs(filtered);
       }
     } catch {
       addToast("Failed to load ledger entries.", "error");
@@ -154,7 +157,7 @@ export default function LedgerPage() {
         </div>
 
         <div className="flex gap-1 px-4 pb-3 overflow-x-auto">
-          {(["all", "awaiting_confirmation", "approved", "disputed"] as const).map((f) => (
+          {(["all", "awaiting_confirmation", "approved", "disputed", "expense"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -164,7 +167,7 @@ export default function LedgerPage() {
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
               }`}
             >
-              {f}
+              {f === "expense" ? "Expenses" : f}
             </button>
           ))}
         </div>
