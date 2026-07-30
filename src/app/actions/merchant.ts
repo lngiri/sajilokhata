@@ -81,7 +81,7 @@ export async function getMerchantStats(merchantId: string): Promise<{
   totalOutstanding: number;
   totalCreditLimit: number;
   customerCount: number;
-  pendingCount: number;
+  awaitingCount: number;
   todayTotal: number;
   totalCashSales: number;
   totalSales: number;
@@ -110,7 +110,7 @@ export async function getMerchantStats(merchantId: string): Promise<{
   ]);
 
   const customers = customersResult?.data;
-  const pendingLogs = pendingResult?.data;
+  const awaitingLogs = pendingResult?.data;
   const allApprovedLogs = approvedResult?.data;
 
   const today = new Date().toISOString().split("T")[0];
@@ -147,13 +147,13 @@ export async function getMerchantStats(merchantId: string): Promise<{
   const cashInHand = totalCashSales + todayPayments;
 
   const totalCreditLimit = customers?.reduce((sum: number, c: any) => sum + (c.credit_limit || 0), 0) || 0;
-  const pendingCount = pendingLogs?.length || 0;
+  const awaitingCount = awaitingLogs?.length || 0;
 
   return {
     totalOutstanding,
     totalCreditLimit,
     customerCount: customers?.length || 0,
-    pendingCount,
+    awaitingCount,
     todayTotal,
     totalCashSales,
     totalSales,
@@ -1501,7 +1501,7 @@ export async function getMerchantDashboardData(merchantId: string) {
 
   const profile = profileResult?.data || null;
   const allApproved = approvedResult?.data || [];
-  const pendingLogs = (pendingEditResult?.data || []) as any[];
+  const awaitingLogs = (pendingEditResult?.data || []) as any[];
   const recentActivity = (recentResult?.data || []) as any[];
 
   const today = new Date().toISOString().split("T")[0];
@@ -1575,14 +1575,14 @@ export async function getMerchantDashboardData(merchantId: string) {
       totalOutstanding,
       totalCreditLimit,
       customerCount: deduped.length,
-      pendingCount: pendingLogs.filter((l: any) => l.status === "awaiting_confirmation").length,
+      awaitingCount: awaitingLogs.filter((l: any) => l.status === "awaiting_confirmation").length,
       todayTotal,
       totalCashSales,
       totalSales,
       cashInHand,
       todayCreditSales,
     },
-    pendingLogs,
+    awaitingLogs,
     recentActivity,
     topReceivables,
   };

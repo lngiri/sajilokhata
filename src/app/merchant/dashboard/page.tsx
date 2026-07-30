@@ -67,14 +67,14 @@ export default function MerchantDashboard() {
     totalOutstanding: number;
     totalCreditLimit: number;
     customerCount: number;
-    pendingCount: number;
+    awaitingCount: number;
     todayTotal: number;
     totalCashSales: number;
     totalSales: number;
     cashInHand: number;
     todayCreditSales: number;
   } | null>(null);
-  const [pendingLogs, setPendingLogs] = useState<
+  const [awaitingLogs, setPendingLogs] = useState<
     {
       id: string;
       amount: number;
@@ -134,7 +134,7 @@ export default function MerchantDashboard() {
   const merchantIdRef = useRef<string | null>(null);
   const onboardedRef = useRef(false);
 
-  const topPendingLogs = useMemo(() => pendingLogs.slice(0, 3), [pendingLogs]);
+  const topAwaitingLogs = useMemo(() => awaitingLogs.slice(0, 3), [awaitingLogs]);
   const displayedActivity = useMemo(() => recentActivity.slice(0, 10), [recentActivity]);
 
   // Show welcome toast based on account status from login redirect
@@ -177,7 +177,7 @@ export default function MerchantDashboard() {
 
       setMerchantProfile(data.profile);
       setStats(data.stats);
-      setPendingLogs(data.pendingLogs as typeof pendingLogs);
+      setPendingLogs(data.awaitingLogs as typeof awaitingLogs);
       setRecentActivity(data.recentActivity as typeof recentActivity);
       setTopReceivables(data.topReceivables);
       setLastRefreshed(new Date());
@@ -481,9 +481,9 @@ export default function MerchantDashboard() {
                     {unreadNotifCount}
                   </span>
                 )}
-                {unreadNotifCount === 0 && pendingLogs.length > 0 && (
+                {unreadNotifCount === 0 && awaitingLogs.length > 0 && (
                   <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
-                    {pendingLogs.length}
+                    {awaitingLogs.length}
                   </span>
                 )}
               </button>
@@ -514,19 +514,19 @@ export default function MerchantDashboard() {
             )}
           </div>
           <div className="max-h-80 overflow-y-auto">
-            {notifications.length === 0 && pendingLogs.length === 0 ? (
+            {notifications.length === 0 && awaitingLogs.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-[var(--color-text-muted)]">
                 No notifications
               </div>
             ) : (
               <>
                 {/* Pending entries section */}
-                {pendingLogs.length > 0 && (
+                {awaitingLogs.length > 0 && (
                   <div className="px-3 pt-2 pb-1">
                     <p className="text-[10px] font-semibold text-amber-600 uppercase tracking-wider">Pending</p>
                   </div>
                 )}
-                {topPendingLogs.map((log) => (
+                {topAwaitingLogs.map((log) => (
                   <a
                     key={`pending-${log.id}`}
                     href="/merchant/logs"

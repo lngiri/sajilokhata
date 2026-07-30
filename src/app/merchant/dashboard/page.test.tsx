@@ -125,7 +125,7 @@ const mockDashboardData = {
     cashInHand: 700,
     todayCreditSales: 800,
   },
-  pendingLogs: [
+  awaitingLogs: [
     {
       id: "cl1",
       amount: 500,
@@ -195,7 +195,7 @@ describe("MerchantDashboard", () => {
     vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
       ...mockDashboardData,
       recentActivity: [],
-      pendingLogs: [],
+      awaitingLogs: [],
       stats: { ...mockDashboardData.stats, pendingCount: 0 },
     });
 
