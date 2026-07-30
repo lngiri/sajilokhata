@@ -123,6 +123,7 @@ const mockDashboardData = {
     totalCashSales: 500,
     totalSales: 1300,
     cashInHand: 700,
+    todayCreditSales: 800,
   },
   pendingLogs: [
     {
@@ -170,14 +171,14 @@ describe("MerchantDashboard", () => {
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Money to Collect")).toBeInTheDocument();
+      expect(screen.getByText("Credit on Market")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Today's Cash")).toBeInTheDocument();
-    expect(screen.getByText("Customers")).toBeInTheDocument();
-    expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("Pending")).toBeInTheDocument();
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("Today's Due Collection")).toBeInTheDocument();
+    expect(screen.getByText("Today's Cash Sales")).toBeInTheDocument();
+    expect(screen.getByText("Today Cr. Sales")).toBeInTheDocument();
+    expect(screen.getByText("All Sales")).toBeInTheDocument();
+    expect(screen.getByText("Cash in Hand")).toBeInTheDocument();
   });
 
   it("shows recent activity entries", async () => {
@@ -187,15 +188,7 @@ describe("MerchantDashboard", () => {
       expect(screen.getByText("Recent Activity")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Shyam")).toBeInTheDocument();
-  });
-
-  it("shows pending approvals section", async () => {
-    render(<MerchantsDashboard />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Pending Approvals")).toBeInTheDocument();
-    });
+    expect(screen.getAllByText("Shyam").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows empty state when no activity", async () => {
@@ -213,23 +206,6 @@ describe("MerchantDashboard", () => {
     });
   });
 
-  it("shows empty state when no pending entries", async () => {
-    vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
-      ...mockDashboardData,
-      pendingLogs: [],
-      stats: { ...mockDashboardData.stats, pendingCount: 0 },
-    });
-
-    render(<MerchantsDashboard />);
-
-    await waitFor(() => {
-      expect(screen.queryByText("Pending Approvals")).toBeInTheDocument();
-    });
-
-    // When no pending, the pending section should show no pending count badge
-    expect(screen.queryByText("1")).not.toBeInTheDocument();
-  });
-
   it("renders quick actions", async () => {
     render(<MerchantsDashboard />);
 
@@ -238,6 +214,7 @@ describe("MerchantDashboard", () => {
     });
 
     expect(screen.getByText("Reports")).toBeInTheDocument();
+    expect(screen.getByText("Add Cash Out")).toBeInTheDocument();
   });
 
   it("renders bottom navigation", async () => {
@@ -246,5 +223,20 @@ describe("MerchantDashboard", () => {
     await waitFor(() => {
       expect(screen.getByTestId("bottom-nav")).toBeInTheDocument();
     });
+  });
+
+  it("shows receivables section with call and sms buttons", async () => {
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Receivables")).toBeInTheDocument();
+    });
+
+    // Check customer name appears
+    expect(screen.getAllByText("Hari").length).toBeGreaterThanOrEqual(1);
+
+    // Check call button link
+    const callLink = screen.getByLabelText("Call Hari");
+    expect(callLink).toHaveAttribute("href", "tel:9841234567");
   });
 });

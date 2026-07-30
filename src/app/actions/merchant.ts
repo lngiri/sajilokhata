@@ -1537,6 +1537,9 @@ export async function getMerchantDashboardData(merchantId: string) {
   }, 0);
   const cashInHand = totalCashSales + todayPayments;
 
+  // Today's credit sales (debits given on credit today, not net)
+  const todayCreditSales = todayDebits;
+
   const customerRows = (customersResult?.data || []) as any[];
   const seen = new Set<string>();
   const deduped = customerRows.filter((r: any) => {
@@ -1577,6 +1580,7 @@ export async function getMerchantDashboardData(merchantId: string) {
       totalCashSales,
       totalSales,
       cashInHand,
+      todayCreditSales,
     },
     pendingLogs,
     recentActivity,

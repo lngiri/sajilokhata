@@ -72,6 +72,7 @@ export default function MerchantDashboard() {
     totalCashSales: number;
     totalSales: number;
     cashInHand: number;
+    todayCreditSales: number;
   } | null>(null);
   const [pendingLogs, setPendingLogs] = useState<
     {
@@ -106,15 +107,14 @@ export default function MerchantDashboard() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+
   const [topReceivables, setTopReceivables] = useState<Array<{
     customer_id: string;
     customer_name: string | null;
     customer_phone: string;
     current_balance: number;
   }>>([]);
-  const [remindingCustomerId, setRemindingCustomerId] = useState<string | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
   const [smsBalance, setSmsBalance] = useState<number | null>(null);
   const [showSmsReminderModal, setShowSmsReminderModal] = useState(false);
   const [reminderCustomer, setReminderCustomer] = useState<{
@@ -135,7 +135,6 @@ export default function MerchantDashboard() {
   const onboardedRef = useRef(false);
 
   const topPendingLogs = useMemo(() => pendingLogs.slice(0, 3), [pendingLogs]);
-  const topActivity = useMemo(() => recentActivity.slice(0, 3), [recentActivity]);
   const displayedActivity = useMemo(() => recentActivity.slice(0, 10), [recentActivity]);
 
   // Show welcome toast based on account status from login redirect
@@ -249,18 +248,7 @@ export default function MerchantDashboard() {
     };
   }, [loadData]);
 
-  // Track online status for avatar indicator
-  useEffect(() => {
-    setIsOnline(navigator.onLine);
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
+
 
   // Close notification dropdown on click outside (mobile & desktop)
   useEffect(() => {
@@ -452,11 +440,11 @@ export default function MerchantDashboard() {
                 </span>
                 <RoleSwitcher compact />
               </div>
-              {merchantProfile?.address && (
-                <p className="text-[10px] text-[var(--color-text-muted)] truncate leading-tight mt-0.5">
-                  {merchantProfile.address}
-                </p>
-              )}
+              <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] truncate leading-tight mt-0.5">
+                {merchantProfile?.phone && <span className="font-mono">{merchantProfile.phone}</span>}
+                {merchantProfile?.phone && merchantProfile?.address && <span className="text-[var(--color-border)]">|</span>}
+                {merchantProfile?.address && <span className="truncate">{merchantProfile.address}</span>}
+              </div>
             </button>
           </div>
           <div className="flex items-center gap-0 flex-shrink-0">
@@ -501,22 +489,15 @@ export default function MerchantDashboard() {
                 )}
               </button>
             </div>
-            {merchantProfile && (
-              <button
-                onClick={() => setShowProfileMenu(true)}
-                className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
-                aria-label="Profile"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
-                  {merchantProfile.photo_url ? (
-                    <img src={merchantProfile.photo_url} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (merchantProfile.name || "S").charAt(0).toUpperCase()
-                  )}
-                </div>
-                <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg)] ${isOnline ? "bg-green-500" : "bg-red-500"}`} />
-              </button>
-            )}
+            <button
+              onClick={() => setShowProfileMenu(true)}
+              className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform"
+              aria-label="Menu"
+            >
+              <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -790,24 +771,21 @@ export default function MerchantDashboard() {
             </div>
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Money to Collect</p>
+              <a href="/merchant/logs?filter=credit" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Credit on Market</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--color-danger)] truncate">Rs. {stats.totalOutstanding.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Cash</p>
+              <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Due Collection</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--color-primary)] truncate">Rs. {stats.todayTotal.toLocaleString()}</p>
               </a>
-              <a href="/merchant/customers" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Customers</p>
-                <p className="text-lg sm:text-xl font-bold text-[var(--color-text)] truncate">{stats.customerCount}</p>
+              <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Cash Sales</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.totalCashSales.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] relative overflow-hidden active:scale-[0.98] transition-transform">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Pending</p>
-                <p className="text-xl font-bold text-[var(--color-accent)]">{stats.pendingCount}</p>
-                {stats.pendingCount > 0 && (
-                  <div className="absolute top-2 right-2 w-2 h-2 bg-[var(--color-accent)] rounded-full animate-pulse-soft" />
-                )}
+              <a href="/merchant/logs?filter=debit" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today Cr. Sales</p>
+                <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400 truncate">Rs. {(stats.todayCreditSales ?? 0).toLocaleString()}</p>
               </a>
             </div>
           )}
@@ -822,12 +800,12 @@ export default function MerchantDashboard() {
             </div>
           ) : stats && (
             <div className="grid grid-cols-2 gap-3">
-              <a href="/merchant/scan?manual=true" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+              <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
                 <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
               </a>
-              <a href="/merchant/logs" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash Today</p>
+              <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
                 <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
               </a>
             </div>
@@ -878,30 +856,20 @@ export default function MerchantDashboard() {
               className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
               </svg>
               Reports
             </a>
 
-            {/* Cash Sales Ledger Entry */}
+            {/* Add Cash Out (Purchase / Expense) */}
             <a
-              href="/merchant/cash-sales"
-              className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform"
+              href="/merchant/scan?manual=true&type=cash"
+              className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
             >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-blue-700 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm text-[var(--color-text)]">Cash Sales Ledger</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">View history of all cash transactions</p>
-                </div>
-                <svg className="w-4 h-4 text-[var(--color-text-muted)] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </div>
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
+              </svg>
+              Add Cash Out
             </a>
 
             {/* Smart Receivables Section */}
@@ -939,23 +907,33 @@ export default function MerchantDashboard() {
                           </p>
                         </a>
                       </div>
-                      <button
-                        onClick={() => {
-                          setReminderCustomer({
-                            customer_id: rc.customer_id,
-                            customer_name: rc.customer_name,
-                            customer_phone: rc.customer_phone,
-                            current_balance: rc.current_balance,
-                          });
-                          setShowSmsReminderModal(true);
-                        }}
-                        className="px-3 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-lg text-xs font-medium active:scale-[0.97] transition-transform flex items-center gap-1.5 flex-shrink-0"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                        </svg>
-                        Remind
-                      </button>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        <a
+                          href={`tel:${rc.customer_phone}`}
+                          className="p-2.5 bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-lg active:scale-[0.97] transition-transform flex items-center justify-center"
+                          aria-label={`Call ${rc.customer_name || rc.customer_phone}`}
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+                          </svg>
+                        </a>
+                        <button
+                          onClick={() => {
+                            setReminderCustomer({
+                              customer_id: rc.customer_id,
+                              customer_name: rc.customer_name,
+                              customer_phone: rc.customer_phone,
+                              current_balance: rc.current_balance,
+                            });
+                            setShowSmsReminderModal(true);
+                          }}
+                          className="px-2.5 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-lg text-xs font-medium active:scale-[0.97] transition-transform flex items-center gap-1.5 flex-shrink-0"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1024,196 +1002,8 @@ export default function MerchantDashboard() {
                 </div>
               )}
             </div>
-
-            {/* Pending Approvals */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <h2 className="font-semibold text-[var(--color-text)]">
-                    Pending Approvals
-                  </h2>
-                  {lastRefreshed && (
-                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-[var(--color-primary)]/5 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-primary)] animate-pulse" />
-                      <span className="text-[10px] text-[var(--color-primary)] font-medium">
-                        Live
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  {lastRefreshed && (
-                    <span className="text-[10px] text-[var(--color-text-muted)]">
-                      {timeAgo(lastRefreshed.toISOString())}
-                    </span>
-                  )}
-                  {pendingLogs.length > 0 && (
-                    <span className="px-2 py-0.5 bg-[var(--color-accent)]/10 text-[var(--color-accent)] text-xs font-medium rounded-full">
-                      {pendingLogs.length}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {pendingLogs.length === 0 ? (
-                <div className="text-center py-8 text-[var(--color-text-muted)]">
-                  <svg className="w-12 h-12 mx-auto mb-2 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15a2.25 2.25 0 012.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
-                  </svg>
-                  <p className="text-sm">All caught up! 🎉</p>
-                  <p className="text-xs mt-1">No entries waiting for your approval</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {pendingLogs.map((log) => {
-                    const isEditRequest = log.status === "edit_requested";
-                    const customerId = log.customer_id;
-                    const href = customerId ? `/merchant/customers/${customerId}` : "#";
-                    return (
-                      <div
-                        key={log.id}
-                        className={`bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border flex items-center gap-3 ${
-                          isEditRequest ? "border-blue-200 bg-blue-50/30 dark:border-blue-800 dark:bg-blue-900/20" : log.attachment_url ? "border-purple-200 bg-purple-50/30 dark:border-purple-800 dark:bg-purple-900/20" : "border-[var(--color-border)]"
-                        }`}
-                      >
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40" : "bg-green-100 dark:bg-green-900/40"}`}>
-                          <TransactionIcon type={log.type} size={16} className={log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : "text-green-700 dark:text-green-400"} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                              {log.type === "cash" ? "Cash Sale" : (log.customers?.name || log.customers?.phone || "Unknown")}
-                            </p>
-                            {log.attachment_url && (
-                              <span className="text-[10px] font-medium text-purple-600 dark:text-purple-400 bg-purple-100 dark:bg-purple-900/40 px-1.5 py-0.5 rounded-full whitespace-nowrap">
-                                Voucher
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-[var(--color-text-muted)] truncate">
-                            {log.description || "No description"}
-                          </p>
-                          {isEditRequest && log.proposed_amount && (
-                            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium mt-1">
-                              Customer requested amount change from Rs. {log.amount.toLocaleString()} to Rs. {log.proposed_amount.toLocaleString()}
-                            </p>
-                          )}
-                          {log.attachment_url && (
-                            <button
-                              onClick={() => setPreviewImage(log.attachment_url)}
-                              className="mt-1 inline-flex items-center gap-1 text-xs text-purple-600 dark:text-purple-400 font-medium active:opacity-70"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3.75 21h16.5A2.25 2.25 0 0022.5 18.75V5.25A2.25 2.25 0 0020.25 3H3.75A2.25 2.25 0 001.5 5.25v13.5A2.25 2.25 0 003.75 21z" />
-                              </svg>
-                              View Screenshot
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex-shrink-0 space-y-1">
-                          {isEditRequest ? (
-                            <>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await acceptEditRequest(log.id);
-                                    addToast("Edit accepted", "success");
-                                    loadData();
-                                  } catch {
-                                    addToast("Failed to accept edit", "error");
-                                  }
-                                }}
-                                className="w-full px-3 py-2.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
-                              >
-                                Accept
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await rejectEditRequest(log.id);
-                                    addToast("Edit rejected", "success");
-                                    loadData();
-                                  } catch {
-                                    addToast("Failed to reject edit", "error");
-                                  }
-                                }}
-                                className="w-full px-3 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          ) : log.attachment_url ? (
-                            <>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await updateCreditLogStatus(log.id, "approved");
-                                    addToast("Voucher approved! Balance updated.", "success");
-                                    loadData();
-                                  } catch {
-                                    addToast("Failed to approve", "error");
-                                  }
-                                }}
-                                className="w-full px-3 py-2.5 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    await updateCreditLogStatus(log.id, "rejected");
-                                    addToast("Voucher rejected", "success");
-                                    loadData();
-                                  } catch {
-                                    addToast("Failed to reject", "error");
-                                  }
-                                }}
-                                className="w-full px-3 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.97] transition-transform"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          ) : (
-                            <a href={href} className="block text-right">
-                              <p className="font-bold text-[var(--color-text)]">
-                                Rs. {log.amount.toLocaleString()}
-                              </p>
-                              <p className="text-[10px] text-[var(--color-text-muted)]">
-                                {timeAgo(log.created_at)}
-                              </p>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         </PullToRefresh>
-
-      {previewImage && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 animate-fade-in"
-          onClick={() => setPreviewImage(null)}
-        >
-          <button
-            onClick={() => setPreviewImage(null)}
-            className="absolute top-4 right-4 p-2 text-white/80 hover:text-white z-10"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          <img
-            src={previewImage}
-            alt="Payment voucher screenshot"
-            className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
 
       {merchantId && reminderCustomer && (
         <SmsReminderModal
