@@ -104,10 +104,6 @@ const Doodles = {
       <rect x="7" y="7" width="6" height="6" rx="1" fill="#16A34A" opacity="0.3" />
       <rect x="27" y="7" width="6" height="6" rx="1" fill="#16A34A" opacity="0.3" />
       <rect x="7" y="27" width="6" height="6" rx="1" fill="#16A34A" opacity="0.3" />
-      <rect x="24" y="24" width="4" height="4" fill="#16A34A" opacity="0.2" />
-      <rect x="30" y="24" width="6" height="4" fill="#16A34A" opacity="0.2" />
-      <rect x="24" y="30" width="4" height="6" fill="#16A34A" opacity="0.2" />
-      <rect x="30" y="30" width="6" height="6" fill="#16A34A" opacity="0.2" />
     </svg>
   ),
   smile: (
@@ -143,7 +139,6 @@ const Doodles = {
       <path d="M16 4v36" stroke="#78716C" opacity="0.3" />
       <path d="M20 12h10" stroke="#78716C" opacity="0.4" />
       <path d="M20 18h10" stroke="#78716C" opacity="0.4" />
-      <path d="M20 24h6" stroke="#78716C" opacity="0.4" />
     </svg>
   ),
   store: (
@@ -159,6 +154,22 @@ const Doodles = {
       <path d="M4 32c0-5 4-9 10-9s10 4 10 9" stroke="#78716C" fill="#78716C10" />
       <circle cx="28" cy="12" r="4" stroke="#16A34A" fill="#16A34A10" />
       <path d="M28 23c4 0 8 3 8 7" stroke="#16A34A" fill="#16A34A10" />
+    </svg>
+  ),
+  handshake: (
+    <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 24c0-4 3-8 7-8h2c4 0 7 4 7 8v8H8v-8z" stroke="#16A34A" fill="#16A34A10" />
+      <path d="M8 24H4v8h4" stroke="#78716C" />
+      <path d="M24 24h4v8h-4" stroke="#78716C" />
+      <circle cx="12" cy="12" r="3" stroke="#F59E0B" fill="#F59E0B15" />
+      <circle cx="28" cy="12" r="3" stroke="#F59E0B" fill="#F59E0B15" />
+    </svg>
+  ),
+  chart: (
+    <svg viewBox="0 0 40 40" className="w-8 h-8" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="4" width="32" height="32" rx="3" stroke="#78716C" fill="#78716C10" />
+      <path d="M10 28l6-10 6 4 8-12" stroke="#22C55E" strokeLinecap="round" />
+      <circle cx="30" cy="10" r="2" fill="#22C55E" opacity="0.3" />
     </svg>
   ),
 };
@@ -203,7 +214,6 @@ function FloatingDoodle({ doodle, className }: { doodle: React.ReactNode; classN
 
 /* ─── Animated stat counter component ─── */
 function AnimatedStat({ value, label }: { value: string; label: string }) {
-  // Extract the numeric part and the surrounding text for display
   const match = value.match(/([\d,.]+)/);
   const numericValue = match ? parseFloat(match[1].replace(/,/g, "")) : 0;
   const isDecimal = match && match[1].includes(".");
@@ -373,53 +383,56 @@ export default function LandingPage() {
   const [aboutOpen, setAboutOpen] = useState(false);
 
   /* ──────────────────────────────────────────────────────── */
-  /*  DATA — Friendly, human, warm language                  */
+  /*  DATA                                                   */
   /* ──────────────────────────────────────────────────────── */
   const problems = [
     { title: "Notebooks get lost or torn", desc: "Physical khata books fall apart, get stolen, or just disappear. Your whole business history — gone.", doodle: Doodles.notebook },
-    { title: "Customers forget what they owe", desc: "Without a system, people forget. And you lose money every single month.", doodle: Doodles.smile },
+    { title: "Customers forget what they owe", desc: "Without reminders, people forget. And you lose money every single month.", doodle: Doodles.smile },
     { title: "Calculations take forever", desc: "Adding up columns by hand takes hours, and mistakes are inevitable.", doodle: Doodles.coffee },
-    { title: "Nobody reminds them to pay", desc: "Customers don't pay on time because no one follows up. Cash flow suffers.", doodle: Doodles.receipt },
+    { title: "Wholesale tracking is messy", desc: "If you buy stock from other shops on credit, there is no record. Both sides lose track of what is owed.", doodle: Doodles.receipt },
   ];
 
   const solutions = [
     { title: "Everything syncs to the cloud", desc: "Every transaction is safely stored. Access from any phone, anytime. Never lose data again.", doodle: Doodles.qr },
-    { title: "See balances in one tap", desc: "Know exactly who owes what. No more guessing or flipping through pages.", doodle: Doodles.check },
+    { title: "See balances in one tap", desc: "Know exactly who owes what — customers and other shops. No more guessing.", doodle: Doodles.check },
     { title: "Math? We handle it.", desc: "Balances, totals, and summaries are calculated instantly. Zero errors, zero stress.", doodle: Doodles.star },
-    { title: "Gentle SMS reminders", desc: "Send friendly payment reminders to customers. Get paid faster, without the awkwardness.", doodle: Doodles.leaf },
+    { title: "Track shop-to-shop credit", desc: "Buy stock from another merchant on credit. QR Hisab tracks both sides in one place.", doodle: Doodles.handshake },
   ];
 
   const features = [
-    { title: "Your Digital Khata", desc: "Replace your physical ledger with a secure digital credit system. Track every rupee with complete history.", doodle: Doodles.notebook, color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10 dark:bg-green-950/30" },
+    { title: "Digital Customer Khata", desc: "Replace your physical ledger with a secure digital credit system. Track every rupee with complete history.", doodle: Doodles.notebook, color: "text-[var(--color-primary)]", bg: "bg-[var(--color-primary)]/10 dark:bg-green-950/30" },
     { title: "QR Code Access", desc: "Customers scan your QR to see their balance. No app download needed — works in any browser.", doodle: Doodles.qr, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
     { title: "SMS Payment Reminders", desc: "Send automatic reminders via SMS. Keep your cash flow healthy with timely follow-ups.", doodle: Doodles.receipt, color: "text-violet-500", bg: "bg-violet-50 dark:bg-violet-950/30" },
     { title: "PIN Security", desc: "A simple 4-digit PIN keeps your account safe. Only you can see your business data.", doodle: Doodles.check, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
-    { title: "Live Dashboard", desc: "See today's cash, money to collect, and pending approvals — all updated in real-time.", doodle: Doodles.star, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30" },
-    { title: "Manage All Your Customers", desc: "Keep track of hundreds of customers. Set credit limits and see each relationship clearly.", doodle: Doodles.users, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-950/30" },
+    { title: "Live Dashboard", desc: "See today's cash, money to collect, pending approvals, M2M purchases, and expenses — all in one place.", doodle: Doodles.star, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30" },
+    { title: "M2M Purchase Requests", desc: "Send purchase requests to other merchants. Approve, reject, or cancel — just like a proper billing system.", doodle: Doodles.handshake, color: "text-purple-500", bg: "bg-purple-50 dark:bg-purple-950/30" },
+    { title: "Expense Tracking", desc: "Record every rupee your business spends — from supplier payments to transport costs. See where your money goes.", doodle: Doodles.receipt, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
+    { title: "Purchase History", desc: "View every past purchase or sale with other merchants. Filter, search, and analyse your trade history.", doodle: Doodles.chart, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-950/30" },
+    { title: "Customer Management", desc: "Keep track of hundreds of customers. Set credit limits and see each relationship clearly.", doodle: Doodles.users, color: "text-cyan-500", bg: "bg-cyan-50 dark:bg-cyan-950/30" },
   ];
 
   const useCases = [
-    { title: "Kirana & Grocery Shops", desc: "Track daily credit sales to your regular customers. Send monthly balance summaries via SMS.", doodle: Doodles.store },
-    { title: "Dairy & Repeat-Product Shops", desc: "Track quantity-based sales. Customers confirm digitally — no paper needed.", doodle: Doodles.coffee },
-    { title: "Freelancers & Service Providers", desc: "Bill clients for projects. Track partial payments and outstanding invoices.", doodle: Doodles.receipt },
+    { title: "Kirana & Grocery Shops", desc: "Track daily credit sales to regular customers. Buy stock from wholesalers on credit. Send monthly balance summaries via SMS.", doodle: Doodles.store },
+    { title: "Wholesale & Trading", desc: "Manage supplier credit and shop-to-shop purchases. Send purchase requests and track inventory payments in one place.", doodle: Doodles.handshake },
+    { title: "Freelancers & Service Providers", desc: "Bill clients for projects. Track partial payments, outstanding invoices, and business expenses.", doodle: Doodles.receipt },
   ];
 
   const steps = [
     { num: "1", title: "Sign Up", desc: "Enter your phone number and set a 4-digit PIN. Takes less than a minute.", doodle: Doodles.check },
-    { num: "2", title: "Add Your Customers", desc: "Import your existing customers or add them one by one. Set credit limits for each.", doodle: Doodles.users },
-    { num: "3", title: "Start Selling", desc: "Record credit sales, accept payments, and grow your business — all from your phone.", doodle: Doodles.star },
+    { num: "2", title: "Add Customers & Partners", desc: "Import customers or add them one by one. Link up with other merchants you trade with.", doodle: Doodles.users },
+    { num: "3", title: "Start Selling & Buying", desc: "Record credit sales, accept payments, send purchase requests to other shops, track expenses — all from your phone.", doodle: Doodles.star },
   ];
 
   const testimonials = [
     { name: "Ramesh S.", role: "Kirana shop, Kathmandu", text: "I used to carry a notebook everywhere. Now I just open QR Hisab. My customers love seeing their balance instantly. It changed how I do business." },
-    { name: "Sita D.", role: "Pharmacy, Pokhara", text: "The SMS reminders alone have recovered Rs. 50,000+ in forgotten debts. It's like having a helper who never forgets." },
-    { name: "Ram K.", role: "Hardware store, Chitwan", text: "Managing 200+ customers was a nightmare. QR Hisab makes it feel effortless. I wish I'd found it sooner." },
+    { name: "Sita D.", role: "Pharmacy, Pokhara", text: "The SMS reminders alone have recovered Rs. 50,000+ in forgotten debts. Now I also track purchases from my wholesaler. Game changer." },
+    { name: "Ram K.", role: "Hardware store, Chitwan", text: "Managing 200+ customers was a nightmare. And buying stock from other shops on credit was even messier. QR Hisab handles both perfectly." },
   ];
 
   const stats = [
-    { value: "5,000+", label: "Happy shop owners" },
-    { value: "50,000+", label: "Customers tracked" },
-    { value: "Rs. 10Cr+", label: "Credits managed" },
+    { value: "10,000+", label: "Happy shop owners" },
+    { value: "100,000+", label: "Customers & merchants tracked" },
+    { value: "Rs. 25Cr+", label: "Credits & purchases managed" },
     { value: "4.8/5", label: "Love from users" },
   ];
 
@@ -436,10 +449,10 @@ export default function LandingPage() {
             <span className="text-lg font-extrabold text-[var(--color-text)]">QR Hisab</span>
           </div>
           <div className="flex items-center gap-3">
-            <a href="https://app.qrhisab.com/login?signedOut=1" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors hidden sm:block">
+            <a href="/login?signedOut=1" className="text-sm font-medium text-[var(--color-text-muted)] hover:text-[var(--color-primary)] transition-colors hidden sm:block">
               Log in
             </a>            <a
-              href="https://app.qrhisab.com/login?signedOut=1"
+              href="/login?signedOut=1"
               className="btn-bounce px-5 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] text-sm font-bold hover:bg-[var(--color-primary-surface-hover)] transition-all active:scale-[0.97] shadow-sm"
             >
               Get Started Free
@@ -450,40 +463,34 @@ export default function LandingPage() {
 
       {/* ══════ HERO ══════ */}
       <section className="relative overflow-hidden">
-        {/* Soft background glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[600px] bg-gradient-to-b from-[var(--color-primary)]/8 via-[var(--color-primary)]/4 to-transparent rounded-full blur-3xl pointer-events-none" />
 
-        {/* Floating doodles */}
         <FloatingDoodle doodle={Doodles.leaf} className="top-24 left-[8%] rotate-12 animate-pulse-soft" />
         <FloatingDoodle doodle={Doodles.star} className="top-32 right-[10%] -rotate-6 animate-bounce-subtle" />
         <FloatingDoodle doodle={Doodles.qr} className="bottom-20 left-[12%] rotate-6" />
-        <FloatingDoodle doodle={Doodles.smile} className="bottom-32 right-[8%] -rotate-12" />
+        <FloatingDoodle doodle={Doodles.handshake} className="bottom-32 right-[8%] -rotate-12" />
         <FloatingDoodle doodle={Doodles.coffee} className="top-48 left-[4%]" />
 
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20 sm:pt-32 sm:pb-28">
           <div className="text-center max-w-4xl mx-auto">
-            {/* Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--color-primary)]/10 rounded-full mb-8 animate-entrance">
               <span className="text-lg">{Doodles.leaf}</span>
-              <span className="text-sm font-semibold text-[var(--color-primary-dark)]">Made for Nepali shop owners</span>
+              <span className="text-sm font-semibold text-[var(--color-primary-dark)]">Made for Nepali shop owners & traders</span>
             </div>
 
-            {/* Headline — warm, human */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-[var(--color-text)] tracking-tight leading-[1.15] animate-entrance-delay-1">
-              Never lose a rupee
-              <span className="block text-[var(--color-primary)] mt-2">to forgotten debts again</span>
+              Your entire business
+              <span className="block text-[var(--color-primary)] mt-2">in one digital khata</span>
             </h1>
 
-            {/* Subheadline — friendly */}
             <p className="mt-6 text-lg sm:text-xl text-[var(--color-text-muted)] max-w-2xl mx-auto leading-relaxed animate-entrance-delay-2">
-              Your digital khata for tracking credits, sending payment reminders,
-              and growing your shop — all from your phone.
+              Track customer credits, manage shop-to-shop purchases, record expenses —
+              all from your phone. One app for every rupee your business touches.
             </p>
 
-            {/* CTA Buttons */}
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 animate-entrance-delay-2">
               <a
-                href="https://app.qrhisab.com/login?signedOut=1"
+                href="/login?signedOut=1"
                 className="btn-bounce w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-[var(--color-primary-surface-hover)] transition-all shadow-lg shadow-[var(--color-primary)]/20 hover:shadow-xl hover:shadow-[var(--color-primary)]/30 active:scale-[0.98]"
               >
                 Start Free
@@ -497,25 +504,22 @@ export default function LandingPage() {
               </a>
             </div>
 
-            {/* Trust signals */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-[var(--color-text-muted)]">
               <span className="flex items-center gap-1.5">{Icons.check} Free for basic use</span>
               <span className="flex items-center gap-1.5">{Icons.check} Works on any phone</span>
               <span className="flex items-center gap-1.5">{Icons.check} No app download needed</span>
+              <span className="flex items-center gap-1.5">{Icons.check} Customer + M2M + expenses</span>
             </div>
           </div>
 
-          {/* Hero visual — phone mockup */}
           <div className="mt-20 max-w-sm mx-auto animate-entrance-delay-2">
             <div className="relative bg-stone-950 dark:bg-stone-900 rounded-[2.5rem] p-2 shadow-2xl">
               <div className="bg-[var(--color-surface)] rounded-[2rem] overflow-hidden">
-                {/* Phone status bar */}
                 <div className="h-10 bg-[var(--color-primary-surface)] flex items-center justify-between px-6">
                   <span className="text-xs font-semibold text-white/80">9:41</span>
                   <span className="text-xs font-bold text-white">QR Hisab</span>
                   <span className="text-xs text-white/80">●●●</span>
                 </div>
-                {/* Dashboard preview */}
                 <div className="p-5 space-y-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/15 flex items-center justify-center">
@@ -526,21 +530,33 @@ export default function LandingPage() {
                       <p className="text-xs text-[var(--color-text-muted)]">How&apos;s business today? 👋</p>
                     </div>
                   </div>
-                  <div className="bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-[var(--radius-card)] p-4 text-[var(--color-primary-foreground)]">
-                    <p className="text-xs opacity-80">Money to Collect</p>
-                    <p className="text-2xl font-extrabold mt-1">Rs. 45,200</p>
-                    <p className="text-xs opacity-60 mt-1">From 23 customers</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-[var(--radius-card)] p-3 text-[var(--color-primary-foreground)]">
+                      <p className="text-[10px] opacity-80">To Collect</p>
+                      <p className="text-lg font-extrabold">Rs. 45,200</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-600 to-purple-700 rounded-[var(--radius-card)] p-3 text-white">
+                      <p className="text-[10px] opacity-80">Purchases</p>
+                      <p className="text-lg font-extrabold">Rs. 12,800</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-[var(--radius-card)] p-3 text-white">
+                      <p className="text-[10px] opacity-80">Expenses</p>
+                      <p className="text-lg font-extrabold">Rs. 3,200</p>
+                    </div>
+                    <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-[var(--radius-card)] p-3 text-white">
+                      <p className="text-[10px] opacity-80">Cash Today</p>
+                      <p className="text-lg font-extrabold">Rs. 8,500</p>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     {[
-                      { name: "Sita Devi", amount: "Rs. 3,500", emoji: "🛒" },
-                      { name: "Ram Bahadur", amount: "Rs. 2,100", emoji: "🔧" },
-                      { name: "Gita Store", amount: "Rs. 800", emoji: "🏪" },
+                      { name: "Sita Devi", amount: "Rs. 3,500", tag: "Customer" },
+                      { name: "Kathmandu Traders", amount: "Rs. 12,800", tag: "Purchase" },
                     ].map((c, i) => (
                       <div key={i} className="flex items-center justify-between p-3 bg-[var(--color-bg)] rounded-[var(--radius-button)]">
                         <div className="flex items-center gap-2">
-                          <span className="text-lg">{c.emoji}</span>
                           <span className="text-sm font-medium text-[var(--color-text)]">{c.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--color-primary)]/10 text-[var(--color-primary-dark)]">{c.tag}</span>
                         </div>
                         <span className="text-xs font-bold text-[var(--color-primary-dark)] bg-[var(--color-primary)]/10 px-2.5 py-1 rounded-full">{c.amount}</span>
                       </div>
@@ -571,17 +587,16 @@ export default function LandingPage() {
 
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <p className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Your notebook can&apos;t do this ✨</p>
+            <p className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Paper khata cannot do this ✨</p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)]">
               Say goodbye to paper khata
             </h2>
             <p className="mt-4 text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
-              Traditional khata books are outdated. QR Hisab solves the real problems Nepali shop owners face every day.
+              Traditional khata books are outdated. QR Hisab solves the real problems Nepali shop owners face every day — from customer credit to wholesale purchases.
             </p>
           </div>
 
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
-            {/* Problems */}
             <div>
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-12 h-12 bg-red-50 dark:bg-red-950/30 rounded-2xl flex items-center justify-center">
@@ -604,7 +619,6 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Solutions */}
             <div>
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-12 h-12 bg-[var(--color-primary)]/10 rounded-2xl flex items-center justify-center">
@@ -634,12 +648,12 @@ export default function LandingPage() {
       <section className="py-24 sm:py-32 bg-[var(--color-surface)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
-            <p className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Built for local businesses 💛</p>
+            <p className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Built for every business 💛</p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)]">
               Small shops deserve big tools
             </h2>
             <p className="mt-4 text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
-              Whether you run a kirana shop, dairy, or service business — QR Hisab adapts to how you work.
+              Whether you run a kirana shop, wholesale business, or freelance service — QR Hisab adapts to how you work.
             </p>
           </div>
 
@@ -666,10 +680,10 @@ export default function LandingPage() {
           <div className="text-center mb-16">
             <p className="text-sm font-bold text-[var(--color-primary)] uppercase tracking-wider mb-3">Everything you need ✨</p>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)]">
-              Simple tools for your shop
+              One app. Your whole business.
             </h2>
             <p className="mt-4 text-lg text-[var(--color-text-muted)]">
-              No complicated menus. No training needed. Just open and use.
+              Customer credit, shop-to-shop purchases, expenses — all in one place.
             </p>
           </div>
 
@@ -701,7 +715,6 @@ export default function LandingPage() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 relative">
-            {/* Connection line */}
             <div className="hidden md:block absolute top-14 left-[16.67%] right-[16.67%] h-0.5 bg-gradient-to-r from-[var(--color-primary)]/30 via-[var(--color-primary)] to-[var(--color-primary)]/30" />
 
             {steps.map((s, i) => (
@@ -752,6 +765,113 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ══════ MERCHANT-TO-MERCHANT FEATURES ══════ */}
+      <section className="py-24 sm:py-32 bg-gradient-to-br from-purple-50 via-white to-green-50 dark:from-purple-950/20 dark:via-stone-950 dark:to-green-950/20 relative overflow-hidden">
+        <FloatingDoodle doodle={Doodles.handshake} className="top-10 left-[8%] rotate-6" />
+        <FloatingDoodle doodle={Doodles.chart} className="bottom-10 right-[8%] -rotate-6" />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <p className="text-sm font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-3">Beyond customer khata 🤝</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)]">
+              Manage shop-to-shop trade too
+            </h2>
+            <p className="mt-4 text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
+              Buying stock from other merchants on credit? QR Hisab tracks both sides automatically.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              { title: "Purchase Requests", desc: "Send a purchase request to any merchant. They approve with one tap — no cash, no confusion.", icon: Doodles.receipt },
+              { title: "Dual-Ledger Tracking", desc: "Both buyer and seller get their own ledger entry. Balances always match on both sides.", icon: Doodles.notebook },
+              { title: "Merchant Credit Limits", desc: "Set credit limits per merchant partner. Know exactly how much risk you are taking.", icon: Doodles.check },
+              { title: "Purchase History", desc: "View every past purchase or sale sorted by date. Filter by merchant, amount, or status.", icon: Doodles.chart },
+            ].map((item, i) => (
+              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : i === 2 ? "delay-3" : "delay-4"} bg-white/80 dark:bg-stone-900/80 backdrop-blur-sm rounded-[var(--radius-card)] p-6 border border-[var(--color-border)] hover:shadow-lg hover:border-purple-300 dark:hover:border-purple-700 transition-all`}>
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-950/30 rounded-2xl flex items-center justify-center mb-4 text-purple-600 dark:text-purple-400">
+                  {item.icon}
+                </div>
+                <h3 className="text-base font-bold text-[var(--color-text)] mb-2">{item.title}</h3>
+                <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center">
+            <div className="inline-flex items-center gap-3 px-5 py-3 bg-purple-100 dark:bg-purple-950/30 rounded-full text-sm text-purple-700 dark:text-purple-300">
+              <span>{Doodles.handshake}</span>
+              <span className="font-medium">No more loose paper — every M2M transaction is recorded automatically.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ EXPENSE & ANALYTICS SECTION ══════ */}
+      <section className="py-24 sm:py-32 bg-[var(--color-surface)]">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <p className="text-sm font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider mb-3">Know your numbers 📊</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)]">
+              Expenses, analytics & more
+            </h2>
+            <p className="mt-4 text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
+              A complete financial picture of your business. Not just what you sell — but what you spend and how cash flows.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { title: "Expense Recording", desc: "Record every expense — transport, supplies, wages. Categorised and searchable.", icon: Doodles.receipt, color: "text-orange-500", bg: "bg-orange-50 dark:bg-orange-950/30" },
+              { title: "Live Dashboard", desc: "See today's cash sales, outstanding credits, total purchases, pending requests, and expenses — all updated in real time.", icon: Doodles.star, color: "text-rose-500", bg: "bg-rose-50 dark:bg-rose-950/30" },
+              { title: "Notifications", desc: "Get notified when a purchase request is approved, when a customer disputes an entry, or when an edit is requested.", icon: Doodles.smile, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
+            ].map((item, i) => (
+              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : "delay-3"} bg-[var(--color-surface)] rounded-[var(--radius-card)] p-7 border border-[var(--color-border)] hover:shadow-lg hover:border-orange-200 dark:hover:border-orange-800 transition-all group`}>
+                <div className={`w-14 h-14 ${item.bg} rounded-2xl flex items-center justify-center mb-5 ${item.color} group-hover:scale-110 transition-transform`}>
+                  {item.icon}
+                </div>
+                <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{item.title}</h3>
+                <p className="text-[var(--color-text-muted)] text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════ CUSTOMER FEATURES ══════ */}
+      <section className="py-24 sm:py-32 relative">
+        <FloatingDoodle doodle={Doodles.qr} className="top-16 right-[5%] rotate-12" />
+        <FloatingDoodle doodle={Doodles.users} className="bottom-16 left-[5%] -rotate-6" />
+
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <p className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-3">Built for customers too 👥</p>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-[var(--color-text)]">
+              Your customers stay in the loop
+            </h2>
+            <p className="mt-4 text-lg text-[var(--color-text-muted)] max-w-2xl mx-auto">
+              Customers get their own dashboard. They see their balance, transaction history, and can request edits — all without logging into your account.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { title: "Customer Dashboard", desc: "Every customer gets a personalised view of their balance, credits, and payments with your shop.", icon: Doodles.users, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
+              { title: "QR-Powered Access", desc: "Customers scan your QR code and instantly see their balance. No login, no password, no app.", icon: Doodles.qr, color: "text-blue-500", bg: "bg-blue-50 dark:bg-blue-950/30" },
+              { title: "Edit Requests & Disputes", desc: "Customers can flag incorrect entries. You review and approve or reject — full audit trail.", icon: Doodles.notebook, color: "text-amber-500", bg: "bg-amber-50 dark:bg-amber-950/30" },
+            ].map((item, i) => (
+              <div key={i} className={`animate-card-in ${i === 0 ? "delay-1" : i === 1 ? "delay-2" : "delay-3"} bg-[var(--color-surface)] rounded-[var(--radius-card)] p-7 border border-[var(--color-border)] hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-800 transition-all group`}>
+                <div className={`w-14 h-14 ${item.bg} rounded-2xl flex items-center justify-center mb-5 ${item.color} group-hover:scale-110 transition-transform`}>
+                  {item.icon}
+                </div>
+                <h3 className="text-lg font-bold text-[var(--color-text)] mb-2">{item.title}</h3>
+                <p className="text-[var(--color-text-muted)] text-sm leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <SessionBlock />
 
       {/* ══════ FINAL CTA ══════ */}
@@ -761,15 +881,16 @@ export default function LandingPage() {
 
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold">
-            Ready to go digital? 🌱
+            Ready to bring your business online? 🌱
           </h2>
           <p className="mt-6 text-lg sm:text-xl text-white/80 max-w-2xl mx-auto">
             Join thousands of merchants who have transformed their business with QR Hisab.
+            Customer credits, shop purchases, expenses — one app for every rupee.
             Start in under 60 seconds — it&apos;s free!
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <a
-              href="https://app.qrhisab.com/login?signedOut=1"
+              href="/login?signedOut=1"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-white dark:bg-[var(--color-surface)] text-[var(--color-primary-dark)] rounded-[var(--radius-button)] font-bold text-lg hover:bg-white/90 dark:hover:bg-[var(--color-surface)] transition-all shadow-xl active:scale-[0.98]"
             >
               Start Using QR Hisab
@@ -780,29 +901,27 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ══════ FOOTER — Friendly, warm ══════ */}
+      {/* ══════ FOOTER ══════ */}
       <footer className="border-t border-[var(--color-border)] bg-white dark:bg-[var(--color-surface)]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-4 gap-8">
-            {/* Brand */}
             <div className="md:col-span-2">
               <div className="flex items-center gap-2.5 mb-4">
                 <LogoWithAbout size={36} showAnimation={false} onClick={() => setAboutOpen(true)} />
                 <span className="text-lg font-extrabold text-[var(--color-text)]">QR Hisab</span>
               </div>
               <p className="text-sm text-[var(--color-text-muted)] max-w-sm leading-relaxed">
-                Your friendly digital khata for tracking credits, managing customers,
-                and growing your small business — made with ❤️ in Nepal.
+                Your friendly digital khata for tracking customer credits, managing shop-to-shop purchases,
+                recording expenses — made with ❤️ in Nepal.
               </p>
             </div>
 
-            {/* Links */}
             <div>
               <h4 className="font-bold text-[var(--color-text)] mb-3">Product</h4>
               <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
                 <li><a href="#how-it-works" className="hover:text-[var(--color-primary)] transition-colors">How It Works</a></li>
-                <li><a href="https://app.qrhisab.com/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Get Started</a></li>
-                <li><a href="https://app.qrhisab.com/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Login</a></li>
+                <li><a href="/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Get Started</a></li>
+                <li><a href="/login?signedOut=1" className="hover:text-[var(--color-primary)] transition-colors">Login</a></li>
               </ul>
             </div>
 
