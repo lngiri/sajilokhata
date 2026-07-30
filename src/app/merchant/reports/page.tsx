@@ -347,7 +347,7 @@ export default function MerchantReportsPage() {
     const rows = filteredLogs.map((log: any) => [
       new Date(log.created_at).toISOString().split("T")[0],
       log.type === "cash" ? "Walk-in" : (log.customers?.name || log.customers?.phone || ""),
-      log.type === "debit" ? "Credit Given" : log.type === "cash" ? "Cash Sale" : "Payment Received",
+      log.type === "debit" ? "Credit Given" : log.type === "expense" ? "Expense" : log.type === "cash" ? "Cash Sale" : "Payment Received",
       log.amount,
       STATUS_LABELS[log.status] || log.status,
       log.description || "",
