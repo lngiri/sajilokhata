@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
       .from("credit_logs")
       .update({
         proposed_amount: null,
-        status: "unverified",
+        status: "awaiting_confirmation",
         verification_token: null,
       })
       .eq("id", log.id);

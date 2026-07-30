@@ -136,7 +136,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       // saveEntry returns success with a verification token
       vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
         success: true,
-        entry: { id: "entry-1", verification_token: "tok-abc", status: "unverified" },
+        entry: { id: "entry-1", verification_token: "tok-abc", status: "awaiting_confirmation" },
       });
 
       render(<MerchantScanPage />);
@@ -213,7 +213,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
 
       vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
         success: true,
-        entry: { id: "entry-1", verification_token: "tok-xyz-123", status: "unverified" },
+        entry: { id: "entry-1", verification_token: "tok-xyz-123", status: "awaiting_confirmation" },
       });
 
       render(<MerchantScanPage />);
@@ -433,7 +433,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       // The legacy format can include amount and description
       vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
         success: true,
-        entry: { id: "entry-2", status: "unverified" },
+        entry: { id: "entry-2", status: "awaiting_confirmation" },
       });
 
       // We need to trigger the legacy scan which has customerId but no amount pre-filled
@@ -455,7 +455,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
 
       vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
         success: true,
-        entry: { id: "entry-1", status: "unverified" },
+        entry: { id: "entry-1", status: "awaiting_confirmation" },
       });
 
       render(<MerchantScanPage />);
@@ -593,7 +593,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       await user.click(screen.getByText("Save Entry"));
 
       // Resolve the save
-      resolveSaveEntry!({ success: true, entry: { id: "e1", status: "unverified" } });
+      resolveSaveEntry!({ success: true, entry: { id: "e1", status: "awaiting_confirmation" } });
 
       await waitFor(() => screen.getByText("Entry Saved! 🎉"));
 

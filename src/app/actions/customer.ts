@@ -238,7 +238,7 @@ export async function addCustomerForMerchant(
           .update({
             otp,
             expires_at: expiresAt,
-            status: "pending",
+            status: "awaiting_confirmation",
             used_at: null,
             sms_sent_at: null,
             sms_error: null,
@@ -259,7 +259,7 @@ export async function addCustomerForMerchant(
           phone: normalized,
           otp,
           expires_at: expiresAt,
-          status: "pending",
+          status: "awaiting_confirmation",
         })
         .select("id")
         .single();
@@ -489,7 +489,7 @@ export async function submitCustomerEntry(
         amount,
         type,
         description: description || null,
-        status: "pending",
+        status: "awaiting_confirmation",
         sync_status: "online",
         initiated_by: "customer",
       })
@@ -655,7 +655,7 @@ export async function getCustomerStats(
       .from("credit_logs")
       .select("id")
       .in("customer_id", customerIds)
-      .eq("status", "pending") as unknown as Promise<{
+      .eq("status", "awaiting_confirmation") as unknown as Promise<{
       data: any[] | null;
     }>,
   ]);
@@ -666,7 +666,7 @@ export async function getCustomerStats(
   for (const log of balanceLogs || []) {
     if (
       log.status === "approved" ||
-      (log.status === "pending" &&
+      (log.status === "awaiting_confirmation" &&
         (log.description as string)?.startsWith("Opening Balance"))
     ) {
       const sign = log.type === "debit" ? 1 : -1;
@@ -724,7 +724,7 @@ export async function updateCreditLog(
     .update(payload)
     .eq("id", logId)
     .eq("customer_id", customer.id)
-    .eq("status", "pending")
+    .eq("status", "awaiting_confirmation")
     .select()
     .single();
 
@@ -769,7 +769,7 @@ export async function cancelCreditLog(logId: string): Promise<any> {
 }
 
 /**
- * Confirm (approve) an unverified credit log entry for the authenticated customer.
+ * Confirm (approve) an awaiting_confirmation credit log entry for the authenticated customer.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function confirmCustomerEntry(logId: string): Promise<any> {
@@ -808,7 +808,7 @@ export async function confirmCustomerEntry(logId: string): Promise<any> {
 }
 
 /**
- * Dispute an unverified credit log entry for the authenticated customer.
+ * Dispute an awaiting_confirmation credit log entry for the authenticated customer.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function disputeEntry(logId: string): Promise<any> {

@@ -236,7 +236,7 @@ export async function getCashSales(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateCreditLogStatus(
   logId: string,
-  status: "approved" | "disputed" | "rejected" | "pending" | "unverified" | "edit_requested",
+  status: "approved" | "disputed" | "rejected" | "awaiting_confirmation" | "edit_requested",
   actorType?: "merchant" | "customer"
 ): Promise<any> {
   const updates: Record<string, unknown> = {};
@@ -270,7 +270,7 @@ export async function updateCreditLog(
     .from("credit_logs")
     .update(payload)
     .eq("id", logId)
-    .eq("status", "pending")
+    .eq("status", "awaiting_confirmation")
     .select()
     .single();
 
@@ -323,7 +323,7 @@ export async function createManualCreditLog(params: {
     amount: params.amount,
     type: params.type,
     description: params.description || null,
-    status: isCash ? "approved" : "unverified",
+    status: isCash ? "approved" : "awaiting_confirmation",
     approved_at: isCash ? new Date().toISOString() : null,
     attachment_url: params.attachment_url || null,
   });
@@ -603,7 +603,7 @@ export async function getMerchantStats(merchantId: string): Promise<StatsResult>
     .from("credit_logs")
     .select("id, amount")
     .eq("merchant_id", merchantId)
-    .eq("status", "pending") as any;
+    .eq("status", "awaiting_confirmation") as any;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allApprovedLogs } = await getClient()

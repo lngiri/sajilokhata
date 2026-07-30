@@ -262,7 +262,7 @@ export default function MerchantScanPage() {
             quantity: quantity ? Number(quantity) : null,
             unit: (unit || null) as any,
             attachment_url: attachmentUrl ?? null,
-            status: entryType === "cash" ? "approved" : "unverified",
+            status: entryType === "cash" ? "approved" : "awaiting_confirmation",
             items: selectedProductId && quantity && unit ? [{
               productId: selectedProductId,
               productName: description || "Item",

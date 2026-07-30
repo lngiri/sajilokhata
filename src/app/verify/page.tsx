@@ -40,7 +40,7 @@ export default function VerifyPage() {
     }
     getCreditLogByToken(token)
       .then((data) => {
-        if (!data || data.status !== "unverified") {
+        if (!data || data.status !== "awaiting_confirmation") {
           setStep("invalid");
           return;
         }

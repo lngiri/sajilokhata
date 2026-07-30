@@ -14,7 +14,7 @@ const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
   rejected: "bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-400",
   disputed: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
-  unverified: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+  awaiting_confirmation: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
   edit_requested: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300",
 };
 
@@ -23,7 +23,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   rejected: "Rejected",
   disputed: "Disputed",
-  unverified: "Unverified",
+  awaiting_confirmation: "Awaiting Confirmation",
   edit_requested: "Edit Req.",
 };
 

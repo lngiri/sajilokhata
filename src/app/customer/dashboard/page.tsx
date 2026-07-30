@@ -525,7 +525,7 @@ export default function CustomerDashboard() {
           amount: Number(amount),
           description: description || null,
           type: entryType,
-          status: "pending",
+          status: "awaiting_confirmation",
           sync_status: "offline_pending",
           created_at: new Date().toISOString(),
         });

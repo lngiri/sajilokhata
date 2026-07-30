@@ -130,7 +130,7 @@ const mockDashboardData = {
       id: "cl1",
       amount: 500,
       type: "debit",
-      status: "pending",
+      status: "awaiting_confirmation",
       description: "Rice 10kg",
       proposed_amount: null,
       created_at: "2025-01-15T10:00:00Z",

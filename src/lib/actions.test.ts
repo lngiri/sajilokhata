@@ -163,7 +163,7 @@ describe("createCreditLog", () => {
       customer_id: "c1",
       amount: 500,
       type: "debit",
-      status: "pending",
+      status: "awaiting_confirmation",
     };
     const created = { id: "cl1", ...log };
     mockQueryResult({ data: created, error: null });
@@ -179,13 +179,13 @@ describe("getMerchantCreditLogs", () => {
       {
         id: "cl1",
         amount: 500,
-        status: "pending",
+        status: "awaiting_confirmation",
         customers: { name: "Hari", phone: "9841234567" },
       },
     ];
     mockQueryResult({ data: logs, error: null });
 
-    const result = await getMerchantCreditLogs("m1", { status: "pending" });
+    const result = await getMerchantCreditLogs("m1", { status: "awaiting_confirmation" });
     expect(result).toEqual(logs);
   });
 
@@ -452,7 +452,7 @@ describe("complete customer submission data flow", () => {
       amount: 500,
       description: "Rice 10kg",
       type: "debit" as const,
-      status: "pending" as const,
+      status: "awaiting_confirmation" as const,
       sync_status: "online" as const,
     };
     const createdLog = { id: "cl1", ...logEntry };
@@ -467,7 +467,7 @@ describe("complete customer submission data flow", () => {
     expect(log.customer_id).toBe(customer.id);
     expect(log.amount).toBe(500);
     expect(log.type).toBe("debit");
-    expect(log.status).toBe("pending");
+    expect(log.status).toBe("awaiting_confirmation");
 
     // Verify all three operations reference the same merchant and customer
     expect(log.merchant_id).toBe(link.merchant_id);
@@ -513,7 +513,7 @@ describe("complete customer submission data flow", () => {
       amount: 200,
       description: null,
       type: "debit" as const,
-      status: "pending" as const,
+      status: "awaiting_confirmation" as const,
       sync_status: "online" as const,
     };
     const createdLog = { id: "cl2", ...logEntry };

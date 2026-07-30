@@ -102,7 +102,7 @@ export async function getMerchantStats(merchantId: string): Promise<{
     (admin.from("credit_logs") as any)
       .select("id, amount")
       .eq("merchant_id", merchantId)
-      .eq("status", "pending"),
+      .eq("status", "awaiting_confirmation"),
     (admin.from("credit_logs") as any)
       .select("amount, type, created_at")
       .eq("merchant_id", merchantId)
@@ -652,7 +652,7 @@ export async function updateCustomerCreditLimit(
 
 export async function updateCreditLogStatus(
   logId: string,
-  status: "approved" | "disputed" | "rejected" | "pending" | "unverified" | "edit_requested",
+  status: "approved" | "disputed" | "rejected" | "awaiting_confirmation" | "edit_requested",
   actorType?: "merchant" | "customer"
 ) {
   const admin = getAdminClient();
@@ -1419,7 +1419,7 @@ export async function submitPaymentVoucher(
         customer_id: customerId,
         amount,
         type: "credit",
-        status: "pending",
+        status: "awaiting_confirmation",
         initiated_by: "customer",
         description: "Payment voucher submitted",
         attachment_url: publicUrl,
@@ -1485,7 +1485,7 @@ export async function getMerchantDashboardData(merchantId: string) {
     (admin.from("credit_logs") as any)
       .select("id, amount, type, status, description, created_at, attachment_url, proposed_amount, customer_id, customers(name, phone)")
       .eq("merchant_id", merchantId)
-      .in("status", ["pending", "edit_requested"])
+      .in("status", ["awaiting_confirmation", "edit_requested"])
       .order("created_at", { ascending: false })
       .limit(10),
     (admin.from("credit_logs") as any)
@@ -1575,7 +1575,7 @@ export async function getMerchantDashboardData(merchantId: string) {
       totalOutstanding,
       totalCreditLimit,
       customerCount: deduped.length,
-      pendingCount: pendingLogs.filter((l: any) => l.status === "pending").length,
+      pendingCount: pendingLogs.filter((l: any) => l.status === "awaiting_confirmation").length,
       todayTotal,
       totalCashSales,
       totalSales,

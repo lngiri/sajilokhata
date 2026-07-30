@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid verification token" }, { status: 400 });
     }
 
-    if (log.status !== "unverified") {
+    if (log.status !== "awaiting_confirmation") {
       return NextResponse.json({ error: "Transaction already processed" }, { status: 400 });
     }
 

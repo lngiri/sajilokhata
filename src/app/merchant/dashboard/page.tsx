@@ -387,7 +387,7 @@ export default function MerchantDashboard() {
       case "approved":
         return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
       case "pending":
-      case "unverified":
+      case "awaiting_confirmation":
         return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30";
       case "rejected":
         return "text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/30";

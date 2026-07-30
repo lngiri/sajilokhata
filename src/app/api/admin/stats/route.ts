@@ -22,7 +22,7 @@ export async function GET() {
       (admin.from("customers") as any).select("id", { count: "exact", head: true }),
       (admin.from("credit_logs") as any)
         .select("id", { count: "exact", head: true })
-        .in("status", ["pending", "unverified"]),
+        .in("status", ["awaiting_confirmation"]),
     ]);
 
     return NextResponse.json({

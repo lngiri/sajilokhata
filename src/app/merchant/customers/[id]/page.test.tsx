@@ -68,7 +68,7 @@ const mockLogs = [
     id: "cl3",
     amount: 1000,
     type: "debit",
-    status: "pending",
+    status: "awaiting_confirmation",
     description: "Milk 5L",
     created_at: "2025-01-13T10:00:00Z",
     attachment_url: null,

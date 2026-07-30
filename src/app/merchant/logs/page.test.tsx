@@ -56,7 +56,7 @@ const pendingLogs = [
     id: "cl1",
     amount: 500,
     type: "debit",
-    status: "pending",
+    status: "awaiting_confirmation",
     description: "Rice 10kg",
     quantity: null,
     unit: null,
@@ -87,7 +87,7 @@ describe("LedgerPage", () => {
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
     vi.mocked(mockMerchantActions.getMerchantCreditLogs).mockImplementation(
       (_id: string, options?: { status?: string }) => {
-        if (options?.status === "pending") return Promise.resolve(pendingLogs);
+        if (options?.status === "awaiting_confirmation") return Promise.resolve(pendingLogs);
         if (options?.status === "approved") return Promise.resolve(approvedLogs);
         return Promise.resolve(allLogs);
       }
@@ -111,7 +111,7 @@ describe("LedgerPage", () => {
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("pending")).toBeInTheDocument();
+      expect(screen.getByText("awaiting_confirmation")).toBeInTheDocument();
       expect(screen.getByText("approved")).toBeInTheDocument();
     });
   });
@@ -166,10 +166,10 @@ describe("LedgerPage", () => {
       expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getAllByText("pending")[0]);
+    await userEvent.click(screen.getAllByText("awaiting_confirmation")[0]);
 
     expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
-      status: "pending",
+      status: "awaiting_confirmation",
       limit: 50,
     });
 
@@ -188,7 +188,7 @@ describe("LedgerPage", () => {
       expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getAllByText("pending")[0]);
+    await userEvent.click(screen.getAllByText("awaiting_confirmation")[0]);
     await userEvent.click(screen.getByText("all"));
 
     expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {

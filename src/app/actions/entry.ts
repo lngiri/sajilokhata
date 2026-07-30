@@ -188,7 +188,7 @@ export async function saveEntry(params: {
       amount: params.amount,
       type: params.type,
       description: params.description || null,
-      status: isCash ? "approved" : "unverified",
+      status: isCash ? "approved" : "awaiting_confirmation",
       approved_at: isCash ? new Date().toISOString() : null,
     };
     if (params.quantity != null) {

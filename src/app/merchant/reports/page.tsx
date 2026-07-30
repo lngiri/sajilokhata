@@ -167,7 +167,7 @@ const STATUS_BADGE: Record<string, string> = {
   pending: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
   rejected: "bg-slate-100 dark:bg-gray-700 text-slate-500 dark:text-slate-400 line-through opacity-60",
   disputed: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300",
-  unverified: "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300",
+  awaiting_confirmation: "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300",
   edit_requested: "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300",
 };
 
@@ -246,14 +246,14 @@ function TransactionAuditLog({
 
 // ─── Main Page ─────────────────────────────────────────────────
 
-type LogFilter = "all" | "approved" | "pending" | "rejected";
+type LogFilter = "all" | "approved" | "awaiting_confirmation" | "rejected";
 
 const STATUS_LABELS: Record<string, string> = {
   approved: "Approved",
   pending: "Pending",
   rejected: "Rejected",
   disputed: "Disputed",
-  unverified: "Unverified",
+  awaiting_confirmation: "Awaiting Confirmation",
   edit_requested: "Edit Req.",
 };
 
@@ -398,7 +398,7 @@ export default function MerchantReportsPage() {
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-[var(--color-text)]">Transactions</p>
             <div className="flex items-center gap-1">
-              {(["approved", "pending", "rejected", "all"] as LogFilter[]).map((f) => (
+              {(["approved", "awaiting_confirmation", "rejected", "all"] as LogFilter[]).map((f) => (
                 <button key={f} onClick={() => setLogFilter(f)}
                   className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${logFilter === f ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                   {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}

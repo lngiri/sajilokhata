@@ -26,7 +26,7 @@ export default function LedgerPage() {
   const { addToast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "pending" | "approved" | "disputed">("all");
+  const [filter, setFilter] = useState<"all" | "awaiting_confirmation" | "approved" | "disputed">("all");
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [pendingEntries, setPendingEntries] = useState<{ id: string; customerName: string; amount: number; description: string | null }[]>([]);
 
@@ -57,7 +57,7 @@ export default function LedgerPage() {
       const id = await getCurrentMerchantId();
       if (id) {
         const allLogs = await getMerchantCreditLogs(id, { limit: 50 });
-        const pending = (allLogs as LogEntry[]).filter((l) => l.status === "pending");
+        const pending = (allLogs as LogEntry[]).filter((l) => l.status === "awaiting_confirmation");
         setLogs(allLogs as LogEntry[]);
         if (pending.length > 0) {
           setPendingEntries(
@@ -77,7 +77,7 @@ export default function LedgerPage() {
   };
 
   const openApprovalModal = () => {
-    const pending = logs.filter((l) => l.status === "pending");
+    const pending = logs.filter((l) => l.status === "awaiting_confirmation");
     if (pending.length === 0) {
       addToast("No pending entries.", "info");
       return;
@@ -101,7 +101,7 @@ export default function LedgerPage() {
       addToast("Entry approved!", "success", {
         label: "Undo",
         onClick: async () => {
-          await updateCreditLogStatus(logId, "pending");
+          await updateCreditLogStatus(logId, "awaiting_confirmation");
           loadLogs();
         },
       });
@@ -126,8 +126,8 @@ export default function LedgerPage() {
     switch (status) {
       case "approved":
         return "text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20";
-      case "pending":
-      case "unverified":
+      case "awaiting_confirmation":
+      case "awaiting_confirmation":
         return "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20";
       case "rejected":
         return "text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/20";
@@ -138,7 +138,7 @@ export default function LedgerPage() {
     }
   };
 
-  const pendingCount = logs.filter((l) => l.status === "pending").length;
+  const pendingCount = logs.filter((l) => l.status === "awaiting_confirmation").length;
 
   return (
     <div className="pb-20">
@@ -154,7 +154,7 @@ export default function LedgerPage() {
         </div>
 
         <div className="flex gap-1 px-4 pb-3 overflow-x-auto">
-          {(["all", "pending", "approved", "disputed"] as const).map((f) => (
+          {(["all", "awaiting_confirmation", "approved", "disputed"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -255,7 +255,7 @@ export default function LedgerPage() {
                     </div>
                   </div>
 
-                  {log.status === "pending" && (
+                  {log.status === "awaiting_confirmation" && (
                     <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                       <button
                         onClick={() => handleReject(log.id)}
@@ -293,7 +293,7 @@ export default function LedgerPage() {
               addToast("Entry approved!", "success", {
                 label: "Undo",
                 onClick: async () => {
-                  await updateCreditLogStatus(id, "pending");
+                  await updateCreditLogStatus(id, "awaiting_confirmation");
                   loadLogs();
                 },
               });

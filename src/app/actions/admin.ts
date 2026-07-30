@@ -139,7 +139,7 @@ export async function getAdminStats(): Promise<{
       admin.from("customers").select("*", { count: "exact", head: true }),
       admin.from("credit_logs")
         .select("*", { count: "exact", head: true })
-        .in("status", ["pending", "unverified"]),
+        .in("status", ["awaiting_confirmation"]),
     ]);
 
     return {

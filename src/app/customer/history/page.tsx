@@ -35,8 +35,8 @@ interface HistoryEntry {
 }
 
 const statusConfig = {
-  pending: { bg: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
-  unverified: { bg: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
+  awaiting_confirmation: { bg: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
+  awaiting_confirmation: { bg: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800", dot: "bg-amber-500" },
   approved: { bg: "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800", dot: "bg-green-500" },
   rejected: { bg: "bg-slate-50 dark:bg-slate-900/20 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700", dot: "bg-slate-400 dark:bg-slate-500" },
   disputed: { bg: "bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800", dot: "bg-purple-500" },
@@ -58,8 +58,8 @@ export default function CustomerHistoryPage() {
   const [initialized, setInitialized] = useState(false);
   const [logs, setLogs] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "unverified" | "pending" | "approved" | "rejected">("all");
-  const [stats, setStats] = useState({ total: 0, pending: 0, unverified: 0, approved: 0, rejected: 0 });
+  const [filter, setFilter] = useState<"all" | "awaiting_confirmation" | "approved" | "rejected">("all");
+  const [stats, setStats] = useState({ total: 0, awaiting_confirmation: 0, approved: 0, rejected: 0 });
   const [editModal, setEditModal] = useState<{ id: string; amount: number; description: string } | null>(null);
   const [lastSeenAt, setLastSeenAt] = useState(() => {
     try { return Number(localStorage.getItem(LAST_SEEN_KEY)) || Date.now(); } catch { return Date.now(); }
@@ -191,10 +191,10 @@ export default function CustomerHistoryPage() {
       setLogs(data as HistoryEntry[]);
 
       // Calculate status counts
-      const counts = { total: data.length, pending: 0, unverified: 0, approved: 0, rejected: 0 };
+      const counts = { total: data.length, awaiting_confirmation: 0, approved: 0, rejected: 0 };
       data.forEach((l: HistoryEntry) => {
-        if (l.status === "pending") counts.pending++;
-        else if (l.status === "unverified") counts.unverified++;
+        if (l.status === "awaiting_confirmation") counts.awaiting_confirmation++;
+        else if (l.status === "awaiting_confirmation") counts.awaiting_confirmation++;
         else if (l.status === "approved") counts.approved++;
         else if (l.status === "rejected") counts.rejected++;
       });
@@ -268,8 +268,8 @@ export default function CustomerHistoryPage() {
         <div className="flex gap-1.5 px-4 pb-3 overflow-x-auto">
           {([
             { key: "all", label: "All", count: stats.total },
-            { key: "unverified", label: "Unverified", count: stats.unverified },
-            { key: "pending", label: "Pending", count: stats.pending },
+            { key: "awaiting_confirmation", label: "Awaiting Confirmation", count: stats.awaiting_confirmation },
+            { key: "awaiting_confirmation", label: "Awaiting Confirmation", count: stats.awaiting_confirmation },
             { key: "approved", label: "Approved", count: stats.approved },
             { key: "rejected", label: "Rejected", count: stats.rejected },
           ] as const).map((tab) => (
@@ -296,7 +296,7 @@ export default function CustomerHistoryPage() {
       </div>
 
       {/* Pending / Unverified banner */}
-      {!loading && (stats.pending > 0 || stats.unverified > 0) && (
+      {!loading && stats.awaiting_confirmation > 0 && (
         <a
           href="/customer/dashboard"
           className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 active:bg-amber-100 dark:active:bg-amber-900/30 transition-colors"
@@ -307,9 +307,8 @@ export default function CustomerHistoryPage() {
             </svg>
           </div>
           <span className="text-sm font-medium text-amber-800 dark:text-amber-300 flex-1 text-left">
-            {stats.pending > 0 && `${stats.pending} pending`}
-            {stats.pending > 0 && stats.unverified > 0 && " · "}
-            {stats.unverified > 0 && `${stats.unverified} unverified`}
+            {stats.awaiting_confirmation > 0 && `${stats.awaiting_confirmation} awaiting confirmation`}
+            {stats.awaiting_confirmation > 0 && `${stats.awaiting_confirmation} awaiting confirmation`}
             {' — review needed'}
           </span>
           <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -444,7 +443,7 @@ export default function CustomerHistoryPage() {
                       </div>
                     </div>
 
-                    {log.status === "pending" && (
+                    {log.status === "awaiting_confirmation" && (
                       <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <button
                           onClick={() =>
@@ -471,7 +470,7 @@ export default function CustomerHistoryPage() {
                       </div>
                     )}
 
-                    {log.status === "unverified" && (
+                    {log.status === "awaiting_confirmation" && (
                       <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <button
                           onClick={async () => {
