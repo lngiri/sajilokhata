@@ -76,6 +76,32 @@ function MetricCard({
 
 // ─── Analytics Charts ──────────────────────────────────────────
 
+function ExpenseChart({ data }: { data: { date: string; expense: number }[] }) {
+  if (data.length === 0 || !data.some((d) => d.expense > 0)) {
+    return null;
+  }
+  return (
+    <div className="bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)]">
+      <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Expense Trend 📉</p>
+      <ResponsiveContainer width="100%" height={180}>
+        <BarChart data={data}>
+          <defs>
+            <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#f97316" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#fb923c" stopOpacity={0.3} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+          <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
+          <YAxis tick={{ fontSize: 10 }} />
+          <Tooltip formatter={(value: number) => [`Rs. ${value.toLocaleString()}`, "Expenses"]} />
+          <Bar dataKey="expense" fill="url(#expenseGrad)" radius={[4, 4, 0, 0]} name="Expenses" />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function CashFlowChart({ data }: { data: { date: string; debit: number; credit: number; cash: number }[] }) {
   if (data.length === 0) {
     return (
@@ -229,11 +255,11 @@ function TransactionAuditLog({
                 </span>
               </td>
               <td className="py-2.5 pr-2">
-                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
-                  {log.type === "debit" ? "Credit" : log.type === "cash" ? "Cash" : "Payment"}
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : log.type === "expense" ? "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
+                  {log.type === "debit" ? "Credit" : log.type === "expense" ? "Expense" : log.type === "cash" ? "Cash" : "Payment"}
                 </span>
               </td>
-              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>
+              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "expense" ? "text-orange-600 dark:text-orange-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>
                 Rs. {log.amount.toLocaleString()}
               </td>
             </tr>
@@ -381,6 +407,7 @@ export default function MerchantReportsPage() {
           <MetricCard label="Total Sales" value={analytics?.totalSales ?? "—"} color="text-blue-600 dark:text-blue-400" />
           <MetricCard label="Cash In Hand" value={analytics?.cashInHand ?? "—"} color="text-green-600 dark:text-green-400" />
           <MetricCard label="Outstanding Credit" value={analytics?.totalOutstanding ?? "—"} color="text-red-600 dark:text-red-400" />
+          <MetricCard label="Total Expenses" value={analytics?.totalExpenses ?? "—"} color="text-orange-600 dark:text-orange-400" />
           <MetricCard label="Cash Received" value={analytics?.totalReceived ?? "—"} color="text-green-600 dark:text-green-400" />
           <MetricCard label="Net Cash Flow"
             value={analytics ? (analytics.netCashFlow >= 0 ? analytics.netCashFlow : `-${Math.abs(analytics.netCashFlow)}`) : "—"}
@@ -390,6 +417,7 @@ export default function MerchantReportsPage() {
         </div>
 
         {/* Charts */}
+        <ExpenseChart data={safeDailyBreakdown} />
         <CashFlowChart data={safeDailyBreakdown} />
         <TopCustomersChart data={safeTopCustomers} />
 
