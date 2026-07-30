@@ -101,7 +101,7 @@ export default function MerchantDashboard() {
   >([]);
   const [profileLoading, setProfileLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [logsLoading, setLogsLoading] = useState(true);
+
   const [customersLoading, setCustomersLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
@@ -200,7 +200,6 @@ export default function MerchantDashboard() {
       if (mountedRef.current) {
         setProfileLoading(false);
         setStatsLoading(false);
-        setLogsLoading(false);
         setCustomersLoading(false);
       }
     }
@@ -676,30 +675,6 @@ export default function MerchantDashboard() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Pending banner — PROMINENT */}
-      {!logsLoading && pendingLogs.length > 0 && (
-        <a
-          href="/merchant/logs"
-          className="relative flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-transform overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
-          <div className="relative w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-bounce-subtle">
-            <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <div className="relative flex-1">
-            <p className="text-sm font-bold">
-              {pendingLogs.length} {pendingLogs.length === 1 ? "entry" : "entries"} pending approval
-            </p>
-            <p className="text-xs text-white/80 mt-0.5">Tap to review and approve</p>
-          </div>
-          <svg className="relative w-5 h-5 text-white/80 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-          </svg>
-        </a>
       )}
 
       {/* Business Name Prompt */}
