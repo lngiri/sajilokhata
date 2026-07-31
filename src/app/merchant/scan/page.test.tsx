@@ -74,6 +74,7 @@ vi.mock("@/app/actions/entry", () => ({
 vi.mock("@/app/actions/customer", () => ({
   checkCustomerByPhone: vi.fn(),
   addCustomerForMerchant: vi.fn(),
+  searchCustomers: vi.fn(),
 }));
 
 // ─── Mock: Product actions ───
@@ -122,6 +123,7 @@ function setupMocks() {
   vi.mocked(mockMerchantActions.getMerchantCashBalance).mockResolvedValue(1000);
   vi.mocked(mockMerchantActions.uploadAttachment).mockResolvedValue("https://example.com/attachment.jpg");
   vi.mocked(mockProductsActions.getMerchantProducts).mockResolvedValue([]);
+  vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([]);
 }
 
 describe("MerchantScanPage — Full Flow Integration Tests", () => {
@@ -784,6 +786,121 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
 
       const cashInBtn = screen.getByText("Cash In").closest("button");
       expect(cashInBtn).not.toHaveClass("bg-teal-600");
+    });
+  });
+
+  // ═══════════════════════════════════════════════
+  // NAME SEARCH (manual mode: search customer by name)
+  // ═══════════════════════════════════════════════
+
+  describe("Customer name search", () => {
+    beforeEach(() => {
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true"));
+    });
+
+    it("shows due-first suggestions when typing a customer name", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
+        { id: "c2", name: "Ram Bahadur", phone: "9847654321", current_balance: 0 },
+      ]);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Credit Given"));
+
+      const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+      await user.type(searchInput, "Ram");
+
+      await waitFor(() => {
+        expect(screen.getByText("Ram Kumar")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Ram Bahadur")).toBeInTheDocument();
+      expect(screen.getByText(/^Due Rs\. /)).toBeInTheDocument();
+      expect(screen.getAllByText("No Due").length).toBeGreaterThanOrEqual(1);
+    });
+
+    it("selects a suggestion and fills customer details through to confirm", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
+        success: true,
+        entry: { id: "e1", status: "awaiting_confirmation" },
+      });
+      vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
+      ]);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Credit Given"));
+
+      const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+      await user.type(searchInput, "Ram");
+
+      await waitFor(() => {
+        expect(screen.getByText("Ram Kumar")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Ram Kumar"));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Already registered ✅ as Ram Kumar/)).toBeInTheDocument();
+      });
+
+      expect((searchInput as HTMLInputElement).value).toBe("Ram Kumar");
+
+      await user.type(screen.getAllByPlaceholderText("0")[0], "1500");
+      await user.type(screen.getByPlaceholderText(/e\.g\. Rice/), "Rice 10kg");
+      await user.click(screen.getByText("Continue"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Confirm Entry")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Ram Kumar")).toBeInTheDocument();
+
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => {
+        expect(screen.getByText("Entry Saved! 🎉")).toBeInTheDocument();
+      });
+
+      expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer_id: "c1",
+          customer_phone: null,
+          customer_name: "Ram Kumar",
+          amount: 1500,
+          type: "debit",
+        })
+      );
+    });
+
+    it("shows a no-match message when the name search finds nothing", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([]);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Credit Given"));
+
+      await user.type(screen.getByPlaceholderText(/Search name or phone/), "Ram");
+
+      await waitFor(() => {
+        expect(screen.getByText(/No customers found matching/)).toBeInTheDocument();
+      });
     });
   });
 });

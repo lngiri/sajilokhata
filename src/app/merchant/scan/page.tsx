@@ -16,7 +16,7 @@ import {
   uploadAttachment,
 } from "@/app/actions/merchant";
 import { compressImage, blobToBase64 } from "@/lib/image";
-import { checkCustomerByPhone, addCustomerForMerchant } from "@/app/actions/customer";
+import { checkCustomerByPhone, addCustomerForMerchant, searchCustomers } from "@/app/actions/customer";
 
 import { savePendingLog, savePendingAttachment } from "@/lib/offline/db";
 import { useSearchParams } from "next/navigation";
@@ -60,6 +60,11 @@ export default function MerchantScanPage() {
   const [customerBalance, setCustomerBalance] = useState<number | null>(null);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [customerLookup, setCustomerLookup] = useState<"idle" | "looking" | "found" | "not_found">("idle");
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string | null; phone: string; current_balance: number }[]>([]);
+  const [searchingSuggestions, setSearchingSuggestions] = useState(false);
+  const [nameSearched, setNameSearched] = useState(false);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchQueryRef = useRef("");
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [smsSent, setSmsSent] = useState(false);
   const [smsError, setSmsError] = useState<string | null>(null);
@@ -214,7 +219,32 @@ export default function MerchantScanPage() {
     setCustomerBalance(null);
     setSmsSent(false);
     setSmsError(null);
+    setSuggestions([]);
+    setSearchingSuggestions(false);
+    setNameSearched(false);
   };
+
+  const selectCustomer = (c: { id: string; name: string | null; phone: string }) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    setCustomerId(c.id);
+    setCustomerPhone(c.phone);
+    setCustomerName(c.name);
+    setCustomerLookup("found");
+    setSuggestions([]);
+    setSearchingSuggestions(false);
+    setSearchQuery(c.name || c.phone);
+    if (merchantId) {
+      getMerchantCustomerBalance(merchantId, c.id).then(({ balance }) => {
+        setCustomerBalance(balance);
+      }).catch(() => setCustomerBalance(null));
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
 
   const handleConfirm = async () => {
     const isCash = entryType === "cash";
@@ -441,61 +471,136 @@ export default function MerchantScanPage() {
           {/* Manual: Enter Details */}
           {step === "enter" && (
             <div className="space-y-4 animate-fade-in">
-              {/* Customer phone input with auto-detect */}
+              {/* Customer search (name or phone) with auto-detect */}
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">
-                  {(entryType === "cash" || entryType === "cash_in" || entryType === "expense") ? (entryType === "expense" ? "Supplier Phone (Optional)" : "Customer Phone (Optional)") : "Customer Phone Number"}
+                  {(entryType === "cash" || entryType === "cash_in" || entryType === "expense") ? (entryType === "expense" ? "Supplier Phone (Optional)" : "Customer Phone (Optional)") : "Customer Name or Phone"}
                 </label>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-sm font-medium text-[var(--color-text-muted)]">+977</span>
-                    <input
-                      type="tel"
-                      placeholder="98XXXXXXXX"
-                      value={searchQuery}
-                      disabled={entryType === "cash" || entryType === "cash_in" || entryType === "expense"}
-                      onChange={async (e) => {
-                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
-                        setSearchQuery(val);
-                        setCustomerLookup("idle");
-                        setSmsSent(false);
-                        if (val.length === 10 && entryType !== "cash" && entryType !== "cash_in" && entryType !== "expense") {
-                          setCustomerLookup("looking");
+                <div className="relative mt-1">
+                  <input
+                    type="text"
+                    placeholder="Search name or phone (98XXXXXXXX)"
+                    value={searchQuery}
+                    disabled={entryType === "cash" || entryType === "cash_in" || entryType === "expense"}
+                    onChange={(e) => {
+                      const val = e.target.value.slice(0, 60);
+                      setSearchQuery(val);
+                      searchQueryRef.current = val;
+                      setCustomerLookup("idle");
+                      setSmsSent(false);
+                      setNameSearched(false);
+                      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+                      setSuggestions([]);
+
+                      const isImmediate = entryType === "cash" || entryType === "cash_in" || entryType === "expense";
+                      if (isImmediate) return;
+
+                      const isNumeric = /^\d+$/.test(val);
+                      const isFullPhone = isNumeric && val.length === 10;
+
+                      // Full 10-digit phone → exact lookup (existing flow)
+                      if (isFullPhone) {
+                        setCustomerLookup("looking");
+                        setSearchingSuggestions(true);
+                        (async () => {
                           try {
                             const result = await checkCustomerByPhone(val);
+                            if (searchQueryRef.current !== val) return;
                             if (result.exists && result.customer) {
-                            setCustomerId(result.customer.id);
-                            setCustomerPhone(result.customer.phone);
-                            setCustomerName(result.customer.name);
-                            setCustomerLookup("found");
-                            if (merchantId) {
-                              try {
-                                const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
-                                setCustomerBalance(balance);
-                              } catch { setCustomerBalance(null); }
+                              setCustomerId(result.customer.id);
+                              setCustomerPhone(result.customer.phone);
+                              setCustomerName(result.customer.name);
+                              setCustomerLookup("found");
+                              if (merchantId) {
+                                try {
+                                  const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
+                                  setCustomerBalance(balance);
+                                } catch { setCustomerBalance(null); }
+                              }
+                            } else {
+                              setCustomerId(null);
+                              setCustomerPhone(val);
+                              setCustomerName(null);
+                              setCustomerLookup("not_found");
+                              setCustomerBalance(null);
                             }
-                          } else {
-                            setCustomerId(null);
-                            setCustomerPhone(val);
-                            setCustomerName(null);
-                            setCustomerLookup("not_found");
-                            setCustomerBalance(null);
+                          } catch {
+                            if (searchQueryRef.current === val) setCustomerLookup("idle");
+                          } finally {
+                            if (searchQueryRef.current === val) setSearchingSuggestions(false);
                           }
-                        } catch {
-                          setCustomerLookup("idle");
-                        }
-                      } else {
+                        })();
+                        return;
+                      }
+
+                      // Partial phone or name → debounced suggestion search
+                      const trimmed = val.trim();
+                      if (trimmed.length < 2) {
                         setCustomerId(null);
-                        setCustomerPhone(val || searchQuery);
+                        setCustomerPhone(val);
                         setCustomerName(null);
                         setCustomerBalance(null);
+                        setSearchingSuggestions(false);
+                        return;
                       }
+
+                      setSearchingSuggestions(true);
+                      searchDebounceRef.current = setTimeout(async () => {
+                        try {
+                          const matches = await searchCustomers(merchantId || "", trimmed);
+                          if (searchQueryRef.current !== val) return;
+                          setSuggestions(matches);
+                          setNameSearched(true);
+                          setSearchingSuggestions(false);
+                          // Auto-select when an exact 10-digit phone matches a single customer
+                          if (matches.length === 1 && isNumeric && normalizePhone(matches[0].phone) === normalizePhone(val)) {
+                            selectCustomer(matches[0]);
+                          }
+                        } catch {
+                          if (searchQueryRef.current === val) setSearchingSuggestions(false);
+                        }
+                      }, 300);
                     }}
-                    className="flex-1 px-4 py-3 bg-white rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-mono disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:bg-gray-800/50 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                    className="w-full px-4 py-3 bg-white rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-left text-base dark:bg-gray-800 dark:border-gray-700 dark:text-white disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:bg-gray-800/50"
                   />
-                  {customerLookup === "looking" && entryType !== "cash" && entryType !== "cash_in" && entryType !== "expense" && (
-                    <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                  {searchingSuggestions && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
                   )}
                 </div>
+
+                {/* Name / partial-phone suggestions (critical/due customers first) */}
+                {suggestions.length > 0 && (
+                  <div className="mt-2 bg-white dark:bg-gray-800 rounded-xl border border-[var(--color-border)] shadow-lg overflow-hidden">
+                    {suggestions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => selectCustomer(s)}
+                        className="w-full flex items-center justify-between gap-2 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors text-left border-b border-gray-50 dark:border-gray-700 last:border-b-0"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-[var(--color-text)] truncate">{s.name || "Unnamed customer"}</p>
+                          <p className="text-xs text-[var(--color-text-muted)]">{s.phone}</p>
+                        </div>
+                        {s.current_balance > 0 ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 flex-shrink-0">
+                            Due Rs. {s.current_balance.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 flex-shrink-0">
+                            No Due
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {nameSearched && suggestions.length === 0 && !searchingSuggestions && (
+                  <div className="mt-2 px-3 py-2 bg-gray-100 dark:bg-gray-700/60 rounded-lg text-sm text-[var(--color-text-muted)]">
+                    No customers found matching &ldquo;{searchQuery}&rdquo;. Try a name or full phone number.
+                  </div>
+                )}
 
                 {/* Lookup result */}
                 {entryType !== "cash" && entryType !== "cash_in" && entryType !== "expense" && customerLookup === "found" && (
@@ -585,11 +690,11 @@ export default function MerchantScanPage() {
               <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
                 <p className="text-sm font-medium text-[var(--color-text)] mb-3">Transaction Type</p>
                 <div className="flex gap-2">
-                  <button onClick={() => setEntryType("debit")}
+                  <button onClick={() => { setEntryType("debit"); setSuggestions([]); setSearchingSuggestions(false); }}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Credit Given
                   </button>
-                  <button onClick={() => setEntryType("credit")}
+                  <button onClick={() => { setEntryType("credit"); setSuggestions([]); setSearchingSuggestions(false); }}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Amount Received
                   </button>
@@ -612,6 +717,9 @@ export default function MerchantScanPage() {
                       setCustomerBalance(null);
                       setSmsSent(false);
                       setSmsError(null);
+                      setSuggestions([]);
+                      setSearchingSuggestions(false);
+                      setNameSearched(false);
                     }}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "expense" ? "bg-orange-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Cash Out

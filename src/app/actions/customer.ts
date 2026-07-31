@@ -44,6 +44,106 @@ export async function checkCustomerByPhone(
   }
 }
 
+/**
+ * Search a merchant's customers by name (or phone prefix) for the manual
+ * entry autocomplete. Results are sorted so customers with outstanding dues
+ * appear first (most critical first), then by balance, then by name.
+ */
+export async function searchCustomers(
+  merchantId: string,
+  query: string
+): Promise<{ id: string; name: string | null; phone: string; current_balance: number }[]> {
+  const admin = getAdminClient();
+  if (!admin) return [];
+  const q = query.trim();
+  if (q.length < 2) return [];
+
+  try {
+    const isNumeric = /^\d+$/.test(q);
+    const matchedIds: string[] = [];
+
+    if (isNumeric) {
+      // Numeric query: match phone prefix
+      const digits = q.replace(/\D/g, "").slice(-10);
+      const { data } = await (admin.from("customers") as any)
+        .select("id")
+        .or(`phone.ilike.${digits}%`);
+      for (const r of data || []) {
+        if (matchedIds.length >= 10) break;
+        matchedIds.push(r.id);
+      }
+    } else {
+      // Text query: match name prefix, then name substring
+      const { data: prefix } = await (admin.from("customers") as any)
+        .select("id")
+        .or(`name.ilike.${q}%`);
+      for (const r of prefix || []) {
+        matchedIds.push(r.id);
+        if (matchedIds.length >= 10) break;
+      }
+      if (matchedIds.length < 10) {
+        const { data: substr } = await (admin.from("customers") as any)
+          .select("id")
+          .or(`name.ilike.%${q}%`);
+        for (const r of substr || []) {
+          if (matchedIds.includes(r.id)) continue;
+          matchedIds.push(r.id);
+          if (matchedIds.length >= 10) break;
+        }
+      }
+    }
+
+    if (matchedIds.length === 0) return [];
+
+    // Keep only customers linked to this merchant
+    const { data: mcRows } = await (admin.from("merchant_customers") as any)
+      .select("customer_id, customers!inner(id, name, phone)")
+      .eq("merchant_id", merchantId)
+      .in("customer_id", matchedIds);
+
+    const seen = new Set<string>();
+    const rows: any[] = [];
+    for (const r of mcRows || []) {
+      if (seen.has(r.customer_id)) continue;
+      seen.add(r.customer_id);
+      rows.push(r);
+    }
+    if (rows.length === 0) return [];
+
+    const customerIds = rows.map((r: any) => r.customer_id);
+    const { data: approvedLogs } = await (admin.from("credit_logs") as any)
+      .select("customer_id, amount, type")
+      .eq("merchant_id", merchantId)
+      .eq("status", "approved")
+      .not("type", "in", "('cash','cash_in','expense')")
+      .in("customer_id", customerIds);
+
+    const balanceMap: Record<string, number> = {};
+    for (const log of approvedLogs || []) {
+      const sign = log.type === "debit" ? 1 : -1;
+      balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
+    }
+
+    return rows
+      .map((r: any) => ({
+        id: r.customer_id,
+        name: r.customers?.name ?? null,
+        phone: r.customers?.phone ?? "",
+        current_balance: balanceMap[r.customer_id] || 0,
+      }))
+      .sort((a, b) => {
+        const aDue = a.current_balance > 0 ? 1 : 0;
+        const bDue = b.current_balance > 0 ? 1 : 0;
+        if (aDue !== bDue) return bDue - aDue;
+        if (b.current_balance !== a.current_balance) return b.current_balance - a.current_balance;
+        return (a.name || "").localeCompare(b.name || "");
+      });
+  } catch (err) {
+    console.warn("[Customer] searchCustomers error:", err);
+    return [];
+  }
+}
+
 export async function checkCustomerOnboarded(
   phone: string
 ): Promise<{ onboarded: boolean }> {
