@@ -717,6 +717,48 @@ export async function getCustomerCreditLogs(
 }
 
 /**
+ * Get transaction-status counts for the authenticated customer.
+ * Uses a lightweight status-only query so tab badges reflect the
+ * true totals, independent of pagination.
+ * @param merchantId Optional — restrict counts to a single shop.
+ */
+export async function getCustomerLogCounts(merchantId?: string): Promise<{
+  total: number;
+  awaiting_confirmation: number;
+  approved: number;
+  rejected: number;
+  disputed: number;
+}> {
+  const empty = { total: 0, awaiting_confirmation: 0, approved: 0, rejected: 0, disputed: 0 };
+  const customer = await getAuthenticatedCustomer();
+  if (!customer) return empty;
+
+  const admin = getAdminClient();
+  if (!admin) return empty;
+
+  let query = admin
+    .from("credit_logs")
+    .select("status")
+    .eq("customer_id", customer.id);
+  if (merchantId) {
+    query = query.eq("merchant_id", merchantId);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const counts = { ...empty };
+  for (const row of (data as unknown as { status: string }[]) || []) {
+    counts.total++;
+    if (row.status === "awaiting_confirmation") counts.awaiting_confirmation++;
+    else if (row.status === "approved") counts.approved++;
+    else if (row.status === "rejected") counts.rejected++;
+    else if (row.status === "disputed") counts.disputed++;
+  }
+  return counts;
+}
+
+/**
  * Get balance stats for the authenticated customer.
  * @param _browserPhone Ignored — identity comes from cookie.
  */
@@ -849,6 +891,7 @@ export async function cancelCreditLog(logId: string): Promise<any> {
     .update({ status: "rejected" })
     .eq("id", logId)
     .eq("customer_id", customer.id)
+    .eq("status", "awaiting_confirmation")
     .select()
     .single();
 
@@ -888,6 +931,7 @@ export async function confirmCustomerEntry(logId: string): Promise<any> {
     })
     .eq("id", logId)
     .eq("customer_id", customer.id)
+    .eq("status", "awaiting_confirmation")
     .select()
     .single();
 
@@ -924,6 +968,7 @@ export async function disputeEntry(logId: string): Promise<any> {
     .update({ status: "disputed" })
     .eq("id", logId)
     .eq("customer_id", customer.id)
+    .eq("status", "awaiting_confirmation")
     .select()
     .single();
 

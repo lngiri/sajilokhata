@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CustomerBottomNav from "@/components/CustomerBottomNav";
 import PullToRefresh from "@/components/PullToRefresh";
 import { useToast } from "@/components/Toast";
-import { getCustomerCreditLogs, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry } from "@/app/actions/customer";
+import { getCustomerCreditLogs, getCustomerLogCounts, updateCreditLog, cancelCreditLog, confirmCustomerEntry, disputeEntry, getCustomerIdsForPhone } from "@/app/actions/customer";
 import TransactionIcon from "@/components/TransactionIcon";
-import { useSearchParams } from "next/navigation";
-import { getCustomerIdsForPhone } from "@/app/actions/customer";
 import { playSuccessSound } from "@/lib/sound";
 import CustomerPinGate from "@/components/CustomerPinGate";
 import { formatNumber } from "@/lib/format";
+import { createClient } from "@/lib/supabase/client";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
 const LAST_SEEN_KEY = "customer_history_last_seen";
+const PAGE_SIZE = 50;
+const SELF_ACTION_WINDOW_MS = 4000;
 
 interface HistoryEntry {
   id: string;
@@ -49,8 +51,31 @@ function getStatusConfig(status: string) {
   };
 }
 
+const FILTER_TABS = [
+  { key: "all", label: "All" },
+  { key: "awaiting_confirmation", label: "Awaiting Confirmation" },
+  { key: "approved", label: "Approved" },
+  { key: "rejected", label: "Rejected" },
+  { key: "disputed", label: "Disputed" },
+] as const;
+
+type FilterKey = (typeof FILTER_TABS)[number]["key"];
+
+const FILTER_LABEL: Record<FilterKey, string> = {
+  all: "transactions",
+  awaiting_confirmation: "pending confirmations",
+  approved: "approved entries",
+  rejected: "rejected entries",
+  disputed: "disputed entries",
+};
+
+function dayKey(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-CA", { timeZone: "Asia/Kathmandu" });
+}
+
 export default function CustomerHistoryPage() {
   const { addToast } = useToast();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const merchantIdParam = searchParams?.get("merchantId") || "";
   const shopNameParam = searchParams?.get("shopName") || "";
@@ -58,17 +83,25 @@ export default function CustomerHistoryPage() {
   const [initialized, setInitialized] = useState(false);
   const [logs, setLogs] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "awaiting_confirmation" | "approved" | "rejected">("all");
-  const [stats, setStats] = useState({ total: 0, awaiting_confirmation: 0, approved: 0, rejected: 0 });
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [stats, setStats] = useState({ total: 0, awaiting_confirmation: 0, approved: 0, rejected: 0, disputed: 0 });
   const [editModal, setEditModal] = useState<{ id: string; amount: number; description: string } | null>(null);
-  const [lastSeenAt, setLastSeenAt] = useState(() => {
+  const [editSaving, setEditSaving] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [txOffset, setTxOffset] = useState(0);
+  const [loadMoreLoading, setLoadMoreLoading] = useState(false);
+  // Snapshot of the last-visit timestamp — never mutated during this visit,
+  // so "N" badges render for entries created since the previous visit.
+  const [lastSeenAt] = useState(() => {
     try { return Number(localStorage.getItem(LAST_SEEN_KEY)) || Date.now(); } catch { return Date.now(); }
   });
   const mountedRef = useRef(true);
   const realtimeChannelRef = useRef<any>(null);
   const realtimeSetupRef = useRef(false);
   const realtimeSupabaseRef = useRef<any>(null);
-  const loadLogsRef = useRef<() => Promise<void>>(undefined!);
+  const loadLogsRef = useRef<(opts?: { silent?: boolean }) => Promise<void>>(async () => {});
+  const selfChangedRef = useRef<{ id: string; at: number } | null>(null);
 
   // On mount, restore customer session
   useEffect(() => {
@@ -94,11 +127,80 @@ export default function CustomerHistoryPage() {
     }
   }, [initialized, customerPhone]);
 
-  // Load logs
+  // Mark-as-seen: persist "now" for the NEXT visit only (badges for this visit
+  // still compare against the snapshot captured at init above).
   useEffect(() => {
-    if (customerPhone) {
-      loadLogs();
+    try { localStorage.setItem(LAST_SEEN_KEY, String(Date.now())); } catch {}
+  }, []);
+
+  // Load logs
+  const loadLogs = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!customerPhone) return;
+    if (!opts?.silent) {
+      setLogs([]);
+      setLoading(true);
     }
+    try {
+      const [data, counts] = await Promise.all([
+        getCustomerCreditLogs(customerPhone, {
+          status: filter === "all" ? undefined : filter,
+          merchant_id: merchantIdParam || undefined,
+          limit: PAGE_SIZE,
+        }),
+        getCustomerLogCounts(merchantIdParam || undefined),
+      ]);
+      if (!mountedRef.current) return;
+      setLogs(data as HistoryEntry[]);
+      setHasMore(data.length === PAGE_SIZE);
+      setTxOffset(data.length);
+      setStats(counts);
+    } catch {
+      if (mountedRef.current) addToast("Failed to load transaction history.", "error");
+    } finally {
+      if (mountedRef.current) setLoading(false);
+    }
+  }, [customerPhone, filter, merchantIdParam, addToast]);
+
+  const loadMore = useCallback(async () => {
+    if (!customerPhone || loadMoreLoading) return;
+    setLoadMoreLoading(true);
+    try {
+      const more = await getCustomerCreditLogs(customerPhone, {
+        status: filter === "all" ? undefined : filter,
+        merchant_id: merchantIdParam || undefined,
+        limit: PAGE_SIZE,
+        offset: txOffset,
+      });
+      if (!mountedRef.current) return;
+      setLogs((prev) => [...prev, ...(more as HistoryEntry[])]);
+      setTxOffset((o) => o + more.length);
+      setHasMore(more.length === PAGE_SIZE);
+    } catch {
+      if (mountedRef.current) addToast("Failed to load more transactions.", "error");
+    } finally {
+      if (mountedRef.current) setLoadMoreLoading(false);
+    }
+  }, [customerPhone, filter, merchantIdParam, txOffset, loadMoreLoading, addToast]);
+
+  const runAction = useCallback(async (id: string, fn: () => Promise<unknown>, success: string) => {
+    setBusyId(id);
+    selfChangedRef.current = { id, at: Date.now() };
+    try {
+      await fn();
+      addToast(success, "success");
+      await loadLogs({ silent: true });
+    } catch {
+      addToast("Something went wrong. Please try again.", "error");
+    } finally {
+      setBusyId(null);
+      selfChangedRef.current = null;
+    }
+  }, [addToast, loadLogs]);
+
+  // Load logs on mount / filter / merchant change
+  useEffect(() => {
+    if (customerPhone) loadLogs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerPhone, filter, merchantIdParam]);
 
   // Supabase Realtime — listen for INSERT + UPDATE on credit_logs
@@ -111,7 +213,6 @@ export default function CustomerHistoryPage() {
       if (!realtimeSetupRef.current) return;
       if (customerIds.length === 0) return;
 
-      const { createClient } = await import("@/lib/supabase/client");
       const supabase = createClient();
       realtimeSupabaseRef.current = supabase;
 
@@ -130,6 +231,11 @@ export default function CustomerHistoryPage() {
             const oldStatus = payload.old?.status;
             const newStatus = payload.new?.status;
             if (oldStatus && newStatus && oldStatus !== newStatus) {
+              // Skip toast/reload for changes this client just made itself.
+              const self = selfChangedRef.current;
+              if (self && self.id === payload.new?.id && Date.now() - self.at < SELF_ACTION_WINDOW_MS) {
+                return;
+              }
               if (newStatus === "approved") {
                 playSuccessSound();
               }
@@ -143,7 +249,7 @@ export default function CustomerHistoryPage() {
                 `${verb} Rs. ${formatNumber(payload.new?.amount)} request`,
                 newStatus === "approved" ? "success" : "warning"
               );
-              loadLogsRef.current?.();
+              loadLogsRef.current?.({ silent: true });
             }
           }
         )
@@ -161,7 +267,7 @@ export default function CustomerHistoryPage() {
               `New ${payload.new?.type || "transaction"} of Rs. ${formatNumber(payload.new?.amount)} added`,
               "info"
             );
-            loadLogsRef.current?.();
+            loadLogsRef.current?.({ silent: true });
           }
         )
         .subscribe();
@@ -178,51 +284,26 @@ export default function CustomerHistoryPage() {
     };
   }, [customerPhone, addToast]);
 
-  const loadLogs = useCallback(async () => {
-    if (!customerPhone) return;
-    setLoading(true);
-    try {
-      const data = await getCustomerCreditLogs(customerPhone, {
-        status: filter === "all" ? undefined : filter,
-        merchant_id: merchantIdParam || undefined,
-        limit: 100,
-      });
-      if (!mountedRef.current) return;
-      setLogs(data as HistoryEntry[]);
-
-      // Calculate status counts
-      const counts = { total: data.length, awaiting_confirmation: 0, approved: 0, rejected: 0 };
-      data.forEach((l: HistoryEntry) => {
-        if (l.status === "awaiting_confirmation") counts.awaiting_confirmation++;
-        else if (l.status === "awaiting_confirmation") counts.awaiting_confirmation++;
-        else if (l.status === "approved") counts.approved++;
-        else if (l.status === "rejected") counts.rejected++;
-      });
-      setStats(counts);
-    } catch {
-      if (mountedRef.current) addToast("Failed to load transaction history.", "error");
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [customerPhone, filter, merchantIdParam, addToast]);
-
   // Keep loadLogsRef current for the realtime channel callback
   useEffect(() => {
     loadLogsRef.current = loadLogs;
   }, [loadLogs]);
-
-  // Mark seen timestamp when page loads
-  useEffect(() => {
-    const now = Date.now();
-    setLastSeenAt(now);
-    try { localStorage.setItem(LAST_SEEN_KEY, String(now)); } catch {}
-  }, []);
 
   // Mounted ref + cleanup
   useEffect(() => {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // Escape closes the edit modal
+  useEffect(() => {
+    if (!editModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEditModal(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [editModal]);
 
   // Handle clear session — removes localStorage, cookies, SW caches
   const handleSignOut = () => {
@@ -266,61 +347,69 @@ export default function CustomerHistoryPage() {
 
         {/* Filter tabs */}
         <div className="flex gap-1.5 px-4 pb-3 overflow-x-auto">
-          {([
-            { key: "all", label: "All", count: stats.total },
-            { key: "awaiting_confirmation", label: "Awaiting Confirmation", count: stats.awaiting_confirmation },
-            { key: "awaiting_confirmation", label: "Awaiting Confirmation", count: stats.awaiting_confirmation },
-            { key: "approved", label: "Approved", count: stats.approved },
-            { key: "rejected", label: "Rejected", count: stats.rejected },
-          ] as const).map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setFilter(tab.key)}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-all ${
-                filter === tab.key
-                  ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] shadow-sm"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-              }`}
-            >
-              {tab.label}
-              {tab.count > 0 && (
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                  filter === tab.key ? "bg-white/20" : "bg-gray-200 dark:bg-gray-700 text-[var(--color-text-muted)]"
-                }`}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
+          {FILTER_TABS.map((tab) => {
+            const count = tab.key === "all" ? stats.total : stats[tab.key];
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setFilter(tab.key)}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium capitalize whitespace-nowrap transition-all ${
+                  filter === tab.key
+                    ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] shadow-sm"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                }`}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                    filter === tab.key ? "bg-white/20" : "bg-gray-200 dark:bg-gray-700 text-[var(--color-text-muted)]"
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+
+        {/* Shop filter chip */}
+        {merchantIdParam && (
+          <button
+            onClick={() => router.replace("/customer/history")}
+            className="mx-4 mb-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:scale-95 transition-all"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            {shopNameParam || "Shop"} &middot; View all shops
+          </button>
+        )}
       </div>
 
-      {/* Pending / Unverified banner */}
+      {/* Pending / Unverified banner — jumps straight to the pending list */}
       {!loading && stats.awaiting_confirmation > 0 && (
-        <a
-          href="/customer/dashboard"
-          className="flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 active:bg-amber-100 dark:active:bg-amber-900/30 transition-colors"
+        <button
+          onClick={() => setFilter("awaiting_confirmation")}
+          className="w-full flex items-center gap-2 px-4 py-3 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800 active:bg-amber-100 dark:active:bg-amber-900/30 transition-colors text-left"
         >
           <div className="w-6 h-6 rounded-full bg-amber-200 dark:bg-amber-700 flex items-center justify-center flex-shrink-0">
             <svg className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <span className="text-sm font-medium text-amber-800 dark:text-amber-300 flex-1 text-left">
-            {stats.awaiting_confirmation > 0 && `${stats.awaiting_confirmation} awaiting confirmation`}
-            {stats.awaiting_confirmation > 0 && `${stats.awaiting_confirmation} awaiting confirmation`}
-            {' — review needed'}
+          <span className="text-sm font-medium text-amber-800 dark:text-amber-300 flex-1">
+            {stats.awaiting_confirmation} awaiting confirmation — review needed
           </span>
           <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
-        </a>
+        </button>
       )}
 
       {/* Content */}
-      <PullToRefresh onRefresh={loadLogs}>
+      <PullToRefresh onRefresh={() => loadLogs({ silent: true })}>
         <div className="px-4 py-4">
-          {loading ? (
+          {loading && logs.length === 0 ? (
           <div className="flex items-center justify-center py-20">
             <div className="w-8 h-8 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
@@ -332,12 +421,12 @@ export default function CustomerHistoryPage() {
               </svg>
             </div>
             <p className="font-medium text-[var(--color-text-muted)]">
-              {filter === "all" ? "No transactions yet 📝" : `No ${filter} transactions 📝`}
+              {filter === "all" ? "No transactions yet 📝" : `No ${FILTER_LABEL[filter]} 📝`}
             </p>
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               {filter === "all"
                 ? "Scan a shop QR or search by phone to get started ✨"
-                : `You have no ${filter} credit requests.`}
+                : `You have no ${FILTER_LABEL[filter]} yet.`}
             </p>
             <div className="flex gap-3 justify-center mt-4">
               <a
@@ -364,10 +453,9 @@ export default function CustomerHistoryPage() {
           <div className="space-y-2">
             {logs.map((log, idx) => {
               const config = getStatusConfig(log.status);
+              const prev = logs[idx - 1];
               const isFirstToday =
-                idx === 0 ||
-                new Date(log.created_at).toDateString() !==
-                  new Date(logs[idx - 1]?.created_at).toDateString();
+                idx === 0 || !prev || dayKey(log.created_at) !== dayKey(prev.created_at);
 
               return (
                 <div key={log.id}>
@@ -446,6 +534,7 @@ export default function CustomerHistoryPage() {
                     {log.status === "awaiting_confirmation" && (
                       <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <button
+                          disabled={busyId === log.id}
                           onClick={() =>
                             setEditModal({
                               id: log.id,
@@ -453,17 +542,17 @@ export default function CustomerHistoryPage() {
                               description: log.description || "",
                             })
                           }
-                          className="flex-1 py-2 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
                         >
                           Edit
                         </button>
                         <button
+                          disabled={busyId === log.id}
                           onClick={async () => {
-                            await cancelCreditLog(log.id);
-                            addToast("Entry cancelled.", "info");
-                            loadLogs();
+                            if (!window.confirm("Cancel this entry? It will be rejected and removed from your balance.")) return;
+                            await runAction(log.id, () => cancelCreditLog(log.id), "Entry cancelled.");
                           }}
-                          className="flex-1 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
                         >
                           Cancel
                         </button>
@@ -473,22 +562,21 @@ export default function CustomerHistoryPage() {
                     {log.status === "awaiting_confirmation" && (
                       <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <button
+                          disabled={busyId === log.id}
                           onClick={async () => {
-                            await disputeEntry(log.id);
-                            addToast("Entry disputed. Merchant notified.", "warning");
-                            loadLogs();
+                            if (!window.confirm("Dispute this entry? The merchant will be notified to resolve it.")) return;
+                            await runAction(log.id, () => disputeEntry(log.id), "Entry disputed. Merchant notified.");
                           }}
-                          className="flex-1 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
                         >
                           Dispute
                         </button>
                         <button
+                          disabled={busyId === log.id}
                           onClick={async () => {
-                            await confirmCustomerEntry(log.id);
-                            addToast("Entry confirmed! Balance updated.", "success");
-                            loadLogs();
+                            await runAction(log.id, () => confirmCustomerEntry(log.id), "Entry confirmed! Balance updated.");
                           }}
-                          className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.98]"
+                          className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
                         >
                           Confirm Balance
                         </button>
@@ -498,6 +586,16 @@ export default function CustomerHistoryPage() {
                 </div>
               );
             })}
+
+            {hasMore && (
+              <button
+                onClick={loadMore}
+                disabled={loadMoreLoading}
+                className="w-full py-3 mt-3 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-[var(--color-text-muted)] active:scale-[0.98] transition-transform disabled:opacity-60"
+              >
+                {loadMoreLoading ? "Loading…" : "Load More"}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -517,7 +615,7 @@ export default function CustomerHistoryPage() {
             <input
               type="number"
               min="1"
-              step="1"
+              step="any"
               value={editModal.amount}
               onChange={(e) => setEditModal({ ...editModal, amount: Number(e.target.value) })}
               className="w-full mt-1 mb-3 px-4 py-3 bg-[var(--color-surface)] rounded-xl text-lg font-bold border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
@@ -533,23 +631,35 @@ export default function CustomerHistoryPage() {
             <div className="flex gap-3">
               <button
                 onClick={() => setEditModal(null)}
-                className="flex-1 py-3 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform"
+                disabled={editSaving}
+                className="flex-1 py-3 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
+                disabled={editSaving}
                 onClick={async () => {
-                  await updateCreditLog(editModal.id, {
-                    amount: editModal.amount,
-                    description: editModal.description,
-                  });
-                  setEditModal(null);
-                  addToast("Entry updated.", "success");
-                  loadLogs();
+                  if (editSaving) return;
+                  setEditSaving(true);
+                  selfChangedRef.current = { id: editModal.id, at: Date.now() };
+                  try {
+                    await updateCreditLog(editModal.id, {
+                      amount: editModal.amount,
+                      description: editModal.description,
+                    });
+                    setEditModal(null);
+                    addToast("Entry updated.", "success");
+                    await loadLogs({ silent: true });
+                  } catch {
+                    addToast("Failed to update entry.", "error");
+                  } finally {
+                    setEditSaving(false);
+                    selfChangedRef.current = null;
+                  }
                 }}
-                className="flex-1 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium active:scale-[0.98] transition-transform"
+                className="flex-1 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                Save
+                {editSaving ? "Saving…" : "Save"}
               </button>
             </div>
           </div>
