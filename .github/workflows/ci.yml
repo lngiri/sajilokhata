@@ -23,9 +23,14 @@ jobs:
 
   schema-drift:
     needs: test-and-build
-    if: github.ref == 'refs/heads/production' && secrets.NEXT_PUBLIC_SUPABASE_URL != ''
+    if: github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
     steps:
+      - name: Skip when Supabase secrets are not configured
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+        if: env.NEXT_PUBLIC_SUPABASE_URL == ''
+        run: exit 0
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -40,19 +45,24 @@ jobs:
 
   prod-smoke:
     needs: test-and-build
-    if: github.ref == 'refs/heads/production' && secrets.PROD_HEALTH_URL != ''
+    if: github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
     steps:
+      - name: Skip when health URL is not configured
+        env:
+          PROD_HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
+        if: env.PROD_HEALTH_URL == ''
+        run: exit 0
       - name: Wait for deploy, then probe /api/health
         run: |
-          url="${{ secrets.PROD_HEALTH_URL }}"
-          token="${{ secrets.HEALTH_TOKEN }}"
-          q=""
-          if [ -n "$token" ]; then q="?token=$token"; fi
           ok=0
           for i in $(seq 1 12); do
             sleep 20
-            if curl -fsS "$url$q" -o /tmp/health.json 2>/dev/null; then ok=1; break; fi
+            if curl -fsS "$PROD_HEALTH_URL$HEALTH_QUERY" -o /tmp/health.json 2>/dev/null; then ok=1; break; fi
           done
           if [ "$ok" != "1" ]; then echo "Health endpoint never became ready"; exit 1; fi
           node -e "const j = require('/tmp/health.json'); if (!j.ok) { console.error(JSON.stringify(j, null, 2)); process.exit(1); } console.log('PRODUCTION HEALTHY');"
+        env:
+          PROD_HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
+          HEALTH_TOKEN: ${{ secrets.HEALTH_TOKEN }}
+          HEALTH_QUERY: ${{ secrets.HEALTH_TOKEN != '' && format('?token={0}', secrets.HEALTH_TOKEN) || '' }}
