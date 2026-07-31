@@ -554,6 +554,69 @@ async function getAuthenticatedCustomer(): Promise<
   }
 }
 
+/**
+ * Resolve the authenticated customer from the cookie, creating the
+ * customers row if it doesn't exist yet. Scan/walk-up customers only
+ * have a session cookie until their first submission, so read-only
+ * lookups (getAuthenticatedCustomer) must NOT be used for writes.
+ */
+async function resolveAuthenticatedCustomer(): Promise<
+  | { id: string; name: string | null; phone: string }
+  | null
+> {
+  try {
+    const cookieStore = await cookies();
+    const rawCookie = cookieStore.get("customer_session")?.value;
+    if (!rawCookie) return null;
+
+    const session = await verifyCustomerSessionToken(rawCookie);
+    if (!session?.phone || String(session.phone).replace(/\D/g, "").length < 10) return null;
+
+    const admin = getAdminClient();
+    if (!admin) return null;
+
+    const normalized = normalizePhone(session.phone);
+
+    const { data: existing } = await (admin
+      .from("customers")
+      .select("id, name, phone")
+      .eq("phone", normalized)
+      .maybeSingle() as unknown as Promise<{
+      data: Pick<CustomerRow, "id" | "name" | "phone"> | null;
+      error: any;
+    }>);
+
+    if (existing) return existing;
+
+    const { data: inserted, error } = await (admin.from("customers") as any)
+      .insert({ phone: normalized, name: session.name || null })
+      .select("id, name, phone")
+      .single();
+
+    if (error) {
+      // Race: another request created the row first (unique phone) — re-select.
+      if (String(error.code).startsWith("23")) {
+        const { data: retry } = await (admin
+          .from("customers")
+          .select("id, name, phone")
+          .eq("phone", normalized)
+          .maybeSingle() as unknown as Promise<{
+          data: Pick<CustomerRow, "id" | "name" | "phone"> | null;
+          error: any;
+        }>);
+        if (retry) return retry;
+      }
+      console.warn("[Customer] resolveAuthenticatedCustomer insert error:", error);
+      return null;
+    }
+
+    return inserted as Pick<CustomerRow, "id" | "name" | "phone">;
+  } catch (err) {
+    console.warn("[Customer] resolveAuthenticatedCustomer error:", err);
+    return null;
+  }
+}
+
 // ============================================================
 // Transaction History — Server actions
 // All functions derive identity from the customer_session cookie.
@@ -889,7 +952,7 @@ export async function findOrCreateCustomer(
   _browserPhone: string,
   _browserName?: string
 ): Promise<any> {
-  const customer = await getAuthenticatedCustomer();
+  const customer = await resolveAuthenticatedCustomer();
   if (!customer) throw new Error("Not authenticated");
   return customer;
 }
@@ -973,10 +1036,6 @@ export async function submitCustomerEntry(params: {
       return { success: false, error: "Invalid transaction type." };
     }
 
-    // Identity always comes from the cookie — never from the params.
-    const customer = await getAuthenticatedCustomer();
-    if (!customer) return { success: false, error: "Not logged in" };
-
     const admin = getAdminClient();
     if (!admin) return { success: false, error: "Database connection unavailable" };
 
@@ -988,6 +1047,11 @@ export async function submitCustomerEntry(params: {
     if (!merchant) {
       return { success: false, error: "Shop not found. Please scan the shop QR again." };
     }
+
+    // Identity always comes from the cookie — never from the params.
+    // find-or-create: scan/walk-up customers may not have a customers row yet.
+    const customer = await resolveAuthenticatedCustomer();
+    if (!customer) return { success: false, error: "Not logged in" };
 
     await ensureMerchantCustomerLink(params.merchant_id, customer.id);
 

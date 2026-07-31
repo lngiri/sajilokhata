@@ -7,15 +7,15 @@ import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
 import PageHeader from "@/components/PageHeader";
 import { submitCustomerEntry } from "@/app/actions/customer";
-import { isOnline, saveOfflineCustomer, savePendingLog } from "@/lib/offline/db";
+import { isOnline, savePendingLog } from "@/lib/offline/db";
 
 import { setCustomerSession, clearCustomerSession, loadCustomerSession } from "@/lib/customer-session";
 
-type Step = "phone" | "scan" | "enter" | "reverse" | "done";
+type Step = "scan" | "enter" | "reverse" | "done";
 
 export default function ScanPage() {
   const { addToast } = useToast();
-  const [step, setStep] = useState<Step>("phone");
+  const [step, setStep] = useState<Step>("scan");
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [merchantId, setMerchantId] = useState("");
@@ -35,52 +35,37 @@ export default function ScanPage() {
     return p.slice(0, 4) + "****" + p.slice(-2);
   }
 
-  // On mount, restore customer session from localStorage (with cookie fallback)
+  // On mount, restore customer session from localStorage (with cookie fallback).
+  // The cookie sync is awaited so a returning user can't submit an entry before
+  // the customer_session cookie is refreshed (would fail server auth).
   useEffect(() => {
-    // 1. Try localStorage first
+    let cancelled = false;
     const fromStorage = loadCustomerSession();
-    if (fromStorage) {
-      setPhone(fromStorage.phone);
-      setName(fromStorage.name);
-      setStep("scan");
-      // Trigger cookie sync via API (for middleware verification)
-      fetch("/api/customer/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: fromStorage.phone, name: fromStorage.name }),
-      }).catch(() => {});
-      setInitialized(true);
+    if (!fromStorage) {
+      window.location.replace("/login");
       return;
     }
 
-    // 2. No session at all — send to login
-    window.location.replace("/login");
-  }, []);
+    (async () => {
+      setPhone(fromStorage.phone);
+      setName(fromStorage.name);
+      const sr = await setCustomerSession(fromStorage.phone, fromStorage.name);
+      if (cancelled) return;
+      if (!sr.success) {
+        addToast("Session setup failed — dashboard access may be limited", "warning");
+      }
+      setStep("scan");
+      setInitialized(true);
+    })();
 
-  const handlePhoneSubmit = async () => {
-    if (!phone || phone.length < 10) return;
-
-    // Save customer locally for future recognition
-    await saveOfflineCustomer({
-      id: crypto.randomUUID(),
-      phone,
-      name: name || undefined,
-    });
-
-    // Persist session so they never see the phone screen again
-    const sr = await setCustomerSession(phone, name);
-    if (!sr.success) {
-      addToast("Session setup failed — dashboard access may be limited", "warning");
-    }
-
-    setStep("scan");
-  };
+    return () => {
+      cancelled = true;
+    };
+  }, [addToast]);
 
   const handleResetPhone = async () => {
     await clearCustomerSession();
-    setPhone("");
-    setName("");
-    setStep("phone");
+    window.location.replace("/login");
   };
 
   const handleQRScan = useCallback(
@@ -219,7 +204,7 @@ export default function ScanPage() {
           <p className="text-center text-sm text-[var(--color-text-muted)]">
             Point your camera at the shop&apos;s QR code
           </p>
-          <QRScanner onScan={handleQRScan} onClose={handleResetPhone} />
+          <QRScanner onScan={handleQRScan} />
           <p className="text-center text-xs text-[var(--color-text-muted)]">
             Ask the shopkeeper to show their QR code
           </p>

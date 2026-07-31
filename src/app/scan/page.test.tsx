@@ -3,6 +3,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ScanPage from "./page";
 
+const { mockAddToast, mockSubmitCustomerEntry } = vi.hoisted(() => ({
+  mockAddToast: vi.fn(),
+  mockSubmitCustomerEntry: vi.fn(),
+}));
+
 vi.mock("@/components/QRCode", () => ({
   QRScanner: ({ onScan }: { onScan: (data: string) => void }) => (
     <div data-testid="qr-scanner">
@@ -28,9 +33,7 @@ vi.mock("@/components/QRCode", () => ({
 }));
 
 vi.mock("@/components/Toast", () => ({
-  useToast: () => ({
-    addToast: vi.fn(),
-  }),
+  useToast: () => ({ addToast: mockAddToast }),
 }));
 
 vi.mock("@/components/AmountSuggestions", () => ({
@@ -57,13 +60,10 @@ vi.mock("@/lib/customer-session", () => ({
   loadCustomerSession: vi.fn(() => null),
 }));
 
-vi.mock("@/lib/actions", () => ({
-  findOrCreateCustomer: vi.fn(),
-  linkCustomerToMerchant: vi.fn(),
-  createCreditLog: vi.fn(),
+vi.mock("@/app/actions/customer", () => ({
+  submitCustomerEntry: mockSubmitCustomerEntry,
 }));
 
-const mockCustomerActions = await import("@/lib/actions");
 const mockSession = await import("@/lib/customer-session");
 
 describe("ScanPage", () => {
@@ -71,10 +71,13 @@ describe("ScanPage", () => {
     localStorage.clear();
     vi.clearAllMocks();
     vi.mocked(mockSession.loadCustomerSession).mockReturnValue(null);
+    mockSubmitCustomerEntry.mockResolvedValue({
+      success: true,
+      entry: { id: "cl1", status: "awaiting_confirmation" },
+    });
   });
 
-  it("renders phone entry screen when no session", async () => {
-    // When no session, page redirects to /login. Mock that.
+  it("redirects to login when no session exists", async () => {
     delete (window as any).location;
     const mockReplace = vi.fn();
     Object.defineProperty(window, "location", {
@@ -121,5 +124,76 @@ describe("ScanPage", () => {
       expect(screen.getByText("Log Entry")).toBeInTheDocument();
       expect(screen.getByText("Shop ABC")).toBeInTheDocument();
     });
+  });
+
+  it("saves an entry through the full scan flow like a human", async () => {
+    vi.mocked(mockSession.loadCustomerSession).mockReturnValue({
+      phone: "9841234567",
+      name: "Hari",
+    });
+
+    render(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-scanner")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("mock-scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Log Entry")).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByPlaceholderText("0"), "500");
+    await userEvent.click(screen.getByRole("button", { name: "Submit Entry" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Entry Saved!")).toBeInTheDocument();
+    });
+
+    expect(mockSubmitCustomerEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        merchant_id: "m1",
+        phone: "9841234567",
+        name: "Hari",
+        amount: 500,
+        type: "debit",
+        idempotency_key: expect.any(String),
+      })
+    );
+  });
+
+  it("shows an error toast and stays on the form when the save fails", async () => {
+    vi.mocked(mockSession.loadCustomerSession).mockReturnValue({
+      phone: "9841234567",
+      name: "Hari",
+    });
+    mockSubmitCustomerEntry.mockResolvedValue({
+      success: false,
+      error: "Database error",
+    });
+
+    render(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("qr-scanner")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByTestId("mock-scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Log Entry")).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByPlaceholderText("0"), "500");
+    await userEvent.click(screen.getByRole("button", { name: "Submit Entry" }));
+
+    await waitFor(() => {
+      expect(mockAddToast).toHaveBeenCalledWith(
+        "Failed to submit. Please try again.",
+        "error"
+      );
+    });
+    expect(screen.getByText("Log Entry")).toBeInTheDocument();
   });
 });
