@@ -8,12 +8,14 @@ interface QRDisplayProps {
   merchantId: string;
   merchantName: string;
   businessType: string;
+  svgRef?: React.Ref<SVGSVGElement>;
 }
 
 export function QRDisplay({
   merchantId,
   merchantName,
   businessType,
+  svgRef,
 }: QRDisplayProps) {
   const qrData = JSON.stringify({
     type: "merchant_scan",
@@ -27,6 +29,7 @@ export function QRDisplay({
     <div className="flex flex-col items-center p-6">
       <div className="bg-white dark:bg-[var(--color-surface)] p-6 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
         <QRCodeSVG
+          ref={svgRef}
           value={qrData}
           size={260}
           level="H"
