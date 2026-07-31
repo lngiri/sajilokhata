@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import MerchantsDashboard from "./page";
 
 vi.mock("@/components/QRCode", () => ({
@@ -150,6 +150,15 @@ const mockDashboardData = {
       created_at: "2025-01-14T10:00:00Z",
       customers: { name: "Shyam", phone: "9847654321" },
     },
+    {
+      id: "cl3",
+      amount: 5000,
+      type: "cash_in",
+      status: "approved",
+      description: "Money from home",
+      created_at: "2025-01-13T10:00:00Z",
+      customers: null,
+    },
   ],
   topReceivables: [
     {
@@ -190,6 +199,21 @@ describe("MerchantDashboard", () => {
     });
 
     expect(screen.getAllByText("Shyam").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders cash_in activity with Cash In label and + sign", async () => {
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Recent Activity")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Cash In")).toBeInTheDocument();
+    expect(screen.getByText("Money from home")).toBeInTheDocument();
+    const cashInRow = screen.getByText("Money from home").closest("a") as HTMLElement;
+    expect(
+      within(cashInRow).getByText((content, el) => !!el?.textContent && /^\+Rs\. \S+$/.test(el.textContent))
+    ).toBeInTheDocument();
   });
 
   it("shows empty state when no activity", async () => {

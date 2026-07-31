@@ -102,7 +102,7 @@ function ExpenseChart({ data }: { data: { date: string; expense: number }[] }) {
   );
 }
 
-function CashFlowChart({ data }: { data: { date: string; debit: number; credit: number; cash: number }[] }) {
+function CashFlowChart({ data }: { data: { date: string; debit: number; credit: number; cash: number; cash_in: number }[] }) {
   if (data.length === 0) {
     return (
       <div className="text-center py-8 space-y-3">
@@ -122,7 +122,7 @@ function CashFlowChart({ data }: { data: { date: string; debit: number; credit: 
   }
   return (
     <div className="bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)]">
-      <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Cash Flow Trend (Credit, Cash & Received)</p>
+      <p className="text-sm font-semibold text-[var(--color-text)] mb-3">Cash Flow Trend (Credit, Cash, Cash In & Received)</p>
       <ResponsiveContainer width="100%" height={220}>
         <AreaChart data={data}>
           <defs>
@@ -138,6 +138,10 @@ function CashFlowChart({ data }: { data: { date: string; debit: number; credit: 
               <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
               <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
             </linearGradient>
+            <linearGradient id="cashInGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#0d9488" stopOpacity={0.15} />
+              <stop offset="95%" stopColor="#0d9488" stopOpacity={0} />
+            </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
@@ -145,6 +149,7 @@ function CashFlowChart({ data }: { data: { date: string; debit: number; credit: 
           <Tooltip />
           <Area type="monotone" dataKey="debit" stroke="#dc2626" fill="url(#debitGrad)" strokeWidth={2} name="Credit Given" />
           <Area type="monotone" dataKey="cash" stroke="#2563eb" fill="url(#cashGrad)" strokeWidth={2} name="Cash Sale" />
+          <Area type="monotone" dataKey="cash_in" stroke="#0d9488" fill="url(#cashInGrad)" strokeWidth={2} name="Cash In" />
           <Area type="monotone" dataKey="credit" stroke="#16a34a" fill="url(#creditGrad)" strokeWidth={2} name="Amount Received" />
         </AreaChart>
       </ResponsiveContainer>
@@ -255,11 +260,11 @@ function TransactionAuditLog({
                 </span>
               </td>
               <td className="py-2.5 pr-2">
-                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : log.type === "expense" ? "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
-                  {log.type === "debit" ? "Credit" : log.type === "expense" ? "Expense" : log.type === "cash" ? "Cash" : "Payment"}
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${log.type === "debit" ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : log.type === "expense" ? "bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300" : log.type === "cash" ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300" : log.type === "cash_in" ? "bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
+                  {log.type === "debit" ? "Credit" : log.type === "expense" ? "Expense" : log.type === "cash" ? "Cash" : log.type === "cash_in" ? "Cash In" : "Payment"}
                 </span>
               </td>
-              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "expense" ? "text-orange-600 dark:text-orange-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-green-600 dark:text-green-400"}`}>
+              <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "expense" ? "text-orange-600 dark:text-orange-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : log.type === "cash_in" ? "text-teal-600 dark:text-teal-400" : "text-green-600 dark:text-green-400"}`}>
                 Rs. {log.amount.toLocaleString()}
               </td>
             </tr>
@@ -346,8 +351,8 @@ export default function MerchantReportsPage() {
     const headers = ["Date", "Customer", "Type", "Amount", "Status", "Description"];
     const rows = filteredLogs.map((log: any) => [
       new Date(log.created_at).toISOString().split("T")[0],
-      log.type === "cash" ? "Walk-in" : (log.customers?.name || log.customers?.phone || ""),
-      log.type === "debit" ? "Credit Given" : log.type === "expense" ? "Expense" : log.type === "cash" ? "Cash Sale" : "Payment Received",
+      log.type === "cash" || log.type === "cash_in" ? "N/A" : (log.customers?.name || log.customers?.phone || ""),
+      log.type === "debit" ? "Credit Given" : log.type === "expense" ? "Expense" : log.type === "cash" ? "Cash Sale" : log.type === "cash_in" ? "Cash In" : "Payment Received",
       log.amount,
       STATUS_LABELS[log.status] || log.status,
       log.description || "",
@@ -409,6 +414,7 @@ export default function MerchantReportsPage() {
           <MetricCard label="Outstanding Credit" value={analytics?.totalOutstanding ?? "—"} color="text-red-600 dark:text-red-400" />
           <MetricCard label="Total Expenses" value={analytics?.totalExpenses ?? "—"} color="text-orange-600 dark:text-orange-400" />
           <MetricCard label="Cash Received" value={analytics?.totalReceived ?? "—"} color="text-green-600 dark:text-green-400" />
+          <MetricCard label="Cash In" value={analytics?.totalCashIn ?? "—"} color="text-teal-600 dark:text-teal-400" />
           <MetricCard label="Net Cash Flow"
             value={analytics ? (analytics.netCashFlow >= 0 ? analytics.netCashFlow : `-${Math.abs(analytics.netCashFlow)}`) : "—"}
             color={(analytics?.netCashFlow ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}

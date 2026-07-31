@@ -714,4 +714,76 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       expect(mockEntryActions.saveEntry).not.toHaveBeenCalled();
     });
   });
+
+  // ═══════════════════════════════════════════════
+  // CASH IN TOGGLE (manual mode: Cash Sale ⟷ Cash In)
+  // ═══════════════════════════════════════════════
+
+  describe("Cash In toggle", () => {
+    beforeEach(() => {
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true"));
+    });
+
+    it("shows both Cash Sale and Cash In options in the transaction type selector", async () => {
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Cash Sale")).toBeInTheDocument();
+      expect(screen.getByText("Cash In")).toBeInTheDocument();
+      expect(screen.getByText("Cash Out")).toBeInTheDocument();
+    });
+
+    it("records a cash_in entry when Cash In is selected", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
+        success: true,
+        entry: { id: "cash-in-1", status: "approved" },
+      });
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Cash In"));
+
+      await user.type(screen.getAllByPlaceholderText("0")[0], "5000");
+      await user.type(screen.getByPlaceholderText(/e\.g\. Money from home/), "Money from home");
+      await user.click(screen.getByText("Continue"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Confirm Entry")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Cash In")).toBeInTheDocument();
+      expect(screen.getByText(/to Cash in Hand/)).toBeInTheDocument();
+
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => {
+        expect(screen.getByText("Entry Saved! 🎉")).toBeInTheDocument();
+      });
+
+      expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "cash_in", amount: 5000, description: "Money from home" })
+      );
+
+      expect(screen.getByText(/added to Cash in Hand/)).toBeInTheDocument();
+      expect(mockAddToast).toHaveBeenCalledWith("Cash In recorded!", "success");
+    });
+
+    it("defaults to Cash Sale when manual mode has no type param", async () => {
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      const cashInBtn = screen.getByText("Cash In").closest("button");
+      expect(cashInBtn).not.toHaveClass("bg-teal-600");
+    });
+  });
 });

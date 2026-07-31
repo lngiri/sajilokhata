@@ -135,14 +135,14 @@ export async function createCreditLog(log: Record<string, any>): Promise<any> {
   if (!log.merchant_id) {
     throw new Error("merchant_id is required");
   }
-  if (log.type !== "cash" && !log.customer_id) {
+  if (log.type !== "cash" && log.type !== "cash_in" && !log.customer_id) {
     throw new Error("customer_id is required for debit/credit transactions");
   }
   if (!log.amount || typeof log.amount !== "number" || log.amount <= 0) {
     throw new Error("amount must be a positive number");
   }
-  if (!log.type || !["debit", "credit", "cash", "expense"].includes(log.type)) {
-    throw new Error("type must be 'debit', 'credit', 'cash', or 'expense'");
+  if (!log.type || !["debit", "credit", "cash", "expense", "cash_in"].includes(log.type)) {
+    throw new Error("type must be 'debit', 'credit', 'cash', 'expense', or 'cash_in'");
   }
 
   const { data, error } = await getClient()
@@ -312,7 +312,7 @@ export async function createManualCreditLog(params: {
   merchant_id: string;
   customer_id?: string | null;
   amount: number;
-  type: "debit" | "credit" | "cash" | "expense";
+  type: "debit" | "credit" | "cash" | "expense" | "cash_in";
   description?: string | null;
   attachment_url?: string | null;
 }): Promise<any> {

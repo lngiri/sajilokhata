@@ -647,7 +647,7 @@ export async function getCustomerStats(
       .from("credit_logs")
       .select("merchant_id, amount, type, status, description")
       .in("customer_id", customerIds)
-      .neq("type", "cash")
+      .not("type", "in", '("cash","cash_in")')
       .not("status", "in", '("rejected","disputed")') as unknown as Promise<{
       data: any[] | null;
     }>,

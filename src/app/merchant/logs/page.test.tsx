@@ -81,6 +81,20 @@ const approvedLogs = [
 
 const allLogs = [...pendingLogs, ...approvedLogs];
 
+const cashInLogs = [
+  {
+    id: "cl3",
+    amount: 5000,
+    type: "cash_in",
+    status: "approved",
+    description: "Money from home",
+    quantity: null,
+    unit: null,
+    created_at: "2025-01-13T10:00:00Z",
+    customers: null,
+  },
+];
+
 describe("LedgerPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -204,6 +218,32 @@ describe("LedgerPage", () => {
     await waitFor(() => {
       expect(screen.getByText(/No entries yet/)).toBeInTheDocument();
     });
+  });
+
+  it("filters to Cash In entries when the Cash In tab is clicked", async () => {
+    vi.mocked(mockMerchantActions.getMerchantCreditLogs).mockImplementation(
+      (_id: string, options?: { status?: string }) => {
+        if (options?.status === "awaiting_confirmation") return Promise.resolve(pendingLogs);
+        if (options?.status === "approved") return Promise.resolve([...approvedLogs, ...cashInLogs]);
+        return Promise.resolve([...allLogs, ...cashInLogs]);
+      }
+    );
+
+    render(<LedgerPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Ledger/)).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getAllByText("Cash In")[0]);
+
+    expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
+      limit: 50,
+    });
+
+    expect(screen.getByText("Money from home")).toBeInTheDocument();
+    expect(screen.queryByText("Hari")).not.toBeInTheDocument();
+    expect(screen.queryByText("Shyam")).not.toBeInTheDocument();
   });
 
   it("renders bottom navigation", async () => {

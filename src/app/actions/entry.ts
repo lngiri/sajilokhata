@@ -80,7 +80,7 @@ export async function saveEntry(params: {
   customer_phone?: string | null;
   customer_name?: string | null;
   amount: number;
-  type: "debit" | "credit" | "cash" | "expense";
+  type: "debit" | "credit" | "cash" | "expense" | "cash_in";
   description?: string | null;
   quantity?: number | null;
   unit?: "liter" | "jar" | "kg" | "piece" | "npr" | null;
@@ -113,13 +113,14 @@ export async function saveEntry(params: {
     if (!params.amount || typeof params.amount !== "number" || params.amount <= 0) {
       return { success: false, error: "Amount must be a positive number" };
     }
-    if (!["debit", "credit", "cash", "expense"].includes(params.type)) {
+    if (!["debit", "credit", "cash", "expense", "cash_in"].includes(params.type)) {
       return { success: false, error: "Invalid transaction type" };
     }
 
     const isCash = params.type === "cash";
     const isExpense = params.type === "expense";
-    const isImmediate = isCash || isExpense; // both approved immediately, no customer needed
+    const isCashIn = params.type === "cash_in";
+    const isImmediate = isCash || isExpense || isCashIn; // all approved immediately, no customer needed
     const admin = getAdminClient();
     if (!admin) {
       return { success: false, error: "Database connection unavailable" };
