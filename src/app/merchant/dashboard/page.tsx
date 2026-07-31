@@ -121,6 +121,7 @@ export default function MerchantDashboard() {
   }>>([]);
 
   const [smsBalance, setSmsBalance] = useState<number | null>(null);
+  const [smsBalanceFailed, setSmsBalanceFailed] = useState(false);
   const [showSmsReminderModal, setShowSmsReminderModal] = useState(false);
   const [reminderCustomer, setReminderCustomer] = useState<{
     customer_id: string;
@@ -163,7 +164,9 @@ export default function MerchantDashboard() {
 
   // Fire-and-forget non-critical loads
   const loadBackground = useCallback((id: string) => {
-    getMerchantSmsBalance(id).then(setSmsBalance).catch(() => {});
+    getMerchantSmsBalance(id)
+      .then((b) => { setSmsBalance(b); setSmsBalanceFailed(false); })
+      .catch(() => setSmsBalanceFailed(true));
     checkAndSendAutoReminders(id).catch(() => {});
   }, []);
 
@@ -504,6 +507,9 @@ export default function MerchantDashboard() {
                   {merchantProfile?.business_name?.trim() || merchantProfile?.name || "Shop"}
                 </span>
                 <RoleSwitcher compact />
+                {isRefreshing && (
+                  <div className="w-3 h-3 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                )}
               </div>
               <div className="flex items-center gap-1.5 text-[10px] text-[var(--color-text-muted)] truncate leading-tight mt-0.5">
                 {merchantProfile?.phone && <span className="font-mono">{merchantProfile.phone}</span>}
@@ -516,25 +522,19 @@ export default function MerchantDashboard() {
             <a
               href="/merchant/billing"
               className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform"
-              aria-label={`${smsBalance === null ? "SMS credits" : `${smsBalance} SMS credits`}`}
+              aria-label={`${smsBalanceFailed || smsBalance === null ? "SMS credits" : `${smsBalance} SMS credits`}`}
             >
               <div className="flex items-center gap-1 px-2 py-1.5 bg-[var(--color-primary)]/5 text-[var(--color-primary-dark)] rounded-full text-[10px] font-semibold border border-[var(--color-primary)]/20">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
                 </svg>
-                {smsBalance === null ? "…" : smsBalance}
+                {smsBalanceFailed || smsBalance === null ? "—" : smsBalance}
               </div>
             </a>
             <div ref={notificationRef}>
               <button
                 onClick={() => {
                   setShowNotifications(!showNotifications);
-                  if (!showNotifications && merchantId) {
-                    markAsRead(merchantId, "merchant").then(() => {
-                      setUnreadNotifCount(0);
-                      loadNotifications();
-                    }).catch(() => {});
-                  }
                 }}
                 className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
                 aria-label="Notifications"
@@ -547,8 +547,8 @@ export default function MerchantDashboard() {
                     {unreadNotifCount}
                   </span>
                 )}
-                {unreadNotifCount === 0 && awaitingLogs.length > 0 && (
-                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
+                {awaitingLogs.length > 0 && (
+                  <span className="absolute top-0 left-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
                     {awaitingLogs.length}
                   </span>
                 )}
@@ -619,6 +619,14 @@ export default function MerchantDashboard() {
                   <a
                     key={n.id}
                     href="/merchant/logs"
+                    onClick={() => {
+                      if (merchantId) {
+                        markAsRead(merchantId, "merchant").then(() => {
+                          setUnreadNotifCount(0);
+                          loadNotifications();
+                        }).catch(() => {});
+                      }
+                    }}
                     className={`flex items-start gap-3 px-4 py-2.5 hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors ${!n.read ? "bg-blue-50/30 dark:bg-blue-900/20" : ""}`}
                   >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
@@ -723,7 +731,7 @@ export default function MerchantDashboard() {
                 <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
                 </svg>
-                SMS Balance: {smsBalance ?? 0} credits
+                SMS Balance: {smsBalanceFailed || smsBalance === null ? "—" : `${smsBalance} credits`}
               </a>
 
               <button

@@ -71,6 +71,7 @@ export default function RoleSwitcher({ compact }: RoleSwitcherProps) {
       <button
         onClick={handleSwitch}
         disabled={switching}
+        aria-label={`Switch to ${isMerchant ? "Customer" : "Merchant"} view`}
         className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 active:scale-90 transition-transform flex-shrink-0 disabled:opacity-50"
         title={`Switch to ${isMerchant ? "Customer" : "Merchant"} view`}
       >
@@ -89,6 +90,7 @@ export default function RoleSwitcher({ compact }: RoleSwitcherProps) {
     <button
       onClick={handleSwitch}
       disabled={switching}
+      aria-label={`Switch to ${isMerchant ? "Customer" : "Merchant"} view`}
       className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 active:scale-95 transition-transform text-[11px] font-medium text-slate-700 whitespace-nowrap disabled:opacity-50"
       title={`Switch to ${isMerchant ? "Customer" : "Merchant"} view`}
     >

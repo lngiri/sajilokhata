@@ -375,13 +375,13 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
 
       await waitFor(() => {
         expect(mockAddToast).toHaveBeenCalledWith(
-          "Failed to save. Please try again.",
+          "Database error: connection refused",
           "error"
         );
       });
 
       // Should NOT show success screen
-      expect(screen.queryByText("Entry Saved!")).not.toBeInTheDocument();
+      expect(screen.queryByText("Entry Saved! 🎉")).not.toBeInTheDocument();
     });
 
     it("shows error toast when saveEntry throws an exception", async () => {
@@ -403,7 +403,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
 
       await waitFor(() => {
         expect(mockAddToast).toHaveBeenCalledWith(
-          "Failed to save. Please try again.",
+          "Network timeout",
           "error"
         );
       });
@@ -909,11 +909,11 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       });
     });
 
-    it("searches by name in the default Cash Sale (manual) mode", async () => {
+    it("searches by name in the default manual mode (Debit)", async () => {
       const user = userEvent.setup();
       vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
         success: true,
-        entry: { id: "e1", status: "approved" },
+        entry: { id: "e1", status: "awaiting_confirmation" },
       });
       vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
         { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
@@ -941,7 +941,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       });
 
       await user.type(screen.getAllByPlaceholderText("0")[0], "1500");
-      await user.type(screen.getByPlaceholderText(/e\.g\. Grocery items/), "Grocery items");
+      await user.type(screen.getByPlaceholderText(/e\.g\. Rice/), "Rice 15kg");
       await user.click(screen.getByText("Continue"));
 
       await waitFor(() => {
@@ -959,7 +959,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
           customer_phone: "9841234567",
           customer_name: "Ram Kumar",
           amount: 1500,
-          type: "cash",
+          type: "debit",
         })
       );
     });
@@ -1039,7 +1039,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       // First attempt fails
       await user.click(screen.getByText("Save Entry"));
       await waitFor(() => {
-        expect(mockAddToast).toHaveBeenCalledWith("Failed to save. Please try again.", "error");
+        expect(mockAddToast).toHaveBeenCalledWith("Duplicate detected", "error");
       });
 
       // Retry from the same confirm screen must reuse the same key

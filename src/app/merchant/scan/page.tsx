@@ -6,6 +6,7 @@ import { QRScanner } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import AmountSuggestions from "@/components/AmountSuggestions";
 import BottomNav from "@/components/BottomNav";
+import PageHeader from "@/components/PageHeader";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { getMerchantProfile } from "@/app/actions/merchant";
 import { saveEntry } from "@/app/actions/entry";
@@ -222,8 +223,10 @@ export default function MerchantScanPage() {
         setEntryType("cash_in");
       } else if (typeParam === "cash") {
         setEntryType("cash");
+      } else if (typeParam === "credit") {
+        setEntryType("credit");
       } else {
-        setEntryType("cash");
+        setEntryType("debit");
       }
     }
   }, [isManual, step, searchParams]);
@@ -529,7 +532,7 @@ export default function MerchantScanPage() {
       );
     } catch (err) {
       console.error("Failed to save entry:", err);
-      addToast("Failed to save. Please try again.", "error");
+      addToast((err as Error)?.message || "Failed to save. Please try again.", "error");
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -611,18 +614,11 @@ export default function MerchantScanPage() {
     return (
       <div className="pb-20">
         {/* Header */}
-        <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
-          <div className="flex items-center px-4 py-3">
-            <a href="/merchant/dashboard" aria-label="Back to dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-              </svg>
-            </a>
-            <h1 className="text-lg font-bold text-[var(--color-text)]">
-              {step === "enter" ? "Manual Entry" : step === "confirm" ? "Confirm Entry" : "Entry Saved!"}
-            </h1>
-          </div>
-        </div>
+        <PageHeader
+          title={step === "enter" ? "Manual Entry" : step === "confirm" ? "Confirm Entry" : "Done"}
+          backHref="/merchant/dashboard"
+          backLabel="Back to dashboard"
+        />
 
         <div className="px-4 py-4 space-y-4">
           {/* Manual: Enter Details */}
@@ -1170,19 +1166,11 @@ export default function MerchantScanPage() {
   // ─── QR scan mode ──────────────────────────────────────────────
   return (
     <div className="pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-[var(--color-bg)]/80 backdrop-blur-md border-b border-[var(--color-border)]">
-        <div className="flex items-center px-4 py-3">
-          <a href="/merchant/dashboard" aria-label="Back to dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </a>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">
-            {step === "scan" ? "Scan Customer QR" : step === "enter" ? "Enter Details" : step === "confirm" ? "Confirm Entry" : "Entry Saved!"}
-          </h1>
-        </div>
-      </div>
+      <PageHeader
+        title={step === "scan" ? "Scan Customer QR" : step === "enter" ? "Enter Details" : step === "confirm" ? "Confirm Entry" : "Done"}
+        backHref="/merchant/dashboard"
+        backLabel="Back to dashboard"
+      />
 
       <div className="px-4 py-4 space-y-4">
         {/* QR: Scan */}
@@ -1197,7 +1185,7 @@ export default function MerchantScanPage() {
               </div>
               <p className="text-sm text-[var(--color-text-muted)]">Point your camera at the customer&apos;s QR code</p>
             </div>
-            <QRScanner onScan={handleScan} />
+            <QRScanner onScan={handleScan} onClose={() => router.replace("/merchant/dashboard")} />
           </div>
         )}
 

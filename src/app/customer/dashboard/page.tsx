@@ -506,12 +506,15 @@ export default function CustomerDashboard() {
     setSaving(true);
     try {
       if (isOnline()) {
-        const result = await submitCustomerEntry(
-          merchantId,
-          Number(amount),
-          entryType,
-          description || null,
-        );
+        const result = await submitCustomerEntry({
+          merchant_id: merchantId,
+          phone: customerPhone,
+          name: customerName || null,
+          amount: Number(amount),
+          description: description || null,
+          type: entryType,
+          idempotency_key: undefined,
+        });
         if (!result.success) {
           addToast(result.error || "Failed to submit entry", "error");
           setSaving(false);
@@ -613,12 +616,6 @@ export default function CustomerDashboard() {
               <button
                 onClick={() => {
                   setShowNotifications(!showNotifications);
-                  if (!showNotifications && customerId) {
-                    markAsRead(customerId, "customer").then(() => {
-                      setUnreadNotifCount(0);
-                      loadNotifications();
-                    }).catch(() => {});
-                  }
                 }}
                 className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
                 aria-label="Notifications"
@@ -631,8 +628,8 @@ export default function CustomerDashboard() {
                     {unreadNotifCount}
                   </span>
                 )}
-                {unreadNotifCount === 0 && (stats?.pendingCount ?? 0) > 0 && (
-                  <span className="absolute top-0 right-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
+                {(stats?.pendingCount ?? 0) > 0 && (
+                  <span className="absolute top-0 left-0 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white px-1 animate-pulse-soft">
                     {stats?.pendingCount}
                   </span>
                 )}
@@ -680,6 +677,14 @@ export default function CustomerDashboard() {
                 <a
                   key={n.id}
                   href="/customer/history"
+                  onClick={() => {
+                    if (customerId) {
+                      markAsRead(customerId, "customer").then(() => {
+                        setUnreadNotifCount(0);
+                        loadNotifications();
+                      }).catch(() => {});
+                    }
+                  }}
                   className={`flex items-start gap-3 px-4 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors ${!n.read ? "bg-blue-50/30" : ""}`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
@@ -1039,7 +1044,7 @@ export default function CustomerDashboard() {
                 <p className="text-center text-sm text-[var(--color-text-muted)]">
                   Point your camera at the shop&apos;s QR code
                 </p>
-                <QRScanner onScan={handleQRScan} />
+                <QRScanner onScan={handleQRScan} onClose={closeModal} />
               </div>
             )}
 

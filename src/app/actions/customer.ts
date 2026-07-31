@@ -516,117 +516,6 @@ export async function updateCustomerAvatar(
   }
 }
 
-/**
- * Server-validated customer credit log submission.
- * Reads the customer_session cookie to extract the verified phone number —
- * never trusts the raw client-provided phone param alone.
- */
-export async function submitCustomerEntry(
-  merchantId: string,
-  amount: number,
-  type: "debit" | "credit",
-  description?: string | null
-): Promise<{ success: boolean; error?: string; logId?: string }> {
-  const admin = getAdminClient();
-  if (!admin) return { success: false, error: "Server config" };
-
-  try {
-    const cookieStore = await cookies();
-    const rawCookie = cookieStore.get("customer_session")?.value;
-    if (!rawCookie) {
-      return { success: false, error: "No session — please scan a QR code first" };
-    }
-
-    const session = await verifyCustomerSessionToken(rawCookie);
-    if (!session?.phone || String(session.phone).replace(/\D/g, "").length < 10) {
-      return { success: false, error: "Invalid session — missing phone" };
-    }
-
-    const phone = session.phone;
-    const normalized = normalizePhone(phone);
-
-    // Find or create customer
-    let customerId: string;
-    const { data: rawExisting } = await admin.from("customers")
-      .select("id")
-      .eq("phone", normalized)
-      .maybeSingle();
-    const existing = rawExisting as Pick<CustomerRow, "id"> | null;
-
-    if (existing) {
-      customerId = existing.id;
-    } else {
-      const { data: inserted, error: insertErr } = await admin.from("customers")
-        .insert({ phone: normalized, name: session.name || null })
-        .select("id")
-        .single();
-      if (insertErr) {
-        return { success: false, error: "Failed to create customer" };
-      }
-      customerId = (inserted as Pick<CustomerRow, "id">).id;
-    }
-
-    // Link to merchant if not already linked
-    const { data: rawLink } = await admin.from("merchant_customers")
-      .select("id")
-      .eq("merchant_id", merchantId)
-      .eq("customer_id", customerId)
-      .maybeSingle();
-    const link = rawLink as Pick<MerchantCustomerRow, "id"> | null;
-
-    if (!link) {
-      const { error: linkErr } = await admin.from("merchant_customers")
-        .insert({ merchant_id: merchantId, customer_id: customerId, credit_limit: 5000 });
-      if (linkErr) {
-        return { success: false, error: "Failed to link to merchant" };
-      }
-    }
-
-    // Create the credit log
-    const { data: rawLog, error: logErr } = await admin.from("credit_logs")
-      .insert({
-        merchant_id: merchantId,
-        customer_id: customerId,
-        amount,
-        type,
-        description: description || null,
-        status: "awaiting_confirmation",
-        sync_status: "online",
-        initiated_by: "customer",
-      })
-      .select("id")
-      .single();
-
-    if (logErr) {
-      return { success: false, error: "Failed to create entry" };
-    }
-
-    const log = rawLog as Pick<CreditLogRow, "id">;
-
-    const { data: shop } = await (admin.from("merchants") as any)
-      .select("name")
-      .eq("id", merchantId)
-      .single()
-      .catch(() => ({ data: null }));
-    const shopName = shop?.name || "Shop";
-    createNotification({
-      userId: merchantId,
-      userType: "merchant",
-      type: "entry_created",
-      title: `New credit request from ${session.name || "a customer"}`,
-      body: `Rs. ${formatNumber(amount)} ${type} requested at ${shopName}`,
-      referenceId: log.id,
-      referenceType: "credit_log",
-    });
-
-    return { success: true, logId: log.id };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Customer] submitCustomerEntry error:", msg);
-    return { success: false, error: msg };
-  }
-}
-
 // ============================================================
 // Cookie-validated customer identity helper
 // Every transaction-history server action calls this first.
@@ -1024,4 +913,131 @@ export async function getCustomerIdsForPhone(phone: string): Promise<string[]> {
     .eq("phone", normalized);
 
   return (data as { id: string }[] | null)?.map((c) => c.id) || [];
+}
+
+// ──────────────────────────────────────────────
+// Customer voucher submission (replaces the 3-call
+// browser-side findOrCreateCustomer → linkCustomerToMerchant
+// → createCreditLog chain).
+// Identity comes from the customer_session cookie — the
+// phone param is never trusted for authorization. Status is
+// pinned to "awaiting_confirmation" and the insert is built
+// from an explicit column list, so arbitrary fields (e.g. a
+// forged "approved") cannot be injected.
+// ──────────────────────────────────────────────
+
+/**
+ * Ensure a merchant_customers link exists (idempotent).
+ */
+async function ensureMerchantCustomerLink(
+  merchantId: string,
+  customerId: string,
+  creditLimit = 5000
+): Promise<void> {
+  const admin = getAdminClient();
+  if (!admin) return;
+
+  const { data: existing } = await (admin.from("merchant_customers") as any)
+    .select("id")
+    .eq("merchant_id", merchantId)
+    .eq("customer_id", customerId)
+    .maybeSingle();
+
+  if (existing) return;
+
+  await (admin.from("merchant_customers") as any)
+    .insert({ merchant_id: merchantId, customer_id: customerId, credit_limit: creditLimit });
+}
+
+export async function submitCustomerEntry(params: {
+  merchant_id: string;
+  phone: string;
+  name?: string | null;
+  amount: number;
+  description?: string | null;
+  type: "debit" | "credit";
+  idempotency_key?: string;
+}): Promise<{
+  success: boolean;
+  error?: string;
+  entry?: { id: string; status: string };
+}> {
+  try {
+    if (!params.merchant_id) {
+      return { success: false, error: "Shop information is missing. Please scan the shop QR again." };
+    }
+    if (!params.amount || typeof params.amount !== "number" || params.amount <= 0) {
+      return { success: false, error: "Please enter a valid amount." };
+    }
+    if (!["debit", "credit"].includes(params.type)) {
+      return { success: false, error: "Invalid transaction type." };
+    }
+
+    // Identity always comes from the cookie — never from the params.
+    const customer = await getAuthenticatedCustomer();
+    if (!customer) return { success: false, error: "Not logged in" };
+
+    const admin = getAdminClient();
+    if (!admin) return { success: false, error: "Database connection unavailable" };
+
+    // Verify the shop actually exists so entries can't target random IDs.
+    const { data: merchant } = await (admin.from("merchants") as any)
+      .select("id, name")
+      .eq("id", params.merchant_id)
+      .maybeSingle();
+    if (!merchant) {
+      return { success: false, error: "Shop not found. Please scan the shop QR again." };
+    }
+
+    await ensureMerchantCustomerLink(params.merchant_id, customer.id);
+
+    // Idempotency: one idempotency key per draft prevents double-submit duplicates.
+    if (params.idempotency_key) {
+      const { data: existing } = await (admin.from("credit_logs") as any)
+        .select("id, status")
+        .eq("merchant_id", params.merchant_id)
+        .eq("customer_id", customer.id)
+        .eq("idempotency_key", params.idempotency_key)
+        .maybeSingle();
+      if (existing) {
+        return { success: true, entry: { id: existing.id, status: existing.status } };
+      }
+    }
+
+    const { data, error } = await (admin.from("credit_logs") as any)
+      .insert({
+        merchant_id: params.merchant_id,
+        customer_id: customer.id,
+        amount: params.amount,
+        type: params.type,
+        description: params.description || null,
+        status: "awaiting_confirmation",
+        approved_at: null,
+        sync_status: "online",
+        idempotency_key: params.idempotency_key || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[Customer] submitCustomerEntry insert error:", error);
+      return { success: false, error: `Database error: ${error.message}` };
+    }
+
+    createNotification({
+      userId: params.merchant_id,
+      userType: "merchant",
+      type: "entry_created",
+      title: `New entry from ${customer.name || customer.phone}`,
+      body: `Rs. ${formatNumber(params.amount)} ${params.type === "debit" ? "credit" : "payment"} requested`,
+      referenceId: data.id,
+      referenceType: "credit_log",
+    });
+
+    return { success: true, entry: { id: data.id, status: data.status } };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[Customer] submitCustomerEntry error:", msg);
+    return { success: false, error: msg };
+  }
 }

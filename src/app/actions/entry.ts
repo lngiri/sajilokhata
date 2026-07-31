@@ -1,8 +1,10 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { createNotification } from "@/app/actions/notifications";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import type { Database } from "@/lib/types/database";
 import { formatNumber } from "@/lib/format";
 
@@ -114,6 +116,22 @@ export async function saveEntry(params: {
     }
     if (!["debit", "credit", "cash", "expense", "cash_in"].includes(params.type)) {
       return { success: false, error: "Invalid transaction type" };
+    }
+
+    // Security: the caller must be the merchant who owns this shop.
+    // The merchant_id is never trusted from the client alone — the HMAC
+    // session cookie must match it. (Middleware guards the page, not actions.)
+    try {
+      const cookieStore = await cookies();
+      const raw = cookieStore.get(SESSION_COOKIE)?.value;
+      if (!raw) return { success: false, error: "Not logged in" };
+      const session = await verifySessionToken(raw);
+      if (!session?.userId) return { success: false, error: "Session expired" };
+      if (session.userId !== params.merchant_id) {
+        return { success: false, error: "Not authorized" };
+      }
+    } catch {
+      return { success: false, error: "Not logged in" };
     }
 
     const isCash = params.type === "cash";

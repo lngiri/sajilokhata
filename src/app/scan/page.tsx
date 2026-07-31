@@ -1,15 +1,12 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { QRScanner, CustomerQR } from "@/components/QRCode";
 import { useToast } from "@/components/Toast";
 import AmountSuggestions from "@/components/AmountSuggestions";
 import PendingApprovalModal from "@/components/PendingApprovalModal";
-import {
-  findOrCreateCustomer,
-  linkCustomerToMerchant,
-  createCreditLog,
-} from "@/lib/actions";
+import PageHeader from "@/components/PageHeader";
+import { submitCustomerEntry } from "@/app/actions/customer";
 import { isOnline, saveOfflineCustomer, savePendingLog } from "@/lib/offline/db";
 
 import { setCustomerSession, clearCustomerSession, loadCustomerSession } from "@/lib/customer-session";
@@ -30,6 +27,8 @@ export default function ScanPage() {
   const [initialized, setInitialized] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
   const [showFullPhone, setShowFullPhone] = useState(false);
+  // One idempotency key per draft — prevents duplicate entries on double-submit/retry
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
 
   function maskPhone(p: string): string {
     if (p.length < 8) return p;
@@ -108,23 +107,27 @@ export default function ScanPage() {
 
     try {
       if (isOnline()) {
-        const customer = await findOrCreateCustomer(phone, name || undefined);
-        await linkCustomerToMerchant(merchantId, customer.id);
-        await createCreditLog({
+        const result = await submitCustomerEntry({
           merchant_id: merchantId,
-          customer_id: customer.id,
+          phone,
+          name: name || undefined,
           amount: Number(amount),
           description: description || null,
           type: entryType,
-          status: "awaiting_confirmation",
-          sync_status: "online",
+          idempotency_key: idempotencyKeyRef.current,
         });
+
+        if (!result.success) {
+          throw new Error(result.error || "Failed to submit entry");
+        }
+
         addToast(
           entryType === "credit"
             ? "Payment submitted! Awaiting merchant confirmation."
             : "Credit request sent! Awaiting merchant approval.",
           "success"
         );
+        idempotencyKeyRef.current = crypto.randomUUID();
         setStep("done");
         setShowPendingModal(true);
       } else {
@@ -161,19 +164,11 @@ export default function ScanPage() {
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
-        <div className="flex items-center px-4 py-3">
-          <a href="/" aria-label="Back to home" className="mr-3 p-1 active:scale-95 transition-transform">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-            </svg>
-          </a>
-          <h1 className="text-lg font-bold text-[var(--color-text)]">
-            {step === "scan" ? "Scan QR" : step === "enter" ? "Log Entry" : step === "reverse" ? "Show QR" : "Done!"}
-          </h1>
-        </div>
-      </div>
+      <PageHeader
+        title={step === "scan" ? "Scan QR" : step === "enter" ? "Log Entry" : step === "reverse" ? "Show QR" : "Done"}
+        backHref="/"
+        backLabel="Back to home"
+      />
 
       {/* Step 2: Scan QR */}
       {step === "scan" && (
@@ -224,7 +219,7 @@ export default function ScanPage() {
           <p className="text-center text-sm text-[var(--color-text-muted)]">
             Point your camera at the shop&apos;s QR code
           </p>
-          <QRScanner onScan={handleQRScan} />
+          <QRScanner onScan={handleQRScan} onClose={handleResetPhone} />
           <p className="text-center text-xs text-[var(--color-text-muted)]">
             Ask the shopkeeper to show their QR code
           </p>
@@ -269,7 +264,7 @@ export default function ScanPage() {
               <input
                 type="number"
                 min="1"
-                step="1"
+                step="any"
                 placeholder="0"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}

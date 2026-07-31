@@ -308,28 +308,6 @@ export async function uploadAttachment(
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function createManualCreditLog(params: {
-  merchant_id: string;
-  customer_id?: string | null;
-  amount: number;
-  type: "debit" | "credit" | "cash" | "expense" | "cash_in";
-  description?: string | null;
-  attachment_url?: string | null;
-}): Promise<any> {
-  const isCash = params.type === "cash";
-  return createCreditLog({
-    merchant_id: params.merchant_id,
-    customer_id: isCash ? null : params.customer_id,
-    amount: params.amount,
-    type: params.type,
-    description: params.description || null,
-    status: isCash ? "approved" : "awaiting_confirmation",
-    approved_at: isCash ? new Date().toISOString() : null,
-    attachment_url: params.attachment_url || null,
-  });
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function confirmCustomerEntry(logId: string): Promise<any> {
   return updateCreditLogStatus(logId, "approved", "customer");
 }

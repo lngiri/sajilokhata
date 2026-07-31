@@ -85,7 +85,7 @@ interface QRScannerProps {
   onScan: (data: string) => void;
   onError?: (error: string) => void;
   /** Called when the user clicks the X button.
-   *  Defaults to redirecting to `/dashboard`. */
+   *  Defaults to going back in history (window.history.back). */
   onClose?: () => void;
 }
 
@@ -99,6 +99,8 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
   const scanningRef = useRef(false);
   const detectorRef = useRef<BarcodeDetector | null>(null);
   const decodeLockRef = useRef(false);
+  const frameCountRef = useRef(0);
+  const hasScannedRef = useRef(false);
 
   const stopScanning = useCallback(() => {
     scanningRef.current = false;
@@ -111,6 +113,11 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
 
   const startCamera = useCallback(async () => {
     setError(null);
+    hasScannedRef.current = false;
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
@@ -124,9 +131,18 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
         scanningRef.current = true;
       }
 
-      // Simple QR detection via canvas
+      // Simple QR detection via canvas.
+      // Decode is throttled to every 2nd frame to keep the main thread
+      // responsive; jsQR runs on a downscaled frame so it stays fast on Safari.
+      const DETECT_EVERY_N_FRAMES = 2;
       const detectQR = () => {
         if (!scanningRef.current || !videoRef.current || !canvasRef.current) return;
+
+        frameCountRef.current += 1;
+        if (frameCountRef.current % DETECT_EVERY_N_FRAMES !== 0) {
+          if (scanningRef.current) requestAnimationFrame(detectQR);
+          return;
+        }
 
         const video = videoRef.current;
         const canvas = canvasRef.current;
@@ -149,7 +165,8 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
             detectorRef.current
               .detect(canvas)
               .then((results) => {
-                if (results.length > 0) {
+                if (results.length > 0 && !hasScannedRef.current && scanningRef.current) {
+                  hasScannedRef.current = true;
                   onScan(results[0].rawValue);
                   stopScanning();
                 }
@@ -157,16 +174,31 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
               .catch(() => {});
           } else if (!decodeLockRef.current) {
             decodeLockRef.current = true;
-            try {
-              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-              const code = jsQR(imageData.data, imageData.width, imageData.height);
-              if (code) {
-                onScan(code.data);
-                stopScanning();
+            // Async decode (setTimeout) keeps rAF running and makes the lock
+            // actually guard against overlapping jsQR scans.
+            setTimeout(() => {
+              try {
+                const scale = Math.min(1, 400 / (canvas.width || 1));
+                const w = Math.max(1, Math.round(canvas.width * scale));
+                const h = Math.max(1, Math.round(canvas.height * scale));
+                const temp = document.createElement("canvas");
+                temp.width = w;
+                temp.height = h;
+                const tctx = temp.getContext("2d");
+                if (tctx) {
+                  tctx.drawImage(canvas, 0, 0, w, h);
+                  const imageData = tctx.getImageData(0, 0, w, h);
+                  const code = jsQR(imageData.data, imageData.width, imageData.height);
+                  if (code && !hasScannedRef.current && scanningRef.current) {
+                    hasScannedRef.current = true;
+                    onScan(code.data);
+                    stopScanning();
+                  }
+                }
+              } finally {
+                decodeLockRef.current = false;
               }
-            } finally {
-              decodeLockRef.current = false;
-            }
+            }, 0);
           }
         }
 
@@ -187,7 +219,7 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
     if (onClose) {
       onClose();
     } else {
-      window.location.replace("/dashboard");
+      window.history.back();
     }
   }, [stopScanning, onClose]);
 
@@ -240,13 +272,24 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-6">
           <div className="text-center">
-            <p className="text-white text-sm mb-4">{error}</p>
-            <button
-              onClick={() => { setCameraStarted(false); setError(null); }}
-              className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-colors"
-            >
-              Back
-            </button>
+            <p className="text-white text-sm mb-1">{error}</p>
+            <p className="text-gray-400 text-xs mb-4 max-w-[240px]">
+              Enable camera access in your browser settings, then try again.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <button
+                onClick={() => { setCameraStarted(false); setError(null); }}
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm transition-colors"
+              >
+                Back
+              </button>
+              <button
+                onClick={() => { setError(null); startCamera(); }}
+                className="px-4 py-2 bg-[var(--color-primary-surface)] hover:bg-[var(--color-primary-surface-hover)] text-[var(--color-primary-foreground)] rounded-lg text-sm transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -259,6 +302,7 @@ export function QRScanner({ onScan, onError, onClose }: QRScannerProps) {
 
       <button
         onClick={handleClose}
+        aria-label="Close scanner"
         className="absolute top-3 right-3 w-8 h-8 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-colors z-10"
       >
         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>

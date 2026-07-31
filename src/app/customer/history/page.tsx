@@ -9,6 +9,7 @@ import { getCustomerCreditLogs, getCustomerLogCounts, updateCreditLog, cancelCre
 import TransactionIcon from "@/components/TransactionIcon";
 import { playSuccessSound } from "@/lib/sound";
 import CustomerPinGate from "@/components/CustomerPinGate";
+import PageHeader from "@/components/PageHeader";
 import { formatNumber } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 
@@ -324,26 +325,19 @@ export default function CustomerHistoryPage() {
   return (
     <CustomerPinGate phone={customerPhone || ""} onUnlocked={() => {}} onSignOut={handleSignOut}>
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-700">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center">
-            <a href="/customer/dashboard" aria-label="Back to dashboard" className="mr-3 p-1 active:scale-95 transition-transform">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-              </svg>
-            </a>
-            <h1 className="text-lg font-bold text-[var(--color-text)]">
-              {shopNameParam ? `${shopNameParam}'s Khata 📒` : "Your Khata 📒"}
-            </h1>
-          </div>
+      <PageHeader
+        title={shopNameParam ? `${shopNameParam}'s Khata 📒` : "Your Khata 📒"}
+        backHref="/customer/dashboard"
+        backLabel="Back to dashboard"
+        rightSlot={
           <button
             onClick={handleSignOut}
             className="text-xs text-[var(--color-text-muted)] px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 active:scale-95 transition-all"
           >
             Sign Out
           </button>
-        </div>
+        }
+      />
 
         {/* Filter tabs */}
         <div className="flex gap-1.5 px-4 pb-3 overflow-x-auto">
@@ -384,7 +378,6 @@ export default function CustomerHistoryPage() {
             {shopNameParam || "Shop"} &middot; View all shops
           </button>
         )}
-      </div>
 
       {/* Pending / Unverified banner — jumps straight to the pending list */}
       {!loading && stats.awaiting_confirmation > 0 && (
