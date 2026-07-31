@@ -38,7 +38,6 @@ Legend: `[ ]` pending · `[~]` in progress · `[x]` done
 
 - [x] Profile prompt: merchant created with name="Shop" — dashboard prompts to set real name
 - [ ] Verify `getCurrentMerchantId()` works after PIN-set redirect (reads `merchant_id` from localStorage)
-- [ ] Check `SyncStatus` component works with offline log queue
 - [ ] Verify `SessionHeartbeat` actually refreshes the session cookie
 
 ## Admin Panel

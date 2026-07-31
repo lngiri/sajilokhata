@@ -35,46 +35,49 @@ src/
 │   ├── loading.tsx               # Global loading spinner
 │   └── not-found.tsx             # 404 page
 │
-├── components/                   # Shared UI components (30 files)
+├── components/                   # Shared UI components (34 files)
+│   ├── AboutSheet.tsx            # "About" bottom sheet
 │   ├── ActionHub.tsx             # Floating action hub (support, refer, feedback)
 │   ├── AdminGuard.tsx            # Admin route guard (client-side)
-│   ├── AuthProvider.tsx          # React context for auth state
+│   ├── AmountSuggestions.tsx     # AI-powered amount suggestions
+│   ├── AppLogo.tsx               # Brand logo mark
 │   ├── BottomNav.tsx             # Merchant 5-tab navigation
+│   ├── BottomNavBar.tsx          # Shared bottom nav bar (safe-area, a11y)
 │   ├── CustomerBottomNav.tsx     # Customer tab navigation
 │   ├── CustomerOnboardingModal.tsx
 │   ├── CustomerPinGate.tsx       # PIN gate for customer flows
 │   ├── DescriptionSuggestions.tsx # AI-powered description suggestions
-│   ├── AmountSuggestions.tsx     # AI-powered amount suggestions
+│   ├── DoodleSpinner.tsx         # Hand-drawn loading spinner
 │   ├── FeedbackModal.tsx         # Feedback form (Formspree)
+│   ├── InsufficientCashModal.tsx # Warns when cash balance is insufficient
+│   ├── LogoWithAbout.tsx         # Logo + about sheet trigger
 │   ├── MerchantOnboardingModal.tsx
+│   ├── NavIcons.tsx              # Shared bottom-nav icons
 │   ├── NetworkStatus.tsx         # Online/offline banner
-│   ├── OfflineIndicator.tsx      # Pending sync count badge
 │   ├── OtherRolePrompt.tsx       # Prompt to register second role
+│   ├── PageHeader.tsx            # Shared page header (title/back/bells)
 │   ├── PendingApprovalModal.tsx  # Approve/reject credit edits
 │   ├── PullToRefresh.tsx         # Pull-to-refresh wrapper
 │   ├── PWAInstallBanner.tsx      # "Install app" prompt
 │   ├── QRCode.tsx                # QR display + scanner components
-│   ├── QuickAddCustomer.tsx      # Quick customer creation
 │   ├── ReferModal.tsx            # "Refer a friend" share modal
 │   ├── RoleSwitcher.tsx          # Role toggle for dual-role users
 │   ├── ServiceWorkerRegistrar.tsx # SW registration + cache-bust on version bump
 │   ├── SessionGuard.tsx          # Client-side session check + redirect
 │   ├── SessionHeartbeat.tsx      # Periodic session cookie refresh
 │   ├── SmsReminderModal.tsx      # SMS payment reminder
-│   ├── SyncStatus.tsx            # Offline sync indicator
 │   ├── ThemeSwitcher.tsx         # Dark/light theme toggle
 │   ├── Toast.tsx                 # Toast notification system
 │   ├── TransactionIcon.tsx       # Transaction type icon
 │   └── VersionGuard.tsx          # App version mismatch detection
 │
 ├── lib/                          # Shared logic
-│   ├── actions.ts                # Legacy server actions (credit logs, customers, etc.)
+│   ├── actions.ts                # Client-side helpers (profile, cash sales, verify tokens)
 │   ├── auth.ts                   # Client-side auth helpers (getCurrentMerchantId, signOut)
 │   ├── session.ts                # HMAC-SHA256 session token creation/verification
 │   ├── admin-session.ts          # Admin session token (separate HMAC key)
 │   ├── phone.ts                  # Phone number normalization (Nepal +977)
 │   ├── rate-limit.ts             # In-memory rate limiter
-│   ├── sms.ts                    # SMS sending via Aakash SMS API
 │   ├── sound.ts                  # Sound effect playback
 │   ├── version.ts                # App version helpers
 │   ├── gsm-7.ts                  # GSM-7 encoding for SMS
@@ -269,7 +272,7 @@ Full schema documentation → [`docs/database_schema.md`](docs/database_schema.m
 ## State Management
 
 - **No global state library** (no Redux, Zustand, etc.)
-- **React context**: `AuthProvider` for auth state, `Toast` for notifications
+- **React context**: `Toast` for notifications, customer session state
 - **localStorage**: `merchant_id`, `merchant_phone`, `sajilo_customer_session`, `qr_hisab_last_session`, `active_role`, `sw_version`, `pwa-install-dismissed`, theme preference
 - **IndexedDB** (via `idb`): Offline pending logs, cached customers, settings
 - **Cookies**: `session` (HTTP-only), `customer_session` (readable), admin session, OTP temp cookies
@@ -463,10 +466,8 @@ The `/merchant/settings` page enforces per-method validation before a merchant c
 ## Offline Strategy
 
 - **Service worker** (`sw.js`): Network-first for navigations + static assets, cache-fallback with `/` as last resort. Static asset list includes `/onboard`, `/merchant/billing`.
-- **IndexedDB** (`src/lib/offline/db.ts`): Pending credit logs (with optional product items), and photo attachments stored offline with per-item sync status (`"offline_pending"` | `"syncing"` | `"failed"`).
-- **Sync queue** (`src/components/SyncStatus.tsx`): Processes one log at a time with a 15-second `Promise.race` timeout. Marks item as `"syncing"` → sends to server → deletes on success, or marks `"failed"` on error/timeout. Handles two queues: credit logs (with items) and photo attachments.
-- **Sync trigger**: Auto-starts when browser transitions offline → online via `onOnlineStatusChange` callback.
-- **Offline indicator** (inline in `SyncStatus.tsx`): Shows pending count and sync status.
+- **IndexedDB** (`src/lib/offline/db.ts`): Pending credit logs (with optional product items) and photo attachments saved offline by the scan flows via `savePendingLog` / `savePendingAttachment`.
+- **Network status** (`src/components/NetworkStatus.tsx`): Shows an online/offline banner using `isOnline` + `onOnlineStatusChange`.
 - **Auth routes bypassed**: `/login`, `/api/auth/*` never cached by SW.
 - **Formspree bypassed**: Feedback form POSTs go directly to network.
 

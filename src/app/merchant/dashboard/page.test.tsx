@@ -15,10 +15,6 @@ vi.mock("@/components/Toast", () => ({
   useToast: () => ({ addToast: vi.fn() }),
 }));
 
-vi.mock("@/components/SyncStatus", () => ({
-  default: () => <div data-testid="sync-status">Sync</div>,
-}));
-
 vi.mock("@/components/PullToRefresh", () => ({
   default: ({ children }: any) => <>{children}</>,
 }));

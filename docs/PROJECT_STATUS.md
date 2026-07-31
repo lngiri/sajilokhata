@@ -97,9 +97,9 @@
 
 ---
 
-## 3. Components (29)
+## 3. Components (34)
 
-ActionHub, AdminGuard, AmountSuggestions, AuthProvider, BottomNav, CustomerBottomNav, CustomerOnboardingModal, CustomerPinGate, DescriptionSuggestions, FeedbackModal, MerchantOnboardingModal, NetworkStatus, OtherRolePrompt, PendingApprovalModal, PullToRefresh, PWAInstallBanner, QRCode, QuickAddCustomer, ReferModal, RoleSwitcher, ServiceWorkerRegistrar, SessionGuard, SessionHeartbeat, SmsReminderModal, SyncStatus, ThemeSwitcher, Toast, TransactionIcon, VersionGuard
+AboutSheet, ActionHub, AdminGuard, AmountSuggestions, AppLogo, BottomNav, BottomNavBar, CustomerBottomNav, CustomerOnboardingModal, CustomerPinGate, DescriptionSuggestions, DoodleSpinner, FeedbackModal, InsufficientCashModal, LogoWithAbout, MerchantOnboardingModal, NavIcons, NetworkStatus, OtherRolePrompt, PageHeader, PendingApprovalModal, PullToRefresh, PWAInstallBanner, QRCode, ReferModal, RoleSwitcher, ServiceWorkerRegistrar, SessionGuard, SessionHeartbeat, SmsReminderModal, ThemeSwitcher, Toast, TransactionIcon, VersionGuard
 
 ---
 

@@ -382,15 +382,16 @@ Customer opens /verify?token=...
 ## 19. Component Architecture
 
 - **No global state library** (no Redux/Zustand).
-- **React Context:** `AuthProvider`, `Toast`.
+- **React Context:** `Toast`, customer session state.
 - **Key reusable components:**
-  - `BottomNav` / `CustomerBottomNav` — role-specific tab navigation.
+  - `BottomNav` / `CustomerBottomNav` / `BottomNavBar` — role-specific tab navigation.
   - `RoleSwitcher` — toggles between merchant/customer views.
   - `OtherRolePrompt` — encourages adding the second role.
   - `MerchantOnboardingModal` / `CustomerOnboardingModal` — profile completeness gates.
   - `CustomerPinGate` — PIN re-prompt for customer flows.
   - `QRCode` — QR display + scanner (html5-qrcode).
-  - `SyncStatus` / `OfflineIndicator` — offline queue UI.
+  - `NetworkStatus` — online/offline banner.
+  - `PageHeader` — shared page header.
   - `PendingApprovalModal` — post-submission confirmation.
   - `PullToRefresh` — mobile pull-to-refresh wrapper.
   - `Toast` — in-app toast notifications.
@@ -481,7 +482,6 @@ Customer opens /verify?token=...
 - `CustomerPinGate`.
 - `PendingApprovalModal`.
 - `PullToRefresh`.
-- `SyncStatus` / `OfflineIndicator`.
 - `NetworkStatus`.
 - `ActionHub`.
 - `SessionGuard` / `AdminGuard`.
@@ -497,7 +497,7 @@ Customer opens /verify?token=...
 1. **Authentication/session logic** (`lib/session.ts`, `app/actions/pin.ts`, `middleware.ts`, `app/api/auth/session/route.ts`).
 2. **Onboarding gate refs** — removing the `useRef(false)` guard will reintroduce infinite render crashes.
 3. **Credit limit trigger** — changes to `check_credit_limit()` or `credit_logs` status logic can allow over-limit transactions.
-4. **Offline sync** (`lib/offline/db.ts`, `components/SyncStatus.tsx`) — mishandling queues causes data loss.
+4. **Offline saves** (`lib/offline/db.ts`, scan flows) — pending logs/attachments are written to IndexedDB but no auto-flush exists; mishandling can cause data loss.
 5. **eSewa callback signature verification** — weakening it enables payment fraud.
 6. **SMS balance guard** — bypassing it allows free SMS abuse.
 7. **Customer data isolation** in `merchant.ts` server actions (`requireMerchant()` + `eq("merchant_id", merchantId)`).
