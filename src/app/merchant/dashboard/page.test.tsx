@@ -215,7 +215,7 @@ describe("MerchantDashboard", () => {
     });
 
     expect(screen.getByText("Reports")).toBeInTheDocument();
-    expect(screen.getByText("Add Cash Out")).toBeInTheDocument();
+    expect(screen.getByText("Note your Purchase or Expenses")).toBeInTheDocument();
   });
 
   it("renders bottom navigation", async () => {
