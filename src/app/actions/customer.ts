@@ -1010,24 +1010,34 @@ export async function submitCustomerEntry(params: {
       }
     }
 
+    // Only include idempotency_key when provided — avoids a 42703 crash on
+    // production DBs where the column has not been deployed yet (migration 043).
+    const insertData: Record<string, unknown> = {
+      merchant_id: params.merchant_id,
+      customer_id: customer.id,
+      amount: params.amount,
+      type: params.type,
+      description: params.description || null,
+      status: "awaiting_confirmation",
+      approved_at: null,
+      sync_status: "online",
+      initiated_by: "customer",
+    };
+    if (params.idempotency_key) {
+      insertData.idempotency_key = params.idempotency_key;
+    }
+
     const { data, error } = await (admin.from("credit_logs") as any)
-      .insert({
-        merchant_id: params.merchant_id,
-        customer_id: customer.id,
-        amount: params.amount,
-        type: params.type,
-        description: params.description || null,
-        status: "awaiting_confirmation",
-        approved_at: null,
-        sync_status: "online",
-        idempotency_key: params.idempotency_key || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
     if (error) {
       console.error("[Customer] submitCustomerEntry insert error:", error);
-      return { success: false, error: `Database error: ${error.message}` };
+      return {
+        success: false,
+        error: `Database error (${error.code || "unknown"}): ${error.message}`,
+      };
     }
 
     createNotification({

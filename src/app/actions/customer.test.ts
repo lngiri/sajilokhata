@@ -29,6 +29,18 @@ vi.mock("./sms", () => ({
 
 type QueryResult = { data?: unknown; error?: unknown };
 
+function findCreditLogsInsert(admin: any) {
+  for (let i = 0; i < admin.from.mock.calls.length; i++) {
+    if (admin.from.mock.calls[i][0] === "credit_logs") {
+      const builder = admin.from.mock.results[i].value;
+      if (builder.insert.mock.calls.length > 0) {
+        return builder.insert.mock.calls[0][0];
+      }
+    }
+  }
+  return null;
+}
+
 function makeAdmin(handlers: Record<string, QueryResult[]>) {
   const queues: Record<string, QueryResult[]> = {};
   for (const [table, items] of Object.entries(handlers)) {
@@ -131,6 +143,15 @@ describe("submitCustomerEntry", () => {
       success: true,
       entry: { id: "cl1", status: "awaiting_confirmation" },
     });
+    expect(findCreditLogsInsert(admin)).toMatchObject({
+      merchant_id: "m1",
+      customer_id: "c1",
+      amount: 500,
+      type: "debit",
+      status: "awaiting_confirmation",
+      initiated_by: "customer",
+      idempotency_key: "key-1",
+    });
   });
 
   it("creates the customer row for a scan/walk-up customer and saves the entry", async () => {
@@ -181,6 +202,57 @@ describe("submitCustomerEntry", () => {
     expect(result).toEqual({
       success: false,
       error: "Database connection unavailable",
+    });
+  });
+
+  it("omits idempotency_key from the insert when none is provided", async () => {
+    const admin = makeAdmin({
+      merchants: [{ data: { id: "m1", name: "Shop" } }],
+      customers: [{ data: { id: "c1", name: "Hari", phone: "+9779841234567" } }],
+      merchant_customers: [{ data: { id: "mc1" } }],
+      credit_logs: [{ data: { id: "cl1", status: "awaiting_confirmation" } }],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const { idempotency_key, ...params } = VALID_PARAMS;
+    const result = await submitCustomerEntry(params);
+    expect(result.success).toBe(true);
+
+    const payload = findCreditLogsInsert(admin);
+    expect(payload).not.toHaveProperty("idempotency_key");
+    expect(payload).toMatchObject({
+      merchant_id: "m1",
+      customer_id: "c1",
+      amount: 500,
+      type: "debit",
+      status: "awaiting_confirmation",
+      initiated_by: "customer",
+    });
+  });
+
+  it("surfaces the postgres error code when the insert fails", async () => {
+    const admin = makeAdmin({
+      merchants: [{ data: { id: "m1", name: "Shop" } }],
+      customers: [{ data: { id: "c1", name: "Hari", phone: "+9779841234567" } }],
+      merchant_customers: [{ data: { id: "mc1" } }],
+      credit_logs: [
+        { data: null },
+        {
+          data: null,
+          error: {
+            code: "42703",
+            message: "column idempotency_key of relation credit_logs does not exist",
+          },
+        },
+      ],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const result = await submitCustomerEntry(VALID_PARAMS);
+    expect(result).toEqual({
+      success: false,
+      error:
+        "Database error (42703): column idempotency_key of relation credit_logs does not exist",
     });
   });
 });

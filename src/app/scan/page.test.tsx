@@ -170,7 +170,7 @@ describe("ScanPage", () => {
     });
     mockSubmitCustomerEntry.mockResolvedValue({
       success: false,
-      error: "Database error",
+      error: "Database error (42703): column idempotency_key of relation credit_logs does not exist",
     });
 
     render(<ScanPage />);
@@ -190,7 +190,7 @@ describe("ScanPage", () => {
 
     await waitFor(() => {
       expect(mockAddToast).toHaveBeenCalledWith(
-        "Failed to submit. Please try again.",
+        "Database error (42703): column idempotency_key of relation credit_logs does not exist",
         "error"
       );
     });

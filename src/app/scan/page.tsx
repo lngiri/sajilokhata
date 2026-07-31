@@ -103,7 +103,8 @@ export default function ScanPage() {
         });
 
         if (!result.success) {
-          throw new Error(result.error || "Failed to submit entry");
+          addToast(result.error || "Failed to submit entry", "error");
+          return;
         }
 
         addToast(
