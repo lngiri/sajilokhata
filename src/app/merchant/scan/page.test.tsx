@@ -902,5 +902,60 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
         expect(screen.getByText(/No customers found matching/)).toBeInTheDocument();
       });
     });
+
+    it("searches by name in the default Cash Sale (manual) mode", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
+        success: true,
+        entry: { id: "e1", status: "approved" },
+      });
+      vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
+      ]);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+      expect(searchInput).not.toBeDisabled();
+
+      await user.type(searchInput, "Ram");
+
+      await waitFor(() => {
+        expect(screen.getByText("Ram Kumar")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Ram Kumar"));
+
+      await waitFor(() => {
+        expect((searchInput as HTMLInputElement).value).toBe("Ram Kumar");
+      });
+
+      await user.type(screen.getAllByPlaceholderText("0")[0], "1500");
+      await user.type(screen.getByPlaceholderText(/e\.g\. Grocery items/), "Grocery items");
+      await user.click(screen.getByText("Continue"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Confirm Entry")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => {
+        expect(screen.getByText("Entry Saved! 🎉")).toBeInTheDocument();
+      });
+
+      expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({
+          customer_id: "c1",
+          customer_phone: "9841234567",
+          customer_name: "Ram Kumar",
+          amount: 1500,
+          type: "cash",
+        })
+      );
+    });
   });
 });

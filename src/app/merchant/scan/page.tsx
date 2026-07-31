@@ -474,14 +474,13 @@ export default function MerchantScanPage() {
               {/* Customer search (name or phone) with auto-detect */}
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">
-                  {(entryType === "cash" || entryType === "cash_in" || entryType === "expense") ? (entryType === "expense" ? "Supplier Phone (Optional)" : "Customer Phone (Optional)") : "Customer Name or Phone"}
+                  {(entryType === "cash" || entryType === "cash_in" || entryType === "expense") ? (entryType === "expense" ? "Supplier Name or Phone (Optional)" : "Customer Name or Phone (Optional)") : "Customer Name or Phone"}
                 </label>
                 <div className="relative mt-1">
                   <input
                     type="text"
                     placeholder="Search name or phone (98XXXXXXXX)"
                     value={searchQuery}
-                    disabled={entryType === "cash" || entryType === "cash_in" || entryType === "expense"}
                     onChange={(e) => {
                       const val = e.target.value.slice(0, 60);
                       setSearchQuery(val);
@@ -493,8 +492,6 @@ export default function MerchantScanPage() {
                       setSuggestions([]);
 
                       const isImmediate = entryType === "cash" || entryType === "cash_in" || entryType === "expense";
-                      if (isImmediate) return;
-
                       const isNumeric = /^\d+$/.test(val);
                       const isFullPhone = isNumeric && val.length === 10;
 
@@ -507,16 +504,7 @@ export default function MerchantScanPage() {
                             const result = await checkCustomerByPhone(val);
                             if (searchQueryRef.current !== val) return;
                             if (result.exists && result.customer) {
-                              setCustomerId(result.customer.id);
-                              setCustomerPhone(result.customer.phone);
-                              setCustomerName(result.customer.name);
-                              setCustomerLookup("found");
-                              if (merchantId) {
-                                try {
-                                  const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
-                                  setCustomerBalance(balance);
-                                } catch { setCustomerBalance(null); }
-                              }
+                              selectCustomer(result.customer);
                             } else {
                               setCustomerId(null);
                               setCustomerPhone(val);
@@ -537,9 +525,9 @@ export default function MerchantScanPage() {
                       const trimmed = val.trim();
                       if (trimmed.length < 2) {
                         setCustomerId(null);
-                        setCustomerPhone(val);
                         setCustomerName(null);
                         setCustomerBalance(null);
+                        setCustomerPhone(!isImmediate && isNumeric ? val : "");
                         setSearchingSuggestions(false);
                         return;
                       }
@@ -555,6 +543,9 @@ export default function MerchantScanPage() {
                           // Auto-select when an exact 10-digit phone matches a single customer
                           if (matches.length === 1 && isNumeric && normalizePhone(matches[0].phone) === normalizePhone(val)) {
                             selectCustomer(matches[0]);
+                          } else if (!isImmediate && isNumeric) {
+                            // Keep the typed phone so Continue still works without an exact match
+                            setCustomerPhone(val);
                           }
                         } catch {
                           if (searchQueryRef.current === val) setSearchingSuggestions(false);
