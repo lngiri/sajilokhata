@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import MerchantsDashboard from "./page";
 
 vi.mock("@/components/QRCode", () => ({
@@ -104,6 +105,7 @@ vi.mock("@/app/actions/notifications", () => ({
 
 const mockMerchantActions = await import("@/app/actions/merchant");
 const mockAuth = await import("@/lib/auth");
+const mockLibActions = await import("@/lib/actions");
 
 const mockDashboardData = {
   profile: {
@@ -175,18 +177,25 @@ describe("MerchantDashboard", () => {
     vi.clearAllMocks();
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
     vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue(mockDashboardData);
+    vi.mocked(mockMerchantActions.updateCreditLogStatus).mockResolvedValue({});
+    vi.mocked(mockLibActions.acceptEditRequest).mockResolvedValue({});
+    vi.mocked(mockLibActions.rejectEditRequest).mockResolvedValue({});
+    vi.mocked(mockAuth.signOut).mockResolvedValue(undefined as any);
   });
 
   it("renders stats cards after loading", async () => {
+    const user = userEvent.setup();
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
       expect(screen.getByText("Credit on Market")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Today's Due Collection")).toBeInTheDocument();
+    expect(screen.getByText("Today's Net Credit")).toBeInTheDocument();
     expect(screen.getByText("Today's Cash Sales")).toBeInTheDocument();
-    expect(screen.getByText("Today Cr. Sales")).toBeInTheDocument();
+    expect(screen.getByText("Today's Credit Sales")).toBeInTheDocument();
+
+    await user.click(screen.getByText("More Stats"));
     expect(screen.getByText("All Sales")).toBeInTheDocument();
     expect(screen.getByText("Cash in Hand")).toBeInTheDocument();
   });
@@ -231,14 +240,22 @@ describe("MerchantDashboard", () => {
     });
   });
 
-  it("renders quick actions", async () => {
+  it("shows New Entry hero and collapsible More Stats", async () => {
+    const user = userEvent.setup();
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      expect(screen.getByText("New Entry")).toBeInTheDocument();
     });
 
+    expect(screen.getByText("Products")).toBeInTheDocument();
     expect(screen.getByText("Reports")).toBeInTheDocument();
+    expect(screen.queryByText("All Sales")).not.toBeInTheDocument();
+
+    await user.click(screen.getByText("More Stats"));
+
+    expect(screen.getByText("All Sales")).toBeInTheDocument();
+    expect(screen.getByText("Cash in Hand")).toBeInTheDocument();
     expect(screen.getByText("Total Purchase and Expenses")).toBeInTheDocument();
     expect(screen.getByText("Add your Purchase or expenses")).toBeInTheDocument();
   });
@@ -264,5 +281,137 @@ describe("MerchantDashboard", () => {
     // Check call button link
     const callLink = screen.getByLabelText("Call Hari");
     expect(callLink).toHaveAttribute("href", "tel:9841234567");
+  });
+
+  it("renders pending requests with inline approve/reject", async () => {
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Pending Requests")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: "Approve" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject" })).toBeInTheDocument();
+  });
+
+  it("approves an awaiting_confirmation entry inline", async () => {
+    const user = userEvent.setup();
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Pending Requests")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+
+    await waitFor(() => {
+      expect(mockMerchantActions.updateCreditLogStatus).toHaveBeenCalledWith("cl1", "approved");
+    });
+  });
+
+  it("rejects an awaiting_confirmation entry inline", async () => {
+    const user = userEvent.setup();
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Pending Requests")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+
+    await waitFor(() => {
+      expect(mockMerchantActions.updateCreditLogStatus).toHaveBeenCalledWith("cl1", "rejected");
+    });
+  });
+
+  it("accepts an edit request inline", async () => {
+    const user = userEvent.setup();
+    vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
+      ...mockDashboardData,
+      awaitingLogs: [
+        {
+          id: "cl-edit",
+          amount: 500,
+          type: "debit" as const,
+          status: "edit_requested",
+          description: "Rice 10kg",
+          proposed_amount: 450,
+          created_at: "2025-01-15T10:00:00Z",
+          attachment_url: null,
+          customer_id: "c1",
+          customers: { name: "Hari", phone: "9841234567" },
+        },
+      ],
+    });
+
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Pending Requests")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Accept" }));
+
+    await waitFor(() => {
+      expect(mockLibActions.acceptEditRequest).toHaveBeenCalledWith("cl-edit");
+    });
+  });
+
+  it("declines an edit request inline", async () => {
+    const user = userEvent.setup();
+    vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
+      ...mockDashboardData,
+      awaitingLogs: [
+        {
+          id: "cl-edit",
+          amount: 500,
+          type: "debit" as const,
+          status: "edit_requested",
+          description: "Rice 10kg",
+          proposed_amount: 450,
+          created_at: "2025-01-15T10:00:00Z",
+          attachment_url: null,
+          customer_id: "c1",
+          customers: { name: "Hari", phone: "9841234567" },
+        },
+      ],
+    });
+
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Pending Requests")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Decline" }));
+
+    await waitFor(() => {
+      expect(mockLibActions.rejectEditRequest).toHaveBeenCalledWith("cl-edit");
+    });
+  });
+
+  it("requires confirmation before signing out", async () => {
+    const user = userEvent.setup();
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("New Entry")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Menu"));
+    await user.click(screen.getByText("Sign Out"));
+
+    expect(screen.getByText("Sign out?")).toBeInTheDocument();
+    await user.click(screen.getByText("Cancel"));
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+
+    await user.click(screen.getByLabelText("Menu"));
+    await user.click(screen.getByText("Sign Out"));
+    await user.click(screen.getByRole("button", { name: "Sign Out" }));
+
+    expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
   });
 });

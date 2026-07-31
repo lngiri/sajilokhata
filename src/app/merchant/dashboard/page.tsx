@@ -108,6 +108,9 @@ export default function MerchantDashboard() {
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [handlingLogId, setHandlingLogId] = useState<string | null>(null);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showMoreStats, setShowMoreStats] = useState(false);
 
   const [topReceivables, setTopReceivables] = useState<Array<{
     customer_id: string;
@@ -134,6 +137,9 @@ export default function MerchantDashboard() {
   const mountedRef = useRef(true);
   const merchantIdRef = useRef<string | null>(null);
   const onboardedRef = useRef(false);
+  // IDs of logs the merchant just acted on, so realtime UPDATE events
+  // triggered by their own action don't re-toast them.
+  const selfActedLogsRef = useRef<Map<string, number>>(new Map());
 
   const topAwaitingLogs = useMemo(() => awaitingLogs.slice(0, 3), [awaitingLogs]);
   const displayedActivity = useMemo(() => recentActivity.slice(0, 10), [recentActivity]);
@@ -343,6 +349,10 @@ export default function MerchantDashboard() {
           const oldStatus = payload.old?.status;
           const newStatus = payload.new?.status;
           if (oldStatus !== newStatus && newStatus) {
+            if (isSelfAction(payload.new?.id)) {
+              loadData();
+              return;
+            }
             if (newStatus === "approved") {
               playSuccessSound();
             }
@@ -362,9 +372,7 @@ export default function MerchantDashboard() {
     };
   }, [merchantId, addToast, loadData, loadNotifications, supabase]);
 
-  // ================================================================
-  // Issue 3: Handle pull-to-refresh — show QR modal + silent refetch
-  // ================================================================
+  // Pull-to-refresh — silent refetch of dashboard data
   const handlePullRefresh = async () => {
     try {
       await loadData();
@@ -380,6 +388,62 @@ export default function MerchantDashboard() {
       router.refresh();
     } finally {
       setTimeout(() => setIsRefreshing(false), 2000);
+    }
+  };
+
+  const isSelfAction = (logId?: string) => {
+    if (!logId) return false;
+    const ts = selfActedLogsRef.current.get(logId);
+    return !!ts && Date.now() - ts < 30_000;
+  };
+
+  const handleApproveLog = async (log: (typeof awaitingLogs)[number]) => {
+    setHandlingLogId(log.id);
+    selfActedLogsRef.current.set(log.id, Date.now());
+    try {
+      if (log.status === "edit_requested") {
+        await acceptEditRequest(log.id);
+        addToast("Edit request accepted.", "success");
+      } else {
+        await updateCreditLogStatus(log.id, "approved");
+        playSuccessSound();
+        addToast("Entry approved!", "success", {
+          label: "Undo",
+          onClick: async () => {
+            selfActedLogsRef.current.set(log.id, Date.now());
+            try {
+              await updateCreditLogStatus(log.id, "awaiting_confirmation");
+              loadData();
+            } catch { /* ignore */ }
+          },
+        });
+      }
+      setPendingLogs((prev) => prev.filter((l) => l.id !== log.id));
+    } catch (e: any) {
+      addToast(e?.message || "Failed to approve. Please try again.", "error");
+      loadData();
+    } finally {
+      setHandlingLogId(null);
+    }
+  };
+
+  const handleRejectLog = async (log: (typeof awaitingLogs)[number]) => {
+    setHandlingLogId(log.id);
+    selfActedLogsRef.current.set(log.id, Date.now());
+    try {
+      if (log.status === "edit_requested") {
+        await rejectEditRequest(log.id);
+        addToast("Edit request declined.", "warning");
+      } else {
+        await updateCreditLogStatus(log.id, "rejected");
+        addToast("Entry rejected.", "warning");
+      }
+      setPendingLogs((prev) => prev.filter((l) => l.id !== log.id));
+    } catch (e: any) {
+      addToast(e?.message || "Failed to reject. Please try again.", "error");
+      loadData();
+    } finally {
+      setHandlingLogId(null);
     }
   };
 
@@ -451,13 +515,13 @@ export default function MerchantDashboard() {
             <a
               href="/merchant/billing"
               className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform"
-              aria-label={`${smsBalance ?? 0} SMS credits`}
+              aria-label={`${smsBalance === null ? "SMS credits" : `${smsBalance} SMS credits`}`}
             >
               <div className="flex items-center gap-1 px-2 py-1.5 bg-[var(--color-primary)]/5 text-[var(--color-primary-dark)] rounded-full text-[10px] font-semibold border border-[var(--color-primary)]/20">
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V9.844a2.25 2.25 0 011.183-1.981l6.478-3.488m8.839 2.51l-4.66-2.51" />
                 </svg>
-                {smsBalance ?? 0}
+                {smsBalance === null ? "…" : smsBalance}
               </div>
             </a>
             <div ref={notificationRef}>
@@ -662,15 +726,44 @@ export default function MerchantDashboard() {
               </a>
 
               <button
-                onClick={async () => {
+                onClick={() => {
                   setShowProfileMenu(false);
-                  await signOut();
+                  setShowSignOutConfirm(true);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50 transition-colors"
               >
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                 </svg>
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sign out confirmation modal */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-6">
+          <div className="bg-[var(--color-surface)] rounded-2xl p-5 w-full max-w-sm shadow-xl">
+            <h3 className="text-base font-bold text-[var(--color-text)]">Sign out?</h3>
+            <p className="text-sm text-[var(--color-text-muted)] mt-1">
+              You&apos;ll need to log in again with your PIN to continue.
+            </p>
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  setShowSignOutConfirm(false);
+                  await signOut();
+                }}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
+              >
                 Sign Out
               </button>
             </div>
@@ -752,7 +845,7 @@ export default function MerchantDashboard() {
                 <p className="text-lg sm:text-xl font-bold text-[var(--color-danger)] truncate">Rs. {stats.totalOutstanding.toLocaleString()}</p>
               </a>
               <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Due Collection</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Net Credit</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--color-primary)] truncate">Rs. {stats.todayTotal.toLocaleString()}</p>
               </a>
               <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
@@ -760,52 +853,102 @@ export default function MerchantDashboard() {
                 <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.totalCashSales.toLocaleString()}</p>
               </a>
               <a href="/merchant/logs?filter=debit" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today Cr. Sales</p>
+                <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Credit Sales</p>
                 <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400 truncate">Rs. {(stats.todayCreditSales ?? 0).toLocaleString()}</p>
               </a>
             </div>
           )}
-          {statsLoading ? (
-            <div className="grid grid-cols-2 gap-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
-                  <div className="h-3 w-16 bg-gray-100 dark:bg-gray-700 rounded animate-pulse mb-2" />
-                  <div className="h-6 w-20 bg-gray-200 dark:bg-gray-600 rounded animate-pulse" />
+
+          {/* Primary action: New Entry */}
+          <a
+            href="/merchant/scan?manual=true"
+            className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white rounded-2xl font-semibold text-base shadow-sm active:scale-[0.98] transition-transform"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            New Entry
+          </a>
+
+            {/* Pending Requests */}
+            {awaitingLogs.length > 0 && (
+              <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="font-semibold text-[var(--color-text)] flex items-center gap-2">
+                    Pending Requests
+                    <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] font-semibold">
+                      {awaitingLogs.length}
+                    </span>
+                  </h2>
+                  <a
+                    href="/merchant/logs"
+                    className="text-xs text-[var(--color-primary)] font-medium active:opacity-70 py-2"
+                  >
+                    View All →
+                  </a>
                 </div>
-              ))}
-            </div>
-          ) : stats && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
-                  <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
-                </a>
-                <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
-                  <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
-                </a>
+                <div className="space-y-2">
+                  {awaitingLogs.map((log) => {
+                    const isHandling = handlingLogId === log.id;
+                    const isEdit = log.status === "edit_requested";
+                    const name = log.customers?.name || log.customers?.phone || "Unknown";
+                    return (
+                      <div
+                        key={log.id}
+                        className="rounded-xl border border-[var(--color-border)] p-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-amber-600">
+                              {name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-[var(--color-text)] truncate">
+                              {name}
+                            </p>
+                            <p className="text-[10px] text-[var(--color-text-muted)] truncate">
+                              {log.description || timeAgo(log.created_at)}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            {isEdit && log.proposed_amount !== null ? (
+                              <p className="text-xs font-bold text-[var(--color-text)]">
+                                <span className="text-[var(--color-text-muted)] line-through">Rs. {log.amount.toLocaleString()}</span>{" "}
+                                → Rs. {log.proposed_amount.toLocaleString()}
+                              </p>
+                            ) : (
+                              <p className="text-xs font-bold text-[var(--color-danger)]">
+                                Rs. {log.amount.toLocaleString()}
+                              </p>
+                            )}
+                            <p className="text-[9px] text-[var(--color-text-muted)]">
+                              {timeAgo(log.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-[var(--color-border)]">
+                          <button
+                            onClick={() => handleRejectLog(log)}
+                            disabled={isHandling}
+                            className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+                          >
+                            {isEdit ? "Decline" : "Reject"}
+                          </button>
+                          <button
+                            onClick={() => handleApproveLog(log)}
+                            disabled={isHandling}
+                            className="flex-1 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+                          >
+                            {isHandling ? "Processing…" : isEdit ? "Accept" : "Approve"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-              <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
-                <a href="/merchant/logs?filter=expense" className="block flex-1 min-w-0 active:scale-[0.98] transition-transform">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Purchase and Expenses</p>
-                  <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {stats.totalExpenses.toLocaleString()}</p>
-                </a>
-                <a
-                  href="/merchant/scan?manual=true&type=expense"
-                  aria-label="Add your Purchase or expenses"
-                  className="flex flex-col items-center gap-1 shrink-0 active:scale-[0.98] transition-transform"
-                >
-                  <span className="w-14 h-14 rounded-full bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] flex items-center justify-center shadow-sm">
-                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
-                    </svg>
-                  </span>
-                  <span className="text-[10px] text-[var(--color-text-muted)] text-center leading-tight">Add your Purchase or expenses</span>
-                </a>
-              </div>
-            </>
-          )}
+            )}
 
             {/* Low SMS Balance Warning */}
             {smsBalance !== null && smsBalance <= 5 && (
@@ -826,17 +969,57 @@ export default function MerchantDashboard() {
               </a>
             )}
 
-            {/* Quick Actions */}
-            <div className="grid grid-cols-2 gap-3">
-              <a
-                href="/merchant/scan?manual=true"
-                className="flex items-center justify-center gap-2 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+            {/* More Stats (collapsible) */}
+            <button
+              onClick={() => setShowMoreStats((v) => !v)}
+              aria-expanded={showMoreStats}
+              className="w-full flex items-center justify-between px-4 py-3 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform"
+            >
+              <span className="text-xs font-semibold text-[var(--color-text-muted)]">
+                More Stats
+              </span>
+              <svg
+                className={`w-4 h-4 text-[var(--color-text-muted)] transition-transform ${showMoreStats ? "rotate-180" : ""}`}
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Manual Entry
-              </a>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+            </button>
+            {showMoreStats && stats && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
+                    <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
+                  </a>
+                  <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
+                    <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
+                  </a>
+                </div>
+                <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
+                  <a href="/merchant/logs?filter=expense" className="block flex-1 min-w-0 active:scale-[0.98] transition-transform">
+                    <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Purchase and Expenses</p>
+                    <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {stats.totalExpenses.toLocaleString()}</p>
+                  </a>
+                  <a
+                    href="/merchant/scan?manual=true&type=expense"
+                    aria-label="Add your Purchase or expenses"
+                    className="flex flex-col items-center gap-1 shrink-0 active:scale-[0.98] transition-transform"
+                  >
+                    <span className="w-14 h-14 rounded-full bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] flex items-center justify-center shadow-sm">
+                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
+                      </svg>
+                    </span>
+                    <span className="text-[10px] text-[var(--color-text-muted)] text-center leading-tight">Add your Purchase or expenses</span>
+                  </a>
+                </div>
+              </>
+            )}
+
+            {/* Secondary actions */}
+            <div className="grid grid-cols-2 gap-3">
               <a
                 href="/merchant/products"
                 className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
@@ -846,16 +1029,16 @@ export default function MerchantDashboard() {
                 </svg>
                 Products
               </a>
+              <a
+                href="/merchant/reports"
+                className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+                </svg>
+                Reports
+              </a>
             </div>
-            <a
-              href="/merchant/reports"
-              className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
-              </svg>
-              Reports
-            </a>
 
             {/* Smart Receivables Section */}
             {topReceivables.length > 0 && (
