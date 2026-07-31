@@ -21,10 +21,12 @@ vi.mock("@/lib/auth", () => ({
 
 vi.mock("@/app/actions/merchant", () => ({
   getMerchantCustomerDetail: vi.fn(),
+  getCustomerTransactions: vi.fn(),
   updateCustomerCreditLimit: vi.fn(),
   updateCustomerTrustStatus: vi.fn(),
   getAuditLogsForCreditLog: vi.fn(),
   getMerchantProfile: vi.fn(),
+  resetCustomerPin: vi.fn(),
 }));
 
 vi.mock("@/app/actions/sms-billing", () => ({
@@ -89,6 +91,7 @@ const mockCustomerDetail = {
   transactions: mockLogs,
   trust_status: "good",
   trust_notes: null,
+  trust_flagged_by_me: false,
 };
 
 describe("CustomerDetailPage", () => {
@@ -210,5 +213,247 @@ describe("CustomerDetailPage", () => {
 
     const backButton = document.querySelector("button");
     expect(backButton).toBeInTheDocument();
+  });
+
+  it("shows a not-found state when the customer does not exist", async () => {
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue(
+      null as any
+    );
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Customer not found")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Back to Customers")).toBeInTheDocument();
+  });
+
+  it("loads more transactions and hides the button when exhausted", async () => {
+    const fifty = Array.from({ length: 50 }, (_, i) => ({
+      id: `tx${i}`,
+      amount: 100,
+      type: "debit",
+      status: "approved",
+      description: `Tx ${i}`,
+      created_at: `2025-01-0${(i % 9) + 1}T10:00:00Z`,
+      attachment_url: null,
+      initiated_by: null,
+      ip_address: null,
+      device_info: null,
+    }));
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue({
+      ...mockCustomerDetail,
+      transactions: fifty,
+    });
+    vi.mocked(mockMerchantActions.getCustomerTransactions).mockResolvedValue({
+      transactions: [
+        {
+          id: "tx50",
+          amount: 250,
+          type: "credit",
+          status: "approved",
+          description: "Extra old payment",
+          created_at: "2024-12-01T10:00:00Z",
+          attachment_url: null,
+          initiated_by: null,
+          ip_address: null,
+          device_info: null,
+        },
+      ],
+      hasMore: false,
+    });
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Load More")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Load More"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Extra old payment")).toBeInTheDocument();
+    });
+
+    expect(mockMerchantActions.getCustomerTransactions).toHaveBeenCalledWith(
+      "m1",
+      "c1",
+      50
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("Load More")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows transaction details (incl. device) in the audit modal and closes on Escape", async () => {
+    vi.mocked(mockMerchantActions.getAuditLogsForCreditLog).mockResolvedValue(
+      []
+    );
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue({
+      ...mockCustomerDetail,
+      transactions: [
+        {
+          ...mockLogs[0],
+          ip_address: "192.168.1.1",
+          device_info: "Android 14",
+        },
+      ],
+    });
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Rice 10kg")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Rice 10kg"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Transaction Details")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Android 14 · 192.168.1.1/)).toBeInTheDocument();
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("Transaction Details")
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  it("closes the flag modal on Escape", async () => {
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Flag")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Flag"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Flag Customer")).toBeInTheDocument();
+    });
+
+    await userEvent.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByText("Flag Customer")).not.toBeInTheDocument();
+    });
+  });
+
+  it("disables Clear Flag when another merchant owns the flag", async () => {
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue({
+      ...mockCustomerDetail,
+      trust_status: "defaulter",
+      trust_notes: "Repeated late payments",
+      trust_flagged_by_me: false,
+    });
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Clear Flag")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Clear Flag")).toBeDisabled();
+  });
+
+  it("clears the flag only after confirmation when the merchant owns it", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue({
+      ...mockCustomerDetail,
+      trust_status: "warning",
+      trust_notes: "Slow payer",
+      trust_flagged_by_me: true,
+    });
+    vi.mocked(mockMerchantActions.updateCustomerTrustStatus).mockResolvedValue({
+      success: true,
+    });
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Clear Flag")).toBeInTheDocument();
+    });
+
+    // Declined confirmation -> no server call
+    await userEvent.click(screen.getByText("Clear Flag"));
+    expect(
+      mockMerchantActions.updateCustomerTrustStatus
+    ).not.toHaveBeenCalled();
+
+    // Accepted confirmation -> clear call
+    confirmSpy.mockReturnValue(true);
+    await userEvent.click(screen.getByText("Clear Flag"));
+
+    await waitFor(() => {
+      expect(
+        mockMerchantActions.updateCustomerTrustStatus
+      ).toHaveBeenCalledWith("m1", "c1", "clear");
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it("allows paisa-precision credit limits (step any)", async () => {
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Edit Limit")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Edit Limit"));
+
+    const input = screen.getByDisplayValue("5000") as HTMLInputElement;
+    expect(input.step).toBe("any");
+  });
+
+  it("resets the customer PIN after confirmation", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.mocked(mockMerchantActions.resetCustomerPin).mockResolvedValue({
+      success: true,
+    });
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Reset PIN")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Reset PIN"));
+
+    await waitFor(() => {
+      expect(mockMerchantActions.resetCustomerPin).toHaveBeenCalledWith(
+        "m1",
+        "c1"
+      );
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it("shows absolute balance and clamped credit-used percent for overpaid customers", async () => {
+    vi.mocked(mockMerchantActions.getMerchantCustomerDetail).mockResolvedValue({
+      ...mockCustomerDetail,
+      current_balance: -1234,
+      total_debit_amount: 200,
+      total_credit_amount: 2000,
+    });
+
+    render(<CustomerDetailPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Current Balance")).toBeInTheDocument();
+    });
+
+    expect(
+      screen.getByText("Customer is in credit (no outstanding)")
+    ).toBeInTheDocument();
+    expect(screen.getByText("0%")).toBeInTheDocument();
+    expect(screen.queryByText(/Rs\.\s*-/)).toBeNull();
   });
 });

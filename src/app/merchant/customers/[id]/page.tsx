@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantCustomerDetail, updateCustomerCreditLimit, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile } from "@/app/actions/merchant";
+import { getMerchantCustomerDetail, getCustomerTransactions, updateCustomerCreditLimit, updateCustomerTrustStatus, getAuditLogsForCreditLog, getMerchantProfile, resetCustomerPin } from "@/app/actions/merchant";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
+import PullToRefresh from "@/components/PullToRefresh";
 import TransactionIcon from "@/components/TransactionIcon";
 import SmsReminderModal from "@/components/SmsReminderModal";
 
@@ -51,6 +52,7 @@ interface CustomerDetail {
   transactions: Transaction[];
   trust_status: string;
   trust_notes: string | null;
+  trust_flagged_by_me: boolean;
 }
 
 export default function CustomerDetailPage() {
@@ -62,6 +64,10 @@ export default function CustomerDetailPage() {
 
   const [customer, setCustomer] = useState<CustomerDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [txOffset, setTxOffset] = useState(0);
   const [showCreditLimitModal, setShowCreditLimitModal] = useState(false);
   const [newLimit, setNewLimit] = useState("");
   const [savingLimit, setSavingLimit] = useState(false);
@@ -70,6 +76,7 @@ export default function CustomerDetailPage() {
   const [flagNotes, setFlagNotes] = useState("");
   const [flagging, setFlagging] = useState(false);
   const [showAuditModal, setShowAuditModal] = useState(false);
+  const [auditTx, setAuditTx] = useState<Transaction | null>(null);
   const [auditLogs, setAuditLogs] = useState<Array<{id: string; action_type: string; actor_type: string; actor_id: string; old_data: unknown; new_data: unknown; inserted_at: string}>>([]);
   const [auditLoading, setAuditLoading] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
@@ -78,6 +85,7 @@ export default function CustomerDetailPage() {
   const [merchantName, setMerchantName] = useState("");
   const [merchantIdState, setMerchantIdState] = useState<string | null>(null);
   const [smsBalance, setSmsBalance] = useState<number>(0);
+  const [resettingPin, setResettingPin] = useState(false);
   const txSectionRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -90,42 +98,71 @@ export default function CustomerDetailPage() {
   }, [showCreditLimitModal]);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!showFlagModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowFlagModal(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showFlagModal]);
 
-    async function loadCustomer() {
-      setLoading(true);
-      try {
-        const merchantId = await getCurrentMerchantId();
-        if (!merchantId || !customerId || cancelled) {
-          setLoading(false);
-          return;
-        }
+  useEffect(() => {
+    if (!showAuditModal) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowAuditModal(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [showAuditModal]);
 
-        const detail = await getMerchantCustomerDetail(merchantId, customerId);
-        if (cancelled) return;
+  useEffect(() => {
+    if (!previewImage) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPreviewImage(null);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [previewImage]);
 
-        if (!detail) {
-          setLoading(false);
-          return;
-        }
-
-        setMerchantIdState(merchantId);
-        setCustomer(detail as CustomerDetail);
-
-        getMerchantProfile(merchantId, "name").then((p: any) => {
-          if (p?.name) setMerchantName(p.name);
-        }).catch(() => {});
-        getMerchantSmsBalance(merchantId).then(setSmsBalance).catch(() => {});
-      } catch {
-        if (!cancelled) addToastRef.current("Failed to load customer details.", "error");
-      } finally {
-        if (!cancelled) setLoading(false);
+  const loadCustomer = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
+    try {
+      const merchantId = await getCurrentMerchantId();
+      if (!merchantId || !customerId) {
+        if (!opts?.silent) setLoading(false);
+        return;
       }
-    }
 
-    loadCustomer();
-    return () => { cancelled = true; };
+      const detail = await getMerchantCustomerDetail(merchantId, customerId);
+      if (!detail) {
+        setCustomer(null);
+        setTransactions([]);
+        setHasMore(false);
+        if (!opts?.silent) setLoading(false);
+        return;
+      }
+
+      const d = detail as CustomerDetail;
+      setMerchantIdState(merchantId);
+      setCustomer(d);
+      setTransactions(d.transactions);
+      setHasMore(d.transactions.length >= 50);
+      setTxOffset(d.transactions.length);
+
+      getMerchantProfile(merchantId, "name").then((p: any) => {
+        if (p?.name) setMerchantName(p.name);
+      }).catch(() => {});
+      getMerchantSmsBalance(merchantId).then(setSmsBalance).catch(() => {});
+    } catch {
+      if (!opts?.silent) addToastRef.current("Failed to load customer details.", "error");
+    } finally {
+      if (!opts?.silent) setLoading(false);
+    }
   }, [customerId]);
+
+  useEffect(() => {
+    loadCustomer();
+  }, [loadCustomer]);
 
   const handleSaveLimit = async () => {
     if (!newLimit || Number(newLimit) < 0) {
@@ -150,6 +187,55 @@ export default function CustomerDetailPage() {
     }
   };
 
+  const loadMore = async () => {
+    if (!merchantIdState || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const { transactions: next, hasMore: more } = await getCustomerTransactions(merchantIdState, customerId, txOffset);
+      setTransactions((prev) => [...prev, ...next]);
+      setHasMore(more);
+      setTxOffset((prev) => prev + next.length);
+    } catch {
+      addToast("Failed to load more transactions.", "error");
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const handleClearFlag = async () => {
+    if (!customer || !customer.trust_flagged_by_me) return;
+    if (!window.confirm(`Clear the "${customer.trust_status}" flag on this customer?`)) return;
+    const merchantId = await getCurrentMerchantId();
+    if (!merchantId) return;
+    const r = await updateCustomerTrustStatus(merchantId, customer.id, "clear");
+    if (r.success) {
+      setCustomer((prev) => prev ? { ...prev, trust_status: "good", trust_notes: null, trust_flagged_by_me: false } : prev);
+      addToast("Trust flag cleared", "success");
+    } else {
+      addToast(r.error || "Failed to clear", "error");
+    }
+  };
+
+  const handleResetPin = async () => {
+    if (!customer) return;
+    if (!window.confirm(`Reset the PIN for ${customer.name || "this customer"}? They will need to set a new PIN.`)) return;
+    setResettingPin(true);
+    try {
+      const merchantId = await getCurrentMerchantId();
+      if (!merchantId) return;
+      const r = await resetCustomerPin(merchantId, customer.id);
+      if (r.success) {
+        addToast("PIN reset. Ask the customer to set a new PIN.", "success");
+      } else {
+        addToast(r.error || "Failed to reset PIN", "error");
+      }
+    } catch {
+      addToast("Failed to reset PIN", "error");
+    } finally {
+      setResettingPin(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
@@ -158,10 +244,34 @@ export default function CustomerDetailPage() {
     );
   }
 
-  if (!customer) return null;
+  if (!customer) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-dvh px-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-4">
+          <svg className="w-8 h-8 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+          </svg>
+        </div>
+        <h1 className="text-lg font-bold text-[var(--color-text)]">Customer not found</h1>
+        <p className="text-sm text-[var(--color-text-muted)] mt-1">
+          This customer may have been removed or the link is invalid.
+        </p>
+        <a
+          href="/merchant/customers"
+          className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+          </svg>
+          Back to Customers
+        </a>
+      </div>
+    );
+  }
 
+  const isNegativeBalance = customer.current_balance < 0;
   const balancePercent = customer.credit_limit > 0
-    ? (customer.current_balance / customer.credit_limit) * 100
+    ? Math.max(0, (customer.current_balance / customer.credit_limit) * 100)
     : 0;
 
   return (
@@ -178,6 +288,7 @@ export default function CustomerDetailPage() {
         </div>
       </div>
 
+      <PullToRefresh onRefresh={() => loadCustomer({ silent: true })}>
       <div className="px-4 py-4 space-y-4">
         {/* Customer Info Card — clickable, scrolls to transaction history */}
         <div
@@ -218,18 +329,10 @@ export default function CustomerDetailPage() {
                 </button>
               ) : (
                 <button
-                  onClick={async () => {
-                    const merchantId = await getCurrentMerchantId();
-                    if (!merchantId) return;
-                    const r = await updateCustomerTrustStatus(merchantId, customer.id, "clear");
-                    if (r.success) {
-                      setCustomer((prev) => prev ? { ...prev, trust_status: "good", trust_notes: null } : prev);
-                      addToast("Trust flag cleared", "success");
-                    } else {
-                      addToast(r.error || "Failed to clear", "error");
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium active:scale-[0.98]"
+                  onClick={handleClearFlag}
+                  disabled={!customer.trust_flagged_by_me}
+                  title={customer.trust_flagged_by_me ? "Clear this trust flag" : "Only the merchant who flagged this customer can clear it"}
+                  className="px-3 py-1.5 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-400 rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   Clear Flag
                 </button>
@@ -248,6 +351,18 @@ export default function CustomerDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Reset PIN */}
+        <button
+          onClick={handleResetPin}
+          disabled={resettingPin}
+          className="w-full py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm text-[var(--color-text-muted)] font-medium active:scale-[0.99] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+          </svg>
+          Reset PIN
+        </button>
 
         {/* Trust Warning Banner (only if flagged — no identity leak) */}
         {customer.trust_status !== "good" && (
@@ -287,9 +402,12 @@ export default function CustomerDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-[var(--color-text-muted)]">Current Balance</p>
-              <p className="text-2xl font-bold text-[var(--color-danger)]">
-                Rs. {customer.current_balance.toLocaleString()}
+              <p className={`text-2xl font-bold ${isNegativeBalance ? "text-[var(--color-primary)]" : "text-[var(--color-danger)]"}`}>
+                Rs. {Math.abs(customer.current_balance).toLocaleString()}
               </p>
+              {isNegativeBalance && (
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Customer is in credit (no outstanding)</p>
+              )}
             </div>
             <button
               onClick={() => { setNewLimit(String(customer.credit_limit)); setShowCreditLimitModal(true); }}
@@ -336,15 +454,16 @@ export default function CustomerDetailPage() {
         <div ref={txSectionRef}>
           <h3 className="font-semibold text-[var(--color-text)] mb-3">Recent Transactions</h3>
           <div className="space-y-2">
-            {customer.transactions.length === 0 ? (
+            {transactions.length === 0 ? (
               <div className="text-center py-8 text-[var(--color-text-muted)]">
                 <p className="text-sm">No transactions yet</p>
               </div>
             ) : (
-              customer.transactions.map((tx) => (
+              transactions.map((tx) => (
                 <div
                   key={tx.id}
                   onClick={async () => {
+                    setAuditTx(tx);
                     setAuditLogs([]);
                     setAuditLoading(true);
                     setShowAuditModal(true);
@@ -371,11 +490,6 @@ export default function CustomerDetailPage() {
                     <p className="text-xs text-[var(--color-text-muted)]">
                       {new Date(tx.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kathmandu" })}
                     </p>
-                    {(tx.ip_address || tx.device_info) && (
-                      <p className="text-[10px] text-[var(--color-text-muted)] truncate max-w-[200px]">
-                        {[tx.device_info, tx.ip_address].filter(Boolean).join(" · ")}
-                      </p>
-                    )}
                     {tx.attachment_url && (
                       <button
                         onClick={(e) => { e.stopPropagation(); setPreviewImage(tx.attachment_url); }}
@@ -395,8 +509,23 @@ export default function CustomerDetailPage() {
               ))
             )}
           </div>
+
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              className="w-full mt-3 py-3 bg-gray-100 dark:bg-gray-800 rounded-xl text-sm font-medium text-[var(--color-text)] active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loadingMore ? (
+                <div className="w-5 h-5 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
+              ) : (
+                "Load More"
+              )}
+            </button>
+          )}
         </div>
       </div>
+      </PullToRefresh>
 
       {/* Credit Limit Modal */}
       {showCreditLimitModal && (
@@ -415,7 +544,7 @@ export default function CustomerDetailPage() {
               <input
                 type="number"
                 min="0"
-                step="1"
+                step="any"
                 value={newLimit}
                 onChange={(e) => setNewLimit(e.target.value)}
                 className="w-full mt-1 px-4 py-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl text-lg font-bold border-0 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
@@ -516,19 +645,61 @@ export default function CustomerDetailPage() {
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 animate-fade-in" onClick={() => setShowAuditModal(false)}>
           <div className="w-full max-w-md bg-[var(--color-surface)] rounded-t-3xl p-6 animate-slide-up max-h-[70vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-lg text-[var(--color-text)]">Audit Trail</h3>
+              <h3 className="font-bold text-lg text-[var(--color-text)]">Transaction Details</h3>
               <button onClick={() => setShowAuditModal(false)} className="p-1">
                 <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
             </div>
+
+            {auditTx && (
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-[var(--color-text-muted)]">Amount</span>
+                  <span className={`font-bold ${auditTx.type === "debit" ? "text-[var(--color-danger)]" : auditTx.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-[var(--color-primary)]"}`}>
+                    {auditTx.type === "cash" ? "" : (auditTx.type === "debit" ? "+" : "-")}Rs. {auditTx.amount.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--color-text-muted)]">Type</span>
+                  <span className="capitalize">{auditTx.type.replace("_", " ")}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--color-text-muted)]">Status</span>
+                  <span className="capitalize">{STATUS_LABELS[auditTx.status] || auditTx.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[var(--color-text-muted)]">Date</span>
+                  <span>{new Date(auditTx.created_at).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "Asia/Kathmandu" })}</span>
+                </div>
+                {auditTx.description && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-[var(--color-text-muted)] flex-shrink-0">Description</span>
+                    <span className="text-right">{auditTx.description}</span>
+                  </div>
+                )}
+                {auditTx.initiated_by && (
+                  <div className="flex justify-between">
+                    <span className="text-[var(--color-text-muted)]">Initiated by</span>
+                    <span className="capitalize">{auditTx.initiated_by}</span>
+                  </div>
+                )}
+                {(auditTx.ip_address || auditTx.device_info) && (
+                  <div className="flex justify-between gap-3">
+                    <span className="text-[var(--color-text-muted)] flex-shrink-0">Device</span>
+                    <span className="text-right break-all">{[auditTx.device_info, auditTx.ip_address].filter(Boolean).join(" · ")}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
             {auditLoading ? (
               <div className="flex justify-center py-8">
                 <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : auditLogs.length === 0 ? (
-              <p className="text-center text-sm text-[var(--color-text-muted)] py-8">No audit records found for this transaction.</p>
+              <p className="text-center text-sm text-[var(--color-text-muted)] py-8">No status changes recorded for this entry.</p>
             ) : (
               <div className="space-y-3">
                 {auditLogs.map((log) => (

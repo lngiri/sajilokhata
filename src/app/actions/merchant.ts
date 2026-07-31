@@ -217,6 +217,28 @@ export async function getMerchantCreditLogs(
 // Recent Descriptions
 // ──────────────────────────────────────────────
 
+/**
+ * Compute a customer's running balance and debit/credit totals from approved
+ * credit logs. Debits increase the balance; every other non-cash type (credit,
+ * etc.) reduces it. Cash / cash_in / expense logs are ignored.
+ */
+function computeCustomerBalance(approvedLogs: any[]) {
+  let current = 0;
+  let totalDebit = 0;
+  let totalCredit = 0;
+  for (const l of approvedLogs) {
+    if (l.type === "cash" || l.type === "cash_in" || l.type === "expense") continue;
+    if (l.type === "debit") {
+      current += l.amount;
+      totalDebit += l.amount;
+    } else {
+      current -= l.amount;
+      if (l.type === "credit") totalCredit += l.amount;
+    }
+  }
+  return { current_balance: current, total_debit_amount: totalDebit, total_credit_amount: totalCredit };
+}
+
 // ──────────────────────────────────────────────
 // Analytics
 // ──────────────────────────────────────────────
@@ -299,13 +321,18 @@ export async function getMerchantAnalytics(
     .not("type", "in", "('cash','cash_in','expense')");
 
   const allTimeBal: Record<string, { name: string; phone: string; balance: number }> = {};
+  const allTimeGroups: Record<string, any[]> = {};
   for (const l of allBalanceLogs || []) {
     if (!l.customers) continue;
     const cusKey = l.customers.phone || "unknown";
+    if (!allTimeGroups[cusKey]) allTimeGroups[cusKey] = [];
+    allTimeGroups[cusKey].push(l);
     if (!allTimeBal[cusKey]) {
       allTimeBal[cusKey] = { name: l.customers.name || cusKey, phone: cusKey, balance: 0 };
     }
-    allTimeBal[cusKey].balance += l.type === "debit" ? l.amount : -l.amount;
+  }
+  for (const [key, logs] of Object.entries(allTimeGroups)) {
+    allTimeBal[key].balance = computeCustomerBalance(logs).current_balance;
   }
 
   const outstandingCustomers = Object.values(allTimeBal)
@@ -363,10 +390,14 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
       .not("type", "in", "('cash','cash_in','expense')")
       .in("customer_id", customerIds);
 
-    const balanceMap: Record<string, number> = {};
+    const groupedLogs: Record<string, any[]> = {};
     for (const log of approvedLogs || []) {
-      const sign = log.type === "debit" ? 1 : -1;
-      balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
+      if (!groupedLogs[log.customer_id]) groupedLogs[log.customer_id] = [];
+      groupedLogs[log.customer_id].push(log);
+    }
+    const balanceMap: Record<string, number> = {};
+    for (const [customerIdKey, logs] of Object.entries(groupedLogs)) {
+      balanceMap[customerIdKey] = computeCustomerBalance(logs).current_balance;
     }
 
     return deduped
@@ -475,10 +506,14 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
     .not("type", "in", "('cash','cash_in','expense')")
     .in("customer_id", searchCustomerIds);
 
-  const balanceMap: Record<string, number> = {};
+  const groupedSearchLogs: Record<string, any[]> = {};
   for (const log of approvedLogs || []) {
-    const sign = log.type === "debit" ? 1 : -1;
-    balanceMap[log.customer_id] = (balanceMap[log.customer_id] || 0) + sign * log.amount;
+    if (!groupedSearchLogs[log.customer_id]) groupedSearchLogs[log.customer_id] = [];
+    groupedSearchLogs[log.customer_id].push(log);
+  }
+  const balanceMap: Record<string, number> = {};
+  for (const [customerIdKey, logs] of Object.entries(groupedSearchLogs)) {
+    balanceMap[customerIdKey] = computeCustomerBalance(logs).current_balance;
   }
 
   return dedupedMc
@@ -562,9 +597,7 @@ export async function getMerchantCustomerBalance(merchantId: string, customerId:
     .eq("status", "approved")
     .not("type", "in", "('cash','cash_in','expense')");
 
-  const balance = (logs || []).reduce((sum: number, l: any) => {
-    return sum + (l.type === "debit" ? l.amount : -l.amount);
-  }, 0);
+  const balance = computeCustomerBalance(logs || []).current_balance;
 
   return { balance, creditLimit };
 }
@@ -611,35 +644,48 @@ export async function getMerchantCustomerDetail(merchantId: string, customerId: 
   }
 
   const { data: mc } = await (admin.from("merchant_customers") as any)
-    .select("*, customers(id, name, phone, trust_status, trust_notes)")
+    .select("*, customers(id, name, phone, trust_status, trust_notes, flagged_by_merchant_id)")
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
     .maybeSingle();
 
   if (!mc) return null;
 
-  const logs = await getMerchantCreditLogs(merchantId, { customerId, limit: 50 });
+  // Transactions: latest 50 for the ledger. Stats: ALL approved logs (so the
+  // balance and totals match the list page, not just the visible 50).
+  const [logs, approvedLogs] = await Promise.all([
+    getMerchantCreditLogs(merchantId, { customerId, limit: 50 }),
+    getMerchantCreditLogs(merchantId, { customerId, status: "approved", columns: "type, amount" }),
+  ]);
 
-  const approvedLogs = logs.filter((l: any) => l.status === "approved");
-  const totalDebit = approvedLogs
-    .filter((l: any) => l.type === "debit")
-    .reduce((sum: number, l: any) => sum + l.amount, 0);
-  const totalCredit = approvedLogs
-    .filter((l: any) => l.type === "credit")
-    .reduce((sum: number, l: any) => sum + l.amount, 0);
+  const stats = computeCustomerBalance(approvedLogs);
 
   return {
     id: customerId,
     name: mc.customers?.name || null,
     phone: mc.customers?.phone || "",
     credit_limit: mc.credit_limit,
-    current_balance: totalDebit - totalCredit,
-    total_debit_amount: totalDebit,
-    total_credit_amount: totalCredit,
+    current_balance: stats.current_balance,
+    total_debit_amount: stats.total_debit_amount,
+    total_credit_amount: stats.total_credit_amount,
     transactions: (logs as any[]) || [],
     trust_status: mc.customers?.trust_status || "good",
     trust_notes: mc.customers?.trust_notes || null,
+    trust_flagged_by_me: (mc.customers?.flagged_by_merchant_id ?? null) === merchantId,
   };
+}
+
+export async function getCustomerTransactions(
+  merchantId: string,
+  customerId: string,
+  offset: number
+): Promise<{ transactions: any[]; hasMore: boolean }> {
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    throw new Error("Not logged in");
+  }
+  const logs = await getMerchantCreditLogs(merchantId, { customerId, limit: 50, offset });
+  return { transactions: logs as any[], hasMore: logs.length === 50 };
 }
 
 // ──────────────────────────────────────────────

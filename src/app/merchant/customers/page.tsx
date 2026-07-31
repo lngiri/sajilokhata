@@ -25,16 +25,13 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [phoneAccountStatus, setPhoneAccountStatus] = useState<{ type: "customer" | "merchant" | "both" } | null>(null);
-  const lastSearchedRef = useRef<string | null>(null);
+  const requestSeqRef = useRef(0);
+  const lookupCacheRef = useRef(new Map<string, { type: "customer" | "merchant" | "both" } | null>());
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 250);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  useEffect(() => {
-    loadCustomers();
-  }, []);
 
   useEffect(() => {
     if (debouncedQuery.length >= 2) {
@@ -45,49 +42,51 @@ export default function CustomersPage() {
   }, [debouncedQuery]);
 
   const loadCustomers = async () => {
+    const seq = ++requestSeqRef.current;
     try {
       setLoading(true);
       setPhoneAccountStatus(null);
       const id = await getCurrentMerchantId();
       if (id) {
         const data = await getMerchantCustomers(id);
+        if (requestSeqRef.current !== seq) return;
         setCustomers(data as CustomerRow[]);
       }
     } catch {
-      addToast("Failed to load customers.", "error");
+      if (requestSeqRef.current === seq) addToast("Failed to load customers.", "error");
     } finally {
-      setLoading(false);
+      if (requestSeqRef.current === seq) setLoading(false);
     }
   };
 
   const searchCustomers = async (query: string) => {
+    const seq = ++requestSeqRef.current;
     try {
       setLoading(true);
       setPhoneAccountStatus(null);
       const id = await getCurrentMerchantId();
       if (id) {
         const data = await getMerchantCustomers(id, query);
+        if (requestSeqRef.current !== seq) return;
         setCustomers(data as CustomerRow[]);
 
         // Secondary lookup: only when zero linked results + numeric phone >= 6 digits
         if (data.length === 0 && /^\d{6,}$/.test(query)) {
-          // Cache hit: skip if same query was already searched
-          if (query === lastSearchedRef.current) return;
-
-          lastSearchedRef.current = query;
-          const status = await lookupPhoneAccountStatus(id, query);
-          // Stale response guard: ignore if search changed while lookup was running
-          if (lastSearchedRef.current === query) {
+          const cached = lookupCacheRef.current.get(query);
+          if (cached !== undefined) {
+            setPhoneAccountStatus(cached);
+          } else {
+            const status = await lookupPhoneAccountStatus(id, query);
+            if (requestSeqRef.current !== seq) return;
+            lookupCacheRef.current.set(query, status);
             setPhoneAccountStatus(status);
           }
-        } else {
-          lastSearchedRef.current = null;
         }
       }
     } catch {
-      addToast("Search failed.", "error");
+      if (requestSeqRef.current === seq) addToast("Search failed.", "error");
     } finally {
-      setLoading(false);
+      if (requestSeqRef.current === seq) setLoading(false);
     }
   };
 
@@ -176,53 +175,77 @@ export default function CustomersPage() {
           )
         ) : (
           <div className="space-y-2">
-            {customers.map((mc) => (
-              <a
-                key={mc.id}
-                href={mc.customers?.id ? `/merchant/customers/${mc.customers.id}` : "#"}
-                className="block bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="font-bold text-[var(--color-primary)] text-sm">
-                      {(mc.customers?.name || mc.customers?.phone || "?").charAt(0).toUpperCase()}
-                    </span>
+            {customers.map((mc) => {
+              const isNegative = mc.current_balance < 0;
+              const customerHref = mc.customers?.id ? `/merchant/customers/${mc.customers.id}` : null;
+              const barRatio = mc.credit_limit > 0 ? Math.max(0, mc.current_balance / mc.credit_limit) : 0;
+              const card = (
+                <>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0">
+                      <span className="font-bold text-[var(--color-primary)] text-sm">
+                        {(mc.customers?.name || mc.customers?.phone || "?").charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm text-[var(--color-text)] truncate">
+                        {mc.customers?.name || "Unknown"}
+                      </p>
+                      <p className="text-xs text-[var(--color-text-muted)]">
+                        {mc.customers?.phone}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-bold text-sm ${mc.current_balance > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
+                        Rs. {Math.abs(mc.current_balance).toLocaleString()}
+                      </p>
+                      <p className="text-[10px] text-[var(--color-text-muted)]">
+                        {isNegative ? "in credit" : `/ Rs. ${mc.credit_limit.toLocaleString()}`}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-[var(--color-text)] truncate">
-                      {mc.customers?.name || "Unknown"}
-                    </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">
-                      {mc.customers?.phone}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-bold text-sm ${mc.current_balance > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                      Rs. {mc.current_balance.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] text-[var(--color-text-muted)]">
-                      / Rs. {mc.credit_limit.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
 
-                {/* Balance bar */}
-                <div className="mt-3 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                  {mc.credit_limit > 0 && (
-                    <div
-                      className={`h-full rounded-full transition-all ${
-                        mc.current_balance / mc.credit_limit > 0.8
-                          ? "bg-[var(--color-danger)]"
-                          : mc.current_balance / mc.credit_limit > 0.5
-                          ? "bg-[var(--color-accent)]"
-                          : "bg-[var(--color-primary)]"
-                      }`}
-                      style={{ width: `${Math.min(100, (mc.current_balance / mc.credit_limit) * 100)}%` }}
-                    />
-                  )}
-                </div>
-              </a>
-            ))}
+                  {/* Balance bar */}
+                  <div className="mt-3 h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                    {mc.credit_limit > 0 && (
+                      <div
+                        data-testid="customer-balance-bar"
+                        className={`h-full rounded-full transition-all ${
+                          barRatio > 0.8
+                            ? "bg-[var(--color-danger)]"
+                            : barRatio > 0.5
+                            ? "bg-[var(--color-accent)]"
+                            : "bg-[var(--color-primary)]"
+                        }`}
+                        style={{ width: `${Math.min(100, barRatio * 100)}%` }}
+                      />
+                    )}
+                  </div>
+                </>
+              );
+
+              if (!customerHref) {
+                return (
+                  <div
+                    key={mc.id}
+                    aria-disabled="true"
+                    className="block bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)] opacity-70"
+                  >
+                    {card}
+                  </div>
+                );
+              }
+
+              return (
+                <a
+                  key={mc.id}
+                  href={customerHref}
+                  className="block bg-[var(--color-surface)] rounded-xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.99] transition-transform"
+                >
+                  {card}
+                </a>
+              );
+            })}
           </div>
         )}
       </div>

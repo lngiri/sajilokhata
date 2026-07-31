@@ -425,4 +425,124 @@ describe("CustomersPage", () => {
       mockActions.lookupPhoneAccountStatus
     ).not.toHaveBeenCalled();
   });
+
+  it("loads the customer list exactly once on mount", async () => {
+    vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
+    vi.mocked(mockActions.getMerchantCustomers).mockImplementation(
+      mockImplementation
+    );
+
+    render(<CustomersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Hari")).toBeInTheDocument();
+    });
+
+    expect(mockActions.getMerchantCustomers).toHaveBeenCalledTimes(1);
+  });
+
+  it("ignores stale search results that resolve after a newer request", async () => {
+    vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
+
+    const makeDeferred = () => {
+      let resolve!: (v: typeof mockCustomers) => void;
+      const promise = new Promise<typeof mockCustomers>((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    };
+
+    const initialLoad = makeDeferred();
+    const searchRes = makeDeferred();
+    const clearLoad = makeDeferred();
+
+    let calls = 0;
+    vi.mocked(mockActions.getMerchantCustomers).mockImplementation(
+      (id, search) => {
+        calls++;
+        if (search) return searchRes.promise;
+        if (calls === 1) return initialLoad.promise;
+        return clearLoad.promise;
+      }
+    );
+
+    render(<CustomersPage />);
+
+    // Initial mount load
+    initialLoad.resolve([]);
+    await waitFor(() => {
+      expect(screen.getByText("No customers found")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText(
+      "Search by name or phone..."
+    );
+
+    // Start a search whose response will arrive late
+    await userEvent.type(searchInput, "Shyam");
+    await waitFor(() => {
+      expect(mockActions.getMerchantCustomers).toHaveBeenCalledWith(
+        "m1",
+        "Shyam"
+      );
+    });
+
+    // Clear the search -> newer full-list request
+    await userEvent.clear(searchInput);
+    await waitFor(() => {
+      expect(calls).toBeGreaterThanOrEqual(3);
+    });
+
+    // Newer request resolves with the full list
+    clearLoad.resolve(mockCustomers);
+    await waitFor(() => {
+      expect(screen.getByText("Hari")).toBeInTheDocument();
+    });
+
+    // Stale search resolves last (only Shyam) - must NOT overwrite
+    searchRes.resolve([mockCustomers[1]]);
+    await new Promise((r) => setTimeout(r, 50));
+
+    expect(screen.getByText("Hari")).toBeInTheDocument();
+    expect(screen.getByText("Shyam")).toBeInTheDocument();
+  });
+
+  it("renders overpaid customers with a credit indicator and clamped bar", async () => {
+    vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
+    vi.mocked(mockActions.getMerchantCustomers).mockResolvedValue([
+      {
+        id: "mc4",
+        credit_limit: 5000,
+        current_balance: -1200,
+        customers: { id: "c4", name: "Gita", phone: "9840000000" },
+      },
+    ]);
+
+    render(<CustomersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Gita")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText(/Rs\.\s*[\d,०-९]+/)).toBeInTheDocument();
+    expect(screen.getByText("in credit")).toBeInTheDocument();
+    const bar = screen.getByTestId("customer-balance-bar");
+    expect(bar.style.width).toBe("0%");
+  });
+
+  it("does not render a clickable card for customers without a linked account", async () => {
+    vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
+    vi.mocked(mockActions.getMerchantCustomers).mockImplementation(
+      mockImplementation
+    );
+
+    render(<CustomersPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Unknown")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Unknown")?.closest("a")).toBeNull();
+    expect(document.querySelector('a[href="#"]')).toBeNull();
+  });
 });
