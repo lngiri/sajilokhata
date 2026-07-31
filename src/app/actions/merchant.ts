@@ -230,6 +230,7 @@ export interface AnalyticsResult {
   totalSales: number;
   cashInHand: number;
   netCashFlow: number;
+  outstandingBalance: number;
   topCustomers: { name: string; phone: string; balance: number }[];
   dailyBreakdown: { date: string; debit: number; credit: number; cash: number; cash_in: number; expense: number }[];
 }
@@ -263,7 +264,6 @@ export async function getMerchantAnalytics(
   let totalReceived = 0;
   let totalCashSales = 0;
   let totalCashIn = 0;
-  const customerBal: Record<string, { name: string; phone: string; balance: number }> = {};
   const dailyMap: Record<string, { debit: number; credit: number; cash: number; cash_in: number; expense: number }> = {};
 
   let totalExpenses = 0;
@@ -281,14 +281,6 @@ export async function getMerchantAnalytics(
       totalReceived += l.amount;
     }
 
-    if (l.type !== "cash" && l.type !== "cash_in" && l.type !== "expense" && l.customers) {
-      const cusKey = l.customers.phone || "unknown";
-      if (!customerBal[cusKey]) {
-        customerBal[cusKey] = { name: l.customers.name || cusKey, phone: cusKey, balance: 0 };
-      }
-      customerBal[cusKey].balance += l.type === "debit" ? l.amount : -l.amount;
-    }
-
     const day = l.created_at?.split("T")[0] || "unknown";
     if (!dailyMap[day]) dailyMap[day] = { debit: 0, credit: 0, cash: 0, cash_in: 0, expense: 0 };
     if (l.type === "debit") dailyMap[day].debit += l.amount;
@@ -298,9 +290,30 @@ export async function getMerchantAnalytics(
     else dailyMap[day].credit += l.amount;
   }
 
-  const topCustomers = Object.values(customerBal)
+  // Top customers use true outstanding balances (all-time approved logs),
+  // independent of the date range — "who owes me right now".
+  const { data: allBalanceLogs } = await (admin.from("credit_logs") as any)
+    .select("amount, type, customers(name, phone)")
+    .eq("merchant_id", merchantId)
+    .eq("status", "approved")
+    .not("type", "in", "('cash','cash_in','expense')");
+
+  const allTimeBal: Record<string, { name: string; phone: string; balance: number }> = {};
+  for (const l of allBalanceLogs || []) {
+    if (!l.customers) continue;
+    const cusKey = l.customers.phone || "unknown";
+    if (!allTimeBal[cusKey]) {
+      allTimeBal[cusKey] = { name: l.customers.name || cusKey, phone: cusKey, balance: 0 };
+    }
+    allTimeBal[cusKey].balance += l.type === "debit" ? l.amount : -l.amount;
+  }
+
+  const outstandingCustomers = Object.values(allTimeBal)
+    .filter((c) => c.balance > 0)
     .sort((a, b) => b.balance - a.balance)
     .slice(0, 5);
+
+  const outstandingBalance = Object.values(allTimeBal).reduce((sum, c) => sum + (c.balance > 0 ? c.balance : 0), 0);
 
   const totalSales = totalOutstanding + totalCashSales;
   const cashInHand = totalCashSales + totalCashIn + totalReceived - totalExpenses;
@@ -309,7 +322,7 @@ export async function getMerchantAnalytics(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, vals]) => ({ date, ...vals }));
 
-  return { totalOutstanding, totalReceived, totalCashSales, totalCashIn, totalExpenses, totalSales, cashInHand, netCashFlow: totalReceived + totalCashIn - totalOutstanding - totalExpenses, topCustomers, dailyBreakdown };
+  return { totalOutstanding, totalReceived, totalCashSales, totalCashIn, totalExpenses, totalSales, cashInHand, netCashFlow: totalReceived + totalCashIn - totalOutstanding - totalExpenses, outstandingBalance, topCustomers: outstandingCustomers, dailyBreakdown };
 }
 
 // ──────────────────────────────────────────────
