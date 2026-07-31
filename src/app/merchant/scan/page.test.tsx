@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useSearchParams } from "next/navigation";
 import MerchantScanPage from "./page";
@@ -597,10 +597,16 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       await user.click(screen.getByText("Continue"));
       await waitFor(() => screen.getByText("Confirm Entry"));
 
-      // Click Save Entry
-      await user.click(screen.getByText("Save Entry"));
+      // Fire two synchronous clicks so the savingRef guard is exercised
+      // before React re-renders the button into its disabled/spinner state
+      const saveBtn = screen.getByRole("button", { name: /Save Entry/ });
+      fireEvent.click(saveBtn);
+      fireEvent.click(saveBtn);
 
-      // Resolve the save
+      // Wait for the in-flight saveEntry promise to be captured, then resolve it
+      await waitFor(() => {
+        expect(resolveSaveEntry).toBeDefined();
+      });
       resolveSaveEntry!({ success: true, entry: { id: "e1", status: "awaiting_confirmation" } });
 
       await waitFor(() => screen.getByText("Entry Saved! 🎉"));
@@ -876,7 +882,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
         expect.objectContaining({
           customer_id: "c1",
-          customer_phone: null,
+          customer_phone: "9841234567",
           customer_name: "Ram Kumar",
           amount: 1500,
           type: "debit",
@@ -956,6 +962,212 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
           type: "cash",
         })
       );
+    });
+  });
+
+  // ═══════════════════════════════════════════════
+  // REGRESSION FIXES from the scan page rewrite
+  // ═══════════════════════════════════════════════
+
+  describe("Regression fixes", () => {
+    it("shows the product picker in QR mode (Bug 1)", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockProductsActions.getMerchantProducts).mockResolvedValue([
+        { id: "p1", name: "Basmati Rice", unit: "kg", default_rate: 120, category: null },
+      ]);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => screen.getByTestId("qr-scanner"));
+      await user.click(screen.getByTestId("mock-scan-valid"));
+      await waitFor(() => screen.getByText("Enter Details"));
+
+      // Product picker must be rendered in QR scan mode
+      expect(screen.getByText("Basmati Rice")).toBeInTheDocument();
+
+      // Selecting a product fills amount + description
+      await user.click(screen.getByText("Basmati Rice"));
+      expect((screen.getAllByPlaceholderText("0")[0] as HTMLInputElement).value).toBe("120");
+      expect((screen.getByPlaceholderText(/e\.g\. Rice 10kg/) as HTMLInputElement).value).toBe("Basmati Rice");
+    });
+
+    it("shows a debit/credit type selector in QR mode (Bug 4)", async () => {
+      const user = userEvent.setup();
+      render(<MerchantScanPage />);
+
+      await waitFor(() => screen.getByTestId("qr-scanner"));
+      await user.click(screen.getByTestId("mock-scan-valid"));
+      await waitFor(() => screen.getByText("Enter Details"));
+
+      expect(screen.getByText("Credit Given")).toBeInTheDocument();
+      expect(screen.getByText("Amount Received")).toBeInTheDocument();
+
+      // Switching to credit keeps the scanned customer and saves as credit
+      await user.click(screen.getByText("Amount Received"));
+      await user.type(screen.getByPlaceholderText("0"), "500");
+      await user.click(screen.getByText("Continue"));
+      await waitFor(() => screen.getByText("Confirm Entry"));
+      expect(screen.getByText("Amount Received")).toBeInTheDocument();
+
+      vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
+        success: true,
+        entry: { id: "e1", status: "awaiting_confirmation" },
+      });
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => screen.getByText("Entry Saved! 🎉"));
+
+      expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "credit", customer_phone: "9841234567", amount: 500 })
+      );
+    });
+
+    it("reuses the idempotency key across a retry and regenerates it on reset (Bug 6)", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockEntryActions.saveEntry)
+        .mockResolvedValueOnce({ success: false, error: "Duplicate detected" })
+        .mockResolvedValueOnce({ success: true, entry: { id: "e1", status: "awaiting_confirmation" } });
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => screen.getByTestId("qr-scanner"));
+      await user.click(screen.getByTestId("mock-scan-valid"));
+      await waitFor(() => screen.getByText("Enter Details"));
+      await user.type(screen.getByPlaceholderText("0"), "100");
+      await user.click(screen.getByText("Continue"));
+      await waitFor(() => screen.getByText("Confirm Entry"));
+
+      // First attempt fails
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => {
+        expect(mockAddToast).toHaveBeenCalledWith("Failed to save. Please try again.", "error");
+      });
+
+      // Retry from the same confirm screen must reuse the same key
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => screen.getByText("Entry Saved! 🎉"));
+
+      const calls = vi.mocked(mockEntryActions.saveEntry).mock.calls;
+      expect(calls).toHaveLength(2);
+      expect(calls[0][0].idempotency_key).toBe(calls[1][0].idempotency_key);
+
+      // Reset (Scan Another) regenerates the key for the next draft
+      await user.click(screen.getByText("Scan Another"));
+      await waitFor(() => screen.getByTestId("qr-scanner"));
+      await user.click(screen.getByTestId("mock-scan-valid"));
+      await waitFor(() => screen.getByText("Enter Details"));
+      await user.type(screen.getByPlaceholderText("0"), "200");
+      await user.click(screen.getByText("Continue"));
+      await waitFor(() => screen.getByText("Confirm Entry"));
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => screen.getByText("Entry Saved! 🎉"));
+
+      const keyAfterReset = vi.mocked(mockEntryActions.saveEntry).mock.calls[2][0].idempotency_key;
+      expect(keyAfterReset).not.toBe(calls[0][0].idempotency_key);
+    });
+
+    it("shows an error toast when the AI bill parse fails without changing the amount (Bug 5)", async () => {
+      const user = userEvent.setup();
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({ error: "Rate limited" }),
+      });
+      vi.stubGlobal("fetch", fetchMock);
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true"));
+
+      try {
+        render(<MerchantScanPage />);
+        await waitFor(() => screen.getByText("Manual Entry"));
+
+        const file = new File(["fake-bill"], "bill.jpg", { type: "image/jpeg" });
+        await user.upload(document.getElementById("ai-bill-input") as HTMLElement, file);
+
+        await waitFor(() => {
+          expect(mockAddToast).toHaveBeenCalledWith("Rate limited", "error");
+        });
+
+        // Amount untouched by the failed parse
+        expect((screen.getAllByPlaceholderText("0")[0] as HTMLInputElement).value).toBe("");
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+
+    it("keeps the customer phone in the offline pending log for new customers (Bug 3)", async () => {
+      const user = userEvent.setup();
+      const originalOnLine = navigator.onLine;
+      Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true"));
+      vi.mocked(mockCustomerActions.checkCustomerByPhone).mockResolvedValue({ exists: false, customer: null });
+
+      try {
+        render(<MerchantScanPage />);
+        await waitFor(() => screen.getByText("Manual Entry"));
+
+        // Switch to Credit Given so the customer lookup UI is active
+        await user.click(screen.getByText("Credit Given"));
+
+        // Type a full 10-digit phone for an unregistered customer
+        const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+        await user.type(searchInput, "9811111111");
+        await waitFor(() => screen.getByText("Not registered yet 📱"));
+
+        await user.type(screen.getAllByPlaceholderText("0")[0], "300");
+        await user.click(screen.getByText("Continue"));
+        await waitFor(() => screen.getByText("Confirm Entry"));
+
+        await user.click(screen.getByText("Save Entry"));
+        await waitFor(() => screen.getByText("Entry Saved! 🎉"));
+
+        expect(mockOfflineDb.savePendingLog).toHaveBeenCalledWith(
+          expect.objectContaining({
+            customer_id: null,
+            customerPhone: "9811111111",
+            amount: 300,
+            type: "debit",
+          })
+        );
+        // Offline path must not hit the server action
+        expect(mockEntryActions.saveEntry).not.toHaveBeenCalled();
+      } finally {
+        Object.defineProperty(navigator, "onLine", { value: originalOnLine, configurable: true });
+      }
+    });
+
+    it("clears the attachment preview on reset and revokes the blob URL (Bug 2)", async () => {
+      const user = userEvent.setup();
+      const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:mock-preview");
+      const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true"));
+
+      const { container } = render(<MerchantScanPage />);
+      await waitFor(() => screen.getByText("Manual Entry"));
+
+      const attachInput = container.querySelector('input[type="file"]:not(#ai-bill-input)');
+      const file = new File(["receipt"], "receipt.jpg", { type: "image/jpeg" });
+      await user.upload(attachInput as HTMLElement, file);
+
+      await waitFor(() => {
+        expect(screen.getByAltText("Receipt preview")).toBeInTheDocument();
+      });
+      expect(createObjectURL).toHaveBeenCalledWith(file);
+
+      // Cancel calls handleReset → clears attachment + revokes preview blob
+      await user.click(screen.getByText("Cancel"));
+      await waitFor(() => {
+        expect(screen.queryByAltText("Receipt preview")).not.toBeInTheDocument();
+      });
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-preview");
+    });
+
+    it("uses step=any on amount inputs so paisa amounts are allowed (UX 9)", async () => {
+      const user = userEvent.setup();
+      render(<MerchantScanPage />);
+
+      await waitFor(() => screen.getByTestId("qr-scanner"));
+      await user.click(screen.getByTestId("mock-scan-valid"));
+      await waitFor(() => screen.getByText("Enter Details"));
+
+      expect(screen.getAllByPlaceholderText("0")[0]).toHaveAttribute("step", "any");
     });
   });
 });

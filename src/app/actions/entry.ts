@@ -104,8 +104,6 @@ export async function saveEntry(params: {
     status: string;
   };
 }> {
-  console.log("[Entry] saveEntry called:", JSON.stringify(params));
-
   try {
     if (!params.merchant_id) {
       return { success: false, error: "merchant_id is required" };
@@ -221,8 +219,6 @@ export async function saveEntry(params: {
         fullError: { code: error.code, message: error.message, details: error.details, hint: error.hint },
       };
     }
-
-    console.log("[Entry] Entry saved successfully:", data?.id, "status:", data?.status);
 
     // ── Step 4: Insert credit_log_items (if provided) ──
     if (params.items && params.items.length > 0) {

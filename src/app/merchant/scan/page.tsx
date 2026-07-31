@@ -25,11 +25,108 @@ import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 import { getMerchantProducts } from "@/app/actions/products";
 import InsufficientCashModal from "@/components/InsufficientCashModal";
 
-
 type Step = "scan" | "enter" | "confirm" | "success";
+type EntryType = "debit" | "credit" | "cash" | "expense" | "cash_in";
+type Product = { id: string; name: string; unit: string; default_rate: number; category: string | null };
 
 /** Prefix that identifies a customer identity QR */
 const CUSTOMER_QR_PREFIX = "QR Hisab:customer:";
+
+const isImmediateType = (t: EntryType) => t === "cash" || t === "cash_in" || t === "expense";
+
+// ─── Shared field components (manual + QR modes) ────────────────
+
+function ProductPicker({
+  products,
+  selectedProductId,
+  onSelect,
+}: {
+  products: Product[];
+  selectedProductId: string | null;
+  onSelect: (id: string | null) => void;
+}) {
+  if (products.length === 0) return null;
+  return (
+    <div>
+      <label className="text-sm font-medium text-[var(--color-text)]">Product</label>
+      <div className="mt-1 flex gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={() => onSelect(null)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+            selectedProductId === null
+              ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]"
+              : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
+          }`}
+        >
+          Custom
+        </button>
+        {products.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => onSelect(p.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+              selectedProductId === p.id
+                ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]"
+                : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
+            }`}
+          >
+            {p.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AmountField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div>
+      <input
+        type="number"
+        min="1"
+        step="any"
+        placeholder="0"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        autoFocus
+        className="w-full mt-1 px-4 py-4 bg-white dark:bg-gray-800 rounded-2xl text-2xl sm:text-3xl font-bold text-center border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white"
+      />
+      <AmountSuggestions onSelect={(v) => onChange(String(v))} />
+    </div>
+  );
+}
+
+function DescriptionField({
+  value,
+  onChange,
+  placeholder,
+  descriptions,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  descriptions: string[];
+}) {
+  return (
+    <div>
+      <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
+      <input
+        type="text"
+        maxLength={200}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white"
+      />
+      <DescriptionSuggestions
+        descriptions={descriptions}
+        onSelect={onChange}
+      />
+    </div>
+  );
+}
 
 export default function MerchantScanPage() {
   const router = useRouter();
@@ -51,7 +148,7 @@ export default function MerchantScanPage() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
-  const [entryType, setEntryType] = useState<"debit" | "credit" | "cash" | "expense" | "cash_in">("debit");
+  const [entryType, setEntryType] = useState<EntryType>("debit");
   const [saving, setSaving] = useState(false);
   const [merchantId, setMerchantId] = useState<string | null>(null);
 
@@ -76,13 +173,18 @@ export default function MerchantScanPage() {
   const profileCheckedRef = useRef(false);
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
-  const [products, setProducts] = useState<Array<{ id: string; name: string; unit: string; default_rate: number; category: string | null }>>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [parsingBill, setParsingBill] = useState(false);
 
   // Cash-in-hand warning for expense entries
   const [cashBalance, setCashBalance] = useState<number | null>(null);
   const [showInsufficientModal, setShowInsufficientModal] = useState(false);
   const insufficientOverrideRef = useRef(false);
+
+  // Guards: one idempotency key per draft, one save at a time
+  const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
+  const savingRef = useRef(false);
 
   // Load merchant ID and customer list on mount
   useEffect(() => {
@@ -125,12 +227,13 @@ export default function MerchantScanPage() {
     }
   }, [isManual, step, searchParams]);
 
+  // Load recent descriptions + products for BOTH manual and QR modes
   useEffect(() => {
-    if (isManual && merchantId) {
+    if (merchantId) {
       getMerchantRecentDescriptions(merchantId).then(setRecentDescriptions).catch(() => {});
       getMerchantProducts(merchantId).then(setProducts).catch(() => {});
     }
-  }, [isManual, merchantId]);
+  }, [merchantId]);
 
   // Fetch current cash in hand when reviewing an expense, and warn if it is insufficient
   useEffect(() => {
@@ -154,6 +257,33 @@ export default function MerchantScanPage() {
       cancelled = true;
     };
   }, [step, entryType, amount]);
+
+  // Revoke old attachment previews (also runs on unmount) to avoid blob URL leaks
+  useEffect(() => {
+    return () => {
+      if (attachmentPreview) URL.revokeObjectURL(attachmentPreview);
+    };
+  }, [attachmentPreview]);
+
+  const clearSuggestions = useCallback(() => {
+    setSuggestions([]);
+    setSearchingSuggestions(false);
+    setNameSearched(false);
+  }, []);
+
+  const handleTypeChange = useCallback((type: EntryType) => {
+    setEntryType(type);
+    clearSuggestions();
+    if (isImmediateType(type)) {
+      setCustomerId(null);
+      setCustomerPhone("");
+      setCustomerName(null);
+      setCustomerLookup("idle");
+      setCustomerBalance(null);
+      setSmsSent(false);
+      setSmsError(null);
+    }
+  }, [clearSuggestions]);
 
   const handleScan = useCallback(
     (data: string) => {
@@ -196,7 +326,7 @@ export default function MerchantScanPage() {
   const handleEnterNext = () => {
     // In QR scan mode customerId is null (server resolves via phone)
     // Expense, cash and cash_in don't require a customer
-    const isImmediate = entryType === "cash" || entryType === "cash_in" || entryType === "expense";
+    const isImmediate = isImmediateType(entryType);
     if (!isImmediate && !customerPhone) {
       addToast("Please select or enter a valid customer.", "error");
       return;
@@ -208,20 +338,6 @@ export default function MerchantScanPage() {
     insufficientOverrideRef.current = false;
     setCashBalance(null);
     setStep("confirm");
-  };
-
-  const handleMoneyInToggle = (type: "cash" | "cash_in") => {
-    setEntryType(type);
-    setCustomerId(null);
-    setCustomerPhone("");
-    setCustomerName(null);
-    setCustomerLookup("idle");
-    setCustomerBalance(null);
-    setSmsSent(false);
-    setSmsError(null);
-    setSuggestions([]);
-    setSearchingSuggestions(false);
-    setNameSearched(false);
   };
 
   const selectCustomer = (c: { id: string; name: string | null; phone: string }) => {
@@ -246,7 +362,14 @@ export default function MerchantScanPage() {
     };
   }, []);
 
+  const clearAttachment = useCallback(() => {
+    setAttachmentFile(null);
+    setAttachmentPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }, []);
+
   const handleConfirm = async () => {
+    if (savingRef.current) return;
     const isCash = entryType === "cash";
     const isExpense = entryType === "expense";
     const isCashIn = entryType === "cash_in";
@@ -257,16 +380,15 @@ export default function MerchantScanPage() {
       return;
     }
 
+    savingRef.current = true;
     setSaving(true);
 
     try {
       const mId = await getCurrentMerchantId();
       if (!mId) {
         addToast("Not logged in", "error");
-        setSaving(false);
         return;
       }
-      console.log("[Entry] handleConfirm — merchantId:", mId);
 
       const isImmediate = isCash || isCashIn || isExpense;
       const cId = customerId; // may be null for cash/expense or new customers
@@ -282,9 +404,7 @@ export default function MerchantScanPage() {
             setAttachmentUploading(true);
             try {
               const compressed = await compressImage(attachmentFile, 200);
-              console.log("[Entry] Image compressed OK, size:", compressed.size);
               attachmentUrl = await uploadAttachment(mId, crypto.randomUUID(), compressed);
-              console.log("[Entry] Attachment uploaded:", attachmentUrl);
             } catch (err) {
               console.error("[Entry] Attachment upload failed:", err);
               addToast("Photo upload failed. Entry saved without photo.", "warning");
@@ -296,7 +416,7 @@ export default function MerchantScanPage() {
           const result = await saveEntry({
             merchant_id: mId,
             customer_id: cId ?? null,
-            customer_phone: isImmediate ? cPhone : null,
+            customer_phone: cPhone,
             customer_name: cName,
             amount: Number(amount),
             type: entryType,
@@ -304,7 +424,7 @@ export default function MerchantScanPage() {
             quantity: quantity ? Number(quantity) : null,
             unit: (unit || null) as any,
             attachment_url: attachmentUrl,
-            idempotency_key: crypto.randomUUID(),
+            idempotency_key: idempotencyKeyRef.current,
             items: selectedProductId && quantity && unit ? [{
               product_id: selectedProductId,
               product_name: description || "Item",
@@ -338,7 +458,6 @@ export default function MerchantScanPage() {
                 merchantId: mId,
                 data: base64,
               });
-              console.log("[Entry] Attachment saved offline with logId:", offlineLogId);
             } catch (err) {
               console.error("[Entry] Offline attachment save failed:", err);
             } finally {
@@ -346,11 +465,12 @@ export default function MerchantScanPage() {
             }
           }
 
-          // Save to IndexedDB for later sync
+          // Save to IndexedDB for later sync (phone preserved so sync can resolve the customer)
           await savePendingLog({
             id: offlineLogId,
             merchant_id: mId,
             customer_id: cId ?? null,
+            customerPhone: cPhone || "",
             type: entryType,
             amount: Number(amount),
             description: description || null,
@@ -377,7 +497,7 @@ export default function MerchantScanPage() {
           amount: Number(amount),
           description: description || null,
           type: entryType,
-          idempotency_key: crypto.randomUUID(),
+          idempotency_key: idempotencyKeyRef.current,
           items: selectedProductId && quantity && unit ? [{
             product_id: selectedProductId,
             product_name: description || "Item",
@@ -410,6 +530,7 @@ export default function MerchantScanPage() {
       console.error("Failed to save entry:", err);
       addToast("Failed to save. Please try again.", "error");
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -442,6 +563,41 @@ export default function MerchantScanPage() {
     setQuantity("");
     setUnit("");
     setSelectedProductId(null);
+    clearAttachment();
+    insufficientOverrideRef.current = false;
+    idempotencyKeyRef.current = crypto.randomUUID();
+  };
+
+  const handleAIParseBill = async (file: File) => {
+    setParsingBill(true);
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      await new Promise((resolve) => { reader.onload = resolve; });
+      const base64 = reader.result as string;
+      const res = await fetch("/api/ai/parse-bill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, merchantId }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        addToast(data?.error || "Failed to parse bill", "error");
+        return;
+      }
+      if (data && typeof data.amount === "number" && data.amount > 0) {
+        setAmount(String(data.amount));
+      }
+      const summary = data?.items_summary;
+      if (summary && summary !== "Could not read bill" && summary !== "AI service error" && summary !== "Parse error") {
+        setDescription(summary);
+      }
+      addToast("Bill parsed successfully!", "success");
+    } catch {
+      addToast("Failed to parse bill", "error");
+    } finally {
+      setParsingBill(false);
+    }
   };
 
   // ─── Hydration guard: return matching skeleton until mounted ────
@@ -491,7 +647,7 @@ export default function MerchantScanPage() {
                       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
                       setSuggestions([]);
 
-                      const isImmediate = entryType === "cash" || entryType === "cash_in" || entryType === "expense";
+                      const isImmediate = isImmediateType(entryType);
                       const isNumeric = /^\d+$/.test(val);
                       const isFullPhone = isNumeric && val.length === 10;
 
@@ -681,37 +837,25 @@ export default function MerchantScanPage() {
               <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]">
                 <p className="text-sm font-medium text-[var(--color-text)] mb-3">Transaction Type</p>
                 <div className="flex gap-2">
-                  <button onClick={() => { setEntryType("debit"); setSuggestions([]); setSearchingSuggestions(false); }}
+                  <button onClick={() => handleTypeChange("debit")}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Credit Given
                   </button>
-                  <button onClick={() => { setEntryType("credit"); setSuggestions([]); setSearchingSuggestions(false); }}
+                  <button onClick={() => handleTypeChange("credit")}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Amount Received
                   </button>
                   <div className="flex-1 flex rounded-xl overflow-hidden border border-[var(--color-border)]">
-                    <button onClick={() => handleMoneyInToggle("cash")}
+                    <button onClick={() => handleTypeChange("cash")}
                       className={`flex-1 py-2.5 text-[11px] sm:text-sm font-semibold transition-all ${entryType === "cash" ? "bg-blue-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                       Cash Sale
                     </button>
-                    <button onClick={() => handleMoneyInToggle("cash_in")}
+                    <button onClick={() => handleTypeChange("cash_in")}
                       className={`flex-1 py-2.5 text-[11px] sm:text-sm font-semibold transition-all border-l border-[var(--color-border)] ${entryType === "cash_in" ? "bg-teal-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                       Cash In
                     </button>
                   </div>
-                  <button onClick={() => {
-                      setEntryType("expense");
-                      setCustomerId(null);
-                      setCustomerPhone("");
-                      setCustomerName(null);
-                      setCustomerLookup("idle");
-                      setCustomerBalance(null);
-                      setSmsSent(false);
-                      setSmsError(null);
-                      setSuggestions([]);
-                      setSearchingSuggestions(false);
-                      setNameSearched(false);
-                    }}
+                  <button onClick={() => handleTypeChange("expense")}
                     className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "expense" ? "bg-orange-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
                     Cash Out
                   </button>
@@ -721,92 +865,43 @@ export default function MerchantScanPage() {
               <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
                 <div className="flex items-center justify-between">
                   <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
-                  <button type="button" onClick={() => document.getElementById("ai-bill-input")?.click()}
-                    className="text-xs text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition">
-                    Scan Bill with AI
+                  <button type="button" onClick={() => document.getElementById("ai-bill-input")?.click()} disabled={parsingBill}
+                    className="text-xs text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-300 transition disabled:opacity-50">
+                    {parsingBill ? "Parsing…" : "Scan Bill with AI"}
                   </button>
                 </div>
-                <input type="file" id="ai-bill-input" accept="image/*" capture="environment" className="hidden"
+                <input type="file" id="ai-bill-input" accept="image/*" className="hidden"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
+                    e.target.value = "";
                     if (!file) return;
-                    try {
-                      const reader = new FileReader();
-                      reader.readAsDataURL(file);
-                      await new Promise((resolve) => { reader.onload = resolve; });
-                      const base64 = reader.result as string;
-                      const res = await fetch("/api/ai/parse-bill", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ image: base64, merchantId }),
-                      });
-                      const data = await res.json();
-                      if (data.amount > 0) setAmount(String(data.amount));
-                      if (data.items_summary && data.items_summary !== "Could not read bill" && data.items_summary !== "AI service error") {
-                        setDescription(data.items_summary);
-                      }
-                      addToast("Bill parsed successfully!", "success");
-                    } catch {
-                      addToast("Failed to parse bill", "error");
-                    }
+                    await handleAIParseBill(file);
                   }} />
 
-                {/* Product Picker — only when merchant has products */}
-                {products.length > 0 && (
-                  <div>
-                    <label className="text-sm font-medium text-[var(--color-text)]">Product</label>
-                    <div className="mt-1 flex gap-2 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedProductId(null);
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                          selectedProductId === null
-                            ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]"
-                            : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
-                        }`}
-                      >
-                        Custom
-                      </button>
-                      {products.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedProductId(p.id);
-                            setDescription(p.name);
-                            setAmount(String(p.default_rate));
-                            setQuantity("1");
-                            setUnit(p.unit);
-                          }}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                            selectedProductId === p.id
-                              ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]"
-                              : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
-                          }`}
-                        >
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <ProductPicker
+                  products={products}
+                  selectedProductId={selectedProductId}
+                  onSelect={(id) => {
+                    setSelectedProductId(id);
+                    if (id) {
+                      const p = products.find((x) => x.id === id);
+                      if (p) {
+                        setDescription(p.name);
+                        setAmount(String(p.default_rate));
+                        setQuantity("1");
+                        setUnit(p.unit);
+                      }
+                    }
+                  }}
+                />
 
-                <div>
-                  <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
-                    className="w-full mt-1 px-4 py-4 bg-white dark:bg-gray-800 rounded-2xl text-2xl sm:text-3xl font-bold text-center border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
-                  <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
-                  <input type="text" maxLength={200} placeholder={entryType === "expense" ? "e.g. Transport, Rent, Supplier payment" : entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grocery items" : entryType === "cash_in" ? "e.g. Money from home, bank deposit" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
-                    className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
-                  <DescriptionSuggestions
-                    descriptions={recentDescriptions}
-                    onSelect={(desc) => setDescription(desc)}
-                  />
-                </div>
+                <AmountField value={amount} onChange={setAmount} />
+                <DescriptionField
+                  value={description}
+                  onChange={setDescription}
+                  descriptions={recentDescriptions}
+                  placeholder={entryType === "expense" ? "e.g. Transport, Rent, Supplier payment" : entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : entryType === "cash" ? "e.g. Grocery items" : entryType === "cash_in" ? "e.g. Money from home, bank deposit" : "e.g. Payment for last week"}
+                />
 
                 {/* Quantity / Unit */}
                 <div className="flex gap-3">
@@ -864,11 +959,7 @@ export default function MerchantScanPage() {
                         />
                         <button
                           type="button"
-                          onClick={() => {
-                            setAttachmentFile(null);
-                            setAttachmentPreview(null);
-                            if (fileInputRef.current) fileInputRef.current.value = "";
-                          }}
+                          onClick={clearAttachment}
                           className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center"
                         >
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -1013,7 +1104,7 @@ export default function MerchantScanPage() {
                 ) : (
                   <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">Waiting for customer confirmation</p>
                 )}
-                {verificationToken && customerPhone && entryType !== "cash" && entryType !== "cash_in" && entryType !== "expense" && (
+                {verificationToken && customerPhone && !isImmediateType(entryType) && (
                   <>
                     <div className="flex gap-2 mt-3">
                       <a
@@ -1127,56 +1218,44 @@ export default function MerchantScanPage() {
             </div>
 
             <div className="bg-[var(--color-surface)] rounded-2xl p-5 shadow-sm border border-[var(--color-border)] space-y-4">
-              {/* Product Picker — QR scan mode */}
-              {products.length > 0 && (
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text)]">Product</label>
-                  <div className="mt-1 flex gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedProductId(null)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                        selectedProductId === null
-                          ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]"
-                          : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
-                      }`}
-                    >
-                      Custom
-                    </button>
-                    {products.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedProductId(p.id);
-                          setDescription(p.name);
-                          setAmount(String(p.default_rate));
-                          setQuantity("1");
-                          setUnit(p.unit);
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                          selectedProductId === p.id
-                            ? "bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] border-[var(--color-primary)]"
-                            : "bg-[var(--color-surface)] text-gray-600 dark:text-gray-300 border-[var(--color-border)]"
-                        }`}
-                      >
-                        {p.name}
-                      </button>
-                    ))}
-                  </div>
+              {/* Transaction type — scan mode supports credit and payment */}
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text)] mb-2">Transaction Type</p>
+                <div className="flex gap-2">
+                  <button onClick={() => handleTypeChange("debit")}
+                    className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "debit" ? "bg-red-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
+                    Credit Given
+                  </button>
+                  <button onClick={() => handleTypeChange("credit")}
+                    className={`flex-1 py-2.5 rounded-xl text-[11px] sm:text-sm font-semibold transition-all ${entryType === "credit" ? "bg-green-600 text-white shadow-sm" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
+                    Amount Received
+                  </button>
                 </div>
-              )}
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text)]">Amount</label>
-                <input type="number" min="1" step="1" placeholder="0" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
-                  className="w-full mt-1 px-4 py-4 bg-white dark:bg-gray-800 rounded-2xl text-2xl sm:text-3xl font-bold text-center border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
-                <AmountSuggestions onSelect={(v) => setAmount(String(v))} />
               </div>
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text)]">Description</label>
-                <input type="text" maxLength={200} placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"} value={description} onChange={(e) => setDescription(e.target.value)}
-                  className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all dark:text-white" />
-              </div>
+
+              <ProductPicker
+                products={products}
+                selectedProductId={selectedProductId}
+                onSelect={(id) => {
+                  setSelectedProductId(id);
+                  if (id) {
+                    const p = products.find((x) => x.id === id);
+                    if (p) {
+                      setDescription(p.name);
+                      setAmount(String(p.default_rate));
+                      setQuantity("1");
+                      setUnit(p.unit);
+                    }
+                  }
+                }}
+              />
+              <AmountField value={amount} onChange={setAmount} />
+              <DescriptionField
+                value={description}
+                onChange={setDescription}
+                descriptions={recentDescriptions}
+                placeholder={entryType === "debit" ? "e.g. Rice 10kg, Milk 2L" : "e.g. Payment for last week"}
+              />
             </div>
 
             <div className="flex gap-3">
