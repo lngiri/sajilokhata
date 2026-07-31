@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [master, production]
+  pull_request:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder' }}
+
+  schema-drift:
+    needs: test-and-build
+    if: github.ref == 'refs/heads/production' && secrets.NEXT_PUBLIC_SUPABASE_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Check production schema matches the app
+        run: node --experimental-strip-types scripts/check-schema.ts
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+  prod-smoke:
+    needs: test-and-build
+    if: github.ref == 'refs/heads/production' && secrets.PROD_HEALTH_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for deploy, then probe /api/health
+        run: |
+          url="${{ secrets.PROD_HEALTH_URL }}"
+          token="${{ secrets.HEALTH_TOKEN }}"
+          q=""
+          if [ -n "$token" ]; then q="?token=$token"; fi
+          ok=0
+          for i in $(seq 1 12); do
+            sleep 20
+            if curl -fsS "$url$q" -o /tmp/health.json 2>/dev/null; then ok=1; break; fi
+          done
+          if [ "$ok" != "1" ]; then echo "Health endpoint never became ready"; exit 1; fi
+          node -e "const j = require('/tmp/health.json'); if (!j.ok) { console.error(JSON.stringify(j, null, 2)); process.exit(1); } console.log('PRODUCTION HEALTHY');"
