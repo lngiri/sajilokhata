@@ -786,12 +786,24 @@ export default function MerchantDashboard() {
                   <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
                 </a>
               </div>
-              {stats.totalExpenses > 0 && (
-                <a href="/merchant/logs?filter=expense" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Expenses</p>
+              <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
+                <a href="/merchant/logs?filter=expense" className="block flex-1 min-w-0 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Purchase and Expenses</p>
                   <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {stats.totalExpenses.toLocaleString()}</p>
                 </a>
-              )}
+                <a
+                  href="/merchant/scan?manual=true&type=expense"
+                  aria-label="Add your Purchase or expenses"
+                  className="flex flex-col items-center gap-1 shrink-0 active:scale-[0.98] transition-transform"
+                >
+                  <span className="w-14 h-14 rounded-full bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] flex items-center justify-center shadow-sm">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
+                    </svg>
+                  </span>
+                  <span className="text-[10px] text-[var(--color-text-muted)] text-center leading-tight">Add your Purchase or expenses</span>
+                </a>
+              </div>
             </>
           )}
 
@@ -843,17 +855,6 @@ export default function MerchantDashboard() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
               </svg>
               Reports
-            </a>
-
-            {/* Add Cash Out (Purchase / Expense) */}
-            <a
-              href="/merchant/scan?manual=true&type=expense"
-              className="flex items-center justify-center gap-2 py-3 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded-xl font-medium text-sm active:scale-[0.98] transition-transform"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
-              </svg>
-              Note your Purchase or Expenses
             </a>
 
             {/* Smart Receivables Section */}

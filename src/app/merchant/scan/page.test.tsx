@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useSearchParams } from "next/navigation";
 import MerchantScanPage from "./page";
 
 // ─── Mock: QRScanner ───
@@ -60,6 +61,7 @@ vi.mock("@/app/actions/merchant", () => ({
   getMerchantProfile: vi.fn(),
   getMerchantCustomerBalance: vi.fn(),
   getMerchantRecentDescriptions: vi.fn(),
+  getMerchantCashBalance: vi.fn(),
   uploadAttachment: vi.fn(),
 }));
 
@@ -104,6 +106,7 @@ const mockAuth = await import("@/lib/auth");
 const mockCustomerActions = await import("@/app/actions/customer");
 const mockOfflineDb = await import("@/lib/offline/db");
 const mockImageUtils = await import("@/lib/image");
+const mockProductsActions = await import("@/app/actions/products");
 
 // ─── Shared setup ───
 function setupMocks() {
@@ -116,12 +119,15 @@ function setupMocks() {
   });
   vi.mocked(mockMerchantActions.getMerchantCustomerBalance).mockResolvedValue({ balance: 500, creditLimit: 5000 });
   vi.mocked(mockMerchantActions.getMerchantRecentDescriptions).mockResolvedValue(["Rice", "Milk"]);
+  vi.mocked(mockMerchantActions.getMerchantCashBalance).mockResolvedValue(1000);
   vi.mocked(mockMerchantActions.uploadAttachment).mockResolvedValue("https://example.com/attachment.jpg");
+  vi.mocked(mockProductsActions.getMerchantProducts).mockResolvedValue([]);
 }
 
 describe("MerchantScanPage — Full Flow Integration Tests", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams());
     setupMocks();
   });
 
@@ -599,6 +605,113 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
 
       // saveEntry should only have been called once
       expect(mockEntryActions.saveEntry).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ═══════════════════════════════════════════════
+  // INSUFFICIENT CASH WARNING (manual expense mode)
+  // ═══════════════════════════════════════════════
+
+  describe("Insufficient cash warning for expenses", () => {
+    function renderExpenseFlow(cashBalance: number) {
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true&type=expense"));
+      vi.mocked(mockMerchantActions.getMerchantCashBalance).mockResolvedValue(cashBalance);
+    }
+
+    it("shows the insufficient cash modal when expense exceeds cash in hand and allows recording anyway", async () => {
+      const user = userEvent.setup();
+      renderExpenseFlow(500);
+      vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
+        success: true,
+        entry: { id: "exp-1", status: "approved" },
+      });
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      // Amount input is the first placeholder="0" (quantity is the second)
+      await user.type(screen.getAllByPlaceholderText("0")[0], "2000");
+      await user.click(screen.getByText("Continue"));
+      await waitFor(() => {
+        expect(screen.getByText("Confirm Entry")).toBeInTheDocument();
+      });
+
+      // Warning modal appears
+      await waitFor(() => {
+        expect(screen.getByText("Insufficient Cash in Hand")).toBeInTheDocument();
+      });
+      expect(screen.getByText("Yes, record anyway")).toBeInTheDocument();
+      expect(screen.getByText("Edit amount")).toBeInTheDocument();
+
+      // Record anyway saves the expense
+      await user.click(screen.getByText("Yes, record anyway"));
+      await waitFor(() => {
+        expect(screen.getByText("Entry Saved! 🎉")).toBeInTheDocument();
+      });
+
+      expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "expense", amount: 2000 })
+      );
+    });
+
+    it("does not block the save when cash in hand is sufficient", async () => {
+      const user = userEvent.setup();
+      renderExpenseFlow(5000);
+      vi.mocked(mockEntryActions.saveEntry).mockResolvedValue({
+        success: true,
+        entry: { id: "exp-2", status: "approved" },
+      });
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.type(screen.getAllByPlaceholderText("0")[0], "2000");
+      await user.click(screen.getByText("Continue"));
+      await waitFor(() => {
+        expect(screen.getByText("Confirm Entry")).toBeInTheDocument();
+      });
+
+      // No modal, Save Entry works directly
+      expect(screen.queryByText("Insufficient Cash in Hand")).not.toBeInTheDocument();
+
+      await user.click(screen.getByText("Save Entry"));
+      await waitFor(() => {
+        expect(screen.getByText("Entry Saved! 🎉")).toBeInTheDocument();
+      });
+
+      expect(mockEntryActions.saveEntry).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "expense", amount: 2000 })
+      );
+    });
+
+    it("goes back to edit when Edit amount is clicked and does not save", async () => {
+      const user = userEvent.setup();
+      renderExpenseFlow(100);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.type(screen.getAllByPlaceholderText("0")[0], "300");
+      await user.click(screen.getByText("Continue"));
+      await waitFor(() => {
+        expect(screen.getByText("Insufficient Cash in Hand")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Edit amount"));
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      expect(mockEntryActions.saveEntry).not.toHaveBeenCalled();
     });
   });
 });

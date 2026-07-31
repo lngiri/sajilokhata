@@ -546,6 +546,34 @@ export async function getMerchantCustomerBalance(merchantId: string, customerId:
   return { balance, creditLimit };
 }
 
+/**
+ * Total cash currently in hand for the merchant (all-time).
+ * Cash in hand = all cash sales + all payments received (credit) − all expenses.
+ * Used to warn merchants when an expense/purchase exceeds their available cash.
+ */
+export async function getMerchantCashBalance(merchantId: string): Promise<number> {
+  const admin = getAdminClient();
+  if (!admin) return 0;
+
+  const sessionUserId = await requireMerchant().catch(() => null);
+  if (!sessionUserId || sessionUserId !== merchantId) {
+    return 0;
+  }
+
+  const { data: logs } = await (admin.from("credit_logs") as any)
+    .select("amount, type")
+    .eq("merchant_id", merchantId)
+    .eq("status", "approved");
+
+  const cashInHand = (logs || []).reduce((sum: number, l: any) => {
+    if (l.type === "cash" || l.type === "credit") return sum + l.amount;
+    if (l.type === "expense") return sum - l.amount;
+    return sum;
+  }, 0);
+
+  return cashInHand;
+}
+
 // ──────────────────────────────────────────────
 // Customer Detail (replaces browser-side supabase query)
 // ──────────────────────────────────────────────

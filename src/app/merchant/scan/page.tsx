@@ -10,6 +10,7 @@ import { getCurrentMerchantId } from "@/lib/auth";
 import { getMerchantProfile } from "@/app/actions/merchant";
 import { saveEntry } from "@/app/actions/entry";
 import {
+  getMerchantCashBalance,
   getMerchantCustomerBalance,
   getMerchantRecentDescriptions,
   uploadAttachment,
@@ -22,6 +23,7 @@ import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl, normalizePhone } from "@/lib/phone";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 import { getMerchantProducts } from "@/app/actions/products";
+import InsufficientCashModal from "@/components/InsufficientCashModal";
 
 
 type Step = "scan" | "enter" | "confirm" | "success";
@@ -72,6 +74,11 @@ export default function MerchantScanPage() {
   const [products, setProducts] = useState<Array<{ id: string; name: string; unit: string; default_rate: number; category: string | null }>>([]);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
+  // Cash-in-hand warning for expense entries
+  const [cashBalance, setCashBalance] = useState<number | null>(null);
+  const [showInsufficientModal, setShowInsufficientModal] = useState(false);
+  const insufficientOverrideRef = useRef(false);
+
   // Load merchant ID and customer list on mount
   useEffect(() => {
     getCurrentMerchantId().then((id) => {
@@ -115,6 +122,29 @@ export default function MerchantScanPage() {
       getMerchantProducts(merchantId).then(setProducts).catch(() => {});
     }
   }, [isManual, merchantId]);
+
+  // Fetch current cash in hand when reviewing an expense, and warn if it is insufficient
+  useEffect(() => {
+    if (step !== "confirm" || entryType !== "expense") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const mId = await getCurrentMerchantId();
+        if (!mId || cancelled) return;
+        const bal = await getMerchantCashBalance(mId);
+        if (cancelled) return;
+        setCashBalance(bal);
+        if (Number(amount) > bal) {
+          setShowInsufficientModal(true);
+        }
+      } catch {
+        if (!cancelled) setCashBalance(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [step, entryType, amount]);
 
   const handleScan = useCallback(
     (data: string) => {
@@ -166,10 +196,21 @@ export default function MerchantScanPage() {
       addToast("Please enter a valid amount.", "error");
       return;
     }
+    insufficientOverrideRef.current = false;
+    setCashBalance(null);
     setStep("confirm");
   };
 
   const handleConfirm = async () => {
+    const isCash = entryType === "cash";
+    const isExpense = entryType === "expense";
+
+    // Warn when an expense/purchase exceeds the cash currently in hand
+    if (isExpense && cashBalance !== null && Number(amount) > cashBalance && !insufficientOverrideRef.current) {
+      setShowInsufficientModal(true);
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -181,8 +222,6 @@ export default function MerchantScanPage() {
       }
       console.log("[Entry] handleConfirm — merchantId:", mId);
 
-      const isCash = entryType === "cash";
-      const isExpense = entryType === "expense";
       const isImmediate = isCash || isExpense;
       const cId = customerId; // may be null for cash/expense or new customers
       const cPhone = customerPhone || null;
@@ -325,6 +364,17 @@ export default function MerchantScanPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleInsufficientEdit = () => {
+    setShowInsufficientModal(false);
+    setStep("enter");
+  };
+
+  const handleRecordAnyway = () => {
+    insufficientOverrideRef.current = true;
+    setShowInsufficientModal(false);
+    handleConfirm();
   };
 
   const handleReset = () => {
@@ -774,11 +824,19 @@ export default function MerchantScanPage() {
                     </div>
                   )}
                   {entryType === "expense" ? (
-                    <div className="bg-orange-100 dark:bg-orange-900/40 rounded-xl p-3 flex items-start gap-2">
-                      <svg className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <div className={`rounded-xl p-3 flex items-start gap-2 ${cashBalance !== null && Number(amount) > cashBalance ? "bg-red-100 dark:bg-red-900/40" : "bg-orange-100 dark:bg-orange-900/40"}`}>
+                      <svg className={`w-4 h-4 mt-0.5 flex-shrink-0 ${cashBalance !== null && Number(amount) > cashBalance ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                       </svg>
-                      <p className="text-xs text-orange-800 dark:text-orange-300">Expense will be recorded immediately. This amount will be deducted from Cash in Hand.</p>
+                      {cashBalance !== null && Number(amount) > cashBalance ? (
+                        <p className="text-xs text-red-800 dark:text-red-300">
+                          <span className="font-semibold">Insufficient Cash in Hand!</span> Current balance: Rs. {cashBalance.toLocaleString()}. This expense of Rs. {Number(amount).toLocaleString()} exceeds it by Rs. {(Number(amount) - cashBalance).toLocaleString()}.
+                        </p>
+                      ) : (
+                        <p className="text-xs text-orange-800 dark:text-orange-300">
+                          Expense will be recorded immediately. Current Cash in Hand: Rs. {cashBalance !== null ? cashBalance.toLocaleString() : "—"}. This amount will be deducted from it.
+                        </p>
+                      )}
                     </div>
                   ) : entryType === "cash" ? (
                     <div className="bg-blue-100 dark:bg-blue-900/40 rounded-xl p-3 flex items-start gap-2">
@@ -880,6 +938,13 @@ export default function MerchantScanPage() {
           )}
         </div>
 
+        <InsufficientCashModal
+          open={showInsufficientModal}
+          cashBalance={cashBalance ?? 0}
+          amount={Number(amount)}
+          onEdit={handleInsufficientEdit}
+          onRecordAnyway={handleRecordAnyway}
+        />
         <BottomNav />
       </div>
     );
@@ -1065,6 +1130,13 @@ export default function MerchantScanPage() {
         )}
       </div>
 
+      <InsufficientCashModal
+        open={showInsufficientModal}
+        cashBalance={cashBalance ?? 0}
+        amount={Number(amount)}
+        onEdit={handleInsufficientEdit}
+        onRecordAnyway={handleRecordAnyway}
+      />
       <BottomNav />
     </div>
   );
