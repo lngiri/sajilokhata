@@ -1792,6 +1792,8 @@ export async function resendInvitation(
       ``,
       `Complete your registration here:`,
       `${inviteLink}`,
+      ``,
+      `Your verification code is ${otp}.`,
     ].join("\n");
 
     // Send SMS

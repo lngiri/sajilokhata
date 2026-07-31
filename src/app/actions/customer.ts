@@ -338,7 +338,7 @@ export async function addCustomerForMerchant(
           .update({
             otp,
             expires_at: expiresAt,
-            status: "awaiting_confirmation",
+            status: "pending",
             used_at: null,
             sms_sent_at: null,
             sms_error: null,
@@ -359,7 +359,7 @@ export async function addCustomerForMerchant(
           phone: normalized,
           otp,
           expires_at: expiresAt,
-          status: "awaiting_confirmation",
+          status: "pending",
         })
         .select("id")
         .single();
@@ -382,6 +382,8 @@ export async function addCustomerForMerchant(
         ``,
         `Complete your registration here:`,
         `${inviteLink}`,
+        ``,
+        `Your verification code is ${otp}.`,
       ].join("\n");
 
       const smsResult = await sendTransactionSMS(normalized, message, merchantId);
