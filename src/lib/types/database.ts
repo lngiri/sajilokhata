@@ -18,7 +18,7 @@ export type TransactionType = "debit" | "credit" | "cash" | "expense" | "cash_in
 export type TransactionStatus = "awaiting_confirmation" | "approved" | "disputed" | "rejected" | "edit_requested";
 export type SyncStatus = "online" | "offline_pending" | "syncing" | "failed";
 export type ActorType = "merchant" | "customer" | "admin";
-export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected" | "pin_reset";
+export type AuditAction = "created" | "approved" | "disputed" | "rejected" | "modified" | "edit_requested" | "edit_accepted" | "edit_rejected";
 export type InitiatedBy = "merchant" | "customer";
 
 export type PaymentMethodType = "fonepay" | "esewa" | "khalti" | "nepalpay" | "bank_deposit" | "cash";

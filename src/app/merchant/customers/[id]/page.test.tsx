@@ -26,7 +26,6 @@ vi.mock("@/app/actions/merchant", () => ({
   updateCustomerTrustStatus: vi.fn(),
   getAuditLogsForCreditLog: vi.fn(),
   getMerchantProfile: vi.fn(),
-  resetCustomerPin: vi.fn(),
 }));
 
 vi.mock("@/app/actions/sms-billing", () => ({
@@ -410,30 +409,6 @@ describe("CustomerDetailPage", () => {
 
     const input = screen.getByDisplayValue("5000") as HTMLInputElement;
     expect(input.step).toBe("any");
-  });
-
-  it("resets the customer PIN after confirmation", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-    vi.mocked(mockMerchantActions.resetCustomerPin).mockResolvedValue({
-      success: true,
-    });
-
-    render(<CustomerDetailPage />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Reset PIN")).toBeInTheDocument();
-    });
-
-    await userEvent.click(screen.getByText("Reset PIN"));
-
-    await waitFor(() => {
-      expect(mockMerchantActions.resetCustomerPin).toHaveBeenCalledWith(
-        "m1",
-        "c1"
-      );
-    });
-
-    confirmSpy.mockRestore();
   });
 
   it("shows absolute balance and clamped credit-used percent for overpaid customers", async () => {

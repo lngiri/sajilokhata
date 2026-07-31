@@ -693,39 +693,6 @@ export async function getCustomerTransactions(
 // Write Operations
 // ──────────────────────────────────────────────
 
-export async function resetCustomerPin(
-  merchantId: string,
-  customerId: string
-): Promise<{ success: boolean; error?: string }> {
-  const sessionUserId = await requireMerchant().catch(() => null);
-  if (!sessionUserId || sessionUserId !== merchantId) {
-    return { success: false, error: "Not logged in" };
-  }
-
-  const admin = getAdminClient();
-  if (!admin) return { success: false, error: "Server config" };
-
-  const { data: mc } = await (admin.from("merchant_customers") as any)
-    .select("customer_id")
-    .eq("merchant_id", merchantId)
-    .eq("customer_id", customerId)
-    .maybeSingle();
-
-  if (!mc) {
-    return { success: false, error: "Customer not found" };
-  }
-
-  const { error: updateError } = await (admin.from("customers") as any)
-    .update({ pin_hash: null })
-    .eq("id", customerId);
-
-  if (updateError) {
-    return { success: false, error: "Failed to reset PIN" };
-  }
-
-  return { success: true };
-}
-
 export async function updateCustomerCreditLimit(
   merchantId: string,
   customerId: string,
