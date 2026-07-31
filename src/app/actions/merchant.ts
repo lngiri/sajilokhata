@@ -337,7 +337,7 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
       .select("customer_id, amount, type")
       .eq("merchant_id", merchantId)
       .eq("status", "approved")
-      .not("type", "in", "("cash","expense")")
+      .not("type", "in", "('cash','expense')")
       .in("customer_id", customerIds);
 
     const balanceMap: Record<string, number> = {};
@@ -449,7 +449,7 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
     .select("customer_id, amount, type")
     .eq("merchant_id", merchantId)
     .eq("status", "approved")
-    .not("type", "in", "("cash","expense")")
+    .not("type", "in", "('cash','expense')")
     .in("customer_id", searchCustomerIds);
 
   const balanceMap: Record<string, number> = {};
@@ -537,7 +537,7 @@ export async function getMerchantCustomerBalance(merchantId: string, customerId:
     .eq("merchant_id", merchantId)
     .eq("customer_id", customerId)
     .eq("status", "approved")
-    .not("type", "in", "("cash","expense")");
+    .not("type", "in", "('cash','expense')");
 
   const balance = (logs || []).reduce((sum: number, l: any) => {
     return sum + (l.type === "debit" ? l.amount : -l.amount);
@@ -1128,7 +1128,7 @@ export async function sendPaymentReminder(
         .eq("merchant_id", merchantId)
         .eq("customer_id", customerId)
         .eq("status", "approved")
-        .not("type", "in", "("cash","expense")"),
+        .not("type", "in", "('cash','expense')"),
     ]);
 
     const shopName = merchantResult.data?.name || "Shop";
@@ -1285,7 +1285,7 @@ export async function checkAndSendAutoReminders(
       .select("customer_id, amount, type")
       .eq("merchant_id", merchantId)
       .eq("status", "approved")
-      .not("type", "in", "("cash","expense")")
+      .not("type", "in", "('cash','expense')")
       .in("customer_id", customerIds);
 
     const balanceMap: Record<string, number> = {};

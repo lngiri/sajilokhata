@@ -94,7 +94,7 @@ function ExpenseChart({ data }: { data: { date: string; expense: number }[] }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
           <YAxis tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(value: number) => [`Rs. ${value.toLocaleString()}`, "Expenses"]} />
+          <Tooltip formatter={(value) => [`Rs. ${Number(value ?? 0).toLocaleString()}`, "Expenses"]} />
           <Bar dataKey="expense" fill="url(#expenseGrad)" radius={[4, 4, 0, 0]} name="Expenses" />
         </BarChart>
       </ResponsiveContainer>

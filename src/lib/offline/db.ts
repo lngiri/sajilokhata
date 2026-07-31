@@ -150,7 +150,7 @@ export async function savePendingLog(log: CreditLogInsert & { id: string; custom
     unit: log.unit ?? undefined,
     description: log.description ?? undefined,
     type: log.type,
-    status: log.status ?? "pending",
+    status: log.status ?? "awaiting_confirmation",
     syncStatus: "offline_pending" as SyncStatus,
     ipAddress: log.ip_address ?? undefined,
     deviceInfo: log.device_info ?? undefined,
