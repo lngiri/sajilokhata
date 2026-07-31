@@ -116,9 +116,8 @@ vi.mock("@/app/actions/customer", () => ({
   findOrCreateCustomer: vi.fn(),
   linkCustomerToMerchant: vi.fn(),
   submitCustomerEntry: vi.fn(),
-  getCustomerProfile: vi.fn().mockResolvedValue({ name: "Hari", avatar_url: null }),
+  getCustomerProfile: vi.fn().mockResolvedValue({ name: "Hari" }),
   getCustomerIdsForPhone: vi.fn().mockResolvedValue(["c1"]),
-  updateCustomerAvatar: vi.fn(),
 }));
 
 vi.mock("@/app/actions/merchant", () => ({

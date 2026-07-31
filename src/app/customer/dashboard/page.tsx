@@ -22,7 +22,7 @@ import {
   getCustomerIdsForPhone,
 } from "@/app/actions/customer";
 import { getMerchantPaymentMethodsPublic, submitPaymentVoucher } from "@/app/actions/merchant";
-import { getCustomerProfile, updateCustomerAvatar, submitCustomerEntry } from "@/app/actions/customer";
+import { getCustomerProfile, submitCustomerEntry } from "@/app/actions/customer";
 import {
   getNotifications as getNotifs,
   getUnreadCount,
@@ -73,10 +73,6 @@ export default function CustomerDashboard() {
   const [saving, setSaving] = useState(false);
   const [showPendingModal, setShowPendingModal] = useState(false);
 
-  // Customer avatar
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
   // Edit profile modal
   const [showEditProfile, setShowEditProfile] = useState(false);
 
@@ -108,14 +104,11 @@ export default function CustomerDashboard() {
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
-  const [onlineStatus, setOnlineStatus] = useState(true);
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [customerId, setCustomerId] = useState<string | null>(null);
   const customerNotificationRef = useRef<HTMLDivElement>(null);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const profileMenuRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
   const closeModalTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined!);
   const onboardingCompletedRef = useRef(false);
@@ -145,18 +138,6 @@ export default function CustomerDashboard() {
 
   // On mount, restore customer session from localStorage (with cookie fallback)
   useEffect(() => {
-    setOnlineStatus(navigator.onLine);
-    const goOnline = () => setOnlineStatus(true);
-    const goOffline = () => setOnlineStatus(false);
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
-
-  useEffect(() => {
     try {
       const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
       if (raw) {
@@ -164,7 +145,6 @@ export default function CustomerDashboard() {
         if (session.phone) {
           setCustomerPhone(session.phone);
           setCustomerName(session.name || "");
-          setAvatarUrl(session.avatar_url || null);
           setInitialized(true);
           return;
         }
@@ -262,7 +242,6 @@ export default function CustomerDashboard() {
     setProfileLoading(true);
     getCustomerProfile(customerPhone).then((profile) => {
       if (cancelled || !profile || !mountedRef.current) return;
-      setAvatarUrl(profile.avatar_url);
       const profileName = profile.name || "";
       if (profileName) {
         setCustomerName(profileName);
@@ -274,7 +253,6 @@ export default function CustomerDashboard() {
       try {
         const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
         const session = raw ? JSON.parse(raw) : {};
-        session.avatar_url = profile.avatar_url || undefined;
         if (profileName && profileName !== "Customer") {
           session.name = profileName;
         }
@@ -462,25 +440,6 @@ export default function CustomerDashboard() {
     };
   }, [qrPreviewUrl]);
 
-  // Close profile menu on click outside + Escape
-  useEffect(() => {
-    if (!showProfileMenu) return;
-    const handler = (e: PointerEvent) => {
-      if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {
-        setShowProfileMenu(false);
-      }
-    };
-    const escHandler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setShowProfileMenu(false);
-    };
-    document.addEventListener("pointerdown", handler);
-    window.addEventListener("keydown", escHandler);
-    return () => {
-      document.removeEventListener("pointerdown", handler);
-      window.removeEventListener("keydown", escHandler);
-    };
-  }, [showProfileMenu]);
-
   // Scan QR handler — moves modal to "enter" step
   const handleQRScan = useCallback(
     (data: string) => {
@@ -635,22 +594,6 @@ export default function CustomerDashboard() {
                 )}
               </button>
             </div>
-            {customerPhone && (
-              <button
-                onClick={() => setShowProfileMenu(true)}
-                className="flex items-center justify-center w-[44px] h-[44px] active:scale-90 transition-transform relative"
-                aria-label="Profile"
-              >
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xs font-bold shadow-sm overflow-hidden">
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    (customerName || customerPhone).charAt(0).toUpperCase()
-                  )}
-                </div>
-                <span className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[var(--color-bg)] ${onlineStatus ? "bg-green-500" : "bg-red-500"}`} />
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -726,75 +669,6 @@ export default function CustomerDashboard() {
           >
             View All
           </a>
-        </div>
-      )}
-
-      {/* Profile menu modal */}
-      {showProfileMenu && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in"
-          onClick={() => setShowProfileMenu(false)}
-        >
-          <div
-            ref={profileMenuRef}
-            onClick={(e) => e.stopPropagation()}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-sm bg-[var(--color-surface)] rounded-2xl shadow-2xl border border-[var(--color-border)] max-h-[85vh] overflow-y-auto animate-scale-up"
-          >
-            {/* Close button */}
-            <button
-              onClick={() => setShowProfileMenu(false)}
-              className="absolute top-3 right-3 p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-text)] active:scale-90 transition-transform z-10"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-
-            {/* Avatar + name header */}
-            <div className="flex flex-col items-center pt-8 pb-4 px-6 border-b border-[var(--color-border)]">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-xl font-bold shadow-md mb-3 overflow-hidden">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  (customerName || customerPhone).charAt(0).toUpperCase()
-                )}
-              </div>
-              <p className="text-base font-bold text-[var(--color-text)] text-center truncate max-w-full">
-                {customerName || "Customer"}
-              </p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-0.5 font-mono">
-                {customerPhone || ""}
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="p-4 space-y-2">
-              <a
-                href="/customer/settings"
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-800 transition-colors"
-              >
-                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a17.933 17.933 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-                </svg>
-                Edit Profile
-              </a>
-
-              <button
-                onClick={async () => {
-                  setShowProfileMenu(false);
-                  localStorage.removeItem(CUSTOMER_STORAGE_KEY);
-                  localStorage.removeItem("qr_hisab_auth_" + customerPhone);
-                  window.location.replace("/");
-                }}
-                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:bg-red-100 dark:active:bg-red-900/30 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
-                </svg>
-                Sign Out
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
@@ -1175,67 +1049,6 @@ export default function CustomerDashboard() {
               </button>
             </div>
             <div className="space-y-4">
-              {/* Avatar upload */}
-              <div className="flex flex-col items-center">
-                <label className="relative cursor-pointer group">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[var(--color-primary-light)] to-[var(--color-primary-dark)] flex items-center justify-center text-white text-2xl font-bold shadow-md overflow-hidden">
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      (customerName || customerPhone || "?").charAt(0).toUpperCase()
-                    )}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                      <svg className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
-                      </svg>
-                    </div>
-                  </div>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (!file || !mountedRef.current) return;
-                      setAvatarUploading(true);
-                      try {
-                        const compressed = await resizeImage(file, 512);
-                        const reader = new FileReader();
-                        reader.onloadend = async () => {
-                          const base64 = reader.result as string;
-                          if (!mountedRef.current) return;
-                          const result = await updateCustomerAvatar(customerPhone, base64);
-                          if (result.success && result.avatarUrl && mountedRef.current) {
-                            setAvatarUrl(result.avatarUrl);
-                            try {
-                              const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
-                              const session = raw ? JSON.parse(raw) : {};
-                              session.avatar_url = result.avatarUrl;
-                              localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
-                            } catch {}
-                            addToast("Avatar updated!", "success");
-                          } else {
-                            addToast(result.error || "Failed to upload avatar", "error");
-                          }
-                          if (mountedRef.current) setAvatarUploading(false);
-                        };
-                        reader.readAsDataURL(compressed);
-                      } catch {
-                        if (mountedRef.current) setAvatarUploading(false);
-                        addToast("Failed to process image", "error");
-                      }
-                    }}
-                  />
-                </label>
-                {avatarUploading && (
-                  <div className="mt-2 flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
-                    <div className="w-3 h-3 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
-                    Uploading...
-                  </div>
-                )}
-              </div>
-
               <div>
                 <label className="text-sm font-medium text-[var(--color-text)]">Name</label>
                 <input
@@ -1266,7 +1079,6 @@ export default function CustomerDashboard() {
                       const session = raw ? JSON.parse(raw) : {};
                       session.name = editName;
                       session.phone = customerPhone;
-                      if (avatarUrl) session.avatar_url = avatarUrl;
                       localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify(session));
                     } catch { /* ignore */ }
                     setShowEditProfile(false);
@@ -1274,10 +1086,10 @@ export default function CustomerDashboard() {
                     loadStats();
                   }
                 }}
-                disabled={!editName || avatarUploading}
+                disabled={!editName}
                 className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
               >
-                {avatarUploading ? "Uploading..." : "Save"}
+                Save
               </button>
             </div>
           </div>

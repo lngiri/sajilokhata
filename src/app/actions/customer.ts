@@ -1,6 +1,5 @@
 "use server";
 
-import crypto from "crypto";
 import { cookies } from "next/headers";
 import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
@@ -444,76 +443,19 @@ export async function addCustomerForMerchant(
 
 export async function getCustomerProfile(
   phone: string
-): Promise<{ id: string; name: string | null; phone: string; avatar_url: string | null; address: string } | null> {
+): Promise<{ id: string; name: string | null; phone: string; address: string } | null> {
   const admin = getAdminClient();
   if (!admin) return null;
 
   const normalized = normalizePhone(phone);
   const { data } = await admin.from("customers")
-    .select("id, name, phone, avatar_url, address")
+    .select("id, name, phone, address")
     .eq("phone", normalized)
     .maybeSingle();
 
-  const profile = data as Pick<CustomerRow, "id" | "name" | "phone" | "avatar_url" | "address"> | null;
+  const profile = data as Pick<CustomerRow, "id" | "name" | "phone" | "address"> | null;
   if (!profile) return null;
   return { ...profile, address: profile.address || "" };
-}
-
-export async function updateCustomerAvatar(
-  phone: string,
-  avatarBase64: string
-): Promise<{ success: boolean; error?: string; avatarUrl?: string }> {
-  const admin = getAdminClient();
-  if (!admin) return { success: false, error: "Server config" };
-
-  try {
-    const normalized = normalizePhone(phone);
-    const { data: rawCustomer } = await admin.from("customers")
-      .select("id")
-      .eq("phone", normalized)
-      .maybeSingle();
-    const customer = rawCustomer as Pick<CustomerRow, "id"> | null;
-
-    if (!customer) return { success: false, error: "Customer not found" };
-
-    const matches = avatarBase64.match(/^data:(image\/\w+);base64,(.+)$/);
-    if (!matches) return { success: false, error: "Invalid image data" };
-
-    const mimeType = matches[1];
-    const ext = mimeType.split("/")[1];
-    const buffer = Buffer.from(matches[2], "base64");
-    const fileName = `customer-avatars/${customer.id}/${crypto.randomUUID()}.${ext}`;
-
-    const { error: uploadError } = await (admin.storage
-      .from("app_assets") as any).upload(fileName, buffer, {
-      contentType: mimeType,
-      upsert: false,
-    });
-
-    if (uploadError) {
-      console.error("[Customer] Avatar upload failed:", uploadError);
-      return { success: false, error: "Failed to upload avatar" };
-    }
-
-    const { data: urlData } = await (admin.storage
-      .from("app_assets") as any).getPublicUrl(fileName);
-    const publicUrl = urlData?.publicUrl || fileName;
-
-    const { error: updateError } = await admin.from("customers")
-      .update({ avatar_url: publicUrl })
-      .eq("id", customer.id);
-
-    if (updateError) {
-      console.error("[Customer] Avatar DB update failed:", updateError);
-      return { success: false, error: "Failed to save avatar URL" };
-    }
-
-    return { success: true, avatarUrl: publicUrl };
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[Customer] updateCustomerAvatar error:", msg);
-    return { success: false, error: msg };
-  }
 }
 
 // ============================================================
