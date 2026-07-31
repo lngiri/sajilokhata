@@ -12,6 +12,7 @@ import {
 } from "@/app/actions/sms-billing";
 import { getReminderLogs } from "@/app/actions/merchant";
 import { SMS_PACKAGES, type SmsPackageType } from "@/lib/types/sms-billing";
+import { formatNumber } from "@/lib/format";
 
 type PackageKey = SmsPackageType;
 
@@ -225,7 +226,7 @@ export default function BillingPage() {
                       +{log.sms_count} SMS
                     </p>
                     <p className="text-xs text-[var(--color-text-muted)]">
-                      Rs. {Number(log.amount).toLocaleString()} &middot; {new Date(log.created_at).toLocaleDateString()}
+                      Rs. {formatNumber(log.amount)} &middot; {new Date(log.created_at).toLocaleDateString()}
                     </p>
                   </div>
                   <span

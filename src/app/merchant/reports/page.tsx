@@ -14,6 +14,7 @@ import {
   getMerchantCreditLogs,
   type AnalyticsResult,
 } from "@/app/actions/merchant";
+import { formatNumber } from "@/lib/format";
 
 // ─── Date Filter ───────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ function MetricCard({
     <div className="rounded-xl p-4 bg-[var(--color-surface)] shadow-sm border border-[var(--color-border)]">
       <p className="text-xs font-medium text-[var(--color-text-muted)]">{label}</p>
       <p className={`text-xl font-bold mt-1 ${color}`}>
-        {prefix} {typeof value === "number" ? value.toLocaleString() : value}
+        {prefix} {typeof value === "number" ? formatNumber(value) : value}
       </p>
       {hint && <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{hint}</p>}
     </div>
@@ -99,7 +100,7 @@ function ExpenseChart({ data }: { data: { date: string; expense: number }[] }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
           <YAxis tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(value) => [`Rs. ${Number(value ?? 0).toLocaleString()}`, "Expenses"]} />
+          <Tooltip formatter={(value) => [`Rs. ${formatNumber(value)}`, "Expenses"]} />
           <Bar dataKey="expense" fill="url(#expenseGrad)" radius={[4, 4, 0, 0]} name="Expenses" />
         </BarChart>
       </ResponsiveContainer>
@@ -119,7 +120,7 @@ function CashFlowChart({ data }: { data: { date: string; debit: number; credit: 
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v: string) => v.slice(5)} />
           <YAxis tick={{ fontSize: 10 }} />
-          <Tooltip formatter={(value, name) => [`Rs. ${Number(value ?? 0).toLocaleString()}`, name]} />
+          <Tooltip formatter={(value, name) => [`Rs. ${formatNumber(value)}`, name]} />
           <Bar dataKey="debit" stackId="flow" fill="#dc2626" name="Credit Given" />
           <Bar dataKey="credit" stackId="flow" fill="#16a34a" name="Received" />
           <Bar dataKey="cash" stackId="flow" fill="#2563eb" name="Cash Sales" />
@@ -158,7 +159,7 @@ function TopCustomersChart({ data }: { data: { name: string; balance: number }[]
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
           <XAxis type="number" tick={{ fontSize: 10 }} />
           <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={80} />
-          <Tooltip formatter={(value) => [`Rs. ${Number(value ?? 0).toLocaleString()}`, "Outstanding"]} />
+          <Tooltip formatter={(value) => [`Rs. ${formatNumber(value)}`, "Outstanding"]} />
           <Bar dataKey="balance" fill="#dc2626" radius={[0, 4, 4, 0]} name="Outstanding" />
         </BarChart>
       </ResponsiveContainer>
@@ -257,7 +258,7 @@ function TransactionAuditLog({
                 </span>
               </td>
               <td className={`py-2.5 pr-2 text-right font-medium text-xs ${log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "expense" ? "text-orange-600 dark:text-orange-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : log.type === "cash_in" ? "text-teal-600 dark:text-teal-400" : "text-green-600 dark:text-green-400"}`}>
-                Rs. {log.amount.toLocaleString()}
+                Rs. {formatNumber(log.amount)}
               </td>
             </tr>
           ))}

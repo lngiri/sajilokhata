@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { getAdminDisputes, resolveDispute } from "@/app/actions/admin";
+import { formatNumber } from "@/lib/format";
 
 interface Dispute {
   id: string;
@@ -71,7 +72,7 @@ export default function DisputesPage() {
                     }`}>{d.status}</span>
                   </div>
                   <p className="text-xs text-[var(--a-muted)] mb-2">
-                    vs {d.customerName} &middot; NPR {d.amount.toLocaleString()}
+                    vs {d.customerName} &middot; NPR {formatNumber(d.amount)}
                   </p>
                   {d.description && <p className="text-xs text-[var(--a-text-2)] mb-1">{d.description}</p>}
                   <p className="text-xs text-red-400/80"><strong>Reason:</strong> {d.reason}</p>

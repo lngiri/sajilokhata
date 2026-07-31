@@ -9,6 +9,7 @@ import { playSuccessSound } from "@/lib/sound";
 import TransactionIcon from "@/components/TransactionIcon";
 import { getMerchantCreditLogs, updateCreditLogStatus } from "@/app/actions/merchant";
 import { getCurrentMerchantId } from "@/lib/auth";
+import { formatNumber } from "@/lib/format";
 
 interface LogEntry {
   id: string;
@@ -252,7 +253,7 @@ export default function LedgerPage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <p className={`font-bold text-sm ${log.status === "rejected" ? "text-slate-400 line-through" : log.type === "expense" ? "text-orange-600 dark:text-orange-400" : log.type === "debit" ? "text-red-600 dark:text-red-400" : log.type === "cash" ? "text-blue-600 dark:text-blue-400" : log.type === "cash_in" ? "text-teal-600 dark:text-teal-400" : "text-green-600 dark:text-green-400"}`}>
-                        {log.type === "cash" || log.type === "expense" ? "" : (log.type === "debit" || log.type === "cash_in" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
+                        {log.type === "cash" || log.type === "expense" ? "" : (log.type === "debit" || log.type === "cash_in" ? "+" : "-")}Rs. {formatNumber(log.amount)}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">
                         {new Date(log.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "Asia/Kathmandu" })}

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/Toast";
 import { sendPaymentReminder } from "@/app/actions/merchant";
+import { formatNumber } from "@/lib/format";
 
 interface SmsReminderModalProps {
   open: boolean;
@@ -25,7 +26,7 @@ function buildDefaultMessage(
 ): string {
   const name = customerName || "Customer";
   const firstName = shopName.split(" ")[0];
-  return `Dear ${name}, pay Rs. ${Number(balance).toLocaleString()} to ${firstName}.`;
+  return `Dear ${name}, pay Rs. ${formatNumber(balance)} to ${firstName}.`;
 }
 
 export default function SmsReminderModal({
@@ -95,7 +96,7 @@ export default function SmsReminderModal({
     try {
       const baseUrl = window.location.origin;
       const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
-      const shareText = `Dear ${customerName || "Customer"}, your outstanding balance at ${merchantName} is Rs. ${Number(balance).toLocaleString()}. View your ledger: ${ledgerLink}`;
+      const shareText = `Dear ${customerName || "Customer"}, your outstanding balance at ${merchantName} is Rs. ${formatNumber(balance)}. View your ledger: ${ledgerLink}`;
 
       if (navigator.share) {
         await navigator.share({
@@ -121,7 +122,7 @@ export default function SmsReminderModal({
   const handleOpenWhatsApp = () => {
     const baseUrl = window.location.origin;
     const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
-    const text = `Dear ${customerName || "Customer"}, your outstanding balance at ${merchantName} is Rs. ${Number(balance).toLocaleString()}. View ledger: ${ledgerLink}`;
+    const text = `Dear ${customerName || "Customer"}, your outstanding balance at ${merchantName} is Rs. ${formatNumber(balance)}. View ledger: ${ledgerLink}`;
     const waUrl = `https://wa.me/${customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(text)}`;
     window.open(waUrl, "_blank");
     onClose();
@@ -230,7 +231,7 @@ export default function SmsReminderModal({
                 <div className="text-right flex-shrink-0">
                   <p className="text-xs text-[var(--color-text-muted)]">Outstanding</p>
                   <p className="text-lg font-bold text-[var(--color-danger)]">
-                    Rs. {Number(balance).toLocaleString()}
+                    Rs. {formatNumber(balance)}
                   </p>
                 </div>
               </div>

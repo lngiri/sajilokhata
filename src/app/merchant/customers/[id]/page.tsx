@@ -9,6 +9,7 @@ import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
 import PullToRefresh from "@/components/PullToRefresh";
 import TransactionIcon from "@/components/TransactionIcon";
 import SmsReminderModal from "@/components/SmsReminderModal";
+import { formatNumber } from "@/lib/format";
 
 const STATUS_BADGE: Record<string, string> = {
   approved: "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300",
@@ -403,7 +404,7 @@ export default function CustomerDetailPage() {
             <div>
               <p className="text-xs text-[var(--color-text-muted)]">Current Balance</p>
               <p className={`text-2xl font-bold ${isNegativeBalance ? "text-[var(--color-primary)]" : "text-[var(--color-danger)]"}`}>
-                Rs. {Math.abs(customer.current_balance).toLocaleString()}
+                Rs. {formatNumber(Math.abs(customer.current_balance))}
               </p>
               {isNegativeBalance && (
                 <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Customer is in credit (no outstanding)</p>
@@ -433,7 +434,7 @@ export default function CustomerDetailPage() {
             </div>
             <div className="flex justify-between text-xs text-[var(--color-text-muted)] mt-1">
               <span>Rs. 0</span>
-              <span>Rs. {customer.credit_limit.toLocaleString()}</span>
+              <span>Rs. {formatNumber(customer.credit_limit)}</span>
             </div>
           </div>
 
@@ -441,11 +442,11 @@ export default function CustomerDetailPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
               <p className="text-xs text-[var(--color-text-muted)]">Total Credit Taken</p>
-              <p className="font-bold text-[var(--color-danger)]">Rs. {customer.total_debit_amount.toLocaleString()}</p>
+              <p className="font-bold text-[var(--color-danger)]">Rs. {formatNumber(customer.total_debit_amount)}</p>
             </div>
             <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-3 text-center">
               <p className="text-xs text-[var(--color-text-muted)]">Total Paid</p>
-              <p className="font-bold text-[var(--color-primary)]">Rs. {customer.total_credit_amount.toLocaleString()}</p>
+              <p className="font-bold text-[var(--color-primary)]">Rs. {formatNumber(customer.total_credit_amount)}</p>
             </div>
           </div>
         </div>
@@ -503,7 +504,7 @@ export default function CustomerDetailPage() {
                     )}
                   </div>
                   <p className={`font-bold text-sm ${tx.status === "rejected" ? "text-slate-400 line-through" : tx.type === "debit" ? "text-[var(--color-danger)]" : tx.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-[var(--color-primary)]"}`}>
-                    {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}Rs. {tx.amount.toLocaleString()}
+                    {tx.type === "cash" ? "" : (tx.type === "debit" ? "+" : "-")}Rs. {formatNumber(tx.amount)}
                   </p>
                 </div>
               ))
@@ -658,7 +659,7 @@ export default function CustomerDetailPage() {
                 <div className="flex justify-between">
                   <span className="text-[var(--color-text-muted)]">Amount</span>
                   <span className={`font-bold ${auditTx.type === "debit" ? "text-[var(--color-danger)]" : auditTx.type === "cash" ? "text-blue-600 dark:text-blue-400" : "text-[var(--color-primary)]"}`}>
-                    {auditTx.type === "cash" ? "" : (auditTx.type === "debit" ? "+" : "-")}Rs. {auditTx.amount.toLocaleString()}
+                    {auditTx.type === "cash" ? "" : (auditTx.type === "debit" ? "+" : "-")}Rs. {formatNumber(auditTx.amount)}
                   </span>
                 </div>
                 <div className="flex justify-between">

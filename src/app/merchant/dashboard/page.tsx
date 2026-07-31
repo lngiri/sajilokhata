@@ -26,6 +26,7 @@ import {
 } from "@/app/actions/notifications";
 import { getCurrentMerchantId, signOut } from "@/lib/auth";
 import { getMerchantSmsBalance } from "@/app/actions/sms-billing";
+import { formatNumber } from "@/lib/format";
 import { useRouter } from "next/navigation";
 import TransactionIcon from "@/components/TransactionIcon";
 import RoleSwitcher from "@/components/RoleSwitcher";
@@ -330,7 +331,7 @@ export default function MerchantDashboard() {
           if (!mountedRef.current) return;
           const customerName = payload.new?.description || "a customer";
           addToast(
-            `📥 New credit request: Rs. ${Number(payload.new?.amount || 0).toLocaleString()} — ${customerName}`,
+            `📥 New credit request: Rs. ${formatNumber(payload.new?.amount)} — ${customerName}`,
             "info"
           );
           loadData();
@@ -357,7 +358,7 @@ export default function MerchantDashboard() {
               playSuccessSound();
             }
             addToast(
-              `📝 Entry ${newStatus}: Rs. ${Number(payload.new?.amount || 0).toLocaleString()}`,
+              `📝 Entry ${newStatus}: Rs. ${formatNumber(payload.new?.amount)}`,
               newStatus === "approved" ? "success" : "warning"
             );
             loadData();
@@ -602,7 +603,7 @@ export default function MerchantDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-[var(--color-text)] truncate">
-                        {log.customers?.name || log.customers?.phone || "Unknown"} — Rs. {log.amount.toLocaleString()}
+                        {log.customers?.name || log.customers?.phone || "Unknown"} — Rs. {formatNumber(log.amount)}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">{timeAgo(log.created_at)}</p>
                     </div>
@@ -842,19 +843,19 @@ export default function MerchantDashboard() {
             <div className="grid grid-cols-2 gap-3">
               <a href="/merchant/logs?filter=credit" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Credit on Market</p>
-                <p className="text-lg sm:text-xl font-bold text-[var(--color-danger)] truncate">Rs. {stats.totalOutstanding.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-[var(--color-danger)] truncate">Rs. {formatNumber(stats.totalOutstanding)}</p>
               </a>
               <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Net Credit</p>
-                <p className="text-lg sm:text-xl font-bold text-[var(--color-primary)] truncate">Rs. {stats.todayTotal.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-[var(--color-primary)] truncate">Rs. {formatNumber(stats.todayTotal)}</p>
               </a>
               <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Cash Sales</p>
-                <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.totalCashSales.toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {formatNumber(stats.totalCashSales)}</p>
               </a>
               <a href="/merchant/logs?filter=debit" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Today's Credit Sales</p>
-                <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400 truncate">Rs. {(stats.todayCreditSales ?? 0).toLocaleString()}</p>
+                <p className="text-lg sm:text-xl font-bold text-amber-600 dark:text-amber-400 truncate">Rs. {formatNumber(stats.todayCreditSales)}</p>
               </a>
             </div>
           )}
@@ -914,12 +915,12 @@ export default function MerchantDashboard() {
                           <div className="text-right flex-shrink-0">
                             {isEdit && log.proposed_amount !== null ? (
                               <p className="text-xs font-bold text-[var(--color-text)]">
-                                <span className="text-[var(--color-text-muted)] line-through">Rs. {log.amount.toLocaleString()}</span>{" "}
-                                → Rs. {log.proposed_amount.toLocaleString()}
+                                <span className="text-[var(--color-text-muted)] line-through">Rs. {formatNumber(log.amount)}</span>{" "}
+                                → Rs. {formatNumber(log.proposed_amount)}
                               </p>
                             ) : (
                               <p className="text-xs font-bold text-[var(--color-danger)]">
-                                Rs. {log.amount.toLocaleString()}
+                                Rs. {formatNumber(log.amount)}
                               </p>
                             )}
                             <p className="text-[9px] text-[var(--color-text-muted)]">
@@ -990,17 +991,17 @@ export default function MerchantDashboard() {
                 <div className="grid grid-cols-2 gap-3">
                   <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                     <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
-                    <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {stats.totalSales.toLocaleString()}</p>
+                    <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {formatNumber(stats.totalSales)}</p>
                   </a>
                   <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                     <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
-                    <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {stats.cashInHand.toLocaleString()}</p>
+                    <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {formatNumber(stats.cashInHand)}</p>
                   </a>
                 </div>
                 <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
                   <a href="/merchant/logs?filter=expense" className="block flex-1 min-w-0 active:scale-[0.98] transition-transform">
                     <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Purchase and Expenses</p>
-                    <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {stats.totalExpenses.toLocaleString()}</p>
+                    <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {formatNumber(stats.totalExpenses)}</p>
                   </a>
                   <a
                     href="/merchant/scan?manual=true&type=expense"
@@ -1071,7 +1072,7 @@ export default function MerchantDashboard() {
                             {rc.customer_name || rc.customer_phone}
                           </p>
                           <p className="text-xs text-[var(--color-danger)] font-semibold">
-                            Rs. {rc.current_balance.toLocaleString()}
+                            Rs. {formatNumber(rc.current_balance)}
                           </p>
                         </a>
                       </div>
@@ -1158,7 +1159,7 @@ export default function MerchantDashboard() {
                         </div>
                         <div className="text-right flex-shrink-0">
                           <p className={`font-bold text-xs ${log.status === "rejected" ? "text-slate-400 dark:text-slate-500 line-through" : log.type === "expense" ? "text-orange-700 dark:text-orange-400" : log.type === "debit" ? "text-red-700 dark:text-red-400" : log.type === "cash" ? "text-blue-700 dark:text-blue-400" : log.type === "cash_in" ? "text-teal-700 dark:text-teal-400" : "text-green-700 dark:text-green-400"}`}>
-                            {log.type === "cash" || log.type === "expense" ? "" : (log.type === "debit" || log.type === "cash_in" ? "+" : "-")}Rs. {log.amount.toLocaleString()}
+                            {log.type === "cash" || log.type === "expense" ? "" : (log.type === "debit" || log.type === "cash_in" ? "+" : "-")}Rs. {formatNumber(log.amount)}
                           </p>
                           <p className="text-[9px] text-[var(--color-text-muted)]">
                             {timeAgo(log.created_at)}

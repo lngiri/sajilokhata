@@ -4,6 +4,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { createNotification } from "@/app/actions/notifications";
 import type { Database } from "@/lib/types/database";
+import { formatNumber } from "@/lib/format";
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 type CreditLogRow = Database["public"]["Tables"]["credit_logs"]["Row"];
@@ -252,7 +253,7 @@ export async function saveEntry(params: {
         userType: "customer",
         type: "entry_created",
         title: `New entry at ${shopName}`,
-        body: `Rs. ${Number(params.amount).toLocaleString()} ${params.type} added`,
+        body: `Rs. ${formatNumber(params.amount)} ${params.type} added`,
         referenceId: data.id,
         referenceType: "credit_log",
       });

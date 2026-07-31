@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { formatNumber } from "@/lib/format";
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
 
         if (netIncrease > remainingLimit) {
           return NextResponse.json({
-            error: `Credit limit exceeded. Available: Rs. ${remainingLimit.toLocaleString()}, requested increase: Rs. ${netIncrease.toLocaleString()}`,
+            error: `Credit limit exceeded. Available: Rs. ${formatNumber(remainingLimit)}, requested increase: Rs. ${formatNumber(netIncrease)}`,
             code: "CREDIT_LIMIT_EXCEEDED",
           }, { status: 400 });
         }
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
         user_type: "customer",
         type: "edit_accepted",
         title: "Merchant accepted your edit request",
-        body: `Amount updated to Rs. ${Number(log.proposed_amount).toLocaleString()}`,
+        body: `Amount updated to Rs. ${formatNumber(log.proposed_amount)}`,
         reference_id: log.id,
         reference_type: "credit_log",
       });

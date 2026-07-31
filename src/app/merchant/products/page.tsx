@@ -11,6 +11,7 @@ import {
   updateMerchantProduct,
   deleteMerchantProduct,
 } from "@/app/actions/products";
+import { formatNumber } from "@/lib/format";
 
 interface Product {
   id: string;
@@ -203,7 +204,7 @@ export default function ProductsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-[var(--color-text)] truncate">{product.name}</p>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          Rs. {product.default_rate.toLocaleString()} / {product.unit}
+                          Rs. {formatNumber(product.default_rate)} / {product.unit}
                           {product.category && <span className="ml-2 text-[var(--color-text-muted)]">• {product.category}</span>}
                         </p>
                       </div>
@@ -247,7 +248,7 @@ export default function ProductsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm text-[var(--color-text-muted)] truncate">{product.name}</p>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                          Rs. {product.default_rate.toLocaleString()} / {product.unit}
+                          Rs. {formatNumber(product.default_rate)} / {product.unit}
                         </p>
                       </div>
                       <button

@@ -6,6 +6,7 @@ import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { createNotification } from "@/app/actions/notifications";
 import { normalizePhone } from "@/lib/phone";
 import { sendTransactionSMS } from "@/app/actions/sms";
+import { formatNumber } from "@/lib/format";
 
 const SEARCH_RESULT_LIMIT = 50;
 const SEARCH_MIN_LENGTH = 2;
@@ -750,7 +751,7 @@ export async function updateCustomerCreditLimit(
     userType: "customer",
     type: "credit_limit_changed",
     title: "Credit limit updated",
-    body: `New credit limit: Rs. ${Number(creditLimit).toLocaleString()}`,
+    body: `New credit limit: Rs. ${formatNumber(creditLimit)}`,
     referenceId: customerId,
     referenceType: "customer",
   });
@@ -794,7 +795,7 @@ export async function updateCreditLogStatus(
       userType: "customer",
       type: status === "approved" ? "entry_approved" : "entry_rejected",
       title: `Entry ${status} by ${shopName}`,
-      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry ${status}`,
+      body: `Rs. ${formatNumber(data.amount)} entry ${status}`,
       referenceId: logId,
       referenceType: "credit_log",
     });
@@ -1245,7 +1246,7 @@ export async function sendPaymentReminder(
         }
       } else {
         const firstName = shopName.split(" ")[0];
-        message = `Dear ${customerName}, pay Rs. ${Number(balance).toLocaleString()} to ${firstName}.`;
+        message = `Dear ${customerName}, pay Rs. ${formatNumber(balance)} to ${firstName}.`;
         if (message.length > 150) {
           message = message.substring(0, 147) + "...";
         }
@@ -1284,7 +1285,7 @@ export async function sendPaymentReminder(
       const ledgerLink = `${baseUrl}/customer/history?merchantId=${merchantId}`;
       const paymentLink = `${baseUrl}/customer/payment-methods?merchantId=${merchantId}`;
 
-      message = `Dear ${customerName}, your outstanding balance at ${shopName} is Rs. ${Number(balance).toLocaleString()}. View ledger: ${ledgerLink}. Payment methods: ${paymentLink}`;
+      message = `Dear ${customerName}, your outstanding balance at ${shopName} is Rs. ${formatNumber(balance)}. View ledger: ${ledgerLink}. Payment methods: ${paymentLink}`;
 
       await (admin.from("payment_reminder_logs") as any).insert({
         merchant_id: merchantId,
@@ -1421,7 +1422,7 @@ export async function checkAndSendAutoReminders(
 
       let msg = template
         .replace(/\{customer\}/g, customerName)
-        .replace(/\{balance\}/g, Number(row.current_balance).toLocaleString())
+        .replace(/\{balance\}/g, formatNumber(row.current_balance))
         .replace(/\{shop\}/g, firstName);
 
       if (msg.length > 150) {
@@ -1549,7 +1550,7 @@ export async function submitPaymentVoucher(
       userType: "merchant",
       type: "payment_voucher",
       title: `Payment voucher from ${customerName}`,
-      body: `Rs. ${Number(amount).toLocaleString()} voucher submitted at ${shopName}`,
+      body: `Rs. ${formatNumber(amount)} voucher submitted at ${shopName}`,
       referenceId: logId,
       referenceType: "credit_log",
     });

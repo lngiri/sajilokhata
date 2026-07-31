@@ -10,6 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { getCustomerIdsForPhone } from "@/app/actions/customer";
 import { playSuccessSound } from "@/lib/sound";
 import CustomerPinGate from "@/components/CustomerPinGate";
+import { formatNumber } from "@/lib/format";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -139,7 +140,7 @@ export default function CustomerHistoryPage() {
                     ? "Rejected"
                     : newStatus;
               addToast(
-                `${verb} Rs. ${Number(payload.new?.amount || 0).toLocaleString()} request`,
+                `${verb} Rs. ${formatNumber(payload.new?.amount)} request`,
                 newStatus === "approved" ? "success" : "warning"
               );
               loadLogsRef.current?.();
@@ -157,7 +158,7 @@ export default function CustomerHistoryPage() {
           (payload: any) => {
             if (!mountedRef.current) return;
             addToast(
-              `New ${payload.new?.type || "transaction"} of Rs. ${Number(payload.new?.amount || 0).toLocaleString()} added`,
+              `New ${payload.new?.type || "transaction"} of Rs. ${formatNumber(payload.new?.amount)} added`,
               "info"
             );
             loadLogsRef.current?.();
@@ -434,7 +435,7 @@ export default function CustomerHistoryPage() {
                               ? "text-red-600 dark:text-red-400"
                               : "text-green-600 dark:text-green-400"
                         }`}>
-                          Rs. {log.amount.toLocaleString()}
+                          Rs. {formatNumber(log.amount)}
                         </p>
                         <p className="text-[10px] text-[var(--color-text-muted)] capitalize">
                           {log.type === "debit" ? "Debit" : "Credit"}

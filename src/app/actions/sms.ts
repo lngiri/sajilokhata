@@ -1,6 +1,7 @@
 "use server";
 
 import { getAdminClient } from "@/lib/supabase/admin";
+import { formatNumber } from "@/lib/format";
 
 export async function sendTransactionSMS(
   to: string,
@@ -140,7 +141,7 @@ export async function sendTransactionNotification(params: {
     shopName = merchant?.business_name || merchant?.name || "Shop";
   }
 
-  const formattedAmount = `Rs. ${Number(amount).toLocaleString()}`;
+  const formattedAmount = `Rs. ${formatNumber(amount)}`;
 
   let message: string;
   if (type === "cash") {

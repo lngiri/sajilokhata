@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { getMerchantAnalytics } from "@/app/actions/admin";
+import { formatNumber } from "@/lib/format";
 
 interface MerchantAnalytic {
   id: string;
@@ -54,12 +55,12 @@ export default function AnalyticsPage() {
           <p className="text-sm text-[var(--a-muted)] mt-2">Active Merchants</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
-          <p className="text-4xl font-bold tracking-tight text-blue-400">{totalTx.toLocaleString()}</p>
+          <p className="text-4xl font-bold tracking-tight text-blue-400">{formatNumber(totalTx)}</p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Total Transactions</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
           <p className="text-4xl font-bold tracking-tight text-amber-400">
-            {data.length > 0 ? Math.round(totalTx / data.length).toLocaleString() : "-"}
+            {data.length > 0 ? formatNumber(Math.round(totalTx / data.length)) : "-"}
           </p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Avg Txns / Merchant</p>
         </div>
@@ -104,9 +105,9 @@ export default function AnalyticsPage() {
                   </td>
                   <td className="px-5 py-3.5 text-sm text-[var(--a-muted)] font-mono">{m.phone}</td>
                   <td className="px-5 py-3.5 text-right">
-                    <span className="font-semibold text-[var(--color-primary-light)]">{m.transactionCount.toLocaleString()}</span>
+                    <span className="font-semibold text-[var(--color-primary-light)]">{formatNumber(m.transactionCount)}</span>
                   </td>
-                  <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{m.customerCount.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{formatNumber(m.customerCount)}</td>
                   <td className="px-5 py-3.5 text-right text-[var(--a-muted)] text-xs">
                     {m.lastActiveDate
                       ? new Date(m.lastActiveDate).toLocaleDateString("en-US", {

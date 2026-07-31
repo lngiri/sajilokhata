@@ -6,6 +6,7 @@ import PullToRefresh from "@/components/PullToRefresh";
 import { getMerchantCustomers, lookupPhoneAccountStatus } from "@/app/actions/merchant";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { useToast } from "@/components/Toast";
+import { formatNumber } from "@/lib/format";
 
 interface CustomerRow {
   id: string;
@@ -197,10 +198,10 @@ export default function CustomersPage() {
                     </div>
                     <div className="text-right">
                       <p className={`font-bold text-sm ${mc.current_balance > 0 ? "text-[var(--color-danger)]" : "text-[var(--color-primary)]"}`}>
-                        Rs. {Math.abs(mc.current_balance).toLocaleString()}
+                        Rs. {formatNumber(Math.abs(mc.current_balance))}
                       </p>
                       <p className="text-[10px] text-[var(--color-text-muted)]">
-                        {isNegative ? "in credit" : `/ Rs. ${mc.credit_limit.toLocaleString()}`}
+                        {isNegative ? "in credit" : `/ Rs. ${formatNumber(mc.credit_limit)}`}
                       </p>
                     </div>
                   </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getMerchantStorageUsage } from "@/app/actions/admin";
+import { formatNumber } from "@/lib/format";
 
 interface MerchantUsage {
   id: string;
@@ -73,15 +74,15 @@ export default function StoragePage() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
-          <p className="text-4xl font-bold tracking-tight text-[var(--color-primary-light)]">{totalTx.toLocaleString()}</p>
+          <p className="text-4xl font-bold tracking-tight text-[var(--color-primary-light)]">{formatNumber(totalTx)}</p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Total Transactions</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
-          <p className="text-4xl font-bold tracking-tight text-blue-400">{totalCust.toLocaleString()}</p>
+          <p className="text-4xl font-bold tracking-tight text-blue-400">{formatNumber(totalCust)}</p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Total Customers</p>
         </div>
         <div className="bg-[var(--a-surface)] rounded-xl shadow-lg border border-[var(--a-border)] p-6">
-          <p className="text-4xl font-bold tracking-tight text-amber-400">{totalRows.toLocaleString()}</p>
+          <p className="text-4xl font-bold tracking-tight text-amber-400">{formatNumber(totalRows)}</p>
           <p className="text-sm text-[var(--a-muted)] mt-2">Estimated Total Rows</p>
         </div>
       </div>
@@ -139,10 +140,10 @@ export default function StoragePage() {
                     {m.businessName || m.name || "Unnamed"}
                   </td>
                   <td className="px-5 py-3.5 text-sm text-[var(--a-muted)] font-mono">{m.phone}</td>
-                  <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{m.transactionCount.toLocaleString()}</td>
-                  <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{m.customerCount.toLocaleString()}</td>
+                  <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{formatNumber(m.transactionCount)}</td>
+                  <td className="px-5 py-3.5 text-right text-[var(--a-text-2)]">{formatNumber(m.customerCount)}</td>
                   <td className="px-5 py-3.5 text-right">
-                    <span className="font-semibold text-amber-400">{m.estimatedRows.toLocaleString()}</span>
+                    <span className="font-semibold text-amber-400">{formatNumber(m.estimatedRows)}</span>
                   </td>
                 </tr>
               ))}

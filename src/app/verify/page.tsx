@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
 import LogoWithAbout from "@/components/LogoWithAbout";
+import { formatNumber } from "@/lib/format";
 
 type Step = "loading" | "invalid" | "action" | "onboard" | "done";
 
@@ -71,13 +72,13 @@ export default function VerifyPage() {
           setCreditCheck({
             overLimit: true,
             remainingLimit,
-            message: `Credit limit exceeded. Remaining: Rs. ${remainingLimit.toLocaleString()}`,
+            message: `Credit limit exceeded. Remaining: Rs. ${formatNumber(remainingLimit)}`,
           });
         } else {
           setCreditCheck({
             overLimit: false,
             remainingLimit,
-            message: `Remaining credit limit: Rs. ${remainingLimit.toLocaleString()}`,
+            message: `Remaining credit limit: Rs. ${formatNumber(remainingLimit)}`,
           });
         }
       } catch {
@@ -216,7 +217,7 @@ export default function VerifyPage() {
               <div className="flex justify-between">
                 <span className="text-xs text-[var(--color-text-muted)]">Amount</span>
                 <span className={`font-bold ${log.type === "debit" ? "text-red-600" : "text-green-600"}`}>
-                  Rs. {log.amount.toLocaleString()}
+                  Rs. {formatNumber(log.amount)}
                 </span>
               </div>
               <div className="flex justify-between">

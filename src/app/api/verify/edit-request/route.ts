@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { formatNumber } from "@/lib/format";
 
 const VERIFICATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       user_type: "merchant",
       type: "edit_requested",
       title: "Customer requested amount change",
-      body: `From Rs. ${Number(log.amount).toLocaleString()} to Rs. ${Number(proposedAmount).toLocaleString()}`,
+      body: `From Rs. ${formatNumber(log.amount)} to Rs. ${formatNumber(proposedAmount)}`,
       reference_id: log.id,
       reference_type: "credit_log",
     });

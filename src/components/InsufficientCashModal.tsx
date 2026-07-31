@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
+import { formatNumber } from "@/lib/format";
 
 interface Props {
   open: boolean;
@@ -42,15 +43,15 @@ export default function InsufficientCashModal({ open, cashBalance, amount, onEdi
             <div className="mt-4 space-y-2 bg-red-50 dark:bg-red-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800">
               <p className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
                 <span>Cash in hand</span>
-                <span className="font-semibold">Rs. {cashBalance.toLocaleString()}</span>
+                <span className="font-semibold">Rs. {formatNumber(cashBalance)}</span>
               </p>
               <p className="flex justify-between text-sm text-gray-700 dark:text-gray-300">
                 <span>This expense</span>
-                <span className="font-semibold">Rs. {amount.toLocaleString()}</span>
+                <span className="font-semibold">Rs. {formatNumber(amount)}</span>
               </p>
               <p className="flex justify-between text-sm font-medium text-red-700 dark:text-red-300">
                 <span>Shortfall</span>
-                <span className="font-semibold">Rs. {shortfall.toLocaleString()}</span>
+                <span className="font-semibold">Rs. {formatNumber(shortfall)}</span>
               </p>
             </div>
 

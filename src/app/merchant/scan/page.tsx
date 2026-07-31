@@ -24,6 +24,7 @@ import { sanitizePhoneForUrl, normalizePhone } from "@/lib/phone";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
 import { getMerchantProducts } from "@/app/actions/products";
 import InsufficientCashModal from "@/components/InsufficientCashModal";
+import { formatNumber } from "@/lib/format";
 
 type Step = "scan" | "enter" | "confirm" | "success";
 type EntryType = "debit" | "credit" | "cash" | "expense" | "cash_in";
@@ -731,7 +732,7 @@ export default function MerchantScanPage() {
                         </div>
                         {s.current_balance > 0 ? (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 flex-shrink-0">
-                            Due Rs. {s.current_balance.toLocaleString()}
+                            Due Rs. {formatNumber(s.current_balance)}
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 flex-shrink-0">
@@ -760,7 +761,7 @@ export default function MerchantScanPage() {
                     </div>
                     {customerBalance !== null && (
                       <div className={`px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
-                        {customerBalance > 0 ? `Current Due: Rs. ${customerBalance.toLocaleString()}` : "No outstanding balance"}
+                        {customerBalance > 0 ? `Current Due: Rs. ${formatNumber(customerBalance)}` : "No outstanding balance"}
                       </div>
                     )}
                   </div>
@@ -1007,7 +1008,7 @@ export default function MerchantScanPage() {
                   <div className="flex gap-4">
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : entryType === "expense" ? "text-orange-600 dark:text-orange-400" : entryType === "cash" ? "text-blue-600 dark:text-blue-400" : entryType === "cash_in" ? "text-teal-600 dark:text-teal-400" : "text-green-600 dark:text-green-400"}`}>Rs. {Number(amount).toLocaleString()}</p>
+                      <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : entryType === "expense" ? "text-orange-600 dark:text-orange-400" : entryType === "cash" ? "text-blue-600 dark:text-blue-400" : entryType === "cash_in" ? "text-teal-600 dark:text-teal-400" : "text-green-600 dark:text-green-400"}`}>Rs. {formatNumber(amount)}</p>
                     </div>
                     <div className="flex-1">
                       <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
@@ -1035,11 +1036,11 @@ export default function MerchantScanPage() {
                       </svg>
                       {cashBalance !== null && Number(amount) > cashBalance ? (
                         <p className="text-xs text-red-800 dark:text-red-300">
-                          <span className="font-semibold">Insufficient Cash in Hand!</span> Current balance: Rs. {cashBalance.toLocaleString()}. This expense of Rs. {Number(amount).toLocaleString()} exceeds it by Rs. {(Number(amount) - cashBalance).toLocaleString()}.
+                          <span className="font-semibold">Insufficient Cash in Hand!</span> Current balance: Rs. {formatNumber(cashBalance)}. This expense of Rs. {formatNumber(amount)} exceeds it by Rs. {formatNumber(Number(amount) - cashBalance)}.
                         </p>
                       ) : (
                         <p className="text-xs text-orange-800 dark:text-orange-300">
-                          Expense will be recorded immediately. Current Cash in Hand: Rs. {cashBalance !== null ? cashBalance.toLocaleString() : "—"}. This amount will be deducted from it.
+                          Expense will be recorded immediately. Current Cash in Hand: Rs. {cashBalance !== null ? formatNumber(cashBalance) : "—"}. This amount will be deducted from it.
                         </p>
                       )}
                     </div>
@@ -1088,12 +1089,12 @@ export default function MerchantScanPage() {
                 <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved! 🎉</h2>
                 <p className="text-sm text-[var(--color-text-muted)]">
                   {entryType === "expense"
-                    ? `Expense of Rs. ${Number(amount).toLocaleString()} recorded`
+                    ? `Expense of Rs. ${formatNumber(amount)} recorded`
                     : entryType === "cash_in"
-                    ? `Rs. ${Number(amount).toLocaleString()} added to Cash in Hand`
+                    ? `Rs. ${formatNumber(amount)} added to Cash in Hand`
                     : entryType === "cash"
-                    ? `Cash Sale of Rs. ${Number(amount).toLocaleString()}${customerName ? ` from ${customerName}` : ""}`
-                    : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${Number(amount).toLocaleString()} for ${customerName}` : `Rs. ${Number(amount).toLocaleString()} saved`}`}
+                    ? `Cash Sale of Rs. ${formatNumber(amount)}${customerName ? ` from ${customerName}` : ""}`
+                    : `${customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${formatNumber(amount)} for ${customerName}` : `Rs. ${formatNumber(amount)} saved`}`}
                 </p>
                 {entryType === "expense" ? (
                   <p className="text-xs text-orange-600 dark:text-orange-400 mt-2">Expense recorded and deducted from cash in hand</p>
@@ -1112,7 +1113,7 @@ export default function MerchantScanPage() {
                           (() => {
                             const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || '');
                             const shareLink = `${baseUrl}/verify?token=${verificationToken}`;
-                            return `Dear customer, Rs. ${Number(amount).toLocaleString()} has been added to your account. Please verify using this link: ${shareLink}`;
+                            return `Dear customer, Rs. ${formatNumber(amount)} has been added to your account. Please verify using this link: ${shareLink}`;
                           })()
                         )}`}
                         target="_blank"
@@ -1286,7 +1287,7 @@ export default function MerchantScanPage() {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Amount</p>
-                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>Rs. {Number(amount).toLocaleString()}</p>
+                    <p className={`text-2xl font-bold ${entryType === "debit" ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}`}>Rs. {formatNumber(amount)}</p>
                   </div>
                   <div className="flex-1">
                     <p className="text-xs text-[var(--color-text-muted)] mb-0.5">Type</p>
@@ -1323,7 +1324,7 @@ export default function MerchantScanPage() {
             <div>
               <h2 className="text-xl font-bold text-[var(--color-text)] mb-1">Entry Saved! 🎉</h2>
               <p className="text-sm text-[var(--color-text-muted)]">
-                {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${Number(amount).toLocaleString()} for ${customerName}` : `Rs. ${Number(amount).toLocaleString()} saved`}
+                {customerName ? `${entryType === "debit" ? "Credit" : "Payment"} of Rs. ${formatNumber(amount)} for ${customerName}` : `Rs. ${formatNumber(amount)} saved`}
               </p>
             </div>
             <div className="flex gap-3">

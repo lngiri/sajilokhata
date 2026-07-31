@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatNumber } from "@/lib/format";
 
 interface PendingEntry {
   id: string;
@@ -47,7 +48,7 @@ export default function PendingApprovalModal(props: Props) {
           <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
             Your credit request of{" "}
             <span className="font-semibold text-[var(--color-text)]">
-              Rs. {Number(props.amount || 0).toLocaleString()}
+              Rs. {formatNumber(props.amount)}
             </span>
             {props.shopName ? (
               <> has been sent to <span className="font-semibold text-[var(--color-text)]">{props.shopName}</span>.</>
@@ -141,7 +142,7 @@ export default function PendingApprovalModal(props: Props) {
                     {entry.customerName}
                   </p>
                   <p className="font-bold text-sm text-[var(--color-danger)]">
-                    Rs. {entry.amount.toLocaleString()}
+                    Rs. {formatNumber(entry.amount)}
                   </p>
                 </div>
                 {entry.description && (

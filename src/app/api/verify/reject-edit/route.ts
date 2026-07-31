@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { formatNumber } from "@/lib/format";
 
 const VERIFICATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest) {
         user_type: "customer",
         type: "edit_rejected",
         title: "Merchant declined your edit request",
-        body: `Edit request for Rs. ${Number(log.amount).toLocaleString()} was declined`,
+        body: `Edit request for Rs. ${formatNumber(log.amount)} was declined`,
         reference_id: log.id,
         reference_type: "credit_log",
       });

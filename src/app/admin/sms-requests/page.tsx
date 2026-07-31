@@ -7,6 +7,7 @@ import {
   rejectSmsRequest,
   type SmsRequestRecord,
 } from "@/app/actions/sms-billing";
+import { formatNumber } from "@/lib/format";
 
 export default function SmsRequestsPage() {
   const [requests, setRequests] = useState<SmsRequestRecord[]>([]);
@@ -79,7 +80,7 @@ export default function SmsRequestsPage() {
                   </div>
                   <p className="text-xs text-[var(--a-muted)] mb-2">
                     {req.merchants?.phone && `${req.merchants.phone} · `}
-                    Rs. {Number(req.amount).toLocaleString()} &middot; {req.sms_count} SMS
+                    Rs. {formatNumber(req.amount)} &middot; {req.sms_count} SMS
                   </p>
                   {req.transaction_id && (
                     <p className="text-xs text-[var(--a-text-2)] mb-1">

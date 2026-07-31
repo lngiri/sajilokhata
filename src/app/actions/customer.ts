@@ -7,6 +7,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { createNotification } from "@/app/actions/notifications";
 import type { Database } from "@/lib/types/database";
+import { formatNumber } from "@/lib/format";
 
 type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
 type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
@@ -613,7 +614,7 @@ export async function submitCustomerEntry(
       userType: "merchant",
       type: "entry_created",
       title: `New credit request from ${session.name || "a customer"}`,
-      body: `Rs. ${Number(amount).toLocaleString()} ${type} requested at ${shopName}`,
+      body: `Rs. ${formatNumber(amount)} ${type} requested at ${shopName}`,
       referenceId: log.id,
       referenceType: "credit_log",
     });
@@ -859,7 +860,7 @@ export async function cancelCreditLog(logId: string): Promise<any> {
       userType: "merchant",
       type: "entry_rejected",
       title: `Entry cancelled by ${customer.name || "Customer"}`,
-      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry cancelled`,
+      body: `Rs. ${formatNumber(data.amount)} entry cancelled`,
       referenceId: logId,
       referenceType: "credit_log",
     });
@@ -898,7 +899,7 @@ export async function confirmCustomerEntry(logId: string): Promise<any> {
       userType: "merchant",
       type: "entry_approved",
       title: `Entry confirmed by ${customer.name || "Customer"}`,
-      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry approved`,
+      body: `Rs. ${formatNumber(data.amount)} entry approved`,
       referenceId: logId,
       referenceType: "credit_log",
     });
@@ -934,7 +935,7 @@ export async function disputeEntry(logId: string): Promise<any> {
       userType: "merchant",
       type: "entry_disputed",
       title: `Entry disputed by ${customer.name || "Customer"}`,
-      body: `Rs. ${Number(data.amount || 0).toLocaleString()} entry disputed`,
+      body: `Rs. ${formatNumber(data.amount)} entry disputed`,
       referenceId: logId,
       referenceType: "credit_log",
     });

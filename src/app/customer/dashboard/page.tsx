@@ -14,6 +14,7 @@ import CustomerPinGate from "@/components/CustomerPinGate";
 import LogoWithAbout from "@/components/LogoWithAbout";
 import { createClient } from "@/lib/supabase/client";
 import { normalizePhone } from "@/lib/phone";
+import { formatNumber } from "@/lib/format";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
@@ -347,7 +348,7 @@ export default function CustomerDashboard() {
                     ? "Rejected"
                     : newStatus;
               addToast(
-                `${verb} Rs. ${Number(payload.new?.amount || 0).toLocaleString()} request`,
+                `${verb} Rs. ${formatNumber(payload.new?.amount)} request`,
                 newStatus === "approved" ? "success" : "warning"
               );
               setNotifications((prev) =>
@@ -881,12 +882,12 @@ export default function CustomerDashboard() {
           >
             <p className="text-sm opacity-80 mb-1">Total Outstanding Balance</p>
             <p className="text-3xl font-bold mb-1">
-              Rs. {stats.totalOutstanding.toLocaleString()}
+              Rs. {formatNumber(stats.totalOutstanding)}
             </p>
             <p className="text-xs opacity-60">
               Across {stats.shopsCount} shop{stats.shopsCount !== 1 ? "s" : ""}
               {stats.totalCreditLimit > 0 && (
-                <> &middot; Limit Rs. {stats.totalCreditLimit.toLocaleString()}</>
+                <> &middot; Limit Rs. {formatNumber(stats.totalCreditLimit)}</>
               )}
             </p>
 
@@ -904,7 +905,7 @@ export default function CustomerDashboard() {
                       {rel.merchants!.name || "Unknown Shop"}
                     </a>
                     <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="font-semibold">Rs. {rel.current_balance.toLocaleString()}</span>
+                      <span className="font-semibold">Rs. {formatNumber(rel.current_balance)}</span>
                       {rel.current_balance > 0 && (
                         <div className="flex items-center gap-1.5">
                           <button
@@ -1135,8 +1136,8 @@ export default function CustomerDashboard() {
                   </h2>
                   <p className="text-sm text-[var(--color-text-muted)]">
                     {entryType === "credit"
-                      ? `Payment of Rs. ${Number(amount).toLocaleString()} sent to ${merchantName}.`
-                      : `Credit request of Rs. ${Number(amount).toLocaleString()} sent to ${merchantName}.`
+                      ? `Payment of Rs. ${formatNumber(amount)} sent to ${merchantName}.`
+                      : `Credit request of Rs. ${formatNumber(amount)} sent to ${merchantName}.`
                     }<br />
                     Awaiting merchant approval.
                   </p>

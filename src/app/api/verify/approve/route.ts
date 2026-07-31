@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { formatNumber } from "@/lib/format";
 
 const VERIFICATION_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
 
       if (log.amount > remainingLimit) {
         return NextResponse.json({
-          error: `Credit limit exceeded. Available: Rs. ${remainingLimit.toLocaleString()}, Requested: Rs. ${log.amount.toLocaleString()}`,
+          error: `Credit limit exceeded. Available: Rs. ${formatNumber(remainingLimit)}, Requested: Rs. ${formatNumber(log.amount)}`,
           code: "CREDIT_LIMIT_EXCEEDED",
         }, { status: 400 });
       }

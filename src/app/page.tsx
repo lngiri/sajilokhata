@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 
 import LogoWithAbout from "@/components/LogoWithAbout";
 import AboutSheet from "@/components/AboutSheet";
+import { formatNumber } from "@/lib/format";
 
 /* ─── IntersectionObserver hook for scroll animations ─── */
 function useScrollReveal() {
@@ -220,7 +221,7 @@ function AnimatedStat({ value, label }: { value: string; label: string }) {
   const { ref, count } = useCountUp(isDecimal ? numericValue * 10 : Math.round(numericValue), 1500);
   const before = value.substring(0, value.indexOf(match?.[0] || ""));
   const after = value.substring(value.indexOf(match?.[0] || "") + (match?.[0]?.length || 0));
-  const displayNum = isDecimal ? (count / 10).toFixed(1) : count.toLocaleString();
+  const displayNum = isDecimal ? (count / 10).toFixed(1) : formatNumber(count);
   return (
     <div ref={ref} className="text-center">
       <p className="text-3xl sm:text-4xl font-extrabold text-[var(--color-primary)] number-shine">
