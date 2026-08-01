@@ -1,6 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
-import { checkSchemaHealth, SCHEMA_MANIFEST } from "../src/lib/schema-health.ts";
+import {
+  checkSchemaHealth,
+  SCHEMA_MANIFEST,
+  CHECK_CONSTRAINT_MANIFEST,
+  diffCheckConstraints,
+  fetchCheckConstraints,
+} from "../src/lib/schema-health.ts";
 
 function loadEnv(): Record<string, string> {
   const vars: Record<string, string> = {};
@@ -41,7 +47,6 @@ async function main() {
 
   if (result.missing.length === 0 && result.errors.length === 0) {
     console.log("\nOK - schema matches the app (no drift).");
-    process.exit(0);
   }
 
   if (result.missing.length > 0) {
@@ -52,8 +57,34 @@ async function main() {
     console.error("\nProbe errors (possibly a connection problem):");
     for (const item of result.errors) console.error(`  - ${item}`);
   }
-  console.error("\nFix: apply the missing migrations before deploying.");
-  process.exit(1);
+  if (result.missing.length > 0 || result.errors.length > 0) {
+    console.error("\nFix: apply the missing migrations before deploying.");
+    process.exit(1);
+  }
+
+  // CHECK constraints cannot be probed through PostgREST, so validate them via
+  // the Supabase Management API when a PAT is available.
+  const pat = vars.SUPABASE_PAT || process.env.SUPABASE_PAT;
+  if (pat) {
+    console.log(`Checking ${CHECK_CONSTRAINT_MANIFEST.length} CHECK constraints...`);
+    try {
+      const actual = await fetchCheckConstraints(url, pat);
+      const problems = diffCheckConstraints(actual);
+      if (problems.length > 0) {
+        console.error("\nCHECK CONSTRAINT DRIFT:");
+        for (const p of problems) console.error(`  - ${p}`);
+        console.error("\nFix: apply the migration that updates the constraint before deploying.");
+        process.exit(1);
+      }
+      console.log("OK - CHECK constraints match the app (no drift).");
+    } catch (e: any) {
+      console.warn(
+        `Skipping CHECK constraint validation (could not reach Management API): ${e?.message || e}`
+      );
+    }
+  } else {
+    console.warn("SUPABASE_PAT not set - skipping CHECK constraint validation (columns only).");
+  }
 }
 
 main();

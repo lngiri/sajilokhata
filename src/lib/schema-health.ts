@@ -3,6 +3,122 @@ export interface SchemaProbe {
   columns: string[];
 }
 
+export interface CheckConstraintProbe {
+  table: string;
+  constraint: string;
+  column: string;
+  expected: string[];
+}
+
+/**
+ * CHECK constraints the app depends on. `expected` lists the values the app
+ * writes today. If production's constraint no longer allows any of them, every
+ * matching write fails with a DB error (e.g. the credit_logs_status_check drift
+ * that rejected 'awaiting_confirmation'). Column probes can't catch this, so
+ * the constraint definitions must be compared directly.
+ */
+export const CHECK_CONSTRAINT_MANIFEST: CheckConstraintProbe[] = [
+  {
+    table: "credit_logs",
+    constraint: "credit_logs_status_check",
+    column: "status",
+    expected: ["awaiting_confirmation", "approved", "disputed", "rejected", "edit_requested"],
+  },
+  {
+    table: "credit_logs",
+    constraint: "credit_logs_type_check",
+    column: "type",
+    expected: ["debit", "credit", "cash", "expense", "cash_in"],
+  },
+  {
+    table: "customers",
+    constraint: "customers_registration_status_check",
+    column: "registration_status",
+    expected: ["invited", "registered"],
+  },
+  {
+    table: "customer_invites",
+    constraint: "customer_invites_status_check",
+    column: "status",
+    expected: [
+      "pending",
+      "sms_sent",
+      "sms_failed",
+      "invitation_opened",
+      "otp_verified",
+      "registration_completed",
+      "expired",
+      "cancelled",
+    ],
+  },
+];
+
+/** True if every value the app writes is allowed by the live constraint. */
+export function diffCheckConstraints(
+  actual: Record<string, string[]>,
+  manifest: CheckConstraintProbe[] = CHECK_CONSTRAINT_MANIFEST
+): string[] {
+  const problems: string[] = [];
+  for (const probe of manifest) {
+    const allowed = actual[probe.constraint];
+    if (!allowed) {
+      problems.push(`CHECK constraint ${probe.constraint} missing on ${probe.table}`);
+      continue;
+    }
+    const notAllowed = probe.expected.filter((v) => !allowed.includes(v));
+    if (notAllowed.length > 0) {
+      problems.push(
+        `CHECK constraint ${probe.constraint} (${probe.table}.${probe.column}) does not allow the app's value(s): ${notAllowed.join(", ")}`
+      );
+    }
+  }
+  return problems;
+}
+
+/**
+ * Reads live CHECK constraint definitions via the Supabase Management API
+ * (requires a Project Access Token). Returns constraint-name → allowed values.
+ */
+export async function fetchCheckConstraints(
+  supabaseUrl: string,
+  pat: string
+): Promise<Record<string, string[]>> {
+  const ref = new URL(supabaseUrl).hostname.split(".")[0];
+  const tables = Array.from(new Set(CHECK_CONSTRAINT_MANIFEST.map((p) => p.table)));
+  const list = tables.map((t) => `'${t}'`).join(", ");
+
+  const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/database/query`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${pat}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `SELECT c.conname AS name, pg_get_constraintdef(c.oid) AS def
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE c.contype = 'c' AND n.nspname = 'public' AND t.relname IN (${list})
+        ORDER BY c.conname;`,
+    }),
+    signal: AbortSignal.timeout(30_000),
+  });
+
+  if (!res.ok) {
+    throw new Error(
+      `Supabase Management API returned HTTP ${res.status}: ${(await res.text()).slice(0, 200)}`
+    );
+  }
+
+  const rows = (await res.json()) as { name: string; def: string }[];
+  const map: Record<string, string[]> = {};
+  for (const row of rows) {
+    const quoted = row.def.matchAll(/'([^']*)'/g);
+    map[row.name] = Array.from(quoted, (m) => m[1]);
+  }
+  return map;
+}
+
 export const SCHEMA_MANIFEST: SchemaProbe[] = [
   { table: "merchants", columns: ["id", "name", "phone", "business_type"] },
   { table: "customers", columns: ["id", "name", "phone", "registration_status", "avatar_url"] },
