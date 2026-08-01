@@ -239,88 +239,97 @@ export default function VerifyPage() {
               </div>
             )}
 
-            {/* Edit amount input */}
-            {showEditInput && (
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-[var(--color-text)]">
-                  Correct Amount
-                </label>
-                <input
-                  type="number"
-                  value={proposedAmount}
-                  onChange={(e) => setProposedAmount(e.target.value.replace(/\D/g, ""))}
-                  placeholder={log.amount.toString()}
-                  min={1}
-                  className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-bold"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => { setShowEditInput(false); setProposedAmount(""); }}
-                    className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleRequestEdit}
-                    disabled={submitting || !proposedAmount || parseFloat(proposedAmount) <= 0}
-                    className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
-                  >
-                    {submitting ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
-                    ) : (
-                      "Submit"
-                    )}
-                  </button>
-                </div>
+            {/* Customer-initiated entries can't be confirmed via this link — the shopkeeper approves them. */}
+            {log.initiated_by === "customer" ? (
+              <div className="rounded-xl p-3 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400">
+                This entry was created by the customer and needs the shopkeeper&apos;s approval. There is nothing to confirm here.
               </div>
-            )}
+            ) : (
+              <>
+                {/* Edit amount input */}
+                {showEditInput && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-medium text-[var(--color-text)]">
+                      Correct Amount
+                    </label>
+                    <input
+                      type="number"
+                      value={proposedAmount}
+                      onChange={(e) => setProposedAmount(e.target.value.replace(/\D/g, ""))}
+                      placeholder={log.amount.toString()}
+                      min={1}
+                      className="w-full px-4 py-3 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-center text-lg font-bold"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setShowEditInput(false); setProposedAmount(""); }}
+                        className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleRequestEdit}
+                        disabled={submitting || !proposedAmount || parseFloat(proposedAmount) <= 0}
+                        className="flex-1 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform disabled:opacity-50"
+                      >
+                        {submitting ? (
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mx-auto" />
+                        ) : (
+                          "Submit"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
-            {/* Dispute reason */}
-            {!showEditInput && (
-              <div>
-                <label className="text-xs font-medium text-[var(--color-text)]">
-                  Dispute Reason — optional
-                </label>
-                <textarea
-                  value={disputeReason}
-                  onChange={(e) => setDisputeReason(e.target.value)}
-                  rows={2}
-                  className="w-full mt-1 px-3 py-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
-                  placeholder="e.g. Amount is incorrect"
-                />
-              </div>
-            )}
+                {/* Dispute reason */}
+                {!showEditInput && (
+                  <div>
+                    <label className="text-xs font-medium text-[var(--color-text)]">
+                      Dispute Reason — optional
+                    </label>
+                    <textarea
+                      value={disputeReason}
+                      onChange={(e) => setDisputeReason(e.target.value)}
+                      rows={2}
+                      className="w-full mt-1 px-3 py-2 bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all text-sm resize-none"
+                      placeholder="e.g. Amount is incorrect"
+                    />
+                  </div>
+                )}
 
-            {!showEditInput && (
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowEditInput(true)}
-                  disabled={submitting}
-                  className="flex-1 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
-                >
-                  Edit Amount
-                </button>
-                <button
-                  onClick={handleDispute}
-                  disabled={submitting}
-                  className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
-                >
-                  Dispute
-                </button>
-                <button
-                  onClick={handleApprove}
-                  disabled={submitting || creditCheck?.overLimit}
-                  className={`flex-1 py-3 rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2 ${
-                    creditCheck?.overLimit ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" : "bg-green-600 text-white"
-                  }`}
-                >
-                  {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <>Approve</>
-                  )}
-                </button>
-              </div>
+                {!showEditInput && (
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setShowEditInput(true)}
+                      disabled={submitting}
+                      className="flex-1 py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                    >
+                      Edit Amount
+                    </button>
+                    <button
+                      onClick={handleDispute}
+                      disabled={submitting}
+                      className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium text-sm active:scale-[0.98] transition-transform disabled:opacity-50"
+                    >
+                      Dispute
+                    </button>
+                    <button
+                      onClick={handleApprove}
+                      disabled={submitting || creditCheck?.overLimit}
+                      className={`flex-1 py-3 rounded-xl font-semibold active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2 ${
+                        creditCheck?.overLimit ? "bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed" : "bg-green-600 text-white"
+                      }`}
+                    >
+                      {submitting ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>Approve</>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}

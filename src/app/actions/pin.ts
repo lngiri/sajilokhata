@@ -381,6 +381,7 @@ export async function registerNewUser(
         id: userId,
         phone: normalizedPhone,
         name: name || "Customer",
+        registration_status: "registered",
       });
       if (insertError) {
         console.error("[registerNewUser] Failed to create customer:", insertError);

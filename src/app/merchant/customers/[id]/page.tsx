@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   rejected: "Rejected",
   disputed: "Disputed",
-  awaiting_confirmation: "Awaiting Confirmation",
+  awaiting_confirmation: "Pending",
   edit_requested: "Edit Req.",
 };
 

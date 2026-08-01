@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { addCustomerForMerchant, submitCustomerEntry } from "./customer";
+import { addCustomerForMerchant, submitCustomerEntry, confirmCustomerEntry } from "./customer";
 import { sendTransactionSMS } from "./sms";
 
 const { mockCookies, mockVerifySession, mockVerifyMerchantSession, mockGetAdminClient } = vi.hoisted(() => ({
@@ -437,5 +437,87 @@ describe("addCustomerForMerchant", () => {
 
     const updates = findInviteUpdates(admin);
     expect(updates[0]).toMatchObject({ status: "sms_failed", sms_error: "SMS provider down" });
+  });
+});
+
+describe("confirmCustomerEntry", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCookies.mockResolvedValue({
+      get: () => ({ value: "valid-token" }),
+    });
+    mockVerifySession.mockResolvedValue({
+      phone: "9841234567",
+      name: "Hari",
+      iat: 0,
+    });
+  });
+
+  function authAdmin(initiatedBy: string, customerId = "c1") {
+    return makeAdmin({
+      customers: [{ data: { id: "c1", name: "Hari", phone: "+9779841234567" } }],
+      credit_logs: [
+        {
+          data: {
+            id: "log1",
+            customer_id: customerId,
+            initiated_by: initiatedBy,
+            status: "awaiting_confirmation",
+          },
+        },
+        {
+          data: {
+            id: "log1",
+            customer_id: "c1",
+            merchant_id: "m1",
+            amount: 500,
+            status: "approved",
+          },
+        },
+      ],
+    });
+  }
+
+  it("rejects when not authenticated", async () => {
+    mockCookies.mockResolvedValue({ get: () => undefined });
+    mockGetAdminClient.mockReturnValue(makeAdmin({}) as any);
+
+    await expect(confirmCustomerEntry("log1")).rejects.toThrow("Not authenticated");
+  });
+
+  it("throws when the entry is not found", async () => {
+    const admin = makeAdmin({
+      customers: [{ data: { id: "c1", name: "Hari", phone: "+9779841234567" } }],
+      credit_logs: [{ data: null }],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(confirmCustomerEntry("log1")).rejects.toThrow("Entry not found");
+  });
+
+  it("blocks a customer from confirming their own initiated entry", async () => {
+    const admin = authAdmin("customer");
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(confirmCustomerEntry("log1")).rejects.toThrow(
+      "This entry awaits approval from the shopkeeper"
+    );
+  });
+
+  it("blocks confirming an entry that belongs to another customer", async () => {
+    const admin = authAdmin("merchant", "other-customer");
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(confirmCustomerEntry("log1")).rejects.toThrow(
+      "You are not authorized to update this entry"
+    );
+  });
+
+  it("confirms a merchant-initiated entry", async () => {
+    const admin = authAdmin("merchant");
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const result = await confirmCustomerEntry("log1");
+    expect(result).toMatchObject({ id: "log1", status: "approved" });
   });
 });

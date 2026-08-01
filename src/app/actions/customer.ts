@@ -825,6 +825,8 @@ export async function cancelCreditLog(logId: string): Promise<any> {
 
 /**
  * Confirm (approve) an awaiting_confirmation credit log entry for the authenticated customer.
+ * Only entries the MERCHANT initiated may be confirmed here — a customer must
+ * not approve their own submitted entry (that awaits the shopkeeper's approval).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function confirmCustomerEntry(logId: string): Promise<any> {
@@ -833,6 +835,27 @@ export async function confirmCustomerEntry(logId: string): Promise<any> {
 
   const admin = getAdminClient();
   if (!admin) throw new Error("Server config");
+
+  const { data: existing, error: fetchError } = await (admin.from("credit_logs") as any)
+    .select("id, customer_id, initiated_by, status")
+    .eq("id", logId)
+    .maybeSingle();
+
+  if (fetchError || !existing) {
+    throw new Error("Entry not found");
+  }
+
+  // Ownership: a customer may only confirm entries that belong to them.
+  if (existing.customer_id !== customer.id) {
+    throw new Error("You are not authorized to update this entry");
+  }
+
+  // Self-approval guard: a customer can only confirm entries the MERCHANT
+  // initiated. Entries the customer submitted themselves (initiated_by
+  // "customer") must be approved by the shopkeeper.
+  if (existing.initiated_by === "customer") {
+    throw new Error("This entry awaits approval from the shopkeeper");
+  }
 
   const { data, error } = await admin
     .from("credit_logs")

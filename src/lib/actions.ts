@@ -107,13 +107,14 @@ export async function getCreditLogByToken(
   description: string | null;
   customer_id: string;
   merchant_id: string;
+  initiated_by: string | null;
   proposed_amount: number | null;
   customers: { name: string | null; phone: string; address: string } | null;
   merchants: { name: string | null } | null;
 } | null> {
   const { data, error } = await getClient()
     .from("credit_logs")
-    .select("id, amount, type, status, description, customer_id, merchant_id, proposed_amount, customers(name, phone, address), merchants(name)")
+    .select("id, amount, type, status, description, customer_id, merchant_id, initiated_by, proposed_amount, customers(name, phone, address), merchants(name)")
     .eq("verification_token", token)
     .maybeSingle();
 

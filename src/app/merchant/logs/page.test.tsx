@@ -141,7 +141,7 @@ describe("LedgerPage", () => {
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("awaiting_confirmation")).toBeInTheDocument();
+      expect(screen.getByText("Pending")).toBeInTheDocument();
       expect(screen.getByText("approved")).toBeInTheDocument();
     });
   });
@@ -164,7 +164,7 @@ describe("LedgerPage", () => {
     render(<LedgerPage />);
 
     await waitFor(() => {
-      expect(screen.getByText(/awaiting confirmation/i)).toBeInTheDocument();
+      expect(screen.getByText(/pending confirmation/i)).toBeInTheDocument();
     });
 
     expect(screen.getByText("Rita")).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe("LedgerPage", () => {
       expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getAllByText("awaiting_confirmation")[0]);
+    await userEvent.click(screen.getAllByRole("button", { name: "Pending" })[0]);
 
     expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {
       status: "awaiting_confirmation",
@@ -235,7 +235,7 @@ describe("LedgerPage", () => {
       expect(screen.getByText(/Ledger/)).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getAllByText("awaiting_confirmation")[0]);
+    await userEvent.click(screen.getAllByRole("button", { name: "Pending" })[0]);
     await userEvent.click(screen.getByText("all"));
 
     expect(mockMerchantActions.getMerchantCreditLogs).toHaveBeenCalledWith("m1", {

@@ -145,6 +145,15 @@ export default function LedgerPage() {
     }
   };
 
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case "awaiting_confirmation":
+        return "Pending";
+      default:
+        return status;
+    }
+  };
+
   const pendingCount = logs.filter((l) => l.status === "awaiting_confirmation" && l.initiated_by === "customer").length;
 
   return (
@@ -171,7 +180,7 @@ export default function LedgerPage() {
                   : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300"
               }`}
             >
-              {f === "expense" ? "Expenses" : f === "cash_in" ? "Cash In" : f}
+              {f === "expense" ? "Expenses" : f === "cash_in" ? "Cash In" : f === "awaiting_confirmation" ? "Pending" : f}
             </button>
           ))}
         </div>
@@ -244,7 +253,7 @@ export default function LedgerPage() {
                           {log.type === "expense" ? "Cash Out" : log.type === "cash" ? "Cash Sale" : log.type === "cash_in" ? "Cash In" : (log.customers?.name || log.customers?.phone || "Unknown")}
                         </p>
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${statusColor(log.status)}`}>
-                          {log.status}
+                          {statusLabel(log.status)}
                         </span>
                       </div>
                       <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">{log.description || "No description"}</p>
@@ -281,7 +290,7 @@ export default function LedgerPage() {
                     ) : (
                       <div className="mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
                         <div className="flex-1 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300 rounded-lg text-xs font-medium text-center">
-                          Sent to customer — awaiting confirmation
+                          Sent to customer — pending confirmation
                         </div>
                       </div>
                     ))}

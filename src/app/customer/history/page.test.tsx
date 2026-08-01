@@ -102,15 +102,15 @@ describe("CustomerHistoryPage", () => {
     expect(await screen.findByText("Shop ABC")).toBeInTheDocument();
     expect(screen.getByText("Rs. 2,000")).toBeInTheDocument();
 
-    // Copy-paste artifact removed: only ONE "Awaiting Confirmation" tab
-    expect(screen.getAllByText("Awaiting Confirmation")).toHaveLength(1);
+    // Only ONE "Pending" tab
+    expect(screen.getAllByText("Pending")).toHaveLength(1);
     // New Disputed tab present
     expect(screen.getByText("Disputed")).toBeInTheDocument();
 
     // Server-side counts render on tabs
     expect(screen.getByRole("button", { name: "All3" })).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Awaiting Confirmation1" })
+      screen.getByRole("button", { name: "Pending1" })
     ).toBeInTheDocument();
   });
 
@@ -220,8 +220,8 @@ describe("CustomerHistoryPage", () => {
 
     render(<CustomerHistoryPage />);
 
-    const banner = await screen.findByText(/awaiting confirmation — review needed/i);
-    expect(screen.getAllByText(/awaiting confirmation — review needed/i)).toHaveLength(1);
+    const banner = await screen.findByText(/pending — review needed/i);
+    expect(screen.getAllByText(/pending — review needed/i)).toHaveLength(1);
 
     fireEvent.click(banner);
     await waitFor(() =>
@@ -230,6 +230,19 @@ describe("CustomerHistoryPage", () => {
         expect.objectContaining({ status: "awaiting_confirmation" })
       )
     );
+  });
+
+  it("shows Confirm Balance only for merchant-initiated pending entries, not the customer's own", async () => {
+    vi.mocked(getCustomerCreditLogs).mockResolvedValue([
+      baseLog({ id: "merchant-init", status: "awaiting_confirmation", initiated_by: "merchant" }),
+      baseLog({ id: "own-init", status: "awaiting_confirmation", initiated_by: "customer" }),
+    ]);
+
+    render(<CustomerHistoryPage />);
+
+    expect(await screen.findByText("Waiting for shopkeeper approval")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Confirm Balance" })).toHaveLength(1);
+    expect(screen.getAllByText("Waiting for shopkeeper approval")).toHaveLength(1);
   });
 
   it("shows a clear-shop chip when scoped to a merchant and clears it", async () => {

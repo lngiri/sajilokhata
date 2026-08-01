@@ -183,7 +183,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
   rejected: "Rejected",
   disputed: "Disputed",
-  awaiting_confirmation: "Awaiting Confirmation",
+  awaiting_confirmation: "Pending",
   edit_requested: "Edit Req.",
 };
 
@@ -495,7 +495,7 @@ export default function MerchantReportsPage() {
                   {(["approved", "awaiting_confirmation", "rejected", "all"] as LogFilter[]).map((f) => (
                     <button key={f} onClick={() => setLogFilter(f)}
                       className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${logFilter === f ? "bg-[var(--color-primary)] text-white" : "bg-gray-100 dark:bg-gray-800 text-[var(--color-text-muted)]"}`}>
-                      {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                      {f === "all" ? "All" : STATUS_LABELS[f] || (f.charAt(0).toUpperCase() + f.slice(1))}
                     </button>
                   ))}
                 </div>

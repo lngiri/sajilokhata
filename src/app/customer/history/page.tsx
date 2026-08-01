@@ -27,6 +27,7 @@ interface HistoryEntry {
   description: string | null;
   created_at: string;
   approved_at: string | null;
+  initiated_by: "merchant" | "customer" | null;
   merchants: {
     id: string;
     name: string;
@@ -52,9 +53,16 @@ function getStatusConfig(status: string) {
   };
 }
 
+const STATUS_LABEL: Record<string, string> = {
+  awaiting_confirmation: "Pending",
+  approved: "Approved",
+  rejected: "Rejected",
+  disputed: "Disputed",
+};
+
 const FILTER_TABS = [
   { key: "all", label: "All" },
-  { key: "awaiting_confirmation", label: "Awaiting Confirmation" },
+  { key: "awaiting_confirmation", label: "Pending" },
   { key: "approved", label: "Approved" },
   { key: "rejected", label: "Rejected" },
   { key: "disputed", label: "Disputed" },
@@ -391,7 +399,7 @@ export default function CustomerHistoryPage() {
             </svg>
           </div>
           <span className="text-sm font-medium text-amber-800 dark:text-amber-300 flex-1">
-            {stats.awaiting_confirmation} awaiting confirmation — review needed
+            {stats.awaiting_confirmation} pending — review needed
           </span>
           <svg className="w-4 h-4 text-amber-600 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -486,7 +494,7 @@ export default function CustomerHistoryPage() {
                           </p>
                           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium capitalize ${config.bg} border`}>
                             <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
-                            {log.status}
+                            {STATUS_LABEL[log.status] || log.status}
                           </span>
                         </div>
                         <p className="text-xs text-[var(--color-text-muted)] mt-0.5 truncate">
@@ -552,29 +560,36 @@ export default function CustomerHistoryPage() {
                       </div>
                     )}
 
-                    {log.status === "awaiting_confirmation" && (
-                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
-                        <button
-                          disabled={busyId === log.id}
-                          onClick={async () => {
-                            if (!window.confirm("Dispute this entry? The merchant will be notified to resolve it.")) return;
-                            await runAction(log.id, () => disputeEntry(log.id), "Entry disputed. Merchant notified.");
-                          }}
-                          className="flex-1 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
-                        >
-                          Dispute
-                        </button>
-                        <button
-                          disabled={busyId === log.id}
-                          onClick={async () => {
-                            await runAction(log.id, () => confirmCustomerEntry(log.id), "Entry confirmed! Balance updated.");
-                          }}
-                          className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
-                        >
-                          Confirm Balance
-                        </button>
-                      </div>
-                    )}
+                    {log.status === "awaiting_confirmation" &&
+                      (log.initiated_by === "customer" ? (
+                        <div className="mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+                          <div className="flex-1 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300 rounded-lg text-xs font-medium text-center">
+                            Waiting for shopkeeper approval
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+                          <button
+                            disabled={busyId === log.id}
+                            onClick={async () => {
+                              if (!window.confirm("Dispute this entry? The merchant will be notified to resolve it.")) return;
+                              await runAction(log.id, () => disputeEntry(log.id), "Entry disputed. Merchant notified.");
+                            }}
+                            className="flex-1 py-2 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
+                          >
+                            Dispute
+                          </button>
+                          <button
+                            disabled={busyId === log.id}
+                            onClick={async () => {
+                              await runAction(log.id, () => confirmCustomerEntry(log.id), "Entry confirmed! Balance updated.");
+                            }}
+                            className="flex-1 py-2 bg-green-600 text-white rounded-lg text-xs font-medium active:scale-[0.98] disabled:opacity-50"
+                          >
+                            Confirm Balance
+                          </button>
+                        </div>
+                      ))}
                   </div>
                 </div>
               );

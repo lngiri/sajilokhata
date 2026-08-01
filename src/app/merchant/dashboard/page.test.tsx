@@ -344,7 +344,7 @@ describe("MerchantDashboard", () => {
     render(<MerchantsDashboard />);
 
     await waitFor(() => {
-      expect(screen.getByText(/awaiting confirmation/i)).toBeInTheDocument();
+      expect(screen.getByText(/pending confirmation/i)).toBeInTheDocument();
     });
 
     expect(screen.getByText("Rita")).toBeInTheDocument();
