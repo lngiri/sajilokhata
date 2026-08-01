@@ -192,7 +192,7 @@ describe("MerchantDashboard", () => {
     expect(screen.getByText("Today's Cash Sales")).toBeInTheDocument();
     expect(screen.getByText("Today's Credit Sales")).toBeInTheDocument();
 
-    await user.click(screen.getByText("More Stats"));
+    await user.click(screen.getByText("Click to see more"));
     expect(screen.getByText("All Sales")).toBeInTheDocument();
     expect(screen.getByText("Cash in Hand")).toBeInTheDocument();
   });
@@ -249,7 +249,7 @@ describe("MerchantDashboard", () => {
     expect(screen.getByText("Reports")).toBeInTheDocument();
     expect(screen.queryByText("All Sales")).not.toBeInTheDocument();
 
-    await user.click(screen.getByText("More Stats"));
+    await user.click(screen.getByText("Click to see more"));
 
     expect(screen.getByText("All Sales")).toBeInTheDocument();
     expect(screen.getByText("Cash in Hand")).toBeInTheDocument();
