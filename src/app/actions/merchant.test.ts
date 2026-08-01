@@ -77,7 +77,8 @@ describe("resendInvitation", () => {
 
     expect(smsMock).toHaveBeenCalledWith("9841234567", expect.any(String), "m1");
     const message = smsMock.mock.calls[0][1] as string;
-    expect(message).toMatch(/Your verification code is \d{6}\./);
+    expect(message).toMatch(/use code \d{6} to register/);
+    expect(message).not.toMatch(/https?:\/\//);
 
     let inviteBuilder: any = null;
     for (let i = 0; i < admin.from.mock.calls.length; i++) {
@@ -93,7 +94,7 @@ describe("resendInvitation", () => {
       used_at: null,
     });
     expect(updatePayload.otp).toMatch(/^\d{6}$/);
-    expect(message).toContain(`Your verification code is ${updatePayload.otp}.`);
+    expect(message).toContain(`use code ${updatePayload.otp} to register`);
   });
 
   it("returns Invitation not found for a bogus invite id", async () => {

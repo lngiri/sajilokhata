@@ -337,8 +337,9 @@ describe("addCustomerForMerchant", () => {
     );
     expect(smsMock.mock.calls[0][0]).toBe("+9779841234567");
     expect(smsMock.mock.calls[0][1]).toContain(
-      `Your verification code is ${insertPayload.otp}.`
+      `Open QRhisab, enter your phone number, and use code ${insertPayload.otp} to register.`
     );
+    expect(smsMock.mock.calls[0][1]).not.toMatch(/https?:\/\//);
   });
 
   it("resets a retryable invite to pending on resend and resends the OTP", async () => {
@@ -371,7 +372,7 @@ describe("addCustomerForMerchant", () => {
     });
     expect(updates[0].otp).toMatch(/^\d{6}$/);
     expect(smsMock.mock.calls[0][1]).toContain(
-      `Your verification code is ${updates[0].otp}.`
+      `Open QRhisab, enter your phone number, and use code ${updates[0].otp} to register.`
     );
   });
 

@@ -107,7 +107,7 @@ export default function RegisterPage() {
           setInviteData(data.invite);
           setMerchantName(data.invite.merchantName || null);
           setStep("otp");
-          addToast("Verification code sent to your phone!", "success");
+          addToast("Invite found. Enter the code you received via SMS, or ask the shop to resend it.", "info");
         } else {
           setStep("profile");
           addToast("No pending invite found. Let's create your account.", "info");

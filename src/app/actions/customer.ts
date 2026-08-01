@@ -187,15 +187,12 @@ export async function sendOnboardingSMS(
     return { success: false, error: "Invalid phone" };
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
   const shopName = businessName || "A shop";
-  const inviteLink = `${siteUrl}/register?invite=${inviteToken}`;
 
   const message = [
     `${shopName} invited you to join Digital Khata.`,
     ``,
-    `Complete your registration here:`,
-    `${inviteLink}`,
+    `Open QRhisab, enter your phone number, and follow the steps to complete your registration.`,
   ].join("\n");
 
   const result = await sendTransactionSMS(cleanPhone, message);
@@ -385,15 +382,10 @@ export async function addCustomerForMerchant(
     let smsStatus: "pending" | "sms_sent" | "sms_failed" = "pending";
 
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
-      const inviteLink = `${siteUrl}/register?invite=${inviteId}`;
       const message = [
         `${businessName} invited you to join Digital Khata.`,
         ``,
-        `Complete your registration here:`,
-        `${inviteLink}`,
-        ``,
-        `Your verification code is ${otp}.`,
+        `Open QRhisab, enter your phone number, and use code ${otp} to register.`,
       ].join("\n");
 
       const smsResult = await sendTransactionSMS(normalized, message, merchantId);

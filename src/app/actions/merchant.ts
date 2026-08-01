@@ -1785,15 +1785,10 @@ export async function resendInvitation(
       .single();
     const businessName = merchant?.business_name || merchant?.name || "Shop";
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://app.qrhisab.com";
-    const inviteLink = `${siteUrl}/register?invite=${invite.id}`;
     const message = [
       `Reminder: ${businessName} invited you to join Digital Khata.`,
       ``,
-      `Complete your registration here:`,
-      `${inviteLink}`,
-      ``,
-      `Your verification code is ${otp}.`,
+      `Open QRhisab, enter your phone number, and use code ${otp} to register.`,
     ].join("\n");
 
     // Send SMS

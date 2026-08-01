@@ -18,7 +18,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Nepali shopko lagi digital credit ledger. Mobile-first PWA built with Next.js 16.",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.12.0",
@@ -58,5 +58,13 @@
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lngiri/sajilokhata.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lngiri/sajilokhata/issues"
+  },
+  "homepage": "https://github.com/lngiri/sajilokhata#readme"
 }

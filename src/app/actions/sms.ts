@@ -86,6 +86,13 @@ export async function sendTransactionSMS(
       return { success: false, error: "Could not send SMS to this number. Please check and try again." };
     }
 
+    // Aakash quarantines messages containing URLs for admin content review.
+    // The message was accepted by the gateway, so don't report a hard failure.
+    if (parsed?.data?.url_review_batch_id || parsed?.data?.pending_count != null) {
+      console.warn("[SMS] Message submitted for Aakash content review:", parsed.message || "");
+      return { success: true };
+    }
+
     // Safety: verify at least one valid recipient exists
     if (!parsed?.data?.valid || parsed.data.valid.length === 0) {
       console.error("[SMS] No valid recipients in response:", body);
