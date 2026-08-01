@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   getCreditLogByToken,
+  getVerifyCreditCheck,
   approveByToken,
   disputeByToken,
   requestAmountEdit,
@@ -64,29 +65,24 @@ export default function VerifyPage() {
     }
     const check = async () => {
       try {
-        const { getMerchantCustomerBalance } = await import("@/app/actions/merchant");
-        const { balance, creditLimit } = await getMerchantCustomerBalance(log.merchant_id, log.customer_id);
-
-        const remainingLimit = creditLimit - balance;
-        if (log.amount > remainingLimit) {
-          setCreditCheck({
-            overLimit: true,
-            remainingLimit,
-            message: `Credit limit exceeded. Remaining: Rs. ${formatNumber(remainingLimit)}`,
-          });
-        } else {
-          setCreditCheck({
-            overLimit: false,
-            remainingLimit,
-            message: `Remaining credit limit: Rs. ${formatNumber(remainingLimit)}`,
-          });
+        const result = await getVerifyCreditCheck(token);
+        if (!result || result.balance === null || result.remainingLimit === null) {
+          setCreditCheck(null);
+          return;
         }
+        setCreditCheck({
+          overLimit: result.overLimit,
+          remainingLimit: result.remainingLimit,
+          message: result.overLimit
+            ? `Credit limit exceeded. Remaining: Rs. ${formatNumber(result.remainingLimit)}`
+            : `Remaining credit limit: Rs. ${formatNumber(result.remainingLimit)}`,
+        });
       } catch {
         setCreditCheck(null);
       }
     };
     check();
-  }, [step, log]);
+  }, [step, log, token]);
 
   const handleApprove = async () => {
     setSubmitting(true);

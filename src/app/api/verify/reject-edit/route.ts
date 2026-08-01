@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { formatNumber } from "@/lib/format";
 
@@ -22,21 +23,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-    const admin = getAdminClient();
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(SESSION_COOKIE)?.value;
+    if (!raw) {
+      return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+    }
+    const session = await verifySessionToken(raw);
+    const sessionUserId = session?.userId ?? null;
+    if (!sessionUserId) {
+      return NextResponse.json({ error: "Session expired" }, { status: 401 });
+    }
 
-    const { data: rawLog, error: fetchError } = await supabase
-      .from("credit_logs")
-      .select("id, amount, proposed_amount, status, customer_id, created_at")
+    const admin = getAdminClient();
+    if (!admin) {
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
+    const { data: rawLog, error: fetchError } = await (admin.from("credit_logs") as any)
+      .select("id, amount, proposed_amount, status, merchant_id, customer_id, created_at")
       .eq("id", logId)
       .single();
 
     const log = rawLog as unknown as {
       id: string; amount: number; proposed_amount: number | null;
-      status: string; customer_id: string; created_at: string;
+      status: string; merchant_id: string; customer_id: string; created_at: string;
     } | null;
 
     if (fetchError || !log) {
+      return NextResponse.json({ error: "Credit log not found" }, { status: 404 });
+    }
+
+    if (log.merchant_id !== sessionUserId) {
       return NextResponse.json({ error: "Credit log not found" }, { status: 404 });
     }
 
@@ -49,8 +66,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Transaction verification window expired" }, { status: 400 });
     }
 
-    const { error: updateError } = await supabase
-      .from("credit_logs")
+    const { error: updateError } = await (admin.from("credit_logs") as any)
       .update({
         proposed_amount: null,
         status: "awaiting_confirmation",
@@ -60,7 +76,7 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    if (admin && log.customer_id) {
+    if (log.customer_id) {
       await admin.from("notifications").insert({
         user_id: log.customer_id,
         user_type: "customer",

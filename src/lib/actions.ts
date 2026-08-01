@@ -213,3 +213,30 @@ export async function rejectEditRequest(
 
   return data;
 }
+
+// ============================================================
+// Credit Limit Check (token-based, works for customers too)
+// ============================================================
+
+export async function getVerifyCreditCheck(
+  token: string
+): Promise<{
+  balance: number | null;
+  creditLimit: number | null;
+  remainingLimit: number | null;
+  overLimit: boolean;
+} | null> {
+  const res = await fetch("/api/verify/credit-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to check credit limit");
+  }
+
+  return data;
+}

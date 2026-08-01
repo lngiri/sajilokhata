@@ -5,6 +5,7 @@ import { sendTransactionSMS } from "./sms";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { createNotification } from "@/app/actions/notifications";
+import { requireMerchant } from "@/app/actions/merchant";
 import type { Database } from "@/lib/types/database";
 import { formatNumber } from "@/lib/format";
 
@@ -27,6 +28,8 @@ export async function checkCustomerByPhone(
   try {
     const admin = getAdminClient();
     if (!admin) return { exists: false };
+
+    await requireMerchant();
 
     const normalized = normalizePhone(phone);
     const { data } = await admin.from("customers")
@@ -253,6 +256,11 @@ export async function addCustomerForMerchant(
   if (!admin) return { success: false, error: "Admin client unavailable" };
 
   try {
+    const sessionUserId = await requireMerchant();
+    if (sessionUserId !== merchantId) {
+      return { success: false, error: "Not logged in" };
+    }
+
     const normalized = normalizePhone(phone);
 
     // 1. Look up merchant's business name

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
+import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { formatNumber } from "@/lib/format";
 
 export async function POST(req: NextRequest) {
@@ -10,11 +12,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "logId is required" }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const admin = getAdminClient();
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { allowed, retryAfter } = await checkRateLimit(`verify:${ip}`);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${retryAfter}s.` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
 
-    const { data: rawLog, error: fetchError } = await supabase
-      .from("credit_logs")
+    const cookieStore = await cookies();
+    const raw = cookieStore.get(SESSION_COOKIE)?.value;
+    if (!raw) {
+      return NextResponse.json({ error: "Not logged in" }, { status: 401 });
+    }
+    const session = await verifySessionToken(raw);
+    const sessionUserId = session?.userId ?? null;
+    if (!sessionUserId) {
+      return NextResponse.json({ error: "Session expired" }, { status: 401 });
+    }
+
+    const admin = getAdminClient();
+    if (!admin) {
+      return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
+    }
+
+    const { data: rawLog, error: fetchError } = await (admin.from("credit_logs") as any)
       .select("id, amount, proposed_amount, status, merchant_id, customer_id, type")
       .eq("id", logId)
       .single();
@@ -28,16 +51,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Credit log not found" }, { status: 404 });
     }
 
+    if (log.merchant_id !== sessionUserId) {
+      return NextResponse.json({ error: "Credit log not found" }, { status: 404 });
+    }
+
     if (log.status !== "edit_requested" || !log.proposed_amount) {
       return NextResponse.json({ error: "No pending edit request for this transaction" }, { status: 400 });
     }
 
     // Credit limit check — only for debit (credit extended to customer)
-    if (log.type === "debit" && log.customer_id && admin) {
+    if (log.type === "debit" && log.customer_id) {
       const netIncrease = log.proposed_amount - log.amount;
-      if (netIncrease <= 0) {
-        // Amount reduced or unchanged — no credit limit concern
-      } else {
+      if (netIncrease > 0) {
         const { data: mc } = await (admin.from("merchant_customers") as any)
           .select("credit_limit")
           .eq("merchant_id", log.merchant_id)
@@ -67,8 +92,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { error: updateError } = await supabase
-      .from("credit_logs")
+    const { error: updateError } = await (admin.from("credit_logs") as any)
       .update({
         amount: log.proposed_amount,
         proposed_amount: null,
@@ -79,7 +103,7 @@ export async function POST(req: NextRequest) {
 
     if (updateError) throw updateError;
 
-    if (admin && log.customer_id) {
+    if (log.customer_id) {
       await admin.from("notifications").insert({
         user_id: log.customer_id,
         user_type: "customer",

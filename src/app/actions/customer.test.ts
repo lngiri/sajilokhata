@@ -2,9 +2,10 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { addCustomerForMerchant, submitCustomerEntry } from "./customer";
 import { sendTransactionSMS } from "./sms";
 
-const { mockCookies, mockVerifySession, mockGetAdminClient } = vi.hoisted(() => ({
+const { mockCookies, mockVerifySession, mockVerifyMerchantSession, mockGetAdminClient } = vi.hoisted(() => ({
   mockCookies: vi.fn(),
   mockVerifySession: vi.fn(),
+  mockVerifyMerchantSession: vi.fn(),
   mockGetAdminClient: vi.fn(),
 }));
 
@@ -14,6 +15,8 @@ vi.mock("next/headers", () => ({
 
 vi.mock("@/lib/session", () => ({
   verifyCustomerSessionToken: mockVerifySession,
+  verifySessionToken: mockVerifyMerchantSession,
+  SESSION_COOKIE: "session",
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
@@ -306,6 +309,19 @@ describe("addCustomerForMerchant", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     smsMock.mockResolvedValue({ success: true });
+    mockCookies.mockResolvedValue({ get: () => ({ value: "merchant-token" }) });
+    mockVerifyMerchantSession.mockResolvedValue({ userId: "m1", iat: 0 });
+  });
+
+  it("rejects when the merchant is not logged in", async () => {
+    mockVerifyMerchantSession.mockResolvedValue(null);
+    const admin = makeAdmin({});
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const result = await addCustomerForMerchant("m1", "9841234567");
+    expect(result).toEqual({ success: false, error: "Session expired" });
+    expect(admin.from).not.toHaveBeenCalled();
+    expect(smsMock).not.toHaveBeenCalled();
   });
 
   it("inserts the invite with pending status and the OTP before sending the SMS", async () => {

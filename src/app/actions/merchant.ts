@@ -15,7 +15,7 @@ const SEARCH_MIN_LENGTH = 2;
  * Require a valid merchant session before allowing data access.
  * Returns the verified merchant ID or throws.
  */
-async function requireMerchant(): Promise<string> {
+export async function requireMerchant(): Promise<string> {
   const cookieStore = await cookies();
   const raw = cookieStore.get(SESSION_COOKIE)?.value;
   if (!raw) throw new Error("Not logged in");
