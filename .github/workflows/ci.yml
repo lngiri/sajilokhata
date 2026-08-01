@@ -54,6 +54,20 @@ jobs:
           PROD_HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
         if: env.PROD_HEALTH_URL == ''
         run: exit 0
+      - name: Diagnostic - dump what the runner receives
+        run: |
+          echo "=== health URL probe ==="
+          curl -sS -D - --max-time 30 "$PROD_HEALTH_URL$HEALTH_QUERY" -o /tmp/diag1.txt 2>/dev/null || echo "(curl exit $?)"
+          echo "--- body (first 600 bytes) ---"
+          head -c 600 /tmp/diag1.txt; echo
+          echo "=== deployment alias probe ==="
+          curl -sS -D - --max-time 30 "https://sajilokhata-lngiris-projects.vercel.app/api/health$HEALTH_QUERY" -o /tmp/diag2.txt 2>/dev/null || echo "(curl exit $?)"
+          echo "--- body (first 600 bytes) ---"
+          head -c 600 /tmp/diag2.txt; echo
+        env:
+          PROD_HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
+          HEALTH_TOKEN: ${{ secrets.HEALTH_TOKEN }}
+          HEALTH_QUERY: ${{ secrets.HEALTH_TOKEN != '' && format('?token={0}', secrets.HEALTH_TOKEN) || '' }}
       - name: Wait for deploy, then probe /api/health
         run: |
           ok=0
