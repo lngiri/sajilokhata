@@ -320,6 +320,7 @@ describe("addCustomerForMerchant", () => {
     const result = await addCustomerForMerchant("m1", "9841234567", "Hari");
     expect(result.success).toBe(true);
     expect(result.smsStatus).toBe("sms_sent");
+    expect(result.customer).toMatchObject({ id: "c1", registration_status: "invited" });
 
     const insertPayload = findInviteInsert(admin);
     expect(insertPayload).toMatchObject({

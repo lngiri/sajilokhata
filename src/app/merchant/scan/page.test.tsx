@@ -807,8 +807,8 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
     it("shows due-first suggestions when typing a customer name", async () => {
       const user = userEvent.setup();
       vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
-        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
-        { id: "c2", name: "Ram Bahadur", phone: "9847654321", current_balance: 0 },
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000, registration_status: "registered" },
+        { id: "c2", name: "Ram Bahadur", phone: "9847654321", current_balance: 0, registration_status: "registered" },
       ]);
 
       render(<MerchantScanPage />);
@@ -838,7 +838,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
         entry: { id: "e1", status: "awaiting_confirmation" },
       });
       vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
-        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000, registration_status: "registered" },
       ]);
 
       render(<MerchantScanPage />);
@@ -890,6 +890,36 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       );
     });
 
+    it("does not show the no-match message after selecting a suggestion (Bug 1)", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000, registration_status: "registered" },
+      ]);
+
+      render(<MerchantScanPage />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Manual Entry")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Credit Given"));
+
+      const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+      await user.type(searchInput, "Ram");
+
+      await waitFor(() => {
+        expect(screen.getByText("Ram Kumar")).toBeInTheDocument();
+      });
+
+      // Select the suggestion → the stale "no customers found" message must disappear
+      await user.click(screen.getByText("Ram Kumar"));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Already registered ✅ as Ram Kumar/)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/No customers found matching/)).not.toBeInTheDocument();
+    });
+
     it("shows a no-match message when the name search finds nothing", async () => {
       const user = userEvent.setup();
       vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([]);
@@ -916,7 +946,7 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
         entry: { id: "e1", status: "awaiting_confirmation" },
       });
       vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
-        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000 },
+        { id: "c1", name: "Ram Kumar", phone: "9841234567", current_balance: 1000, registration_status: "registered" },
       ]);
 
       render(<MerchantScanPage />);
@@ -1168,6 +1198,93 @@ describe("MerchantScanPage — Full Flow Integration Tests", () => {
       await waitFor(() => screen.getByText("Enter Details"));
 
       expect(screen.getAllByPlaceholderText("0")[0]).toHaveAttribute("step", "any");
+    });
+  });
+
+  // ═══════════════════════════════════════════════
+  // INVITE FLOW: honest status labels when SMS fails
+  // ═══════════════════════════════════════════════
+
+  describe("Invite flow status labels (Bug 2)", () => {
+    beforeEach(() => {
+      vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("manual=true"));
+    });
+
+    function setupInviteFlow(smsSent: boolean, smsError?: string) {
+      vi.mocked(mockCustomerActions.checkCustomerByPhone).mockResolvedValue({ exists: false, customer: null });
+      vi.mocked(mockCustomerActions.addCustomerForMerchant).mockResolvedValue({
+        success: true,
+        customer: { id: "c9", name: null, phone: "9811111111", registration_status: "invited" },
+        smsSent,
+        smsError,
+        smsStatus: smsSent ? "sms_sent" : "sms_failed",
+      });
+    }
+
+    async function inviteNewCustomer(user: ReturnType<typeof userEvent.setup>) {
+      render(<MerchantScanPage />);
+      await waitFor(() => screen.getByText("Manual Entry"));
+      await user.click(screen.getByText("Credit Given"));
+
+      const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+      await user.type(searchInput, "9811111111");
+      await waitFor(() => screen.getByText("Not registered yet 📱"));
+      await user.click(screen.getByText("Send Invitation"));
+    }
+
+    it("shows 'Invited — awaiting registration' (never 'Already registered') when the SMS succeeds", async () => {
+      const user = userEvent.setup();
+      setupInviteFlow(true);
+
+      await inviteNewCustomer(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Invited — awaiting registration/)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Already registered/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/SMS delivery failed/)).not.toBeInTheDocument();
+      expect(screen.queryByText("Retry SMS")).not.toBeInTheDocument();
+    });
+
+    it("shows an SMS-failure banner with a retry button when the SMS fails", async () => {
+      const user = userEvent.setup();
+      setupInviteFlow(false, "SMS provider down");
+
+      await inviteNewCustomer(user);
+
+      await waitFor(() => {
+        expect(screen.getByText(/Invited — awaiting registration/)).toBeInTheDocument();
+        expect(screen.getByText(/SMS delivery failed: SMS provider down/)).toBeInTheDocument();
+        expect(screen.getByText("Retry SMS")).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Already registered/)).not.toBeInTheDocument();
+
+      await user.click(screen.getByText("Retry SMS"));
+      await waitFor(() => {
+        expect(mockCustomerActions.addCustomerForMerchant).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("marks an invited customer selected from search as awaiting registration, not already registered", async () => {
+      const user = userEvent.setup();
+      vi.mocked(mockCustomerActions.searchCustomers).mockResolvedValue([
+        { id: "c1", name: "Hari", phone: "9812222222", current_balance: 0, registration_status: "invited" },
+      ]);
+
+      render(<MerchantScanPage />);
+      await waitFor(() => screen.getByText("Manual Entry"));
+      await user.click(screen.getByText("Credit Given"));
+
+      const searchInput = screen.getByPlaceholderText(/Search name or phone/);
+      await user.type(searchInput, "Hari");
+
+      await waitFor(() => screen.getByText("Hari"));
+      await user.click(screen.getByText("Hari"));
+
+      await waitFor(() => {
+        expect(screen.getByText(/Invited — awaiting registration for Hari/)).toBeInTheDocument();
+      });
+      expect(screen.queryByText(/Already registered/)).not.toBeInTheDocument();
     });
   });
 });

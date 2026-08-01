@@ -159,7 +159,8 @@ export default function MerchantScanPage() {
   const [customerBalance, setCustomerBalance] = useState<number | null>(null);
   const [verificationToken, setVerificationToken] = useState<string | null>(null);
   const [customerLookup, setCustomerLookup] = useState<"idle" | "looking" | "found" | "not_found">("idle");
-  const [suggestions, setSuggestions] = useState<{ id: string; name: string | null; phone: string; current_balance: number }[]>([]);
+  const [customerRegStatus, setCustomerRegStatus] = useState<string>("registered");
+  const [suggestions, setSuggestions] = useState<{ id: string; name: string | null; phone: string; current_balance: number; registration_status?: string | null }[]>([]);
   const [searchingSuggestions, setSearchingSuggestions] = useState(false);
   const [nameSearched, setNameSearched] = useState(false);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -344,12 +345,14 @@ export default function MerchantScanPage() {
     setStep("confirm");
   };
 
-  const selectCustomer = (c: { id: string; name: string | null; phone: string }) => {
+  const selectCustomer = (c: { id: string; name: string | null; phone: string; registration_status?: string | null }) => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     setCustomerId(c.id);
     setCustomerPhone(c.phone);
     setCustomerName(c.name);
+    setCustomerRegStatus(c.registration_status ?? "registered");
     setCustomerLookup("found");
+    setNameSearched(false);
     setSuggestions([]);
     setSearchingSuggestions(false);
     setSearchQuery(c.name || c.phone);
@@ -357,6 +360,43 @@ export default function MerchantScanPage() {
       getMerchantCustomerBalance(merchantId, c.id).then(({ balance }) => {
         setCustomerBalance(balance);
       }).catch(() => setCustomerBalance(null));
+    }
+  };
+
+  const sendInvite = async (phone: string) => {
+    if (!merchantId) {
+      addToast("Not logged in", "error");
+      return;
+    }
+    setAddingCustomer(true);
+    try {
+      const result = await addCustomerForMerchant(merchantId, phone);
+      if (!result.success || !result.customer) {
+        addToast(result.error || "Failed to add customer", "error");
+        return;
+      }
+      setCustomerId(result.customer.id);
+      setCustomerPhone(result.customer.phone);
+      setCustomerName(result.customer.name || "");
+      setCustomerRegStatus(result.customer.registration_status ?? "invited");
+      setSmsSent(result.smsSent ?? false);
+      setSmsError(result.smsError || null);
+      setCustomerLookup("found");
+      if (result.smsSent) {
+        addToast("Invitation sent successfully.", "success");
+      } else {
+        addToast(`Invitation created but SMS delivery failed: ${result.smsError || "Unknown error"}`, "error");
+      }
+      try {
+        const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
+        setCustomerBalance(balance);
+      } catch {
+        setCustomerBalance(null);
+      }
+    } catch {
+      addToast("Failed to add customer", "error");
+    } finally {
+      setAddingCustomer(false);
     }
   };
 
@@ -749,15 +789,46 @@ export default function MerchantScanPage() {
                 {/* Lookup result */}
                 {entryType !== "cash" && entryType !== "cash_in" && entryType !== "expense" && customerLookup === "found" && (
                   <div className="mt-2 space-y-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/40 rounded-lg text-sm font-medium text-green-700 dark:text-green-300">
-                      <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Already registered ✅{customerName ? ` as ${customerName}` : ""}</span>
-                    </div>
+                    {customerRegStatus === "invited" ? (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg text-sm font-medium text-amber-700 dark:text-amber-300">
+                        <svg className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Invited — awaiting registration{customerName ? ` for ${customerName}` : ""}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-900/40 rounded-lg text-sm font-medium text-green-700 dark:text-green-300">
+                        <svg className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Already registered ✅{customerName ? ` as ${customerName}` : ""}</span>
+                      </div>
+                    )}
                     {customerBalance !== null && (
                       <div className={`px-3 py-2 rounded-lg text-sm font-medium ${customerBalance > 0 ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"}`}>
                         {customerBalance > 0 ? `Current Due: Rs. ${formatNumber(customerBalance)}` : "No outstanding balance"}
+                      </div>
+                    )}
+                    {customerRegStatus === "invited" && !smsSent && smsError && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 px-3 py-2 bg-red-100 dark:bg-red-900/40 rounded-lg text-sm font-medium text-red-700 dark:text-red-300">
+                          <svg className="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                          </svg>
+                          <span>SMS delivery failed: {smsError}</span>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={addingCustomer}
+                          onClick={() => sendInvite(customerPhone)}
+                          className="w-full py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {addingCustomer ? (
+                            <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Sending...</>
+                          ) : (
+                            <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg> Retry SMS</>
+                          )}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -775,38 +846,7 @@ export default function MerchantScanPage() {
                       <button
                         type="button"
                         disabled={addingCustomer}
-                        onClick={async () => {
-                          setAddingCustomer(true);
-                          try {
-                            if (!merchantId) { addToast("Not logged in", "error"); return; }
-                            const result = await addCustomerForMerchant(merchantId, searchQuery);
-                            if (!result.success || !result.customer) {
-                              addToast(result.error || "Failed to add customer", "error");
-                              return;
-                            }
-                            setCustomerId(result.customer.id);
-                            setCustomerPhone(result.customer.phone);
-                            setCustomerName(result.customer.name || "");
-                            setSmsSent(result.smsSent ?? false);
-                            setSmsError(result.smsError || null);
-                            setCustomerLookup("found");
-                            if (result.smsSent) {
-                              addToast("Invitation sent successfully.", "success");
-                            } else {
-                              addToast(`Invitation created but SMS delivery failed: ${result.smsError || "Unknown error"}`, "error");
-                            }
-                            if (merchantId) {
-                              try {
-                                const { balance } = await getMerchantCustomerBalance(merchantId, result.customer.id);
-                                setCustomerBalance(balance);
-                              } catch { setCustomerBalance(null); }
-                            }
-                          } catch {
-                            addToast("Failed to add customer", "error");
-                          } finally {
-                            setAddingCustomer(false);
-                          }
-                        }}
+                        onClick={() => sendInvite(searchQuery)}
                         className="w-full py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {addingCustomer ? (

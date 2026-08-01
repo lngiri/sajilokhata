@@ -14,6 +14,7 @@ type MerchantCustomerRow = Database["public"]["Tables"]["merchant_customers"]["R
 type MerchantCustomerInsert = Database["public"]["Tables"]["merchant_customers"]["Insert"];
 type CreditLogRow = Database["public"]["Tables"]["credit_logs"]["Row"];
 type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Insert"];
+type CustomerBrief = { id: string; name: string | null; phone: string; registration_status: string };
 
 /**
  * Lookup a customer by phone number.
@@ -22,20 +23,28 @@ type CreditLogInsert = Database["public"]["Tables"]["credit_logs"]["Insert"];
  */
 export async function checkCustomerByPhone(
   phone: string
-): Promise<{ exists: boolean; customer?: { id: string; name: string | null; phone: string } }> {
+): Promise<{ exists: boolean; customer?: CustomerBrief }> {
   try {
     const admin = getAdminClient();
     if (!admin) return { exists: false };
 
     const normalized = normalizePhone(phone);
     const { data } = await admin.from("customers")
-      .select("id, name, phone")
+      .select("id, name, phone, registration_status")
       .eq("phone", normalized)
       .maybeSingle();
 
-    const row = data as Pick<CustomerRow, "id" | "name" | "phone"> | null;
+    const row = data as CustomerBrief | null;
     if (row) {
-      return { exists: true, customer: { id: row.id, name: row.name, phone: row.phone } };
+      return {
+        exists: true,
+        customer: {
+          id: row.id,
+          name: row.name,
+          phone: row.phone,
+          registration_status: row.registration_status || "invited",
+        },
+      };
     }
     return { exists: false };
   } catch (err) {
@@ -52,7 +61,7 @@ export async function checkCustomerByPhone(
 export async function searchCustomers(
   merchantId: string,
   query: string
-): Promise<{ id: string; name: string | null; phone: string; current_balance: number }[]> {
+): Promise<{ id: string; name: string | null; phone: string; current_balance: number; registration_status: string | null }[]> {
   const admin = getAdminClient();
   if (!admin) return [];
   const q = query.trim();
@@ -97,7 +106,7 @@ export async function searchCustomers(
 
     // Keep only customers linked to this merchant
     const { data: mcRows } = await (admin.from("merchant_customers") as any)
-      .select("customer_id, customers!inner(id, name, phone)")
+      .select("customer_id, customers!inner(id, name, phone, registration_status)")
       .eq("merchant_id", merchantId)
       .in("customer_id", matchedIds);
 
@@ -129,6 +138,7 @@ export async function searchCustomers(
         id: r.customer_id,
         name: r.customers?.name ?? null,
         phone: r.customers?.phone ?? "",
+        registration_status: r.customers?.registration_status ?? null,
         current_balance: balanceMap[r.customer_id] || 0,
       }))
       .sort((a, b) => {
@@ -237,7 +247,7 @@ export async function addCustomerForMerchant(
 ): Promise<{
   success: boolean;
   error?: string;
-  customer?: { id: string; name: string | null; phone: string };
+  customer?: CustomerBrief;
   smsSent?: boolean;
   smsError?: string;
   smsStatus?: "pending" | "sms_sent" | "sms_failed";
@@ -257,20 +267,20 @@ export async function addCustomerForMerchant(
 
     // 2. Find or create customer
     const { data: rawCustomer } = await admin.from("customers")
-      .select("id, name, phone")
+      .select("id, name, phone, registration_status")
       .eq("phone", normalized)
       .maybeSingle();
-    let customer = rawCustomer as Pick<CustomerRow, "id" | "name" | "phone"> | null;
+    let customer = rawCustomer as CustomerBrief | null;
 
     if (!customer) {
       const { data: inserted, error } = await admin.from("customers")
         .insert({ phone: normalized, name: name || null, registration_status: "invited" })
-        .select("id, name, phone")
+        .select("id, name, phone, registration_status")
         .single();
       if (error) {
         return { success: false, error: `DB error: ${error.message}` };
       }
-      customer = inserted as Pick<CustomerRow, "id" | "name" | "phone">;
+      customer = inserted as CustomerBrief;
     }
 
     // 3. Link to merchant
@@ -432,7 +442,12 @@ export async function addCustomerForMerchant(
 
     return {
       success: true,
-      customer: { id: customer.id, name: customer.name, phone: normalized },
+      customer: {
+        id: customer.id,
+        name: customer.name,
+        phone: normalized,
+        registration_status: customer.registration_status || "invited",
+      },
       smsSent,
       smsError,
       smsStatus,
