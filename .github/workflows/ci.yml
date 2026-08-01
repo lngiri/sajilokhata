@@ -57,12 +57,17 @@ jobs:
       - name: Wait for deploy, then probe /api/health
         run: |
           ok=0
-          for i in $(seq 1 12); do
+          for i in $(seq 1 15); do
             sleep 20
-            if curl -fsS "$PROD_HEALTH_URL$HEALTH_QUERY" -o /tmp/health.json 2>/dev/null; then ok=1; break; fi
+            if curl -fsS "$PROD_HEALTH_URL$HEALTH_QUERY" -o /tmp/health.json 2>/dev/null; then
+              if node -e "const j = require('/tmp/health.json'); if (!j || typeof j !== 'object' || j.ok !== true) process.exit(1)"; then
+                echo "PRODUCTION HEALTHY"
+                ok=1
+                break
+              fi
+            fi
           done
-          if [ "$ok" != "1" ]; then echo "Health endpoint never became ready"; exit 1; fi
-          node -e "const j = require('/tmp/health.json'); if (!j.ok) { console.error(JSON.stringify(j, null, 2)); process.exit(1); } console.log('PRODUCTION HEALTHY');"
+          if [ "$ok" != "1" ]; then echo "Health endpoint never became healthy"; exit 1; fi
         env:
           PROD_HEALTH_URL: ${{ secrets.PROD_HEALTH_URL }}
           HEALTH_TOKEN: ${{ secrets.HEALTH_TOKEN }}
