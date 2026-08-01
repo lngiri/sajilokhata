@@ -27,13 +27,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { data: rawLog, error: fetchError } = await (admin.from("credit_logs") as any)
-      .select("id, amount, type, status, merchant_id, customer_id, created_at")
+      .select("id, amount, type, status, merchant_id, customer_id, created_at, initiated_by")
       .eq("verification_token", token)
       .maybeSingle();
 
     const log = rawLog as unknown as {
       id: string; amount: number; type: string; status: string;
       merchant_id: string; customer_id: string; created_at: string;
+      initiated_by: string | null;
     } | null;
 
     if (fetchError || !log) {
@@ -42,6 +43,13 @@ export async function POST(req: NextRequest) {
 
     if (log.status !== "awaiting_confirmation") {
       return NextResponse.json({ error: "Transaction already processed" }, { status: 400 });
+    }
+
+    // Self-approval guard: a customer cannot approve a transaction they initiated.
+    // Only merchant-initiated entries (initiated_by "merchant" or legacy null) go
+    // through the customer verification link.
+    if (log.initiated_by === "customer") {
+      return NextResponse.json({ error: "This transaction needs the shopkeeper's approval" }, { status: 400 });
     }
 
     const createdAt = new Date(log.created_at).getTime();

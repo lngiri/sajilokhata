@@ -19,6 +19,7 @@ interface LogEntry {
   description: string | null;
   quantity: number | null;
   unit: string | null;
+  initiated_by: string | null;
   created_at: string;
   customers: { name: string | null; phone: string } | null;
 }
@@ -63,7 +64,7 @@ export default function LedgerPage() {
       const id = await getCurrentMerchantId();
       if (id) {
         const allLogs = await getMerchantCreditLogs(id, { limit: 50 });
-        const pending = (allLogs as LogEntry[]).filter((l) => l.status === "awaiting_confirmation");
+        const pending = (allLogs as LogEntry[]).filter((l) => l.status === "awaiting_confirmation" && l.initiated_by === "customer");
         setLogs(allLogs as LogEntry[]);
         if (pending.length > 0) {
           setPendingEntries(
@@ -83,7 +84,7 @@ export default function LedgerPage() {
   };
 
   const openApprovalModal = () => {
-    const pending = logs.filter((l) => l.status === "awaiting_confirmation");
+    const pending = logs.filter((l) => l.status === "awaiting_confirmation" && l.initiated_by === "customer");
     if (pending.length === 0) {
       addToast("No pending entries.", "info");
       return;
@@ -144,7 +145,7 @@ export default function LedgerPage() {
     }
   };
 
-  const pendingCount = logs.filter((l) => l.status === "awaiting_confirmation").length;
+  const pendingCount = logs.filter((l) => l.status === "awaiting_confirmation" && l.initiated_by === "customer").length;
 
   return (
     <div className="pb-20">
@@ -261,22 +262,29 @@ export default function LedgerPage() {
                     </div>
                   </div>
 
-                  {log.status === "awaiting_confirmation" && (
-                    <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
-                      <button
-                        onClick={() => handleReject(log.id)}
-                        className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98]"
-                      >
-                        Reject
-                      </button>
-                      <button
-                        onClick={() => handleApprove(log.id)}
-                        className="flex-1 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.98]"
-                      >
-                        Approve
-                      </button>
-                    </div>
-                  )}
+                  {log.status === "awaiting_confirmation" &&
+                    (log.initiated_by === "customer" ? (
+                      <div className="flex gap-2 mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+                        <button
+                          onClick={() => handleReject(log.id)}
+                          className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98]"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleApprove(log.id)}
+                          className="flex-1 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.98]"
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-3 pt-3 border-t border-gray-50 dark:border-gray-700">
+                        <div className="flex-1 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300 rounded-lg text-xs font-medium text-center">
+                          Sent to customer — awaiting confirmation
+                        </div>
+                      </div>
+                    ))}
                 </div>
               ))}
             </div>

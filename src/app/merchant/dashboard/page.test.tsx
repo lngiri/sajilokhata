@@ -135,6 +135,7 @@ const mockDashboardData = {
       created_at: "2025-01-15T10:00:00Z",
       attachment_url: null,
       customer_id: "c1",
+      initiated_by: "customer",
       customers: { name: "Hari", phone: "9841234567" },
     },
   ],
@@ -320,6 +321,37 @@ describe("MerchantDashboard", () => {
     });
   });
 
+  it("shows a badge instead of Approve/Reject for merchant-initiated entries", async () => {
+    vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
+      ...mockDashboardData,
+      awaitingLogs: [
+        {
+          id: "cl-own",
+          amount: 700,
+          type: "debit" as const,
+          status: "awaiting_confirmation",
+          description: "Sugar 5kg",
+          proposed_amount: null,
+          created_at: "2025-01-15T11:00:00Z",
+          attachment_url: null,
+          customer_id: "c1",
+          initiated_by: "merchant",
+          customers: { name: "Rita", phone: "9800000000" },
+        },
+      ],
+    });
+
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/awaiting confirmation/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Rita")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Approve" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reject" })).not.toBeInTheDocument();
+  });
+
   it("accepts an edit request inline", async () => {
     const user = userEvent.setup();
     vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
@@ -335,6 +367,7 @@ describe("MerchantDashboard", () => {
           created_at: "2025-01-15T10:00:00Z",
           attachment_url: null,
           customer_id: "c1",
+          initiated_by: "merchant",
           customers: { name: "Hari", phone: "9841234567" },
         },
       ],
@@ -371,6 +404,7 @@ describe("MerchantDashboard", () => {
           created_at: "2025-01-15T10:00:00Z",
           attachment_url: null,
           customer_id: "c1",
+          initiated_by: "merchant",
           customers: { name: "Hari", phone: "9841234567" },
         },
       ],

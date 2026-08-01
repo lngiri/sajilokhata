@@ -210,6 +210,7 @@ export async function saveEntry(params: {
       description: params.description || null,
       status: isImmediate ? "approved" : "awaiting_confirmation",
       approved_at: isImmediate ? new Date().toISOString() : null,
+      initiated_by: "merchant",
     };
     if (params.quantity != null) {
       insertData.quantity = params.quantity;

@@ -87,6 +87,7 @@ export default function MerchantDashboard() {
       created_at: string;
       attachment_url: string | null;
       customer_id: string | null;
+      initiated_by: string | null;
       customers: { name: string | null; phone: string } | null;
     }[]
   >([]);
@@ -402,6 +403,10 @@ export default function MerchantDashboard() {
   };
 
   const handleApproveLog = async (log: (typeof awaitingLogs)[number]) => {
+    if (log.status === "awaiting_confirmation" && log.initiated_by !== "customer") {
+      addToast("This entry awaits confirmation from the customer.", "info");
+      return;
+    }
     setHandlingLogId(log.id);
     selfActedLogsRef.current.set(log.id, Date.now());
     try {
@@ -432,6 +437,10 @@ export default function MerchantDashboard() {
   };
 
   const handleRejectLog = async (log: (typeof awaitingLogs)[number]) => {
+    if (log.status === "awaiting_confirmation" && log.initiated_by !== "customer") {
+      addToast("This entry awaits confirmation from the customer.", "info");
+      return;
+    }
     setHandlingLogId(log.id);
     selfActedLogsRef.current.set(log.id, Date.now());
     try {
@@ -937,20 +946,28 @@ export default function MerchantDashboard() {
                           </div>
                         </div>
                         <div className="flex gap-2 mt-2.5 pt-2.5 border-t border-[var(--color-border)]">
-                          <button
-                            onClick={() => handleRejectLog(log)}
-                            disabled={isHandling}
-                            className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
-                          >
-                            {isEdit ? "Decline" : "Reject"}
-                          </button>
-                          <button
-                            onClick={() => handleApproveLog(log)}
-                            disabled={isHandling}
-                            className="flex-1 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
-                          >
-                            {isHandling ? "Processing…" : isEdit ? "Accept" : "Approve"}
-                          </button>
+                          {isEdit || log.initiated_by === "customer" ? (
+                            <>
+                              <button
+                                onClick={() => handleRejectLog(log)}
+                                disabled={isHandling}
+                                className="flex-1 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+                              >
+                                {isEdit ? "Decline" : "Reject"}
+                              </button>
+                              <button
+                                onClick={() => handleApproveLog(log)}
+                                disabled={isHandling}
+                                className="flex-1 py-2 bg-[var(--color-primary)] text-white rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
+                              >
+                                {isHandling ? "Processing…" : isEdit ? "Accept" : "Approve"}
+                              </button>
+                            </>
+                          ) : (
+                            <div className="flex-1 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-300 rounded-lg text-xs font-medium text-center">
+                              Sent to customer — awaiting confirmation
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

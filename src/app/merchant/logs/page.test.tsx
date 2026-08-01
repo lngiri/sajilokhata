@@ -60,8 +60,24 @@ const pendingLogs = [
     description: "Rice 10kg",
     quantity: null,
     unit: null,
+    initiated_by: "customer",
     created_at: "2025-01-15T10:00:00Z",
     customers: { name: "Hari", phone: "9841234567" },
+  },
+];
+
+const merchantInitiatedPendingLogs = [
+  {
+    id: "cl4",
+    amount: 700,
+    type: "debit",
+    status: "awaiting_confirmation",
+    description: "Sugar 5kg",
+    quantity: null,
+    unit: null,
+    initiated_by: "merchant",
+    created_at: "2025-01-15T11:00:00Z",
+    customers: { name: "Rita", phone: "9800000000" },
   },
 ];
 
@@ -137,6 +153,23 @@ describe("LedgerPage", () => {
       expect(screen.getByText("Approve")).toBeInTheDocument();
       expect(screen.getByText("Reject")).toBeInTheDocument();
     });
+  });
+
+  it("shows a badge instead of Approve for merchant-initiated pending entries", async () => {
+    vi.mocked(mockMerchantActions.getMerchantCreditLogs).mockResolvedValue([
+      ...merchantInitiatedPendingLogs,
+      ...approvedLogs,
+    ] as any);
+
+    render(<LedgerPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/awaiting confirmation/i)).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Rita")).toBeInTheDocument();
+    expect(screen.queryByText("Approve")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reject")).not.toBeInTheDocument();
   });
 
   it("calls updateCreditLogStatus with 'approved' on Approve click", async () => {

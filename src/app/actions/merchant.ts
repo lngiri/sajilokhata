@@ -738,6 +738,30 @@ export async function updateCreditLogStatus(
   const sessionUserId = await requireMerchant().catch(() => null);
   if (!sessionUserId) throw new Error("Not logged in");
 
+  const { data: existing, error: fetchError } = await (admin.from("credit_logs") as any)
+    .select("id, merchant_id, initiated_by, status")
+    .eq("id", logId)
+    .maybeSingle();
+
+  if (fetchError || !existing) {
+    throw new Error("Entry not found");
+  }
+
+  // Ownership: a merchant may only approve/reject entries that belong to them.
+  if (existing.merchant_id !== sessionUserId) {
+    throw new Error("You are not authorized to update this entry");
+  }
+
+  // Self-approval guard: a merchant can only approve/reject entries the CUSTOMER
+  // initiated. Entries the merchant created themselves (initiated_by "merchant",
+  // or null for legacy rows) must be confirmed by the customer via the link.
+  if (
+    (status === "approved" || status === "rejected") &&
+    existing.initiated_by !== "customer"
+  ) {
+    throw new Error("This entry awaits confirmation from the customer");
+  }
+
   const updates: Record<string, unknown> = {};
   if (status === "approved") updates.approved_at = new Date().toISOString();
   updates.status = status;
@@ -1559,7 +1583,7 @@ export async function getMerchantDashboardData(merchantId: string) {
       .select("*, customers(id, name, phone)")
       .eq("merchant_id", merchantId),
     (admin.from("credit_logs") as any)
-      .select("id, amount, type, status, description, created_at, attachment_url, proposed_amount, customer_id, customers(name, phone)")
+      .select("id, amount, type, status, description, created_at, attachment_url, proposed_amount, customer_id, initiated_by, customers(name, phone)")
       .eq("merchant_id", merchantId)
       .in("status", ["awaiting_confirmation", "edit_requested"])
       .order("created_at", { ascending: false })

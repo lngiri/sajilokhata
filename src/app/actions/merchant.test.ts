@@ -1,17 +1,23 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { resendInvitation } from "./merchant";
+import { updateCreditLogStatus, resendInvitation } from "./merchant";
 import { sendTransactionSMS } from "./sms";
 
-const { mockGetAdminClient } = vi.hoisted(() => ({
+const { mockGetAdminClient, mockCookies, mockVerifySession } = vi.hoisted(() => ({
   mockGetAdminClient: vi.fn(),
+  mockCookies: vi.fn(),
+  mockVerifySession: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/admin", () => ({
   getAdminClient: mockGetAdminClient,
 }));
 
+vi.mock("next/headers", () => ({
+  cookies: mockCookies,
+}));
+
 vi.mock("@/lib/session", () => ({
-  verifySessionToken: vi.fn(),
+  verifySessionToken: mockVerifySession,
   SESSION_COOKIE: "merchant_session",
 }));
 
@@ -134,5 +140,112 @@ describe("resendInvitation", () => {
       error: "Cannot resend invitation in current status",
     });
     expect(smsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("updateCreditLogStatus", () => {
+  const baseLog = {
+    id: "log1",
+    merchant_id: "m1",
+    initiated_by: "customer",
+    status: "awaiting_confirmation",
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCookies.mockResolvedValue({
+      get: (name: string) => (name === "merchant_session" ? { value: "tok" } : undefined),
+      getAll: vi.fn(() => []),
+    });
+    mockVerifySession.mockResolvedValue({ userId: "m1" });
+  });
+
+  it("throws when there is no merchant session", async () => {
+    mockVerifySession.mockResolvedValue(null);
+    const admin = makeAdmin({ credit_logs: [{ data: baseLog }] });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(updateCreditLogStatus("log1", "approved")).rejects.toThrow("Not logged in");
+  });
+
+  it("throws when the log belongs to another merchant", async () => {
+    const admin = makeAdmin({
+      credit_logs: [{ data: { ...baseLog, merchant_id: "m2" } }],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(updateCreditLogStatus("log1", "approved")).rejects.toThrow(
+      "You are not authorized to update this entry"
+    );
+  });
+
+  it("throws when the merchant approves their own merchant-initiated entry", async () => {
+    const admin = makeAdmin({
+      credit_logs: [{ data: { ...baseLog, initiated_by: "merchant" } }],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(updateCreditLogStatus("log1", "approved")).rejects.toThrow(
+      "This entry awaits confirmation from the customer"
+    );
+  });
+
+  it("throws for legacy merchant-initiated entries (null initiated_by)", async () => {
+    const admin = makeAdmin({
+      credit_logs: [{ data: { ...baseLog, initiated_by: null } }],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(updateCreditLogStatus("log1", "rejected")).rejects.toThrow(
+      "This entry awaits confirmation from the customer"
+    );
+  });
+
+  it("throws when the log does not exist", async () => {
+    const admin = makeAdmin({ credit_logs: [{ data: null }] });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    await expect(updateCreditLogStatus("log1", "approved")).rejects.toThrow("Entry not found");
+  });
+
+  it("approves a customer-initiated entry owned by the merchant", async () => {
+    const updated = { id: "log1", amount: 100, customer_id: "c1", status: "approved" };
+    const admin = makeAdmin({
+      credit_logs: [
+        { data: { ...baseLog, customer_id: "c1" } },
+        { data: updated },
+      ],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const result = await updateCreditLogStatus("log1", "approved");
+    expect(result).toMatchObject({ id: "log1", status: "approved" });
+
+    let updateBuilder: any = null;
+    for (let i = 0; i < admin.from.mock.calls.length; i++) {
+      if (admin.from.mock.calls[i][0] === "credit_logs" && admin.from.mock.results[i].value.update.mock.calls.length > 0) {
+        updateBuilder = admin.from.mock.results[i].value;
+        break;
+      }
+    }
+    expect(updateBuilder).not.toBeNull();
+    const updatePayload = updateBuilder.update.mock.calls[0][0];
+    expect(updatePayload).toMatchObject({ status: "approved" });
+    expect(updatePayload.approved_at).toBeTruthy();
+    expect(updateBuilder.eq.mock.calls[0][0]).toBe("id");
+    expect(updateBuilder.eq.mock.calls[0][1]).toBe("log1");
+  });
+
+  it("allows the merchant to undo an approval back to awaiting_confirmation", async () => {
+    const admin = makeAdmin({
+      credit_logs: [
+        { data: { ...baseLog, status: "approved" } },
+        { data: { id: "log1", status: "awaiting_confirmation" } },
+      ],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const result = await updateCreditLogStatus("log1", "awaiting_confirmation");
+    expect(result).toMatchObject({ id: "log1", status: "awaiting_confirmation" });
   });
 });
