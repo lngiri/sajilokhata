@@ -929,6 +929,40 @@ export default function MerchantDashboard() {
             </svg>
           </button>
 
+          {/* More Stats (collapsible) */}
+          {showMoreStats && stats && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
+                  <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {formatNumber(stats.totalSales)}</p>
+                </a>
+                <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
+                  <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {formatNumber(stats.cashInHand)}</p>
+                </a>
+              </div>
+              <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
+                <a href="/merchant/logs?filter=expense" className="block flex-1 min-w-0 active:scale-[0.98] transition-transform">
+                  <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Purchase and Expenses</p>
+                  <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {formatNumber(stats.totalExpenses)}</p>
+                </a>
+                <a
+                  href="/merchant/scan?manual=true&type=expense"
+                  aria-label="Add your Purchase or expenses"
+                  className="flex flex-col items-center gap-1 shrink-0 active:scale-[0.98] transition-transform"
+                >
+                  <span className="w-14 h-14 rounded-full bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] flex items-center justify-center shadow-sm">
+                    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
+                    </svg>
+                  </span>
+                  <span className="text-[10px] text-[var(--color-text-muted)] text-center leading-tight">Add your Purchase or expenses</span>
+                </a>
+              </div>
+            </>
+          )}
+
           {/* Primary action: New Entry */}
           <a
             href="/merchant/scan?manual=true"
@@ -1045,40 +1079,6 @@ export default function MerchantDashboard() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                 </svg>
               </a>
-            )}
-
-            {/* More Stats (collapsible) */}
-            {showMoreStats && stats && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
-                  <a href="/merchant/logs?filter=today" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                    <p className="text-xs text-[var(--color-text-muted)] mb-1">All Sales</p>
-                    <p className="text-lg sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">Rs. {formatNumber(stats.totalSales)}</p>
-                  </a>
-                  <a href="/merchant/logs?filter=cash" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
-                    <p className="text-xs text-[var(--color-text-muted)] mb-1">Cash in Hand</p>
-                    <p className="text-lg sm:text-xl font-bold text-green-600 dark:text-green-400 truncate">Rs. {formatNumber(stats.cashInHand)}</p>
-                  </a>
-                </div>
-                <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] flex items-center gap-3">
-                  <a href="/merchant/logs?filter=expense" className="block flex-1 min-w-0 active:scale-[0.98] transition-transform">
-                    <p className="text-xs text-[var(--color-text-muted)] mb-1">Total Purchase and Expenses</p>
-                    <p className="text-lg sm:text-xl font-bold text-orange-600 dark:text-orange-400 truncate">Rs. {formatNumber(stats.totalExpenses)}</p>
-                  </a>
-                  <a
-                    href="/merchant/scan?manual=true&type=expense"
-                    aria-label="Add your Purchase or expenses"
-                    className="flex flex-col items-center gap-1 shrink-0 active:scale-[0.98] transition-transform"
-                  >
-                    <span className="w-14 h-14 rounded-full bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] flex items-center justify-center shadow-sm">
-                      <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m3-3H9" />
-                      </svg>
-                    </span>
-                    <span className="text-[10px] text-[var(--color-text-muted)] text-center leading-tight">Add your Purchase or expenses</span>
-                  </a>
-                </div>
-              </>
             )}
 
             {/* Secondary actions */}
