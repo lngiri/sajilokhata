@@ -207,6 +207,32 @@ describe("MerchantDashboard", () => {
     expect(screen.getAllByText("Shyam").length).toBeGreaterThanOrEqual(1);
   });
 
+  it("shows prominent pending approval banner when awaitingLogs exist", async () => {
+    render(<MerchantsDashboard />);
+
+    const banner = await screen.findByText("Tap to review and take action");
+    expect(banner).toBeInTheDocument();
+    expect(screen.getByText("1 pending approval")).toBeInTheDocument();
+    const link = banner.closest("a");
+    expect(link).toHaveAttribute("href", "/merchant/logs");
+  });
+
+  it("hides pending approval banner when no awaitingLogs", async () => {
+    vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
+      ...mockDashboardData,
+      awaitingLogs: [],
+      stats: { ...mockDashboardData.stats, awaitingCount: 0 },
+    });
+
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Recent Activity")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Tap to review and take action")).not.toBeInTheDocument();
+  });
+
   it("renders cash_in activity with Cash In label and + sign", async () => {
     render(<MerchantsDashboard />);
 

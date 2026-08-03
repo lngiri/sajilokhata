@@ -315,8 +315,10 @@ export default function MerchantDashboard() {
           table: "notifications",
           filter: `user_id=eq.${merchantId}`,
         },
-        () => {
-          if (mountedRef.current) loadNotifications();
+        (payload: any) => {
+          if (!mountedRef.current) return;
+          if (payload.new?.type !== "entry_approved") playSuccessSound();
+          loadNotifications();
         }
       )
       .subscribe();
@@ -846,6 +848,30 @@ export default function MerchantDashboard() {
 
       <PullToRefresh onRefresh={handlePullRefresh}>
         <div className="px-4 py-4 space-y-4">
+          {/* Pending Approval Notification Banner — PROMINENT */}
+          {awaitingLogs.length > 0 && (
+            <a
+              href="/merchant/logs"
+              className="relative flex items-center gap-3 px-4 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl shadow-lg shadow-amber-500/25 active:scale-[0.98] transition-transform overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvc3ZnPg==')] opacity-50" />
+              <div className="relative w-10 h-10 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 animate-bounce-subtle">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+                </svg>
+              </div>
+              <div className="relative flex-1">
+                <p className="text-sm font-bold">
+                  {awaitingLogs.length} pending approval{awaitingLogs.length > 1 ? "s" : ""}
+                </p>
+                <p className="text-xs text-white/80 mt-0.5">Tap to review and take action</p>
+              </div>
+              <svg className="relative w-5 h-5 text-white/80 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </a>
+          )}
+
           {/* Stats Cards */}
           {statsLoading ? (
             <div className="grid grid-cols-2 gap-3">

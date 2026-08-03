@@ -336,6 +336,24 @@ export default function CustomerDashboard() {
             }
           }
         )
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "credit_logs",
+            filter: `customer_id=in.(${customerIds.join(",")})`,
+          },
+          (payload: any) => {
+            if (!mountedRef.current) return;
+            if (payload.new?.initiated_by === "customer") return;
+            addToast(
+              `📥 New entry added: Rs. ${formatNumber(payload.new?.amount)} — ${payload.new?.description || "Shop"}`,
+              "info"
+            );
+            loadStatsRef.current();
+          }
+        )
         .subscribe();
     };
 
@@ -364,8 +382,10 @@ export default function CustomerDashboard() {
           table: "notifications",
           filter: `user_id=eq.${customerId}`,
         },
-        () => {
-          if (mountedRef.current) loadNotifications();
+        (payload: any) => {
+          if (!mountedRef.current) return;
+          if (payload.new?.type !== "entry_approved") playSuccessSound();
+          loadNotifications();
         }
       )
       .subscribe();
