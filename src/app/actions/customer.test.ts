@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { addCustomerForMerchant, submitCustomerEntry, confirmCustomerEntry } from "./customer";
 import { sendTransactionSMS } from "./sms";
+import { verifyOtpCode } from "@/lib/otp";
+
+process.env.SESSION_HMAC_SECRET = "test-secret";
+
+const otpCodeIn = (message: string): string => message.match(/\d{6}/)![0];
 
 const { mockCookies, mockVerifySession, mockVerifyMerchantSession, mockGetAdminClient } = vi.hoisted(() => ({
   mockCookies: vi.fn(),
@@ -345,16 +350,15 @@ describe("addCustomerForMerchant", () => {
       phone: "+9779841234567",
       status: "pending",
     });
-    expect(insertPayload.otp).toMatch(/^\d{6}$/);
+    expect(insertPayload.otp).toMatch(/^[a-f0-9]{64}$/);
 
     const inviteInsertBuilder = findInviteInsertBuilder(admin);
     expect(inviteInsertBuilder.insert.mock.invocationCallOrder[0]).toBeLessThan(
       smsMock.mock.invocationCallOrder[0]
     );
     expect(smsMock.mock.calls[0][0]).toBe("+9779841234567");
-    expect(smsMock.mock.calls[0][1]).toContain(
-      `Open QRhisab, enter your phone number, and use code ${insertPayload.otp} to register.`
-    );
+    expect(smsMock.mock.calls[0][1]).toContain("Open QRhisab, enter your phone number, and use code");
+    expect(verifyOtpCode(otpCodeIn(smsMock.mock.calls[0][1]), insertPayload.otp)).toBe(true);
     expect(smsMock.mock.calls[0][1]).not.toMatch(/https?:\/\//);
   });
 
@@ -386,10 +390,9 @@ describe("addCustomerForMerchant", () => {
       resend_count: 2,
       used_at: null,
     });
-    expect(updates[0].otp).toMatch(/^\d{6}$/);
-    expect(smsMock.mock.calls[0][1]).toContain(
-      `Open QRhisab, enter your phone number, and use code ${updates[0].otp} to register.`
-    );
+    expect(updates[0].otp).toMatch(/^[a-f0-9]{64}$/);
+    expect(smsMock.mock.calls[0][1]).toContain("Open QRhisab, enter your phone number, and use code");
+    expect(verifyOtpCode(otpCodeIn(smsMock.mock.calls[0][1]), updates[0].otp)).toBe(true);
   });
 
   it("does not create a duplicate invite when one is already pending", async () => {

@@ -6,6 +6,7 @@ import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
 import { createNotification } from "@/app/actions/notifications";
 import { normalizePhone } from "@/lib/phone";
 import { sendTransactionSMS } from "@/app/actions/sms";
+import { generateOtpCode, hashOtpCode } from "@/lib/otp";
 import { formatNumber } from "@/lib/format";
 
 const SEARCH_RESULT_LIMIT = 50;
@@ -432,7 +433,7 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
     if (matchedIds.length === 0) {
       const { data: prefix } = await (admin.from("customers") as any)
         .select("id")
-        .or(`phone.ilike.${normalized}%`);
+        .ilike("phone", `${normalized}%`);
 
       const prefixRows = (prefix || []) as { id: string }[];
       for (const r of prefixRows) {
@@ -449,7 +450,7 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
     // 1. Prefix name
     const { data: prefix } = await (admin.from("customers") as any)
       .select("id")
-      .or(`name.ilike.${search}%`);
+      .ilike("name", `${search}%`);
 
     const prefixRows = (prefix || []) as { id: string }[];
     for (const r of prefixRows) {
@@ -464,7 +465,7 @@ export async function getMerchantCustomers(merchantId: string, search?: string) 
     if (matchedIds.length < SEARCH_RESULT_LIMIT) {
       const { data: substr } = await (admin.from("customers") as any)
         .select("id")
-        .or(`name.ilike.%${search}%`);
+        .ilike("name", `%${search}%`);
 
       const substrRows = (substr || []) as { id: string }[];
       for (const r of substrRows) {
@@ -1799,7 +1800,7 @@ export async function resendInvitation(
     }
 
     // Generate new OTP and resend
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtpCode();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     // Get merchant business name
@@ -1825,7 +1826,7 @@ export async function resendInvitation(
     // Update invite record
     await (admin.from("customer_invites") as any)
       .update({
-        otp,
+        otp: hashOtpCode(otp),
         expires_at: expiresAt,
         status: smsResult.success ? "sms_sent" : "sms_failed",
         used_at: null,

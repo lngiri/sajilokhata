@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/components/Toast";
@@ -38,6 +38,14 @@ export default function ProductsPage() {
   const [formRate, setFormRate] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const confirmDeleteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmDeleteTimer.current) clearTimeout(confirmDeleteTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     getCurrentMerchantId().then((id) => {
@@ -85,7 +93,7 @@ export default function ProductsPage() {
   };
 
   const handleSave = async () => {
-    if (!formName.trim() || !formRate || Number(formRate) <= 0) {
+    if (!formName.trim() || !formRate || Number(formRate) < 0) {
       addToast("Enter product name and rate", "error");
       return;
     }
@@ -96,7 +104,7 @@ export default function ProductsPage() {
           name: formName.trim(),
           unit: formUnit,
           default_rate: Number(formRate),
-          category: formCategory.trim() || undefined,
+          category: formCategory.trim() || null,
         });
         addToast("Product updated", "success");
       } else {
@@ -105,7 +113,7 @@ export default function ProductsPage() {
           name: formName.trim(),
           unit: formUnit,
           default_rate: Number(formRate),
-          category: formCategory.trim() || undefined,
+          category: formCategory.trim() || null,
         });
         addToast("Product added", "success");
       }
@@ -128,6 +136,14 @@ export default function ProductsPage() {
   };
 
   const handleDelete = async (product: Product) => {
+    if (confirmDeleteId !== product.id) {
+      setConfirmDeleteId(product.id);
+      if (confirmDeleteTimer.current) clearTimeout(confirmDeleteTimer.current);
+      confirmDeleteTimer.current = setTimeout(() => setConfirmDeleteId(null), 3000);
+      return;
+    }
+    if (confirmDeleteTimer.current) clearTimeout(confirmDeleteTimer.current);
+    setConfirmDeleteId(null);
     try {
       await deleteMerchantProduct(product.id);
       addToast("Product removed", "success");
@@ -226,11 +242,19 @@ export default function ProductsPage() {
                         </button>
                         <button
                           onClick={() => handleDelete(product)}
-                          className="p-2 text-[var(--color-text-muted)] hover:text-red-500 dark:hover:text-red-400"
+                          className={`p-2 rounded-lg text-xs font-medium transition-colors ${
+                            confirmDeleteId === product.id
+                              ? "bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400"
+                              : "text-[var(--color-text-muted)] hover:text-red-500 dark:hover:text-red-400"
+                          }`}
                         >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-                          </svg>
+                          {confirmDeleteId === product.id ? (
+                            "Confirm?"
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                            </svg>
+                          )}
                         </button>
                       </div>
                     </div>
@@ -289,6 +313,7 @@ export default function ProductsPage() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Full Cream Milk, Basmati Rice"
+                  maxLength={100}
                   autoFocus
                   className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
@@ -298,8 +323,8 @@ export default function ProductsPage() {
                   <label className="text-sm font-medium text-[var(--color-text)]">Rate (Rs.) *</label>
                   <input
                     type="number"
-                    min="1"
-                    step="1"
+                    min="0"
+                    step="any"
                     value={formRate}
                     onChange={(e) => setFormRate(e.target.value)}
                     placeholder="0"
@@ -326,6 +351,7 @@ export default function ProductsPage() {
                   value={formCategory}
                   onChange={(e) => setFormCategory(e.target.value)}
                   placeholder="Optional: e.g. Dairy, Groceries"
+                  maxLength={50}
                   className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               </div>
@@ -337,7 +363,7 @@ export default function ProductsPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !formName.trim() || !formRate || Number(formRate) <= 0}
+                disabled={saving || !formName.trim() || !formRate || Number(formRate) < 0}
                 className="flex-1 py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
               >
                 {saving ? "Saving..." : editingProduct ? "Update" : "Add Product"}

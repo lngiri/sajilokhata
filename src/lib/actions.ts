@@ -112,14 +112,19 @@ export async function getCreditLogByToken(
   customers: { name: string | null; phone: string; address: string } | null;
   merchants: { name: string | null } | null;
 } | null> {
-  const { data, error } = await getClient()
-    .from("credit_logs")
-    .select("id, amount, type, status, description, customer_id, merchant_id, initiated_by, proposed_amount, customers(name, phone, address), merchants(name)")
-    .eq("verification_token", token)
-    .maybeSingle();
+  const res = await fetch("/api/verify/lookup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
 
-  if (error) throw error;
-  return data as any;
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error || "Failed to load entry");
+  }
+
+  return (data.log as any) || null;
 }
 
 export async function approveByToken(

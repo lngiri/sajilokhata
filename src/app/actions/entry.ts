@@ -5,6 +5,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { createNotification } from "@/app/actions/notifications";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
+import { requireMerchant } from "@/app/actions/merchant";
 import type { Database } from "@/lib/types/database";
 import { formatNumber } from "@/lib/format";
 
@@ -301,6 +302,23 @@ export async function updateEntryAttachment(
     const admin = getAdminClient();
     if (!admin) {
       return { success: false, error: "Database connection unavailable" };
+    }
+
+    // Security: the caller must be the merchant who owns this entry.
+    const sessionUserId = await requireMerchant().catch(() => null);
+    if (!sessionUserId) {
+      return { success: false, error: "Not logged in" };
+    }
+
+    const { data: entry } = await (admin.from("credit_logs") as any)
+      .select("merchant_id")
+      .eq("id", entryId)
+      .maybeSingle();
+    if (!entry) {
+      return { success: false, error: "Entry not found" };
+    }
+    if (entry.merchant_id !== sessionUserId) {
+      return { success: false, error: "Not authorized to update this entry" };
     }
 
     const updateData: Record<string, unknown> = { attachment_url: attachmentUrl };

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createNotification } from "@/app/actions/notifications";
 
 /**
@@ -12,6 +13,15 @@ export async function POST(req: NextRequest) {
     const { phone, name, address } = await req.json();
     if (!phone || !name) {
       return NextResponse.json({ error: "Phone and name required" }, { status: 400 });
+    }
+
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { allowed, retryAfter } = await checkRateLimit(`verify:${ip}`);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${retryAfter}s.` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
     }
 
     const normalized = normalizePhone(phone);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/verify/lookup-invite
@@ -11,6 +12,15 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { phone, inviteId } = body;
+
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const { allowed, retryAfter } = await checkRateLimit(`verify:${ip}`);
+    if (!allowed) {
+      return NextResponse.json(
+        { error: `Too many requests. Try again in ${retryAfter}s.` },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } }
+      );
+    }
 
     const admin = getAdminClient();
     if (!admin) {

@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { updateCreditLogStatus, resendInvitation } from "./merchant";
 import { sendTransactionSMS } from "./sms";
+import { verifyOtpCode } from "@/lib/otp";
+
+process.env.SESSION_HMAC_SECRET = "test-secret";
 
 const { mockGetAdminClient, mockCookies, mockVerifySession } = vi.hoisted(() => ({
   mockGetAdminClient: vi.fn(),
@@ -99,8 +102,8 @@ describe("resendInvitation", () => {
       resend_count: 2,
       used_at: null,
     });
-    expect(updatePayload.otp).toMatch(/^\d{6}$/);
-    expect(message).toContain(`use code ${updatePayload.otp} to register`);
+    expect(updatePayload.otp).toMatch(/^[a-f0-9]{64}$/);
+    expect(verifyOtpCode(message.match(/use code (\d{6})/)![1], updatePayload.otp)).toBe(true);
   });
 
   it("returns Invitation not found for a bogus invite id", async () => {

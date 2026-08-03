@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { verifyOtpCode } from "@/lib/otp";
 
 /**
  * POST /api/verify/confirm-invite
@@ -43,8 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "No valid invite found. Please request a new code." }, { status: 404 });
     }
 
-    // Verify OTP
-    if (invite.otp !== otp) {
+    // Verify OTP (backward compatible with legacy plaintext-stored codes)
+    if (!verifyOtpCode(otp, invite.otp)) {
       return NextResponse.json({ success: false, error: "Invalid code. Please try again." }, { status: 400 });
     }
 

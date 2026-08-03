@@ -32,12 +32,14 @@ vi.mock("@/components/BottomNav", () => ({
   default: () => <div data-testid="bottom-nav">Nav</div>,
 }));
 
-// ─── Mock: AmountSuggestions ───
+// ─── Mock: AmountSuggestions (mirrors real SUGGESTIONS = [10, 50, 100, 500]) ───
 vi.mock("@/components/AmountSuggestions", () => ({
   default: ({ onSelect }: any) => (
     <div data-testid="amount-suggestions">
+      <button onClick={() => onSelect(10)}>Rs 10</button>
+      <button onClick={() => onSelect(50)}>Rs 50</button>
+      <button onClick={() => onSelect(100)}>Rs 100</button>
       <button onClick={() => onSelect(500)}>Rs 500</button>
-      <button onClick={() => onSelect(1000)}>Rs 1000</button>
     </div>
   ),
 }));

@@ -5,6 +5,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/session";
 import { findUserByPhone } from "./pin";
 import { sendTransactionSMS } from "./sms";
+import { generateOtpCode } from "@/lib/otp";
 
 // ──────────────────────────────────────────────
 // OTP generation and storage (cookie-based)
@@ -32,7 +33,7 @@ export async function sendRegistrationOtp(
       return { success: false, error: "SMS service not configured. Please contact support." };
     }
 
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = generateOtpCode();
 
     const cookieStore = await cookies();
     cookieStore.set("otp_code", code, {

@@ -6,6 +6,7 @@ import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 import { createNotification } from "@/app/actions/notifications";
 import { requireMerchant } from "@/app/actions/merchant";
+import { generateOtpCode, hashOtpCode } from "@/lib/otp";
 import type { Database } from "@/lib/types/database";
 import { formatNumber } from "@/lib/format";
 
@@ -88,7 +89,7 @@ export async function searchCustomers(
       // Text query: match name prefix, then name substring
       const { data: prefix } = await (admin.from("customers") as any)
         .select("id")
-        .or(`name.ilike.${q}%`);
+        .ilike("name", `${q}%`);
       for (const r of prefix || []) {
         matchedIds.push(r.id);
         if (matchedIds.length >= 10) break;
@@ -96,7 +97,7 @@ export async function searchCustomers(
       if (matchedIds.length < 10) {
         const { data: substr } = await (admin.from("customers") as any)
           .select("id")
-          .or(`name.ilike.%${q}%`);
+          .ilike("name", `%${q}%`);
         for (const r of substr || []) {
           if (matchedIds.includes(r.id)) continue;
           matchedIds.push(r.id);
@@ -323,7 +324,7 @@ export async function addCustomerForMerchant(
     } | null;
 
     // Generate OTP
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = generateOtpCode();
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
     let inviteId: string;
@@ -351,7 +352,7 @@ export async function addCustomerForMerchant(
         inviteId = existingInvite.id;
         await (admin.from("customer_invites") as any)
           .update({
-            otp,
+            otp: hashOtpCode(otp),
             expires_at: expiresAt,
             status: "pending",
             used_at: null,
@@ -372,7 +373,7 @@ export async function addCustomerForMerchant(
           customer_id: customer.id,
           merchant_id: merchantId,
           phone: normalized,
-          otp,
+          otp: hashOtpCode(otp),
           expires_at: expiresAt,
           status: "pending",
         })

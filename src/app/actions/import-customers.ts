@@ -1,5 +1,6 @@
 "use server";
 
+import { randomInt } from "node:crypto";
 import { cookies } from "next/headers";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { verifySessionToken, SESSION_COOKIE } from "@/lib/session";
@@ -46,7 +47,7 @@ function generateShortCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
   let code = "";
   for (let i = 0; i < 6; i++) {
-    code += chars[Math.floor(Math.random() * chars.length)];
+    code += chars[randomInt(0, chars.length)];
   }
   return code;
 }
