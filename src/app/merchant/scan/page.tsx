@@ -19,7 +19,8 @@ import {
 import { compressImage, blobToBase64 } from "@/lib/image";
 import { checkCustomerByPhone, addCustomerForMerchant, searchCustomers } from "@/app/actions/customer";
 
-import { savePendingLog, savePendingAttachment } from "@/lib/offline/db";
+import { savePendingLog, savePendingAttachment, getAllOfflineCustomers, saveOfflineCustomer } from "@/lib/offline/db";
+import { notifyPendingSave } from "@/lib/offline/sync";
 import { useSearchParams } from "next/navigation";
 import { sanitizePhoneForUrl, normalizePhone } from "@/lib/phone";
 import DescriptionSuggestions from "@/components/DescriptionSuggestions";
@@ -188,6 +189,9 @@ export default function MerchantScanPage() {
   // Guards: one idempotency key per draft, one save at a time
   const idempotencyKeyRef = useRef<string>(crypto.randomUUID());
   const savingRef = useRef(false);
+  // Set when a customer's offline reverse-QR is scanned, so the entry (online or
+  // offline) shares the customer's idempotency key and never duplicates on sync.
+  const reverseScanIdempotencyRef = useRef<string | null>(null);
 
   // Load merchant ID and customer list on mount
   useEffect(() => {
@@ -312,6 +316,10 @@ export default function MerchantScanPage() {
               setCustomerPhone(phone);
               if (parsed.amount) setAmount(String(parsed.amount));
               if (parsed.description) setDescription(parsed.description);
+              reverseScanIdempotencyRef.current =
+                typeof parsed.idempotencyKey === "string" && parsed.idempotencyKey
+                  ? parsed.idempotencyKey
+                  : null;
               setStep("enter");
               return;
             }
@@ -347,6 +355,7 @@ export default function MerchantScanPage() {
 
   const selectCustomer = (c: { id: string; name: string | null; phone: string; registration_status?: string | null }) => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    saveOfflineCustomer({ id: c.id, name: c.name ?? undefined, phone: c.phone }).catch(() => {});
     setCustomerId(c.id);
     setCustomerPhone(c.phone);
     setCustomerName(c.name);
@@ -522,6 +531,7 @@ export default function MerchantScanPage() {
             unit: (unit || null) as any,
             attachment_url: attachmentUrl ?? null,
             status: isImmediate ? "approved" : "awaiting_confirmation",
+            idempotencyKey: reverseScanIdempotencyRef.current ?? undefined,
             items: selectedProductId && quantity && unit ? [{
               productId: selectedProductId,
               productName: description || "Item",
@@ -530,9 +540,10 @@ export default function MerchantScanPage() {
               unitPrice: Number(amount) / Number(quantity || 1),
             }] : undefined,
           });
+          notifyPendingSave();
         }
-      } else {
-        // QR scan mode — use server action (always online)
+      } else if (navigator.onLine) {
+        // QR scan mode — server action
         const result = await saveEntry({
           merchant_id: mId,
           customer_id: null,
@@ -541,7 +552,7 @@ export default function MerchantScanPage() {
           amount: Number(amount),
           description: description || null,
           type: entryType,
-          idempotency_key: idempotencyKeyRef.current,
+          idempotency_key: reverseScanIdempotencyRef.current ?? idempotencyKeyRef.current,
           items: selectedProductId && quantity && unit ? [{
             product_id: selectedProductId,
             product_name: description || "Item",
@@ -554,6 +565,52 @@ export default function MerchantScanPage() {
         if (!result.success) {
           throw new Error(result.error || "Failed to save entry");
         }
+      } else {
+        // QR scan mode offline — queue the entry so it syncs when connectivity returns
+        const offlineLogId = crypto.randomUUID();
+        let attachmentUrl: string | null = null;
+
+        if (attachmentFile) {
+          setAttachmentUploading(true);
+          try {
+            const compressed = await compressImage(attachmentFile, 200);
+            const base64 = await blobToBase64(compressed);
+            await savePendingAttachment({
+              id: crypto.randomUUID(),
+              logId: offlineLogId,
+              merchantId: mId,
+              data: base64,
+            });
+          } catch (err) {
+            console.error("[Entry] Offline attachment save failed:", err);
+          } finally {
+            setAttachmentUploading(false);
+          }
+        }
+
+        const isImmediate = isCash || isCashIn || isExpense;
+        await savePendingLog({
+          id: offlineLogId,
+          merchant_id: mId,
+          customer_id: null,
+          customerPhone: cPhone || "",
+          type: entryType,
+          amount: Number(amount),
+          description: description || null,
+          quantity: quantity ? Number(quantity) : null,
+          unit: (unit || null) as any,
+          attachment_url: attachmentUrl ?? null,
+          status: isImmediate ? "approved" : "awaiting_confirmation",
+          idempotencyKey: reverseScanIdempotencyRef.current ?? undefined,
+          items: selectedProductId && quantity && unit ? [{
+            productId: selectedProductId,
+            productName: description || "Item",
+            quantity: Number(quantity),
+            unit: unit,
+            unitPrice: Number(amount) / Number(quantity || 1),
+          }] : undefined,
+        });
+        notifyPendingSave();
       }
 
       setStep("success");
@@ -609,6 +666,7 @@ export default function MerchantScanPage() {
     setSelectedProductId(null);
     clearAttachment();
     insufficientOverrideRef.current = false;
+    reverseScanIdempotencyRef.current = null;
     idempotencyKeyRef.current = crypto.randomUUID();
   };
 
@@ -733,6 +791,9 @@ export default function MerchantScanPage() {
                           setSuggestions(matches);
                           setNameSearched(true);
                           setSearchingSuggestions(false);
+                          matches.forEach((m: any) =>
+                            saveOfflineCustomer({ id: m.id, name: m.name ?? undefined, phone: m.phone }).catch(() => {})
+                          );
                           // Auto-select when an exact 10-digit phone matches a single customer
                           if (matches.length === 1 && isNumeric && normalizePhone(matches[0].phone) === normalizePhone(val)) {
                             selectCustomer(matches[0]);
@@ -741,7 +802,31 @@ export default function MerchantScanPage() {
                             setCustomerPhone(val);
                           }
                         } catch {
-                          if (searchQueryRef.current === val) setSearchingSuggestions(false);
+                          if (searchQueryRef.current === val) {
+                            // Offline — fall back to locally cached customers
+                            try {
+                              const cached = await getAllOfflineCustomers();
+                              const q = trimmed.toLowerCase();
+                              const filtered = cached.filter(
+                                (c) =>
+                                  c.phone.toLowerCase().includes(q) ||
+                                  (c.name ?? "").toLowerCase().includes(q)
+                              );
+                              if (searchQueryRef.current !== val) return;
+                              setSuggestions(
+                                filtered.map((c) => ({
+                                  id: c.id,
+                                  name: c.name ?? null,
+                                  phone: c.phone,
+                                  current_balance: 0,
+                                }))
+                              );
+                              setNameSearched(true);
+                            } catch {
+                              // ignore
+                            }
+                            setSearchingSuggestions(false);
+                          }
                         }
                       }, 300);
                     }}

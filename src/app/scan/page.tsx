@@ -8,6 +8,7 @@ import PendingApprovalModal from "@/components/PendingApprovalModal";
 import PageHeader from "@/components/PageHeader";
 import { submitCustomerEntry } from "@/app/actions/customer";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
+import { notifyPendingSave } from "@/lib/offline/sync";
 
 import { setCustomerSession, clearCustomerSession, loadCustomerSession } from "@/lib/customer-session";
 
@@ -29,6 +30,8 @@ export default function ScanPage() {
   const [showFullPhone, setShowFullPhone] = useState(false);
   // One idempotency key per draft — prevents duplicate entries on double-submit/retry
   const idempotencyKeyRef = useRef(crypto.randomUUID());
+  // Offline draft reference — carries the queued log's id + idempotency key into the reverse QR
+  const offlineDraftRef = useRef<{ logId: string; idempotencyKey: string } | null>(null);
 
   function maskPhone(p: string): string {
     if (p.length < 8) return p;
@@ -117,8 +120,11 @@ export default function ScanPage() {
         setStep("done");
         setShowPendingModal(true);
       } else {
+        const offlineLogId = crypto.randomUUID();
+        const offlineKey = crypto.randomUUID();
+        offlineDraftRef.current = { logId: offlineLogId, idempotencyKey: offlineKey };
         await savePendingLog({
-          id: crypto.randomUUID(),
+          id: offlineLogId,
           merchant_id: merchantId,
           customer_id: "",
           customerPhone: phone,
@@ -126,9 +132,10 @@ export default function ScanPage() {
           description: description || null,
           type: entryType,
           status: "awaiting_confirmation",
-          sync_status: "offline_pending",
+          idempotencyKey: offlineKey,
           created_at: new Date().toISOString(),
         });
+        notifyPendingSave();
         setStep("reverse");
       }
     } catch (err) {
@@ -299,7 +306,13 @@ export default function ScanPage() {
       {step === "reverse" && (
         <div className="px-4 py-6 space-y-6 animate-fade-in">
           <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-gray-50 dark:border-gray-700">
-            <CustomerQR customerId={phone} />
+            <CustomerQR
+              customerId={phone}
+              amount={Number(amount)}
+              description={description || undefined}
+              pendingLogId={offlineDraftRef.current?.logId}
+              idempotencyKey={offlineDraftRef.current?.idempotencyKey}
+            />
           </div>
 
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-800">
@@ -355,6 +368,7 @@ export default function ScanPage() {
                 setMerchantId("");
                 setMerchantName("");
                 setEntryType("debit");
+                offlineDraftRef.current = null;
                 setStep("scan");
               }}
               className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-semibold active:scale-[0.98]"

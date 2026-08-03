@@ -50,11 +50,33 @@ export function QRDisplay({
 // ============================================================
 interface CustomerQRProps {
   customerId: string;
+  amount?: number;
+  description?: string;
+  pendingLogId?: string;
+  idempotencyKey?: string;
 }
 
-export function CustomerQR({ customerId }: CustomerQRProps) {
-  // Simple format: no merchant ID, no amount — just the customer's phone
-  const qrData = `QR Hisab:customer:${customerId}`;
+export function CustomerQR({
+  customerId,
+  amount,
+  description,
+  pendingLogId,
+  idempotencyKey,
+}: CustomerQRProps) {
+  // When created from an offline draft we embed the queued log's id + idempotency
+  // key (plus amount/description). The merchant's saveEntry then stores the same
+  // key, so the customer's later sync dedupes instead of duplicating.
+  const hasOfflineDraft = typeof amount === "number" && amount > 0;
+  const qrData = hasOfflineDraft
+    ? JSON.stringify({
+        type: "reverse_scan",
+        customerId,
+        amount,
+        description: description || undefined,
+        pendingLogId: pendingLogId || undefined,
+        idempotencyKey: idempotencyKey || undefined,
+      })
+    : `QR Hisab:customer:${customerId}`;
 
   return (
     <div className="flex flex-col items-center p-6 bg-[var(--color-primary)]/5 rounded-2xl">

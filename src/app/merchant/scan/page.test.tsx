@@ -88,6 +88,13 @@ vi.mock("@/app/actions/products", () => ({
 vi.mock("@/lib/offline/db", () => ({
   savePendingLog: vi.fn(),
   savePendingAttachment: vi.fn(),
+  getAllOfflineCustomers: vi.fn().mockResolvedValue([]),
+  saveOfflineCustomer: vi.fn().mockResolvedValue(undefined),
+}));
+
+// ─── Mock: Offline sync (decouples server-action imports) ───
+vi.mock("@/lib/offline/sync", () => ({
+  notifyPendingSave: vi.fn(),
 }));
 
 // ─── Mock: Image utils ───

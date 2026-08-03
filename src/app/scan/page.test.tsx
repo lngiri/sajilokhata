@@ -54,6 +54,10 @@ vi.mock("@/lib/offline/db", () => ({
   savePendingLog: vi.fn(),
 }));
 
+vi.mock("@/lib/offline/sync", () => ({
+  notifyPendingSave: vi.fn(),
+}));
+
 vi.mock("@/lib/customer-session", () => ({
   setCustomerSession: vi.fn().mockResolvedValue({ success: true }),
   clearCustomerSession: vi.fn().mockResolvedValue(undefined),
