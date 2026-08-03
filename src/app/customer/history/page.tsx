@@ -12,6 +12,7 @@ import CustomerPinGate from "@/components/CustomerPinGate";
 import PageHeader from "@/components/PageHeader";
 import { formatNumber } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
+import { fetchWithCache } from "@/lib/offline/cache";
 
 /** Key used to persist customer session in localStorage */
 const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
@@ -150,19 +151,25 @@ export default function CustomerHistoryPage() {
       setLoading(true);
     }
     try {
-      const [data, counts] = await Promise.all([
-        getCustomerCreditLogs(customerPhone, {
-          status: filter === "all" ? undefined : filter,
-          merchant_id: merchantIdParam || undefined,
-          limit: PAGE_SIZE,
-        }),
-        getCustomerLogCounts(merchantIdParam || undefined),
-      ]);
+      const result = await fetchWithCache(
+        `customer:history:${customerPhone}:${filter}:${merchantIdParam || ""}`,
+        async () => {
+          const [data, counts] = await Promise.all([
+            getCustomerCreditLogs(customerPhone, {
+              status: filter === "all" ? undefined : filter,
+              merchant_id: merchantIdParam || undefined,
+              limit: PAGE_SIZE,
+            }),
+            getCustomerLogCounts(merchantIdParam || undefined),
+          ]);
+          return { data, counts };
+        }
+      );
       if (!mountedRef.current) return;
-      setLogs(data as HistoryEntry[]);
-      setHasMore(data.length === PAGE_SIZE);
-      setTxOffset(data.length);
-      setStats(counts);
+      setLogs(result.data.data as HistoryEntry[]);
+      setHasMore(result.data.data.length === PAGE_SIZE);
+      setTxOffset(result.data.data.length);
+      setStats(result.data.counts);
     } catch {
       if (mountedRef.current) addToast("Failed to load transaction history.", "error");
     } finally {

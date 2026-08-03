@@ -29,6 +29,7 @@ import {
   markAsRead,
 } from "@/app/actions/notifications";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
+import { fetchWithCache } from "@/lib/offline/cache";
 
 function maskPhone(phone: string): string {
   if (phone.length < 8) return phone;
@@ -197,8 +198,10 @@ export default function CustomerDashboard() {
     if (!mountedRef.current) return;
     setStatsLoading(true);
     try {
-      const data = await getCustomerStats(customerPhone);
-      if (mountedRef.current) setStats(data);
+      const result = await fetchWithCache(`customer:stats:${customerPhone}`, () =>
+        getCustomerStats(customerPhone)
+      );
+      if (mountedRef.current) setStats(result.data);
     } catch {
       // No data yet
     } finally {

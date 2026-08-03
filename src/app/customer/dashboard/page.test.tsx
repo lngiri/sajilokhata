@@ -131,6 +131,14 @@ vi.mock("@/app/actions/notifications", () => ({
   markAsRead: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/offline/cache", () => ({
+  fetchWithCache: vi.fn(async (_key: string, fn: any) => ({
+    data: await fn(),
+    stale: false,
+    cachedAt: null,
+  })),
+}));
+
 const mockCustomerActions = await import("@/app/actions/customer");
 
 const VALID_SESSION = {

@@ -65,6 +65,14 @@ vi.mock("@/app/actions/customer", () => ({
   getCustomerIdsForPhone: vi.fn(),
 }));
 
+vi.mock("@/lib/offline/cache", () => ({
+  fetchWithCache: vi.fn(async (_key: string, fn: any) => ({
+    data: await fn(),
+    stale: false,
+    cachedAt: null,
+  })),
+}));
+
 const baseLog = (over: Record<string, unknown> = {}) => ({
   id: "cl1",
   amount: 2000,

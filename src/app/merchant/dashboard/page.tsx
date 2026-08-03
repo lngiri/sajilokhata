@@ -9,6 +9,7 @@ import MerchantOnboardingModal from "@/components/MerchantOnboardingModal";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
+import { fetchWithCache } from "@/lib/offline/cache";
 import {
   getMerchantDashboardData,
   sendPaymentReminder,
@@ -184,7 +185,10 @@ export default function MerchantDashboard() {
     if (!id) return;
 
     try {
-      const data = await getMerchantDashboardData(id);
+      const result = await fetchWithCache(`merchant:dashboard:${id}`, () =>
+        getMerchantDashboardData(id)
+      );
+      const data = result.data;
       if (!mountedRef.current) return;
 
       setMerchantProfile(data.profile);

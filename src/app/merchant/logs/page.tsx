@@ -10,6 +10,7 @@ import TransactionIcon from "@/components/TransactionIcon";
 import { getMerchantCreditLogs, updateCreditLogStatus } from "@/app/actions/merchant";
 import { getCurrentMerchantId } from "@/lib/auth";
 import { formatNumber } from "@/lib/format";
+import { fetchWithCache } from "@/lib/offline/cache";
 
 interface LogEntry {
   id: string;
@@ -41,10 +42,13 @@ export default function LedgerPage() {
     try {
       const id = await getCurrentMerchantId();
       if (id) {
-        const data = await getMerchantCreditLogs(id, {
-          status: (filter === "expense" || filter === "cash_in") ? undefined : (filter === "all" ? undefined : filter),
-          limit: 50,
-        });
+        const result = await fetchWithCache(`merchant:logs:${id}:${filter}`, () =>
+          getMerchantCreditLogs(id, {
+            status: (filter === "expense" || filter === "cash_in") ? undefined : (filter === "all" ? undefined : filter),
+            limit: 50,
+          })
+        );
+        const data = result.data;
         const filtered = filter === "expense"
           ? (data as LogEntry[]).filter((l) => l.type === "expense")
           : filter === "cash_in"
