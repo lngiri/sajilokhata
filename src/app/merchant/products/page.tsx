@@ -293,7 +293,7 @@ export default function ProductsPage() {
       {/* Add/Edit Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}>
-          <div className="bg-[var(--color-surface)] rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[85dvh] flex flex-col animate-slide-up">
+          <div className="bg-[var(--color-surface)] rounded-t-2xl sm:rounded-2xl w-full max-w-md h-[100dvh] sm:h-auto sm:max-h-[90vh] flex flex-col animate-slide-up">
             <div className="flex items-center justify-between px-6 pt-6 pb-2">
               <h2 className="text-lg font-bold text-[var(--color-text)]">
                 {editingProduct ? "Edit Product" : "Add Product"}
@@ -314,7 +314,6 @@ export default function ProductsPage() {
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g. Full Cream Milk, Basmati Rice"
                   maxLength={100}
-                  autoFocus
                   className="w-full mt-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 dark:text-white focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                 />
               </div>
@@ -357,7 +356,7 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            <div className="flex-shrink-0 flex gap-3 px-6 pb-6 pt-4 border-t border-[var(--color-border)]">
+            <div className="flex-shrink-0 flex gap-3 px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-4 border-t border-[var(--color-border)]">
               <button onClick={resetForm} className="flex-1 py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform">
                 Cancel
               </button>
