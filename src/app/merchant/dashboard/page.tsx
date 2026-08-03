@@ -6,6 +6,9 @@ import BottomNav from "@/components/BottomNav";
 import SmsReminderModal from "@/components/SmsReminderModal";
 import PullToRefresh from "@/components/PullToRefresh";
 import MerchantOnboardingModal from "@/components/MerchantOnboardingModal";
+import OnboardingTour from "@/components/OnboardingTour";
+import { MERCHANT_TOUR_STEPS } from "@/components/tourSteps";
+import GettingStartedCard from "@/components/GettingStartedCard";
 import { useToast } from "@/components/Toast";
 import { playSuccessSound } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
@@ -110,6 +113,8 @@ export default function MerchantDashboard() {
   const [loadError, setLoadError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [showGettingStarted, setShowGettingStarted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [handlingLogId, setHandlingLogId] = useState<string | null>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -208,6 +213,25 @@ export default function MerchantDashboard() {
         try { dismissed = localStorage.getItem(`merchant_onboarded_${id}`) === "1"; } catch { /* ignore */ }
         if (!isComplete && !dismissed && !onboardedRef.current) {
           setShowOnboarding(true);
+        } else if (isComplete) {
+          // First-time users get the guided tour once the profile is complete
+          let tourSeen = true;
+          try { tourSeen = localStorage.getItem(`tour_seen_merchant_${id}`) === "1"; } catch { /* ignore */ }
+          if (!tourSeen) setShowTour(true);
+        }
+      }
+
+      // Show the "Getting Started" checklist for brand-new shops (no data yet)
+      if (data.stats && data.recentActivity) {
+        const brandNew =
+          !data.stats.totalSales &&
+          !data.stats.totalOutstanding &&
+          !data.stats.todayTotal &&
+          data.recentActivity.length === 0;
+        if (brandNew) {
+          let gsDismissed = false;
+          try { gsDismissed = localStorage.getItem(`getting_started_dismissed_${id}`) === "1"; } catch { /* ignore */ }
+          if (!gsDismissed) setShowGettingStarted(true);
         }
       }
     } catch {
@@ -494,6 +518,36 @@ export default function MerchantDashboard() {
     if (data) {
       setMerchantProfile(prev => prev ? { ...prev, ...data } : prev);
     }
+    // First-time users get the guided tour right after completing their profile
+    const mid = merchantIdRef.current || merchantId;
+    if (mid) {
+      let seen = true;
+      try { seen = localStorage.getItem(`tour_seen_merchant_${mid}`) === "1"; } catch { /* ignore */ }
+      if (!seen) setShowTour(true);
+    }
+  }, [merchantId]);
+
+  const handleTourFinish = useCallback(() => {
+    setShowTour(false);
+    try {
+      const mid = merchantIdRef.current || merchantId;
+      if (mid) localStorage.setItem(`tour_seen_merchant_${mid}`, "1");
+    } catch { /* ignore */ }
+  }, [merchantId]);
+
+  // Replay the tour on demand (from the About sheet)
+  useEffect(() => {
+    const handler = () => setShowTour(true);
+    window.addEventListener("tour:replay", handler);
+    return () => window.removeEventListener("tour:replay", handler);
+  }, []);
+
+  const dismissGettingStarted = useCallback(() => {
+    setShowGettingStarted(false);
+    try {
+      const mid = merchantIdRef.current || merchantId;
+      if (mid) localStorage.setItem(`getting_started_dismissed_${mid}`, "1");
+    } catch { /* ignore */ }
   }, [merchantId]);
 
   return (
@@ -505,6 +559,15 @@ export default function MerchantDashboard() {
           currentAddress={merchantProfile.address ?? null}
           currentBusinessType={merchantProfile.business_type || ""}
           onComplete={handleOnboardingComplete}
+        />
+      )}
+
+      {showTour && (
+        <OnboardingTour
+          steps={MERCHANT_TOUR_STEPS}
+          open={showTour}
+          onComplete={handleTourFinish}
+          onSkip={handleTourFinish}
         />
       )}
       <div className="pb-20">
@@ -752,6 +815,19 @@ export default function MerchantDashboard() {
               <button
                 onClick={() => {
                   setShowProfileMenu(false);
+                  setShowTour(true);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[var(--color-text)] hover:bg-[var(--color-surface)]/80 active:bg-[var(--color-surface)] transition-colors"
+              >
+                <svg className="w-5 h-5 text-[var(--color-text-muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+                Show me around
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
                   setShowSignOutConfirm(true);
                 }}
                 className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 active:bg-red-100 dark:active:bg-red-900/50 transition-colors"
@@ -876,6 +952,11 @@ export default function MerchantDashboard() {
             </a>
           )}
 
+          {/* Getting Started checklist for brand-new shops */}
+          {showGettingStarted && (
+            <GettingStartedCard onDismiss={dismissGettingStarted} />
+          )}
+
           {/* Stats Cards */}
           {statsLoading ? (
             <div className="grid grid-cols-2 gap-3">
@@ -887,7 +968,7 @@ export default function MerchantDashboard() {
               ))}
             </div>
           ) : stats && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3" data-tour="stats">
               <a href="/merchant/logs?filter=credit" className="block bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform overflow-hidden">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">Credit on Market</p>
                 <p className="text-lg sm:text-xl font-bold text-[var(--color-danger)] truncate">Rs. {formatNumber(stats.totalOutstanding)}</p>
@@ -966,6 +1047,7 @@ export default function MerchantDashboard() {
           {/* Primary action: New Entry */}
           <a
             href="/merchant/scan?manual=true"
+            data-tour="new-entry"
             className="flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-dark)] text-white rounded-2xl font-semibold text-base shadow-sm active:scale-[0.98] transition-transform"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1190,7 +1272,16 @@ export default function MerchantDashboard() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p className="text-sm">No activity yet 📝</p>
-                  <p className="text-xs mt-1">Start by adding a customer or making a sale</p>
+                  <p className="text-xs mt-1">Tap New Entry to record your first sale — it will show up here</p>
+                  <a
+                    href="/merchant/scan?manual=true"
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-[var(--color-primary)] text-white rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    New Entry
+                  </a>
                 </div>
               ) : (
                 <div className="space-y-1.5">

@@ -47,6 +47,18 @@ vi.mock("@/components/MerchantOnboardingModal", () => ({
   ),
 }));
 
+vi.mock("@/components/OnboardingTour", () => ({
+  default: ({ open, onComplete, onSkip }: any) => {
+    if (!open) return null;
+    return (
+      <div data-testid="onboarding-tour">
+        <button onClick={onComplete}>Done</button>
+        <button onClick={onSkip}>Skip</button>
+      </div>
+    );
+  },
+}));
+
 vi.mock("@/components/TransactionIcon", () => ({
   default: ({ type }: any) => <div data-testid="transaction-icon">{type}</div>,
 }));
@@ -179,6 +191,7 @@ const mockDashboardData = {
 
 describe("MerchantDashboard", () => {
   beforeEach(() => {
+    localStorage.clear();
     vi.clearAllMocks();
     vi.mocked(mockAuth.getCurrentMerchantId).mockResolvedValue("m1");
     vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue(mockDashboardData);
@@ -477,5 +490,73 @@ describe("MerchantDashboard", () => {
     await user.click(screen.getByRole("button", { name: "Sign Out" }));
 
     expect(mockAuth.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the guided tour for a new merchant and hides it after completion", async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-tour")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Done"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("onboarding-tour")).not.toBeInTheDocument();
+    });
+    expect(localStorage.getItem("tour_seen_merchant_m1")).toBe("1");
+
+    unmount();
+    render(<MerchantsDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("Credit on Market")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("onboarding-tour")).not.toBeInTheDocument();
+  });
+
+  it("shows the Getting Started checklist for a brand-new shop and dismisses it", async () => {
+    const user = userEvent.setup();
+    vi.mocked(mockMerchantActions.getMerchantDashboardData).mockResolvedValue({
+      ...mockDashboardData,
+      stats: {
+        ...mockDashboardData.stats,
+        totalOutstanding: 0,
+        totalSales: 0,
+        todayTotal: 0,
+      },
+      recentActivity: [],
+    });
+
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("getting-started-card")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Dismiss getting started"));
+    await waitFor(() => {
+      expect(screen.queryByTestId("getting-started-card")).not.toBeInTheDocument();
+    });
+    expect(localStorage.getItem("getting_started_dismissed_m1")).toBe("1");
+  });
+
+  it("replays the tour when the tour:replay event fires", async () => {
+    const user = userEvent.setup();
+    render(<MerchantsDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-tour")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Done"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("onboarding-tour")).not.toBeInTheDocument();
+    });
+
+    window.dispatchEvent(new CustomEvent("tour:replay"));
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-tour")).toBeInTheDocument();
+    });
   });
 });

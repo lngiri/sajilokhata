@@ -29,6 +29,8 @@ import {
   markAsRead,
 } from "@/app/actions/notifications";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
+import OnboardingTour from "@/components/OnboardingTour";
+import { CUSTOMER_TOUR_STEPS } from "@/components/tourSteps";
 import { fetchWithCache } from "@/lib/offline/cache";
 
 function maskPhone(phone: string): string {
@@ -47,6 +49,7 @@ export default function CustomerDashboard() {
   const [customerName, setCustomerName] = useState("");
   const [initialized, setInitialized] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
 
   // Stats
   const [stats, setStats] = useState<{
@@ -252,6 +255,11 @@ export default function CustomerDashboard() {
       const nameIsMissing = !profileName || profileName.trim() === "" || profileName === "Customer";
       if (nameIsMissing) {
         setShowOnboarding(true);
+      } else {
+        // First-time users get the guided tour once their identity is resolved
+        let tourSeen = true;
+        try { tourSeen = localStorage.getItem(`tour_seen_customer_${customerPhone}`) === "1"; } catch { /* ignore */ }
+        if (!tourSeen) setShowTour(true);
       }
       try {
         const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -558,6 +566,25 @@ export default function CustomerDashboard() {
   const handleOnboardingComplete = useCallback(() => {
     onboardingCompletedRef.current = true;
     setShowOnboarding(false);
+    if (customerPhone) {
+      let seen = true;
+      try { seen = localStorage.getItem(`tour_seen_customer_${customerPhone}`) === "1"; } catch { /* ignore */ }
+      if (!seen) setShowTour(true);
+    }
+  }, [customerPhone]);
+
+  const handleTourFinish = useCallback(() => {
+    setShowTour(false);
+    if (customerPhone) {
+      try { localStorage.setItem(`tour_seen_customer_${customerPhone}`, "1"); } catch { /* ignore */ }
+    }
+  }, [customerPhone]);
+
+  // Replay the tour on demand (from the About sheet)
+  useEffect(() => {
+    const handler = () => setShowTour(true);
+    window.addEventListener("tour:replay", handler);
+    return () => window.removeEventListener("tour:replay", handler);
   }, []);
 
   // Prevent flash while reading localStorage
@@ -573,6 +600,14 @@ export default function CustomerDashboard() {
     <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={handleSignOut}>
     {showOnboarding && customerPhone && (
       <CustomerOnboardingModal phone={customerPhone} onComplete={handleOnboardingComplete} />
+    )}
+    {showTour && (
+      <OnboardingTour
+        steps={CUSTOMER_TOUR_STEPS}
+        open={showTour}
+        onComplete={handleTourFinish}
+        onSkip={handleTourFinish}
+      />
     )}
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
@@ -780,6 +815,7 @@ export default function CustomerDashboard() {
         ) : stats ? (
           <a
             href="/customer/history"
+            data-tour="balance"
             className="block bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-2xl p-5 shadow-sm text-white active:opacity-90 transition-opacity"
           >
             <p className="text-sm opacity-80 mb-1">Total Outstanding Balance</p>
@@ -862,6 +898,11 @@ export default function CustomerDashboard() {
             <p className="text-sm text-[var(--color-text-muted)] mt-1">
               Submit your first credit request by scanning a shop QR
             </p>
+            <div className="mt-4 text-left bg-[var(--color-primary)]/5 rounded-xl p-3 space-y-2">
+              <p className="text-[11px] font-semibold text-[var(--color-primary-dark)] uppercase tracking-wider">How it works</p>
+              <p className="text-xs text-[var(--color-text-muted)]"><span className="font-bold text-[var(--color-text)]">1.</span> Scan a shop&apos;s QR code to send a credit request</p>
+              <p className="text-xs text-[var(--color-text-muted)]"><span className="font-bold text-[var(--color-text)]">2.</span> The shop confirms it — the amount shows up in your balance</p>
+            </div>
             <button
               onClick={() => { setShowScanner(true); setScanStep("scan"); }}
               className="mt-4 px-6 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
@@ -877,6 +918,7 @@ export default function CustomerDashboard() {
         {/* Scan Shop QR — always visible primary CTA */}
         <button
           onClick={() => { setShowScanner(true); setScanStep("scan"); }}
+          data-tour="scan"
           className="w-full flex items-center gap-4 p-5 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform text-left"
         >
           <div className="w-12 h-12 rounded-xl bg-[var(--color-primary)]/10 flex items-center justify-center">
@@ -895,6 +937,7 @@ export default function CustomerDashboard() {
         {/* Quick Action: Transaction History */}
         <a
           href="/customer/history"
+          data-tour="history"
           className="flex items-center gap-4 p-5 bg-[var(--color-surface)] rounded-2xl shadow-sm border border-[var(--color-border)] active:scale-[0.98] transition-transform"
         >
           <div className="w-12 h-12 rounded-xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">

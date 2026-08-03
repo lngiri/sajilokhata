@@ -8,6 +8,7 @@ export interface NavItem {
   label: string;
   icon: (active: boolean) => ReactNode;
   isFab?: boolean;
+  dataTour?: string;
 }
 
 interface BottomNavBarProps {
@@ -48,6 +49,7 @@ export default function BottomNavBar({
                 type="button"
                 onClick={onFabClick}
                 aria-label={fabLabel}
+                data-tour={item.dataTour}
                 className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
               >
                 <div className="w-12 h-12 -mt-4 rounded-full bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] shadow-lg flex items-center justify-center ring-4 ring-[var(--color-bg)]">
@@ -66,6 +68,7 @@ export default function BottomNavBar({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
+              data-tour={item.dataTour}
               className="flex flex-col items-center justify-center w-full h-full gap-0.5 active:scale-95 transition-transform"
             >
               {item.icon(active)}

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import CustomerDashboard from "./page";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -80,6 +81,18 @@ vi.mock("@/components/CustomerOnboardingModal", () => ({
       <button onClick={onComplete}>Complete</button>
     </div>
   ),
+}));
+
+vi.mock("@/components/OnboardingTour", () => ({
+  default: ({ open, onComplete, onSkip }: any) => {
+    if (!open) return null;
+    return (
+      <div data-testid="onboarding-tour">
+        <button onClick={onComplete}>Done</button>
+        <button onClick={onSkip}>Skip</button>
+      </div>
+    );
+  },
 }));
 
 vi.mock("@/components/CustomerPinGate", () => ({
@@ -260,6 +273,45 @@ describe("CustomerDashboard", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("customer-bottom-nav")).toBeInTheDocument();
+    });
+  });
+
+  it("shows the guided tour for a new customer and hides it after completion", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
+
+    render(<CustomerDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-tour")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Done"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("onboarding-tour")).not.toBeInTheDocument();
+    });
+    expect(localStorage.getItem("tour_seen_customer_9841234567")).toBe("1");
+  });
+
+  it("replays the tour when the tour:replay event fires", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("sajilo_customer_session", JSON.stringify(VALID_SESSION));
+
+    render(<CustomerDashboard />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-tour")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Done"));
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("onboarding-tour")).not.toBeInTheDocument();
+    });
+
+    window.dispatchEvent(new CustomEvent("tour:replay"));
+    await waitFor(() => {
+      expect(screen.getByTestId("onboarding-tour")).toBeInTheDocument();
     });
   });
 });

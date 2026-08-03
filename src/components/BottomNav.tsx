@@ -10,9 +10,9 @@ import { HomeIcon, CustomersIcon, HistoryIcon, SettingsIcon, QRIcon } from "@/co
 
 const navItems: NavItem[] = [
   { href: "/merchant/dashboard", label: "Home", icon: HomeIcon },
-  { href: "/merchant/customers", label: "Customers", icon: CustomersIcon },
-  { href: "#", label: "My QR", isFab: true, icon: QRIcon },
-  { href: "/merchant/logs", label: "History", icon: HistoryIcon },
+  { href: "/merchant/customers", label: "Customers", icon: CustomersIcon, dataTour: "customers" },
+  { href: "#", label: "My QR", isFab: true, icon: QRIcon, dataTour: "my-qr" },
+  { href: "/merchant/logs", label: "History", icon: HistoryIcon, dataTour: "history" },
   { href: "/merchant/settings", label: "Settings", icon: SettingsIcon },
 ];
 

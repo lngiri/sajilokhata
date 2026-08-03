@@ -148,6 +148,44 @@ export default function AboutSheet({ open, onClose }: Props) {
 
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
+                  How it works
+                </h3>
+                <div className="space-y-2.5">
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[var(--color-primary)]/5">
+                    <span className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+                    <p className="text-sm text-[var(--color-text)] leading-snug">
+                      Shops record sales on credit with the <span className="font-semibold">New Entry</span> button
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[var(--color-primary)]/5">
+                    <span className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+                    <p className="text-sm text-[var(--color-text)] leading-snug">
+                      Customers scan the shop&apos;s QR to send credit or payment requests from their own phone
+                    </p>
+                  </div>
+                  <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-[var(--color-primary)]/5">
+                    <span className="w-6 h-6 rounded-full bg-[var(--color-primary)] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">3</span>
+                    <p className="text-sm text-[var(--color-text)] leading-snug">
+                      Both sides see everything — balance, history, and approvals — in one khata
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      onClose();
+                      window.dispatchEvent(new CustomEvent("tour:replay"));
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[var(--color-primary)]/10 text-sm font-semibold text-[var(--color-primary-dark)] hover:bg-[var(--color-primary)]/20 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                    </svg>
+                    Show me around
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[var(--color-text-muted)] mb-3">
                   Features
                 </h3>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">
