@@ -47,7 +47,9 @@ export default function VersionGuard() {
       if (swVersion) localStorage.setItem("sw_version", swVersion);
       if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
 
-      await clearIndexedDB();
+      // Preserve queued offline work (pending logs + photo attachments) so a
+      // deploy never deletes entries captured without internet.
+      await clearIndexedDB({ preservePending: true });
 
       document.cookie.split(";").forEach((c) => {
         const name = c.trim().split("=")[0];

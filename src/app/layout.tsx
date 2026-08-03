@@ -9,6 +9,7 @@ import ActionHub from "@/components/ActionHub";
 import SessionGuard from "@/components/SessionGuard";
 import SessionHeartbeat from "@/components/SessionHeartbeat";
 import VersionGuard from "@/components/VersionGuard";
+import OfflineSync from "@/components/OfflineSync";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -61,6 +62,7 @@ export default function RootLayout({
           <ServiceWorkerRegistrar />
           <ToastProvider>
             <NetworkStatus />
+            <OfflineSync />
             <main className="min-h-dvh">{children}</main>
             <PWAInstallBanner />
             <ActionHub />

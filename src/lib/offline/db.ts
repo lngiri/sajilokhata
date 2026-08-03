@@ -26,6 +26,7 @@ interface QRHisabDB extends DBSchema {
       ipAddress?: string;
       deviceInfo?: string;
       createdAt: string;
+      idempotencyKey?: string;
       items?: Array<{
         productId?: string;
         productName: string;
@@ -74,6 +75,14 @@ interface QRHisabDB extends DBSchema {
       value: string;
     };
   };
+  cache: {
+    key: string;
+    value: {
+      key: string;
+      data: unknown;
+      savedAt: string;
+    };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<QRHisabDB>> | null = null;
@@ -81,8 +90,27 @@ let dbPromise: Promise<IDBPDatabase<QRHisabDB>> | null = null;
 /**
  * Delete the entire IndexedDB database.
  * Called on sign-out / session-mismatch to prevent cross-user data leakage.
+ *
+ * Pass `preservePending: true` to keep offline pending work (logs + photo
+ * attachments) while clearing everything else — used on app-version bumps so
+ * queued offline entries survive deployments.
  */
-export async function clearIndexedDB() {
+export async function clearIndexedDB(opts?: { preservePending?: boolean }) {
+  if (opts?.preservePending) {
+    try {
+      const db = await getDB();
+      const preserve = new Set(["pendingLogs", "pendingAttachments"]);
+      const stores = db.objectStoreNames;
+      for (let i = 0; i < stores.length; i++) {
+        const name = stores[i];
+        if (!preserve.has(name)) await db.clear(name);
+      }
+      return;
+    } catch {
+      // Fall through to full wipe if the DB can't be opened.
+    }
+  }
+
   dbPromise = null; // Drop cached reference so next getDB() creates a fresh DB
   try {
     const dbs = await indexedDB.databases();
@@ -101,7 +129,7 @@ export async function clearIndexedDB() {
 
 function getDB() {
   if (!dbPromise) {
-    dbPromise = openDB<QRHisabDB>("QR Hisab", 2, {
+    dbPromise = openDB<QRHisabDB>("QR Hisab", 3, {
       upgrade(db, oldVersion) {
         if (oldVersion < 1) {
           // Pending credit logs
@@ -128,6 +156,10 @@ function getDB() {
           attachStore.createIndex("by-merchant", "merchantId");
           attachStore.createIndex("by-log", "logId");
         }
+        if (oldVersion < 3) {
+          // Read cache so dashboards/lists can render offline
+          db.createObjectStore("cache", { keyPath: "key" });
+        }
       },
     });
   }
@@ -138,7 +170,7 @@ function getDB() {
 // Pending Logs CRUD
 // ============================================================
 
-export async function savePendingLog(log: CreditLogInsert & { id: string; customerPhone?: string; items?: Array<{ productId?: string; productName: string; quantity: number; unit: string; unitPrice: number; description?: string }> }) {
+export async function savePendingLog(log: CreditLogInsert & { id: string; customerPhone?: string; idempotencyKey?: string; items?: Array<{ productId?: string; productName: string; quantity: number; unit: string; unitPrice: number; description?: string }> }) {
   const db = await getDB();
   const entry = {
     id: log.id,
@@ -155,6 +187,7 @@ export async function savePendingLog(log: CreditLogInsert & { id: string; custom
     ipAddress: log.ip_address ?? undefined,
     deviceInfo: log.device_info ?? undefined,
     createdAt: log.created_at ?? new Date().toISOString(),
+    idempotencyKey: log.idempotencyKey ?? crypto.randomUUID(),
     items: log.items ?? undefined,
   };
   await db.put("pendingLogs", entry);
@@ -177,6 +210,7 @@ export async function getPendingLogs(): Promise<
     ipAddress?: string;
     deviceInfo?: string;
     createdAt: string;
+    idempotencyKey?: string;
     items?: Array<{
       productId?: string;
       productName: string;
@@ -209,6 +243,7 @@ export async function getPendingLogsByMerchant(
     ipAddress?: string;
     deviceInfo?: string;
     createdAt: string;
+    idempotencyKey?: string;
   }[]
 > {
   const db = await getDB();
@@ -349,6 +384,27 @@ export async function getSetting(key: string): Promise<string | null> {
 export async function setSetting(key: string, value: string) {
   const db = await getDB();
   await db.put("settings", { key, value });
+}
+
+// ============================================================
+// Read Cache (offline rendering of dashboards/lists)
+// ============================================================
+
+export async function cachePut(key: string, data: unknown) {
+  const db = await getDB();
+  await db.put("cache", { key, data, savedAt: new Date().toISOString() });
+}
+
+export async function cacheGet<T>(key: string): Promise<{ data: T; savedAt: string } | null> {
+  const db = await getDB();
+  const entry = await db.get("cache", key);
+  if (!entry) return null;
+  return { data: entry.data as T, savedAt: entry.savedAt };
+}
+
+export async function cacheDelete(key: string) {
+  const db = await getDB();
+  await db.delete("cache", key);
 }
 
 // ============================================================
