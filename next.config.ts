@@ -1,36 +1,4 @@
 import type { NextConfig } from "next";
-import { createLocalizedPathnamesNavigation } from "next-intl/navigation";
-import { locales } from "./i18n";
-
-const { LocalizedPathnamesNavigation } = createLocalizedPathnamesNavigation({
-  locales,
-  pathnames: {
-    "/": "/",
-    "/scan": "/scan",
-    "/login": "/login",
-    "/onboard": "/onboard",
-    "/select-role": "/select-role",
-    "/verify": "/verify",
-    "/merchant/dashboard": "/merchant/dashboard",
-    "/merchant/scan": "/merchant/scan",
-    "/merchant/logs": "/merchant/logs",
-    "/merchant/customers": "/merchant/customers",
-    "/merchant/customers/[id]": "/merchant/customers/[id]",
-    "/merchant/qr": "/merchant/qr",
-    "/merchant/settings": "/merchant/settings",
-    "/merchant/billing": "/merchant/billing",
-    "/merchant/cash-sales": "/merchant/cash-sales",
-    "/merchant/reports": "/merchant/reports",
-    "/merchant/import": "/merchant/import",
-    "/merchant/products": "/merchant/products",
-    "/customer/dashboard": "/customer/dashboard",
-    "/customer/history": "/customer/history",
-    "/customer/scan": "/customer/scan",
-    "/customer/settings": "/customer/settings",
-    "/admin/login": "/admin/login",
-    "/admin/dashboard": "/admin/dashboard",
-  },
-});
 
 const nextConfig: NextConfig = {
   // Bridge the HMAC secret to Edge Runtime (next.config env is available in ALL runtimes)
