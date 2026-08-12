@@ -20,9 +20,9 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Check if locale is already in pathname
+  // Check if locale is already in pathname (handle both /en and /en/)
   const pathnameHasLocale = locales.some(
-    (locale) => pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+    (locale) => pathname === `/${locale}` || pathname.startsWith(`/${locale}/`)
   );
 
   if (pathnameHasLocale) {
@@ -31,12 +31,19 @@ export function middleware(request: NextRequest) {
 
   // Get locale from cookie
   const cookieLocale = request.cookies.get(LOCALE_COOKIE)?.value;
-  let locale = cookieLocale && isValidLocale(cookieLocale) ? cookieLocale : defaultLocale;
+  const locale = cookieLocale && isValidLocale(cookieLocale) ? cookieLocale : defaultLocale;
+
+  // Build target URL - avoid double redirect by checking if we're already at target
+  const targetPath = `/${locale}${pathname === "/" ? "" : pathname}`;
+  const targetUrl = new URL(targetPath, request.url);
+
+  // Prevent redirect loop: if target equals current, don't redirect
+  if (targetUrl.pathname === pathname && targetUrl.search === request.nextUrl.search) {
+    return NextResponse.next();
+  }
 
   // Redirect to localized path
-  const response = NextResponse.redirect(
-    new URL(`/${locale}${pathname}`, request.url)
-  );
+  const response = NextResponse.redirect(targetUrl);
 
   // Set locale cookie (1 year expiry)
   response.cookies.set(LOCALE_COOKIE, locale, {

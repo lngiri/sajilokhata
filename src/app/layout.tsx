@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { redirect } from "next/navigation";
 import { defaultLocale } from "@/i18n";
 
 export const metadata: Metadata = {
@@ -18,5 +17,6 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout() {
-  redirect(`/${defaultLocale}`);
+  // Middleware handles locale redirect; this should not be reached
+  return null;
 }
