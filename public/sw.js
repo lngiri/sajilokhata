@@ -1,14 +1,21 @@
 const CACHE_NAME = "qrhisab-v8";
 const STATIC_ASSETS = [
   "/",
-  "/scan",
+  "/en",
+  "/ne",
+  "/en/customer/dashboard",
+  "/en/customer/history",
+  "/en/customer/scan",
+  "/en/customer/settings",
   "/merchant/dashboard",
+  "/merchant/scan",
   "/merchant/customers",
   "/merchant/logs",
   "/merchant/qr",
   "/merchant/settings",
   "/merchant/billing",
   "/onboard",
+  "/login",
   "/manifest.json",
 ];
 const AUTH_ROUTES = ["/login", "/api/auth/"];
