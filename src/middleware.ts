@@ -5,12 +5,10 @@ import { locales, defaultLocale, isValidLocale } from "./i18n";
 const LOCALE_COOKIE = "qr_hisab_locale";
 
 // Routes that HAVE a localized variant in src/app/[locale]/
+// Only include routes that actually have a page.tsx under [locale]/
 const LOCALIZED_ROUTES = [
   "/",
   "/customer/dashboard",
-  "/customer/history",
-  "/customer/scan",
-  "/customer/settings",
 ];
 
 function shouldLocalize(pathname: string): boolean {
