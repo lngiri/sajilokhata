@@ -6,7 +6,7 @@ import {
   createSessionTokenWithTTL,
   SESSION_COOKIE,
   SESSION_DURATION,
-  SESSION_COOKIE_OPTIONS,
+  getSessionCookieOptions,
 } from "@/lib/session";
 
 /**
@@ -32,7 +32,7 @@ export async function heartbeatSession(): Promise<{ ok: boolean }> {
       userId,
       SESSION_DURATION
     );
-    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
+    cookieStore.set(SESSION_COOKIE, token, await getSessionCookieOptions(maxAge));
 
     return { ok: true };
   } catch {

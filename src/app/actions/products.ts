@@ -62,6 +62,42 @@ export interface ProductUpdateParams {
   sort_order?: number;
 }
 
+/**
+ * Public, read-only catalog for customers scanning a shop QR.
+ * Only active products and safe columns are exposed. Never throws —
+ * returns [] so the customer UI can quietly hide the optional picker.
+ */
+export interface PublicProduct {
+  id: string;
+  name: string;
+  unit: string;
+  default_rate: number;
+  category: string | null;
+}
+
+export async function getPublicMerchantProducts(merchantId: string): Promise<PublicProduct[]> {
+  if (!merchantId) return [];
+  try {
+    const admin = requireAdmin();
+    const { data, error } = await admin
+      .from("merchant_products")
+      .select("id, name, unit, default_rate, category, sort_order")
+      .eq("merchant_id", merchantId)
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("[getPublicMerchantProducts] query error:", error.message);
+      return [];
+    }
+    return data || [];
+  } catch (err) {
+    console.error("[getPublicMerchantProducts] failed:", err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
 export async function getMerchantProducts(merchantId: string) {
   const sessionUserId = await requireMerchant();
   if (sessionUserId !== merchantId) throw new Error("Not logged in");

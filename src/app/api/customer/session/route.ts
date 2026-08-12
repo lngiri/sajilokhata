@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createCustomerSessionToken, CUSTOMER_SESSION_COOKIE_OPTIONS } from "@/lib/session";
+import { createCustomerSessionToken, getCustomerSessionCookieOptions } from "@/lib/session";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
 
@@ -38,10 +38,10 @@ export async function POST(request: Request) {
       console.warn("[Customer Session] registration_status update failed:", err);
     }
 
-    const { token } = await createCustomerSessionToken(cleanPhone, name);
+    const { token, maxAge } = await createCustomerSessionToken(cleanPhone, name);
 
     const response = NextResponse.json({ success: true });
-    response.cookies.set("customer_session", token, CUSTOMER_SESSION_COOKIE_OPTIONS);
+    response.cookies.set("customer_session", token, await getCustomerSessionCookieOptions(maxAge));
 
     return response;
   } catch (err) {

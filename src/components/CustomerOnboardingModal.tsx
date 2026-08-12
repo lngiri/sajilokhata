@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { updateCustomerProfile } from "@/app/actions/customer";
+
+const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
 
 interface Props {
   phone: string;
   onComplete: () => void;
 }
 
-const CUSTOMER_STORAGE_KEY = "sajilo_customer_session";
-
 export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
+  const t = useTranslations("onboarding");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Pre-populate name from localStorage if available
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
@@ -31,7 +32,7 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
     }
   }, []);
 
-  const valid = name.trim().length > 0; // address is optional
+  const valid = name.trim().length > 0;
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -51,10 +52,9 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
         address: address.trim() || undefined,
       });
       if (!result.success) {
-        setError(result.error || "Failed to save");
+        setError(result.error || t("common.error"));
         return;
       }
-      // Persist name to localStorage so it's available on next mount
       try {
         const raw = localStorage.getItem(CUSTOMER_STORAGE_KEY);
         const session = raw ? JSON.parse(raw) : { phone };
@@ -63,11 +63,11 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
       } catch {}
       onComplete();
     } catch {
-      setError("Network error. Please try again.");
+      setError(t("common.networkError"));
     } finally {
       setSaving(false);
     }
-  }, [valid, saving, phone, name, address, onComplete]);
+  }, [valid, saving, phone, name, address, onComplete, t]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center backdrop-blur-xl bg-slate-900/50 p-4">
@@ -78,31 +78,34 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Complete Your Profile</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Tell us your name so shops can recognise you.</p>
+          <h2 className="text-xl font-bold text-[var(--color-text)]">{t("title")}</h2>
+          <p className="text-sm text-[var(--color-text-muted)] mt-1">{t("subtitle")}</p>
         </div>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Full Name *</label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">{t("nameLabel")}</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Ram Sharma"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition"
+              placeholder={t("namePlaceholder")}
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Address <span className="text-gray-400 dark:text-gray-500 font-normal">(optional)</span></label>
+            <label className="block text-sm font-medium text-[var(--color-text)] mb-1">
+              {t("addressLabel")}
+              <span className="text-[var(--color-text-muted)] font-normal"> {t("common.optional")}</span>
+            </label>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="e.g. Kathmandu, Baneshwor"
-              className="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none transition"
+              placeholder={t("addressPlaceholder")}
+              className="w-full px-4 py-3 rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition"
             />
           </div>
         </div>
@@ -114,22 +117,22 @@ export default function CustomerOnboardingModal({ phone, onComplete }: Props) {
         <div className="flex gap-3">
           <button
             onClick={onComplete}
-            className="flex-1 py-3 rounded-xl font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+            className="flex-1 py-3 rounded-xl font-medium text-[var(--color-text-muted)] bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition"
           >
-            Skip
+            {t("skip")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={!valid || saving}
-            className="flex-1 py-3 rounded-xl font-semibold text-white bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+            className="flex-1 py-3 rounded-xl font-semibold text-white bg-[var(--color-primary-surface)] hover:bg-[var(--color-primary-surface-hover)] disabled:bg-gray-300 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
           >
             {saving ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                Saving...
+                {t("common.saving")}
               </>
             ) : (
-              "Save & Continue"
+              t("saveAndContinue")
             )}
           </button>
         </div>

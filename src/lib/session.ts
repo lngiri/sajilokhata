@@ -98,6 +98,55 @@ const SESSION_COOKIE_OPTIONS = {
   ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
 };
 
+/**
+ * Resolve whether to attach COOKIE_DOMAIN based on the current host.
+ * Only qrhisab.com (and subdomains) get the shared domain so cookies
+ * are never rejected on preview (vercel.app) or localhost.
+ */
+export async function resolveCookieDomain(): Promise<string | undefined> {
+  if (!COOKIE_DOMAIN) return undefined;
+  let host = "";
+  try {
+    const { headers } = await import("next/headers");
+    const headersList = await headers();
+    host = headersList.get("host") || "";
+  } catch {
+    host = process.env.VERCEL_URL || "";
+  }
+  return host.includes("qrhisab.com") ? COOKIE_DOMAIN : undefined;
+}
+
+/**
+ * Session cookie options that adapt to the current host so login works
+ * on production, preview deployments, and localhost alike.
+ */
+export async function getSessionCookieOptions(maxAge: number) {
+  const domain = await resolveCookieDomain();
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+    ...(domain ? { domain } : {}),
+  };
+}
+
+/**
+ * Customer session cookie options that adapt to the current host.
+ */
+export async function getCustomerSessionCookieOptions(maxAge: number) {
+  const domain = await resolveCookieDomain();
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+    ...(domain ? { domain } : {}),
+  };
+}
+
 export { SESSION_COOKIE, SESSION_DURATION, SESSION_COOKIE_OPTIONS, COOKIE_DOMAIN };
 
 // ──────────────────────────────────────────────────────────────

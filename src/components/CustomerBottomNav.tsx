@@ -1,17 +1,23 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import BottomNavBar, { type NavItem } from "@/components/BottomNavBar";
 import { HomeIcon, HistoryIcon, SettingsIcon } from "@/components/NavIcons";
 
-const navItems: NavItem[] = [
-  { href: "/customer/dashboard", label: "Home", icon: HomeIcon },
-  { href: "/customer/history", label: "History", icon: HistoryIcon },
-  { href: "/customer/settings", label: "Settings", icon: SettingsIcon },
-];
+interface Props {
+  locale: string;
+}
 
-export default function CustomerBottomNav() {
+export default function CustomerBottomNav({ locale }: Props) {
   const pathname = usePathname();
+  const t = useTranslations("bottomNav");
+
+  const navItems: NavItem[] = [
+    { href: `/${locale}/customer/dashboard`, label: t("home"), icon: HomeIcon },
+    { href: `/${locale}/customer/history`, label: t("history"), icon: HistoryIcon },
+    { href: `/${locale}/customer/settings`, label: t("settings"), icon: SettingsIcon },
+  ];
 
   return (
     <BottomNavBar

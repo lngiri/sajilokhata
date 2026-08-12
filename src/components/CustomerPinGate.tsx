@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { checkCustomerHasPin, verifyCustomerPin, setCustomerPin } from "@/app/actions/customer-pin";
 
 const PIN_UNLOCKED_PREFIX = "qr_hisab_auth_";
@@ -33,15 +34,7 @@ function isPinUnlocked(phone: string): boolean {
 
 interface Props {
   phone: string;
-  /**
-   * Called once the gate is unlocked (PIN verified) or when
-   * the user completes the initial set-PIN flow.
-   */
   onUnlocked: () => void;
-  /**
-   * Called when the user wants to switch accounts
-   * (e.g. sign out and re-scan).
-   */
   onSignOut?: () => void;
   children: React.ReactNode;
 }
@@ -49,6 +42,7 @@ interface Props {
 type GateStep = "loading" | "pin" | "set_pin" | "unlocked";
 
 export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children }: Props) {
+  const t = useTranslations("pinGate");
   const [step, setStep] = useState<GateStep>("loading");
   const [pin, setPin] = useState(["", "", "", ""]);
   const [newPin, setNewPin] = useState(["", "", "", ""]);
@@ -61,7 +55,6 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
   useEffect(() => {
     if (!phone) return;
 
-    // Skip PIN only if phone-scoped key exists and is within 24h TTL
     if (isPinUnlocked(phone)) {
       setStep("unlocked");
       return;
@@ -119,7 +112,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
     setError("");
     const result = await verifyCustomerPin(phone, p);
     if (!result.success) {
-      setError(result.error || "Incorrect PIN");
+      setError(result.error || t("incorrectPin"));
       setPin(["", "", "", ""]);
       focusInput(pinRefs, 0);
       setLoading(false);
@@ -132,14 +125,14 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
   const handleSetPin = async () => {
     const newP = pinArrToString(newPin);
     const confirm = pinArrToString(confirmPin);
-    if (newP.length < 4) { setError("Enter a 4-digit PIN"); return; }
-    if (newP !== confirm) { setError("PINs do not match"); return; }
+    if (newP.length < 4) { setError(t("pinTooShort")); return; }
+    if (newP !== confirm) { setError(t("pinsDoNotMatch")); return; }
     if (!phone) return;
     setLoading(true);
     setError("");
     const result = await setCustomerPin(phone, newP);
     if (!result.success) {
-      setError(result.error || "Failed to set PIN");
+      setError(result.error || t("failedToSetPin"));
       setLoading(false);
       return;
     }
@@ -187,12 +180,10 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
             </svg>
           </div>
           <h2 className="text-xl font-bold text-[var(--color-text)]">
-            {step === "pin" ? "Enter PIN" : "Set a PIN"}
+            {step === "pin" ? t("enterPin") : t("setPin")}
           </h2>
           <p className="text-sm text-[var(--color-text-muted)] mt-1">
-            {step === "pin"
-              ? "Enter your 4-digit PIN to continue"
-              : "Protect your account with a 4-digit PIN"}
+            {step === "pin" ? t("enterPinDesc") : t("setPinDesc")}
           </p>
         </div>
 
@@ -207,15 +198,15 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : "Unlock"}
+              ) : t("unlock")}
             </button>
           </>
         )}
 
         {step === "set_pin" && (
           <>
-            {renderDots(newPin, setNewPin, newPinRefs, "New PIN")}
-            {renderDots(confirmPin, setConfirmPin, newPinRefs, "Confirm PIN")}
+            {renderDots(newPin, setNewPin, newPinRefs, t("newPinLabel"))}
+            {renderDots(confirmPin, setConfirmPin, newPinRefs, t("confirmPinLabel"))}
             {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
             <button
               onClick={handleSetPin}
@@ -224,14 +215,14 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : "Set PIN"}
+              ) : t("setPinButton")}
             </button>
           </>
         )}
 
         {onSignOut && (
           <button onClick={onSignOut} className="w-full text-center text-xs text-gray-400 dark:text-gray-500 active:text-red-500 dark:active:text-red-400">
-            Sign out
+            {t("signOut")}
           </button>
         )}
       </div>

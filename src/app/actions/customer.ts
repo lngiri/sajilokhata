@@ -271,7 +271,9 @@ export async function addCustomerForMerchant(
       .single();
     const businessName = merchant?.business_name || merchant?.name || "Shop";
 
-    // 2. Find or create customer
+    // 2. Find or create customer.
+    // A phone that is already a merchant must reuse the merchant's id so we never
+    // create two identities (customer + merchant) for the same person/phone.
     const { data: rawCustomer } = await admin.from("customers")
       .select("id, name, phone, registration_status")
       .eq("phone", normalized)
@@ -279,8 +281,17 @@ export async function addCustomerForMerchant(
     let customer = rawCustomer as CustomerBrief | null;
 
     if (!customer) {
+      let customerId: string | undefined;
+      const { data: existingMerchant } = await (admin.from("merchants") as any)
+        .select("id")
+        .eq("phone", normalized)
+        .maybeSingle();
+      if (existingMerchant?.id) {
+        customerId = existingMerchant.id;
+      }
+
       const { data: inserted, error } = await admin.from("customers")
-        .insert({ phone: normalized, name: name || null, registration_status: "invited" })
+        .insert({ id: customerId, phone: normalized, name: name || null, registration_status: "invited" })
         .select("id, name, phone, registration_status")
         .single();
       if (error) {

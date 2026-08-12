@@ -4,10 +4,26 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import jsQR from "jsqr";
 
+export interface PaymentMethodQR {
+  method_type: string;
+  label: string | null;
+  qr_url: string | null;
+  is_active: boolean;
+}
+
 interface QRDisplayProps {
   merchantId: string;
   merchantName: string;
   businessType: string;
+  svgRef?: React.Ref<SVGSVGElement>;
+}
+
+interface MerchantQRSwiperProps {
+  merchantId: string;
+  merchantName: string;
+  businessType: string;
+  methods?: PaymentMethodQR[];
+  walletQR?: string | null;
   svgRef?: React.Ref<SVGSVGElement>;
 }
 
@@ -40,6 +56,143 @@ export function QRDisplay({
       </div>
       <p className="mt-4 text-sm text-[var(--color-text-muted)]">
         Scan this QR to log a credit entry
+      </p>
+    </div>
+  );
+}
+
+// ============================================================
+// Merchant QR Swiper — swipeable cards for the shop's QR and
+// the payment-method QRs the merchant set up in Settings.
+// Slide 1 is always the shop QR; following slides show each
+// active payment method with a QR image (cash is excluded),
+// then the merchant's Wallet QR if uploaded.
+// ============================================================
+export function MerchantQRSwiper({
+  merchantId,
+  merchantName,
+  businessType,
+  methods = [],
+  walletQR,
+  svgRef,
+}: MerchantQRSwiperProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const methodSlides = (methods || []).filter(
+    (m) =>
+      m.is_active &&
+      m.qr_url &&
+      m.method_type !== "cash" &&
+      m.method_type !== "bank_deposit"
+  );
+
+  const slides = [
+    {
+      type: "shop",
+      label: "Shop QR",
+      url: null,
+    },
+    ...methodSlides.map((m) => ({
+      type: "method",
+      label: m.label || m.method_type.replace(/_/g, " "),
+      url: m.qr_url,
+    })),
+    ...(walletQR
+      ? [{ type: "wallet", label: "Wallet QR", url: walletQR }]
+      : []),
+  ];
+
+  const handleScroll = useCallback(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    const idx = Math.round(el.scrollLeft / el.clientWidth);
+    setActiveIndex(Math.max(0, Math.min(idx, slides.length - 1)));
+  }, [slides.length]);
+
+  const goTo = (index: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollTo({ left: index * el.clientWidth, behavior: "smooth" });
+    setActiveIndex(index);
+  };
+
+  return (
+    <div className="w-full">
+      <div
+        ref={trackRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth no-scrollbar"
+        style={{ scrollSnapType: "x mandatory" }}
+      >
+        {slides.map((slide, i) => (
+          <div
+            key={i}
+            className="flex-shrink-0 w-full snap-center flex items-center justify-center px-6"
+          >
+            {slide.type === "shop" ? (
+              <div className="flex flex-col items-center w-full">
+                <div className="bg-white dark:bg-[var(--color-surface)] p-4 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
+                  <QRCodeSVG
+                    ref={svgRef}
+                    value={JSON.stringify({
+                      type: "merchant_scan",
+                      merchantId,
+                      merchantName: merchantName || "Shop",
+                      businessType,
+                      timestamp: Date.now(),
+                    })}
+                    size={220}
+                    level="H"
+                    bgColor="#FFFFFF"
+                    fgColor="#000000"
+                    includeMargin={true}
+                  />
+                </div>
+                <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+                  Scan to log a credit entry
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center w-full">
+                <div className="bg-white dark:bg-[var(--color-surface)] p-4 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
+                  <img
+                    src={slide.url || ""}
+                    alt={`${slide.label} QR`}
+                    className="w-[220px] h-[220px] object-contain"
+                  />
+                </div>
+                <p className="mt-3 text-sm text-[var(--color-text-muted)]">
+                  Scan to pay via {slide.label}
+                </p>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {slides.length > 1 && (
+        <div className="flex items-center justify-center gap-2 mt-5">
+          <p className="text-xs text-[var(--color-text-muted)] mr-1">
+            Swipe to see more
+          </p>
+          {slides.map((s, i) => (
+            <button
+              key={i}
+              onClick={() => goTo(i)}
+              aria-label={`Show ${s.label}`}
+              className={`w-2.5 h-2.5 rounded-full transition-all ${
+                i === activeIndex
+                  ? "bg-[var(--color-primary)] w-4"
+                  : "bg-gray-300 dark:bg-gray-600"
+              }`}
+            />
+          ))}
+        </div>
+      )}
+
+      <p className="mt-2 text-center text-xs font-medium text-[var(--color-text-muted)]">
+        {slides[activeIndex]?.label}
       </p>
     </div>
   );

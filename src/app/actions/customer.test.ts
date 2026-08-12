@@ -362,6 +362,29 @@ describe("addCustomerForMerchant", () => {
     expect(smsMock.mock.calls[0][1]).not.toMatch(/https?:\/\//);
   });
 
+  it("reuses the merchant id when the invited phone is already a merchant (no overlap)", async () => {
+    const admin = makeAdmin({
+      merchants: [
+        { data: { id: "m1", business_name: "Kirana Store", name: "Shop" } },
+        { data: { id: "M" } },
+      ],
+      customers: [
+        { data: null },
+        { data: { id: "M", name: "Hari", phone: "+9779841234567", registration_status: "invited" } },
+      ],
+      merchant_customers: [{ data: null }],
+      customer_invites: [{ data: null }, { data: { id: "inv1" } }],
+    });
+    mockGetAdminClient.mockReturnValue(admin as any);
+
+    const result = await addCustomerForMerchant("m1", "9841234567", "Hari");
+    expect(result.success).toBe(true);
+    expect(result.customer?.id).toBe("M");
+
+    const invitePayload = findInviteInsert(admin);
+    expect(invitePayload).toMatchObject({ customer_id: "M", merchant_id: "m1" });
+  });
+
   it("resets a retryable invite to pending on resend and resends the OTP", async () => {
     const admin = makeAdmin({
       merchants: merchantQueue,

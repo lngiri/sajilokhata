@@ -212,7 +212,49 @@ export async function getMerchantCreditLogs(
 
   const { data, error } = await query;
   if (error) throw error;
-  return data || [];
+
+  const rows = data || [];
+
+  // Mark "partially paid" on payment entries (type "credit") whose amount did
+  // not fully clear the customer's running approved balance at that time. This
+  // is derived at read time (no status writes), so it stays correct even if
+  // the legacy status constraint does not yet allow 'partially_paid'.
+  const creditCustomers = Array.from(
+    new Set<string>(
+      rows
+        .filter((r: any) => r.type === "credit" && r.customer_id)
+        .map((r: any) => r.customer_id as string)
+    )
+  );
+  const partialMap = new Map<string, Set<string>>();
+  for (const customerId of creditCustomers) {
+    const { data: history } = await (admin.from("credit_logs") as any)
+      .select("id, amount, type, status")
+      .eq("merchant_id", merchantId)
+      .eq("customer_id", customerId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: true });
+    let balance = 0;
+    const partialIds = new Set<string>();
+    for (const h of history || []) {
+      if (h.type === "cash" || h.type === "cash_in" || h.type === "expense") continue;
+      if (h.type === "debit") {
+        balance += Number(h.amount);
+      } else if (h.type === "credit") {
+        if (balance > 0 && Number(h.amount) < balance) partialIds.add(h.id);
+        balance -= Number(h.amount);
+      }
+    }
+    partialMap.set(customerId, partialIds);
+  }
+
+  return rows.map((r: any) => {
+    const customerPartial = r.type === "credit" && r.customer_id ? partialMap.get(r.customer_id as string) : undefined;
+    return {
+      ...r,
+      is_partial_paid: customerPartial ? customerPartial.has(r.id) : false,
+    };
+  });
 }
 
 // ──────────────────────────────────────────────
@@ -1871,6 +1913,166 @@ export async function cancelInvitation(
       .eq("id", inviteId);
 
     return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+// ──────────────────────────────────────────────
+// Wallet QR + Payment Tracking
+// ──────────────────────────────────────────────
+
+export async function saveWalletQR(
+  merchantId: string,
+  base64: string
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const sessionUserId = await requireMerchant().catch(() => null);
+    if (!sessionUserId || sessionUserId !== merchantId) {
+      return { success: false, error: "Not logged in" };
+    }
+
+    const { error } = await (admin.from("merchants") as any)
+      .update({ wallet_qr_base64: base64 })
+      .eq("id", merchantId);
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+export async function getWalletQR(
+  merchantId: string
+): Promise<{ success: boolean; error?: string; base64?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const sessionUserId = await requireMerchant().catch(() => null);
+    if (!sessionUserId || sessionUserId !== merchantId) {
+      return { success: false, error: "Not logged in" };
+    }
+
+    const { data, error } = await (admin.from("merchants") as any)
+      .select("wallet_qr_base64")
+      .eq("id", merchantId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return { success: true, base64: data?.wallet_qr_base64 || null };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+export async function markCreditPaid(
+  logId: string,
+  paymentMethod: "cash" | "wallet" | "bank" | "other",
+  amount?: number
+): Promise<{ success: boolean; error?: string }> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const sessionUserId = await requireMerchant().catch(() => null);
+    if (!sessionUserId) return { success: false, error: "Not logged in" };
+
+    // Fetch the credit log to verify ownership and get current amounts
+    const { data: log, error: fetchError } = await (admin.from("credit_logs") as any)
+      .select("id, merchant_id, amount, paid_amount, status")
+      .eq("id", logId)
+      .maybeSingle();
+
+    if (fetchError || !log) return { success: false, error: "Entry not found" };
+    if (log.merchant_id !== sessionUserId) return { success: false, error: "Not authorized" };
+
+    const remaining = Number(log.amount) - Number(log.paid_amount);
+    const payAmount = amount ?? remaining;
+    const newPaidAmount = Number(log.paid_amount) + payAmount;
+
+    if (payAmount <= 0) return { success: false, error: "Amount must be positive" };
+    if (payAmount > remaining) return { success: false, error: "Amount exceeds remaining balance" };
+
+    const newStatus = newPaidAmount >= Number(log.amount) ? "paid" : "partially_paid";
+
+    const { error: updateError } = await (admin.from("credit_logs") as any)
+      .update({
+        paid_amount: newPaidAmount,
+        paid_at: new Date().toISOString(),
+        payment_method: paymentMethod,
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", logId);
+
+    if (updateError) throw updateError;
+
+    return { success: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+export async function getCustomerUnpaidLogs(
+  merchantId: string,
+  customerId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+  logs?: Array<{
+    id: string;
+    amount: number;
+    paid_amount: number;
+    remaining: number;
+    status: string;
+    description: string | null;
+    created_at: string;
+    payment_method: string | null;
+    paid_at: string | null;
+  }>;
+}> {
+  const admin = getAdminClient();
+  if (!admin) return { success: false, error: "Server config" };
+
+  try {
+    const sessionUserId = await requireMerchant().catch(() => null);
+    if (!sessionUserId || sessionUserId !== merchantId) {
+      return { success: false, error: "Not logged in" };
+    }
+
+    const { data, error } = await (admin.from("credit_logs") as any)
+      .select("id, amount, paid_amount, status, description, created_at, payment_method, paid_at")
+      .eq("merchant_id", merchantId)
+      .eq("customer_id", customerId)
+      .in("status", ["unpaid", "partially_paid"])
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    const logs = (data || []).map((row: any) => ({
+      id: row.id,
+      amount: Number(row.amount),
+      paid_amount: Number(row.paid_amount || 0),
+      remaining: Number(row.amount) - Number(row.paid_amount || 0),
+      status: row.status,
+      description: row.description,
+      created_at: row.created_at,
+      payment_method: row.payment_method,
+      paid_at: row.paid_at,
+    }));
+
+    return { success: true, logs };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, error: msg };

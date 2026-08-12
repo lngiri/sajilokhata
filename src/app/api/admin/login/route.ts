@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getAdminClient } from "@/lib/supabase/admin";
-import { createAdminSessionToken, ADMIN_SESSION_COOKIE, ADMIN_SESSION_COOKIE_OPTIONS } from "@/lib/admin-session";
+import { createAdminSessionToken, ADMIN_SESSION_COOKIE, getAdminSessionCookieOptions } from "@/lib/admin-session";
 import type { Database } from "@/lib/types/database";
 
 type AdminRow = Database["public"]["Tables"]["admins"]["Row"];
@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     const { token, maxAge } = await createAdminSessionToken(row.id);
     const response = NextResponse.json({ success: true, name: row.name });
 
-    response.cookies.set(ADMIN_SESSION_COOKIE, token, { ...ADMIN_SESSION_COOKIE_OPTIONS, maxAge });
+    response.cookies.set(ADMIN_SESSION_COOKIE, token, await getAdminSessionCookieOptions(maxAge));
 
     return response;
   } catch (err) {

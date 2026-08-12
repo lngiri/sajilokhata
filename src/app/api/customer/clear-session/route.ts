@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { CUSTOMER_SESSION_COOKIE_OPTIONS } from "@/lib/session";
+import { getCustomerSessionCookieOptions } from "@/lib/session";
 
 export async function POST() {
   const response = NextResponse.json({ success: true });
   response.cookies.set("customer_session", "", {
-    ...CUSTOMER_SESSION_COOKIE_OPTIONS,
+    ...(await getCustomerSessionCookieOptions(0)),
     expires: new Date(0),
     maxAge: 0,
   });

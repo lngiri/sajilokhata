@@ -5,6 +5,7 @@ import {
   createMerchantProduct,
   updateMerchantProduct,
   deleteMerchantProduct,
+  getPublicMerchantProducts,
 } from "./products";
 
 const { mockGetAdminClient, mockRequireMerchant } = vi.hoisted(() => ({
@@ -198,5 +199,56 @@ describe("products actions security hardening", () => {
       throw new Error("Not logged in");
     });
     await expect(getMerchantProducts("m1")).rejects.toThrow("Not logged in");
+  });
+});
+
+function makePublicAdmin(result: { data?: any[]; error?: any }) {
+  const builder: any = {
+    select: vi.fn(() => builder),
+    eq: vi.fn(() => builder),
+    order: vi.fn(() => builder),
+    then: (resolve: (v: any) => any) =>
+      resolve({ data: result.data ?? null, error: result.error ?? null }),
+  };
+  return { admin: { from: vi.fn(() => builder) } as any, builder };
+}
+
+describe("getPublicMerchantProducts (customer catalog)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("returns active products without requiring a merchant session", async () => {
+    mockRequireMerchant.mockResolvedValue("m1");
+    const { admin, builder } = makePublicAdmin({
+      data: [{ id: "p1", name: "Milk", unit: "litre", default_rate: 100, category: null }],
+    });
+    mockGetAdminClient.mockReturnValue(admin);
+
+    const result = await getPublicMerchantProducts("m1");
+
+    expect(result).toHaveLength(1);
+    expect(mockRequireMerchant).not.toHaveBeenCalled();
+    const eqCalls = builder.eq.mock.calls;
+    expect(eqCalls).toContainEqual(["merchant_id", "m1"]);
+    expect(eqCalls).toContainEqual(["is_active", true]);
+  });
+
+  it("returns [] when the merchant has no products", async () => {
+    mockGetAdminClient.mockReturnValue(makePublicAdmin({ data: [] }).admin);
+    const result = await getPublicMerchantProducts("m1");
+    expect(result).toEqual([]);
+  });
+
+  it("returns [] (does not throw) on DB error", async () => {
+    mockGetAdminClient.mockReturnValue(makePublicAdmin({ error: { message: "boom" } }).admin);
+    const result = await getPublicMerchantProducts("m1");
+    expect(result).toEqual([]);
+  });
+
+  it("returns [] for an empty merchant id without hitting the DB", async () => {
+    const result = await getPublicMerchantProducts("");
+    expect(result).toEqual([]);
+    expect(mockGetAdminClient).not.toHaveBeenCalled();
   });
 });

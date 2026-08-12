@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import bcrypt from "bcryptjs";
 import { getAdminClient } from "@/lib/supabase/admin";
 import { normalizePhone } from "@/lib/phone";
-import { createSessionToken, SESSION_COOKIE, SESSION_COOKIE_OPTIONS } from "@/lib/session";
+import { createSessionToken, SESSION_COOKIE, getSessionCookieOptions } from "@/lib/session";
 
 const PIN_ROUNDS = 10;
 
@@ -179,7 +179,7 @@ export async function loginWithPin(
     // Create session cookie
     console.log("[loginWithPin] Creating session for user:", userId);
     const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
+    cookieStore.set(SESSION_COOKIE, token, await getSessionCookieOptions(maxAge));
     console.log("[loginWithPin] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
     const verifyCookie = cookieStore.get(SESSION_COOKIE)?.value;
     console.log("[loginWithPin] Post-set cookie check:", !!verifyCookie, "| matches:", verifyCookie === token);
@@ -256,7 +256,7 @@ export async function setPin(
   try {
     const cookieStore = await cookies();
     const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
+    cookieStore.set(SESSION_COOKIE, token, await getSessionCookieOptions(maxAge));
     console.log("[setPin] Session cookie set for user:", userId, "| maxAge:", maxAge, "| token length:", token.length);
 
     // Verify cookie was written by reading it back
@@ -308,6 +308,106 @@ export async function forgotPinSendOtp(
 }
 
 /**
+ * Merge an "overlap" (invited customer row + separate merchant row for the same phone)
+ * into a single canonical identity id.
+ *
+ * role === "customer"  → canonical = existing merchant id (orphan customer is folded in)
+ * role === "merchant"  → canonical = existing customer id (orphan merchant is folded in)
+ *
+ * Returns true on success, false/undefined if anything failed.
+ */
+async function mergeOverlapIdentity(args: {
+  admin: any;
+  role: "merchant" | "customer";
+  canonicalId: string;
+  orphanCustomerId: string;
+  orphanMerchantId: string;
+  phone: string;
+  name?: string;
+}): Promise<boolean> {
+  const { admin, role, canonicalId, orphanCustomerId, orphanMerchantId, phone, name } = args;
+  const tmpPhone = `__merge_${crypto.randomUUID()}`;
+
+  if (role === "customer") {
+    // Free the unique phone held by the orphan customer row, then create the
+    // canonical customer row (so FKs have a valid target), repoint references,
+    // and finally delete the orphan row.
+    const { error: freeErr } = await admin.from("customers").update({ phone: tmpPhone }).eq("id", orphanCustomerId);
+    if (freeErr) return false;
+
+    const { error: createErr } = await (admin.from("customers") as any).upsert(
+      { id: canonicalId, phone, name: name || "Customer", registration_status: "registered" },
+      { onConflict: "id" }
+    );
+    if (createErr) return false;
+
+    // Dedupe merchant_customers before repointing (UNIQUE on merchant_id + customer_id)
+    const { data: links } = await admin.from("merchant_customers").select("merchant_id").eq("customer_id", orphanCustomerId);
+    for (const link of links || []) {
+      const { data: dup } = await admin.from("merchant_customers")
+        .select("id").eq("merchant_id", link.merchant_id).eq("customer_id", canonicalId).maybeSingle();
+      if (dup) {
+        await admin.from("merchant_customers")
+          .delete().eq("merchant_id", link.merchant_id).eq("customer_id", orphanCustomerId);
+      } else {
+        await admin.from("merchant_customers")
+          .update({ customer_id: canonicalId }).eq("customer_id", orphanCustomerId).eq("merchant_id", link.merchant_id);
+      }
+    }
+
+    for (const table of ["customer_invites", "credit_logs", "payment_reminder_logs"]) {
+      await (admin.from(table) as any).update({ customer_id: canonicalId }).eq("customer_id", orphanCustomerId);
+    }
+
+    const { error: deleteErr } = await admin.from("customers").delete().eq("id", orphanCustomerId);
+    return !deleteErr;
+  }
+
+  // role === "merchant"
+  const { data: orphan } = await admin
+    .from("merchants")
+    .select("name, business_type, sms_balance")
+    .eq("id", orphanMerchantId)
+    .maybeSingle();
+  const { error: freeErr } = await admin.from("merchants").update({ phone: tmpPhone }).eq("id", orphanMerchantId);
+  if (freeErr) return false;
+
+  const { error: createErr } = await (admin.from("merchants") as any).upsert(
+    {
+      id: canonicalId,
+      phone,
+      name: name || orphan?.name || "Shop",
+      business_type: orphan?.business_type || "kirana",
+      sms_balance: orphan?.sms_balance ?? 10,
+    },
+    { onConflict: "id" }
+  );
+  if (createErr) return false;
+
+  // Dedupe merchant_customers (UNIQUE on merchant_id + customer_id)
+  const { data: mlinks } = await admin.from("merchant_customers").select("customer_id").eq("merchant_id", orphanMerchantId);
+  for (const link of mlinks || []) {
+    const { data: dup } = await admin.from("merchant_customers")
+      .select("id").eq("merchant_id", canonicalId).eq("customer_id", link.customer_id).maybeSingle();
+    if (dup) {
+      await admin.from("merchant_customers")
+        .delete().eq("merchant_id", orphanMerchantId).eq("customer_id", link.customer_id);
+    } else {
+      await admin.from("merchant_customers")
+        .update({ merchant_id: canonicalId }).eq("merchant_id", orphanMerchantId).eq("customer_id", link.customer_id);
+    }
+  }
+
+  for (const table of ["audit_logs", "credit_logs", "customer_invites", "merchant_products", "notifications", "payment_reminder_logs", "sessions", "sms_requests"]) {
+    await (admin.from(table) as any).update({ merchant_id: canonicalId }).eq("merchant_id", orphanMerchantId);
+  }
+  await (admin.from("customers") as any).update({ flagged_by_merchant_id: canonicalId }).eq("flagged_by_merchant_id", orphanMerchantId);
+
+  const { error: deleteErr } = await admin.from("merchants").delete().eq("id", orphanMerchantId);
+  return !deleteErr;
+}
+
+/**
  * Register a NEW user with the chosen role.
  * Creates the user row and sets the session cookie.
  * Called AFTER role selection (not within OTP verification).
@@ -326,27 +426,49 @@ export async function registerNewUser(
 
     // Duplicate phone guard — check both tables before creating
     let existingUserId: string | null = null;
+    let mergedOverlap = false;
     if (admin) {
       const { merchant: existingMerchant, customer: existingCustomer } = await findUserByPhone(normalizedPhone);
 
       if (existingMerchant && existingCustomer) {
-        // Both roles exist — cannot register again
-        return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
-      }
+        if (existingMerchant.id === existingCustomer.id) {
+          // True dual-role on the same identity — cannot register again
+          return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
+        }
 
-      if (role === "merchant" && existingMerchant) {
-        // Already a merchant — cannot register as merchant again
-        return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
-      }
+        // Overlap (different ids): fold both rows into one canonical identity,
+        // then continue so the new role lands on the unified id.
+        const canonicalId = role === "merchant" ? existingCustomer.id : existingMerchant.id;
+        const merged = await mergeOverlapIdentity({
+          admin,
+          role,
+          canonicalId,
+          orphanCustomerId: existingCustomer.id,
+          orphanMerchantId: existingMerchant.id,
+          phone: normalizedPhone,
+          name: name || (role === "merchant" ? "Shop" : "Customer"),
+        });
+        if (!merged) {
+          console.error("[registerNewUser] Merge overlap failed");
+          return { success: false, error: "Could not unify your account. Please contact support." };
+        }
+        mergedOverlap = true;
+        existingUserId = canonicalId;
+      } else {
+        if (role === "merchant" && existingMerchant) {
+          // Already a merchant — cannot register as merchant again
+          return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
+        }
 
-      if (role === "customer" && existingCustomer) {
-        // Already a customer — cannot register as customer again
-        return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
-      }
+        if (role === "customer" && existingCustomer) {
+          // Already a customer — cannot register as customer again
+          return { success: false, error: "यो फोन नम्बरबाट पहिले नै खाता बनिसकेको छ।" };
+        }
 
-      // Phone exists in the OTHER table — adding the missing role
-      if (existingMerchant) existingUserId = existingMerchant.id;
-      if (existingCustomer) existingUserId = existingCustomer.id;
+        // Phone exists in the OTHER table — adding the missing role
+        if (existingMerchant) existingUserId = existingMerchant.id;
+        if (existingCustomer) existingUserId = existingCustomer.id;
+      }
     }
 
     if (!admin) {
@@ -354,45 +476,48 @@ export async function registerNewUser(
       const localId = `local_${cleanPhone}`;
       const cookieStore = await cookies();
       const { token, maxAge } = await createSessionToken(localId);
-      cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
+      cookieStore.set(SESSION_COOKIE, token, await getSessionCookieOptions(maxAge));
       return { success: true, userId: localId, phone: cleanPhone, userType: role };
     }
 
     // Reuse existing userId when adding a second role; generate new one for fresh registrations
     const userId = existingUserId || crypto.randomUUID();
 
-    if (role === "merchant") {
-      const { error: upsertError } = await (admin.from("merchants") as any).upsert(
-        {
+    // When an overlap was merged, mergeOverlapIdentity already created the unified row.
+    if (!mergedOverlap) {
+      if (role === "merchant") {
+        const { error: upsertError } = await (admin.from("merchants") as any).upsert(
+          {
+            id: userId,
+            phone: normalizedPhone,
+            name: name || "Shop",
+            business_type: "kirana",
+            sms_balance: 10,
+          },
+          { onConflict: "id" }
+        );
+        if (upsertError) {
+          console.error("[registerNewUser] Failed to create merchant:", upsertError);
+          return { success: false, error: "Could not create account. Please try again." };
+        }
+      } else {
+        const { error: insertError } = await (admin.from("customers") as any).insert({
           id: userId,
           phone: normalizedPhone,
-          name: name || "Shop",
-          business_type: "kirana",
-          sms_balance: 10,
-        },
-        { onConflict: "id" }
-      );
-      if (upsertError) {
-        console.error("[registerNewUser] Failed to create merchant:", upsertError);
-        return { success: false, error: "Could not create account. Please try again." };
-      }
-    } else {
-      const { error: insertError } = await (admin.from("customers") as any).insert({
-        id: userId,
-        phone: normalizedPhone,
-        name: name || "Customer",
-        registration_status: "registered",
-      });
-      if (insertError) {
-        console.error("[registerNewUser] Failed to create customer:", insertError);
-        return { success: false, error: "Could not create account. Please try again." };
+          name: name || "Customer",
+          registration_status: "registered",
+        });
+        if (insertError) {
+          console.error("[registerNewUser] Failed to create customer:", insertError);
+          return { success: false, error: "Could not create account. Please try again." };
+        }
       }
     }
 
     // Set session cookie
     const cookieStore = await cookies();
     const { token, maxAge } = await createSessionToken(userId);
-    cookieStore.set(SESSION_COOKIE, token, { ...SESSION_COOKIE_OPTIONS, maxAge });
+    cookieStore.set(SESSION_COOKIE, token, await getSessionCookieOptions(maxAge));
     console.log("[registerNewUser] Session cookie set for", role, "userId:", userId);
 
     // Verify cookie was written

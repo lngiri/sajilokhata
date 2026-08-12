@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { usePathname } from "next/navigation";
-import { QRDisplay } from "@/components/QRCode";
+import { MerchantQRSwiper } from "@/components/QRCode";
 import { getCurrentMerchantId } from "@/lib/auth";
-import { getMerchantProfile } from "@/app/actions/merchant";
+import { getMerchantProfile, getMerchantPaymentMethods, getWalletQR } from "@/app/actions/merchant";
 import BottomNavBar, { type NavItem } from "@/components/BottomNavBar";
 import { HomeIcon, CustomersIcon, HistoryIcon, SettingsIcon, QRIcon } from "@/components/NavIcons";
 
@@ -29,6 +29,15 @@ export default function BottomNav() {
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
   const [qrError, setQrError] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<
+    Array<{
+      method_type: string;
+      label: string | null;
+      qr_url: string | null;
+      is_active: boolean;
+    }>
+  >([]);
+  const [walletQR, setWalletQR] = useState<string | null>(null);
 
   const loadQR = useCallback(async () => {
     setQrLoading(true);
@@ -37,19 +46,29 @@ export default function BottomNav() {
     try {
       const id = await getCurrentMerchantId();
       if (id) {
+        let profile: MerchantProfile | null = null;
         try {
-          const profile = await getMerchantProfile(id, "id, name, business_type, business_name");
-          if (profile) {
-            setMerchantProfile(profile);
-            setQrLoading(false);
-            return;
-          }
+          profile = await getMerchantProfile(id, "id, name, business_type, business_name");
         } catch {
-          // fall through to localStorage fallback below
+          profile = null;
+        }
+        setMerchantProfile(
+          profile || { id, name: "My Shop", business_type: "general", business_name: null }
+        );
+
+        // Load payment methods + wallet QR for the carousel
+        try {
+          setPaymentMethods(await getMerchantPaymentMethods(id));
+        } catch {
+          setPaymentMethods([]);
+        }
+        try {
+          const qr = await getWalletQR(id);
+          setWalletQR(qr.success ? qr.base64 || null : null);
+        } catch {
+          setWalletQR(null);
         }
 
-        // Fallback: minimal profile from localStorage so the QR still renders
-        setMerchantProfile({ id, name: "My Shop", business_type: "general", business_name: null });
         setQrLoading(false);
         return;
       }
@@ -139,15 +158,17 @@ export default function BottomNav() {
                   </p>
                 </div>
 
-                <QRDisplay
+                <MerchantQRSwiper
                   merchantId={merchantProfile.id}
                   merchantName={merchantProfile.business_name?.trim() || merchantProfile.name || "Shop"}
                   businessType={merchantProfile.business_type}
+                  methods={paymentMethods}
+                  walletQR={walletQR}
                 />
 
                 <div className="bg-[var(--color-primary)]/10 rounded-xl p-4 mt-4">
                   <p className="text-sm text-[var(--color-text)] text-center font-medium leading-relaxed">
-                    Ask your customer to scan this QR code
+                    Ask your customer to scan a QR code
                   </p>
                 </div>
               </>

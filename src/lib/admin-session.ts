@@ -61,4 +61,21 @@ const ADMIN_SESSION_COOKIE_OPTIONS = {
   ...(COOKIE_DOMAIN ? { domain: COOKIE_DOMAIN } : {}),
 };
 
+/**
+ * Admin session cookie options that adapt to the current host so the
+ * admin panel works on production, preview, and localhost alike.
+ */
+export async function getAdminSessionCookieOptions(maxAge: number) {
+  const { resolveCookieDomain } = await import("./session");
+  const domain = await resolveCookieDomain();
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+    ...(domain ? { domain } : {}),
+  };
+}
+
 export { ADMIN_SESSION_COOKIE, ADMIN_SESSION_DURATION, ADMIN_SESSION_COOKIE_OPTIONS };

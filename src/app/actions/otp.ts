@@ -129,9 +129,33 @@ export async function verifyRegistrationOtp(
     console.log("[OTP] Existing user lookup roles:", existing.merchant ? "merchant" : "", existing.customer ? "customer" : "");
 
     if (existing.merchant && existing.customer) {
-      const hasPin = !!(existing.merchant.pin_hash || existing.customer.pin_hash);
-      const name = existing.merchant.name || existing.customer.name || undefined;
-      return { success: true, exists: true, phone: cleanPhone, userType: "both", userId: existing.merchant.id, hasPin, name };
+      // True dual-role only when the SAME row id backs both roles.
+      // A mismatch means an "overlap" (e.g. an invited customer row + a separate
+      // merchant row). Returning "both" for those would block the add-role flow,
+      // so treat the account with a PIN as the user's real ("self") role instead.
+      const sameId = existing.merchant.id === existing.customer.id;
+      if (sameId) {
+        const hasPin = !!(existing.merchant.pin_hash || existing.customer.pin_hash);
+        const name = existing.merchant.name || existing.customer.name || undefined;
+        return { success: true, exists: true, phone: cleanPhone, userType: "both", userId: existing.merchant.id, hasPin, name };
+      }
+
+      const selfType = existing.merchant.pin_hash
+        ? "merchant"
+        : existing.customer.pin_hash
+          ? "customer"
+          : "merchant";
+      const self = selfType === "merchant" ? existing.merchant : existing.customer;
+      console.log("[OTP] Overlap detected (different ids) — treating as", selfType);
+      return {
+        success: true,
+        exists: true,
+        userId: self.id,
+        phone: cleanPhone,
+        userType: selfType,
+        hasPin: !!self.pin_hash,
+        name: self.name || undefined,
+      };
     }
 
     if (existing.merchant) {
