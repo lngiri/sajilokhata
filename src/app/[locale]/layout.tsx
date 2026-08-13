@@ -1,5 +1,5 @@
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { isValidLocale } from "@/i18n";
 
@@ -15,9 +15,11 @@ export default async function LocaleLayout({ children, params }: Props) {
     notFound();
   }
 
+  setRequestLocale(locale);
+
   let messages;
   try {
-    messages = await getMessages({ locale });
+    messages = await getMessages();
   } catch {
     notFound();
   }
