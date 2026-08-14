@@ -8,6 +8,7 @@ const LOCALE_COOKIE = "qr_hisab_locale";
 // Only include routes that actually have a page.tsx under [locale]/
 const LOCALIZED_ROUTES = [
   "/",
+  "/login",
   "/customer/dashboard",
   "/customer/history",
   "/customer/settings",

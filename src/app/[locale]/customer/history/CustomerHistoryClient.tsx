@@ -254,9 +254,9 @@ export default function CustomerHistoryClient({ locale, messages, merchantId: me
               const self = selfChangedRef.current;
               if (self && self.id === payload.new?.id && Date.now() - self.at < SELF_ACTION_WINDOW_MS) return;
               if (newStatus === "approved") playSuccessSound();
-              const verb = newStatus === "approved" ? "Approved!" : newStatus === "rejected" ? "Rejected" : newStatus;
+              const verb = newStatus === "approved" ? `${t("history.approved")}!` : newStatus === "rejected" ? t("history.rejected") : newStatus;
               addToast(
-                `${verb} Rs. ${formatNumber(payload.new?.amount, localeFmt)} request`,
+                `${verb} ${t("currency.prefix")}${formatNumber(payload.new?.amount, localeFmt)} request`,
                 newStatus === "approved" ? "success" : "warning"
               );
               loadLogsRef.current?.({ silent: true });
@@ -274,7 +274,7 @@ export default function CustomerHistoryClient({ locale, messages, merchantId: me
           (payload: any) => {
             if (!mountedRef.current) return;
             addToast(
-              `New ${payload.new?.type || "transaction"} of Rs. ${formatNumber(payload.new?.amount, localeFmt)} added`,
+              `${t("history.pending")} ${payload.new?.type || "transaction"} ${t("currency.prefix")}${formatNumber(payload.new?.amount, localeFmt)} added`,
               "info"
             );
             loadLogsRef.current?.({ silent: true });

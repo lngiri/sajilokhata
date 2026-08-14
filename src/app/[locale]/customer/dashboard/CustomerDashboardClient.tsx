@@ -33,7 +33,7 @@ import {
 } from "@/app/actions/notifications";
 import CustomerOnboardingModal from "@/components/CustomerOnboardingModal";
 import OnboardingTour from "@/components/OnboardingTour";
-import { CUSTOMER_TOUR_STEPS } from "@/components/tourSteps";
+import { getCustomerTourSteps } from "@/components/tourSteps";
 import { fetchWithCache } from "@/lib/offline/cache";
 
 interface Props {
@@ -344,7 +344,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                     ? t("dashboard.rejected")
                     : newStatus;
               addToast(
-                `${verb} Rs. ${formatNumber(payload.new?.amount, locale as "en" | "ne")} ${t("dashboard.request")}`,
+                `${verb} ${t("currency.prefix")}${formatNumber(payload.new?.amount, locale as "en" | "ne")} ${t("dashboard.request")}`,
                 newStatus === "approved" ? "success" : "warning"
               );
               setNotifications((prev) =>
@@ -366,7 +366,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
             if (!mountedRef.current) return;
             if (payload.new?.initiated_by === "customer") return;
             addToast(
-              `📥 ${t("toast.newEntry")}: Rs. ${formatNumber(payload.new?.amount, locale as "en" | "ne")} — ${payload.new?.description || "Shop"}`,
+              `📥 ${t("toast.newEntry")}: ${t("currency.prefix")}${formatNumber(payload.new?.amount, locale as "en" | "ne")} — ${payload.new?.description || "Shop"}`,
               "info"
             );
             loadStatsRef.current();
@@ -617,7 +617,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
     )}
     {showTour && (
       <OnboardingTour
-        steps={CUSTOMER_TOUR_STEPS}
+        steps={getCustomerTourSteps(t as any)}
         open={showTour}
         onComplete={handleTourFinish}
         onSkip={handleTourFinish}
