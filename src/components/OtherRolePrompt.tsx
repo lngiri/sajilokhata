@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations, useLocale } from "next-intl";
 
 type Role = "merchant" | "customer";
 
@@ -13,6 +14,9 @@ interface Props {
  * if they only have one role. Shows once per session.
  */
 export default function OtherRolePrompt({ currentRole }: Props) {
+  const t = useTranslations("otherRolePrompt");
+  const tRole = useTranslations("roleSwitcher");
+  const locale = useLocale();
   const [show, setShow] = useState(false);
   const [dismissed, setDismissed] = useState(false);
 
@@ -51,13 +55,14 @@ export default function OtherRolePrompt({ currentRole }: Props) {
   const handleRegister = () => {
     sessionStorage.setItem(`other_role_prompt_dismissed_${currentRole}`, "1");
     setDismissed(true);
-    window.location.replace(`/login?addRole=${otherRole}`);
+    window.location.replace(`/${locale}/login?addRole=${otherRole}`);
   };
 
   if (!show) return null;
 
   const otherRole = currentRole === "merchant" ? "customer" : "merchant";
-  const otherLabel = currentRole === "merchant" ? "Customer" : "Shop Owner";
+  const otherLabel = otherRole === "merchant" ? tRole("merchant") : tRole("customer");
+  const currentLabel = currentRole === "merchant" ? tRole("merchant") : tRole("customer");
 
   return (
     <>
@@ -80,10 +85,10 @@ export default function OtherRolePrompt({ currentRole }: Props) {
             </div>
             <div>
               <h3 className="font-bold text-[var(--color-text)] text-sm">
-                Also use as {otherLabel}?
+                {t("alsoUseAs", { role: otherLabel })}
               </h3>
               <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                You are currently registered only as a {currentRole}. Register as {otherLabel} too to switch between both views.
+                {t("description", { currentRole: currentLabel, otherRole: otherLabel })}
               </p>
             </div>
           </div>
@@ -93,13 +98,13 @@ export default function OtherRolePrompt({ currentRole }: Props) {
               onClick={handleDismiss}
               className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
             >
-              Not now
+              {t("notNow")}
             </button>
             <button
               onClick={handleRegister}
               className="flex-1 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-semibold active:scale-[0.98] transition-transform"
             >
-              Register as {otherLabel}
+              {t("registerAs", { role: otherLabel })}
             </button>
           </div>
         </div>

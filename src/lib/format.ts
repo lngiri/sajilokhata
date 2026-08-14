@@ -4,6 +4,10 @@ export function toDevanagari(num: string | number): string {
   return String(num).replace(/[0-9]/g, (d) => DEVANAGARI_DIGITS[Number(d)]);
 }
 
+export function fromDevanagari(str: string): string {
+  return str.replace(/[०-९]/g, (d) => String(DEVANAGARI_DIGITS.indexOf(d)));
+}
+
 export function formatNumber(value: unknown, locale: "en" | "ne" = "en"): string {
   const num = Number(value ?? 0);
   if (locale === "ne") {

@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { sendRegistrationOtp, verifyRegistrationOtp } from "@/app/actions/otp";
 import { checkUserExists, verifyPin, setPin as setMerchantPin, loginWithPin, forgotPinSendOtp, forgotPinVerifyOtp, registerNewUser } from "@/app/actions/pin";
 import { setCustomerSession } from "@/lib/customer-session";
+import { fromDevanagari } from "@/lib/format";
 import LogoWithAbout from "@/components/LogoWithAbout";
 
 type Step =
@@ -64,8 +65,9 @@ export default function LoginClient({ locale }: Props) {
     refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
     autoSubmit?: () => void,
   ) => {
-    if (!/^\d*$/.test(value)) return;
-    const digit = value.slice(-1);
+    const normalized = fromDevanagari(value);
+    if (!/^\d*$/.test(normalized)) return;
+    const digit = normalized.slice(-1);
     const next = [...pinArr];
     next[idx] = digit;
     setter(next);
@@ -217,7 +219,7 @@ export default function LoginClient({ locale }: Props) {
 
   // ── Phone Submit ──
   const handlePhoneSubmit = async () => {
-    const digitsOnly = phone.replace(/\D/g, "");
+    const digitsOnly = fromDevanagari(phone).replace(/\D/g, "");
     if (digitsOnly.length < 10) return;
     setLoading(true);
     setError("");
@@ -1146,7 +1148,7 @@ export default function LoginClient({ locale }: Props) {
                 type="tel"
                 placeholder="9841234567"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) => setPhone(fromDevanagari(e.target.value).replace(/\D/g, "").slice(0, 10))}
                 className="flex-1 px-4 py-3 bg-[var(--color-surface)] rounded-r-xl text-lg font-mono border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
                 maxLength={10}
               />
@@ -1206,7 +1208,7 @@ export default function LoginClient({ locale }: Props) {
               placeholder={t("otpPlaceholder")}
               value={otp}
               onChange={(e) => {
-                const filtered = e.target.value.replace(/\D/g, "").slice(0, 6);
+                const filtered = fromDevanagari(e.target.value).replace(/\D/g, "").slice(0, 6);
                 setOtp(filtered);
                 requestAnimationFrame(() => {
                   if (otpRef.current) {
@@ -1253,7 +1255,7 @@ export default function LoginClient({ locale }: Props) {
                 type="tel"
                 placeholder="9841234567"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                onChange={(e) => setPhone(fromDevanagari(e.target.value).replace(/\D/g, "").slice(0, 10))}
                 className="flex-1 px-4 py-3 bg-[var(--color-surface)] rounded-r-xl text-lg font-mono border border-gray-100 dark:border-gray-700 focus:ring-2 focus:ring-[var(--color-primary)]/20 outline-none"
                 maxLength={10}
               />
@@ -1299,7 +1301,7 @@ export default function LoginClient({ locale }: Props) {
               placeholder={t("otpPlaceholder")}
               value={otp}
               onChange={(e) => {
-                const filtered = e.target.value.replace(/\D/g, "").slice(0, 6);
+                const filtered = fromDevanagari(e.target.value).replace(/\D/g, "").slice(0, 6);
                 setOtp(filtered);
                 requestAnimationFrame(() => {
                   if (otpRef.current) {

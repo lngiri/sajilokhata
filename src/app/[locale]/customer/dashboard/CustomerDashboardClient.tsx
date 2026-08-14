@@ -17,7 +17,7 @@ import LogoWithAbout from "@/components/LogoWithAbout";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { createClient } from "@/lib/supabase/client";
 import { normalizePhone } from "@/lib/phone";
-import { formatNumber } from "@/lib/format";
+import { formatNumber, fromDevanagari } from "@/lib/format";
 import { isOnline, savePendingLog } from "@/lib/offline/db";
 import {
   findOrCreateCustomer,
@@ -1060,12 +1060,14 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                 <div>
                   <label className="text-sm font-medium text-[var(--color-text)]">{t("scan.amount")}</label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     min="1"
                     step="1"
                     placeholder="0"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => setAmount(fromDevanagari(e.target.value).replace(/[^\d]/g, ""))}
                     className="w-full mt-1 px-4 py-4 bg-[var(--color-surface)] rounded-2xl text-2xl sm:text-3xl font-bold text-center border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
                     autoFocus
                   />

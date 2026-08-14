@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { formatNumber } from "@/lib/format";
+import { useTranslations, useLocale } from "next-intl";
+import { formatNumber, formatCurrency } from "@/lib/format";
 
 interface PendingEntry {
   id: string;
@@ -36,59 +37,71 @@ export default function PendingApprovalModal(props: Props) {
 
   if (props.mode === "customer") {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in p-4">
-        <div className="w-full max-w-sm bg-white dark:bg-[var(--color-surface)] rounded-3xl p-6 animate-slide-up shadow-2xl text-center">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-            <svg className="w-10 h-10 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-
-          <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">Pending Approval</h2>
-          <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
-            Your credit request of{" "}
-            <span className="font-semibold text-[var(--color-text)]">
-              Rs. {formatNumber(props.amount)}
-            </span>
-            {props.shopName ? (
-              <> has been sent to <span className="font-semibold text-[var(--color-text)]">{props.shopName}</span>.</>
-            ) : (
-              <> has been sent.</>
-            )}
-            <br />
-            The shopkeeper will review and approve it shortly.
-          </p>
-
-          <div className="mt-6 space-y-2">
-            {props.onViewHistory && (
-              <button
-                onClick={props.onViewHistory}
-                className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-[var(--color-text)] rounded-xl font-medium active:scale-[0.98] transition-transform"
-              >
-                Track in History
-              </button>
-            )}
-            <button
-              onClick={props.onClose}
-              className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform"
-            >
-              OK
-            </button>
-          </div>
-        </div>
-      </div>
+      <PendingApprovalCustomer {...props} />
     );
   }
 
   // Merchant mode
-  const merchantProps = props as MerchantApprovalModalProps;
+  return (
+    <PendingApprovalMerchant {...props as MerchantApprovalModalProps} />
+  );
+}
+
+function PendingApprovalCustomer(props: PendingApprovalModalProps) {
+  const t = useTranslations("pendingApproval");
+  const locale = useLocale() as "en" | "ne";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in p-4">
+      <div className="w-full max-w-sm bg-white dark:bg-[var(--color-surface)] rounded-3xl p-6 animate-slide-up shadow-2xl text-center">
+        <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+          <svg className="w-10 h-10 text-amber-500 dark:text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+
+        <h2 className="text-xl font-bold text-[var(--color-text)] mb-2">{t("title")}</h2>
+        <p className="text-sm text-[var(--color-text-muted)] leading-relaxed">
+          {props.shopName ? (
+            t("requestMessage", { amount: formatCurrency(props.amount, locale), shop: props.shopName })
+          ) : (
+            t("noShopMessage")
+          )}
+          <br />
+          {t("approvalWait")}
+        </p>
+
+        <div className="mt-6 space-y-2">
+          {props.onViewHistory && (
+            <button
+              onClick={props.onViewHistory}
+              className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-[var(--color-text)] rounded-xl font-medium active:scale-[0.98] transition-transform"
+            >
+              {t("trackHistory")}
+            </button>
+          )}
+          <button
+            onClick={props.onClose}
+            className="w-full py-3 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl font-semibold active:scale-[0.98] transition-transform"
+          >
+            {t("done")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PendingApprovalMerchant(props: MerchantApprovalModalProps) {
+  const t = useTranslations("pendingApproval");
+  const locale = useLocale() as "en" | "ne";
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [entryList, setEntryList] = useState(merchantProps.entries);
+  const [entryList, setEntryList] = useState(props.entries);
 
   const handleApprove = async (id: string) => {
     setSavingId(id);
     try {
-      await merchantProps.onApprove(id);
+      await props.onApprove(id);
       setEntryList((prev) => prev.filter((e) => e.id !== id));
     } finally {
       setSavingId(null);
@@ -98,7 +111,7 @@ export default function PendingApprovalModal(props: Props) {
   const handleReject = async (id: string) => {
     setSavingId(id);
     try {
-      await merchantProps.onReject(id);
+      await props.onReject(id);
       setEntryList((prev) => prev.filter((e) => e.id !== id));
     } finally {
       setSavingId(null);
@@ -116,10 +129,10 @@ export default function PendingApprovalModal(props: Props) {
               </svg>
             </div>
             <h2 className="font-bold text-lg text-[var(--color-text)]">
-              Pending Approval
+              {t("title")}
             </h2>
           </div>
-          <button onClick={merchantProps.onClose} className="p-1">
+          <button onClick={props.onClose} className="p-1">
             <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -129,7 +142,7 @@ export default function PendingApprovalModal(props: Props) {
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-3">
           {entryList.length === 0 ? (
             <div className="text-center py-8 text-sm text-[var(--color-text-muted)]">
-              All entries have been reviewed.
+              {t("allReviewed")}
             </div>
           ) : (
             entryList.map((entry) => (
@@ -142,7 +155,7 @@ export default function PendingApprovalModal(props: Props) {
                     {entry.customerName}
                   </p>
                   <p className="font-bold text-sm text-[var(--color-danger)]">
-                    Rs. {formatNumber(entry.amount)}
+                    {formatCurrency(entry.amount, locale)}
                   </p>
                 </div>
                 {entry.description && (
@@ -156,7 +169,7 @@ export default function PendingApprovalModal(props: Props) {
                     disabled={savingId === entry.id}
                     className="flex-1 py-2 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium active:scale-[0.98] transition-transform disabled:opacity-50"
                   >
-                    Reject
+                    {t("reject")}
                   </button>
                   <button
                     onClick={() => handleApprove(entry.id)}
@@ -166,7 +179,7 @@ export default function PendingApprovalModal(props: Props) {
                     {savingId === entry.id ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      "Approve"
+                      t("approve")
                     )}
                   </button>
                 </div>
@@ -177,10 +190,10 @@ export default function PendingApprovalModal(props: Props) {
 
         <div className="px-6 py-4 border-t border-gray-50 dark:border-gray-700">
           <button
-            onClick={merchantProps.onClose}
+            onClick={props.onClose}
             className="w-full py-3 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl font-medium active:scale-[0.98] transition-transform"
           >
-            Done
+            {t("done")}
           </button>
         </div>
       </div>

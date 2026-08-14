@@ -258,11 +258,6 @@
     "history": "इतिहास",
     "settings": "सेटिङ"
   },
-  "productPicker": {
-    "title": "सामानहरू",
-    "noProducts": "कुनै सामान उपलब्ध छैन",
-    "selectProduct": "सामान छान्नुहोस्"
-  },
   "errors": {
     "failedToLoad": "डाटा लोड गर्न असफल",
     "failedToSubmit": "लेनदेन पेश गर्न असफल",
@@ -363,5 +358,39 @@
     "format": "ne-NP",
     "short": "yyyy/MM/dd",
     "withTime": "yyyy/MM/dd, h:mm a"
+  },
+  "productPicker": {
+    "title": "उत्पादनहरू (वैकल्पिक)",
+    "noProducts": "कुनै उत्पादन उपलब्ध छैन",
+    "selectProduct": "उत्पादन छान्नुहोस्",
+    "custom": "स्वनिर्धारित"
+  },
+  "pendingApproval": {
+    "title": "स्वीकृति बाँकी",
+    "requestMessage": "तपाईंको उधार अनुरोध {{amount}} {{shop}} मा पठाइएको छ।",
+    "noShopMessage": "तपाईंको उधार अनुरोध पठाइएको छ।",
+    "approvalWait": "पसलकर्मीले शीघ्र समीक्षा गरी स्वीकृत गर्नेछन्।",
+    "trackHistory": "इतिहासमा हेर्नुहोस्",
+    "allReviewed": "सबै प्रविष्टिहरू समीक्षा भइसकेको छ।",
+    "reject": "अस्वीकार गर्नुहोस्",
+    "approve": "स्वीकार गर्नुहोस्",
+    "done": "सकियो"
+  },
+  "roleSwitcher": {
+    "merchant": "व्यापारी",
+    "customer": "ग्राहक",
+    "switchTo": "{{role}} मा स्विच गर्नुहोस्",
+    "switch": "स्विच"
+  },
+  "otherRolePrompt": {
+    "alsoUseAs": "{{role}} पनि प्रयोग गर्न चाहनुहुन्छ?",
+    "description": "तपाईं अहिले {{currentRole}} मात्र दर्ता भएका हुनुहुन्छ। {{otherRole}} पनि दर्ता गर्नुहोस् ताकि दुवै दृश्य बीच स्विच गर्न सक्नुहुन्छ।",
+    "notNow": "अहिले होइन",
+    "registerAs": "{{role}} मा दर्ता गर्नुहोस्"
+  },
+  "legal": {
+    "privacyTitle": "गोपनीयता नीति",
+    "termsTitle": "सेवा शर्तहरू",
+    "refundTitle": "फिर्ता नीति"
   }
 }

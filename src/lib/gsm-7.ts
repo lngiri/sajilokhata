@@ -60,7 +60,7 @@ export function buildSmsText(
   domain?: string
 ): string {
   const host = resolveDomain(domain);
-  return `Hello ${customerName}, ${merchantName} added opening balance Rs.${amount}. Verify: ${host}/v/${shortCode}`;
+  return `${customerName} नमस्ते, ${merchantName} ले रु.${amount} उद्घाटन शेष रकम थपेको छ। प्रमाणित गर्नुहोस्: ${host}/v/${shortCode}`;
 }
 
 export function computeTotalSmsParts(

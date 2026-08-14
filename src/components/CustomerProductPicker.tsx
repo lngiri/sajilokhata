@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { getPublicMerchantProducts } from "@/app/actions/products";
 import type { PublicProduct } from "@/app/actions/products";
+import { formatCurrency } from "@/lib/format";
 
 interface CustomerProductPickerProps {
   merchantId: string;
@@ -21,6 +23,8 @@ export default function CustomerProductPicker({
   selectedProductId,
   onSelect,
 }: CustomerProductPickerProps) {
+  const t = useTranslations("productPicker");
+  const locale = useLocale() as "en" | "ne";
   const [products, setProducts] = useState<PublicProduct[]>([]);
 
   useEffect(() => {
@@ -53,7 +57,7 @@ export default function CustomerProductPicker({
   return (
     <div>
       <label className="text-sm font-medium text-[var(--color-text)]">
-        Products (optional)
+        {t("title")}
       </label>
       <div className="mt-1.5 flex gap-2 flex-wrap">
         <button
@@ -61,7 +65,7 @@ export default function CustomerProductPicker({
           onClick={() => onSelect(null)}
           className={chipClass(selectedProductId === null)}
         >
-          Custom
+          {t("custom")}
         </button>
         {products.map((p) => (
           <button
@@ -71,7 +75,7 @@ export default function CustomerProductPicker({
             className={chipClass(selectedProductId === p.id)}
           >
             {p.name}
-            <span className="ml-1 opacity-70">Rs {p.default_rate}</span>
+            <span className="ml-1 opacity-70">{formatCurrency(p.default_rate, locale)}</span>
           </button>
         ))}
       </div>

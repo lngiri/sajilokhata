@@ -52,7 +52,7 @@ export async function sendRegistrationOtp(
     });
 
     // Send SMS
-    const message = `Your QR Hisab OTP is ${code}. Use this to complete your registration on QR Hisab.`;
+    const message = `QR Hisab को OTP: ${code}। QR Hisab मा तपाईंको पंजीकरण पूरा गर्न यो प्रयोग गर्नुहोस्।`;
     console.log("[OTP] SMS dispatched");
     const smsResult = await sendTransactionSMS(cleanPhone, message);
     console.log("[OTP] SMS result status:", smsResult?.success ? "sent" : "failed");

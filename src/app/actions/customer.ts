@@ -194,9 +194,9 @@ export async function sendOnboardingSMS(
   const shopName = businessName || "A shop";
 
   const message = [
-    `${shopName} invited you to join Digital Khata.`,
+    `${shopName} ले तपाईंलाई Digital Khata मा सामेल हुन निम्तो गरेको छ।`,
     ``,
-    `Open QRhisab, enter your phone number, and follow the steps to complete your registration.`,
+    `QRhisab खोल्नुहोस्, तपाईंको फोन नम्बर प्रविश्ट गर्नुहोस्, र पंजीकरण पूरा गर्न चरणहरू पालना गर्नुहोस्।`,
   ].join("\n");
 
   const result = await sendTransactionSMS(cleanPhone, message);

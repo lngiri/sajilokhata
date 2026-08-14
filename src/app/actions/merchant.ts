@@ -1263,8 +1263,8 @@ export async function sendPaymentReminder(
         .not("type", "in", "('cash','cash_in','expense')"),
     ]);
 
-    const shopName = merchantResult.data?.name || "Shop";
-    const customerName = customerResult.data?.name || "Customer";
+    const shopName = merchantResult.data?.name || "दुकान";
+    const customerName = customerResult.data?.name || "ग्राहक";
     const customerPhone = customerResult.data?.phone || "";
     const balance = (logsResult.data || []).reduce((sum: number, l: any) => {
       return sum + (l.type === "debit" ? l.amount : -l.amount);
@@ -1280,7 +1280,7 @@ export async function sendPaymentReminder(
         }
       } else {
         const firstName = shopName.split(" ")[0];
-        message = `Dear ${customerName}, pay Rs. ${formatNumber(balance)} to ${firstName}.`;
+        message = `${customerName} लाई, ${firstName} मा रु ${formatNumber(balance, "ne")} तिर्नुहोस्।`;
         if (message.length > 150) {
           message = message.substring(0, 147) + "...";
         }
@@ -1443,9 +1443,9 @@ export async function checkAndSendAutoReminders(
       .eq("id", merchantId)
       .single();
 
-    const shopName = merchant?.name || "Shop";
+    const shopName = merchant?.name || "दुकान";
     const firstName = shopName.split(" ")[0];
-    const template = settings.reminder_message_template || "Dear {customer}, pay Rs. {balance} to {shop}.";
+    const template = settings.reminder_message_template || `{customer} लाई, {shop} मा रु {balance} तिर्नुहोस्।`;
     const { sendTransactionSMS } = await import("./sms");
 
     let sent = 0;
@@ -1456,7 +1456,7 @@ export async function checkAndSendAutoReminders(
 
       let msg = template
         .replace(/\{customer\}/g, customerName)
-        .replace(/\{balance\}/g, formatNumber(row.current_balance))
+        .replace(/\{balance\}/g, formatNumber(row.current_balance, "ne"))
         .replace(/\{shop\}/g, firstName);
 
       if (msg.length > 150) {

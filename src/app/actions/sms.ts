@@ -148,17 +148,17 @@ export async function sendTransactionNotification(params: {
     shopName = merchant?.business_name || merchant?.name || "Shop";
   }
 
-  const formattedAmount = `Rs. ${formatNumber(amount)}`;
+  const formattedAmount = `\u0930\u0941 ${formatNumber(amount, "ne")}`;
 
   let message: string;
   if (type === "cash") {
-    message = `Thank you for shopping at ${shopName}! Cash payment received: ${formattedAmount}.`;
+    message = `${shopName} मा खरिद गर्दा धन्यवाद! नगद भुक्तानी प्राप्त: ${formattedAmount}।`;
   } else if (type === "debit") {
-    const greeting = customerName ? `Dear ${customerName}, ` : "";
-    message = `${greeting}${formattedAmount} has been added to your ledger at ${shopName}.`;
+    const greeting = customerName ? `${customerName}, ` : "";
+    message = `${greeting}${formattedAmount} ${shopName} मा तपाईंको खातामा थपियो।`;
   } else {
-    const greeting = customerName ? `Dear ${customerName}, ` : "";
-    message = `${greeting}${formattedAmount} has been credited to your account at ${shopName}.`;
+    const greeting = customerName ? `${customerName}, ` : "";
+    message = `${greeting}${formattedAmount} ${shopName} मा तपाईंको खातामा जम्मा भयो।`;
   }
 
   return sendTransactionSMS(to, message, merchantId);

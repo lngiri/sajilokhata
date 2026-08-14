@@ -258,11 +258,6 @@
     "history": "History",
     "settings": "Settings"
   },
-  "productPicker": {
-    "title": "Products",
-    "noProducts": "No products available",
-    "selectProduct": "Select a product"
-  },
   "errors": {
     "failedToLoad": "Failed to load data",
     "failedToSubmit": "Failed to submit entry",
@@ -363,5 +358,39 @@
     "format": "en-US",
     "short": "MMM d, yyyy",
     "withTime": "MMM d, yyyy, h:mm a"
+  },
+  "productPicker": {
+    "title": "Products (optional)",
+    "noProducts": "No products available",
+    "selectProduct": "Select a product",
+    "custom": "Custom"
+  },
+  "pendingApproval": {
+    "title": "Pending Approval",
+    "requestMessage": "Your credit request of {{amount}} has been sent to {{shop}}.",
+    "noShopMessage": "Your credit request has been sent.",
+    "approvalWait": "The shopkeeper will review and approve it shortly.",
+    "trackHistory": "Track in History",
+    "allReviewed": "All entries have been reviewed.",
+    "reject": "Reject",
+    "approve": "Approve",
+    "done": "Done"
+  },
+  "roleSwitcher": {
+    "merchant": "Merchant",
+    "customer": "Customer",
+    "switchTo": "Switch to {{role}} view",
+    "switch": "Switch"
+  },
+  "otherRolePrompt": {
+    "alsoUseAs": "Also use as {{role}}?",
+    "description": "You are currently registered only as a {{currentRole}}. Register as {{otherRole}} too to switch between both views.",
+    "notNow": "Not now",
+    "registerAs": "Register as {{role}}"
+  },
+  "legal": {
+    "privacyTitle": "Privacy Policy",
+    "termsTitle": "Terms of Service",
+    "refundTitle": "Refund Policy"
   }
 }

@@ -9,6 +9,9 @@ const LOCALE_COOKIE = "qr_hisab_locale";
 const LOCALIZED_ROUTES = [
   "/",
   "/login",
+  "/privacy",
+  "/terms",
+  "/refund",
   "/customer/dashboard",
   "/customer/history",
   "/customer/settings",

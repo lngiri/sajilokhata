@@ -24,9 +24,9 @@ function buildDefaultMessage(
   balance: number,
   shopName: string
 ): string {
-  const name = customerName || "Customer";
+  const name = customerName || "ग्राहक";
   const firstName = shopName.split(" ")[0];
-  return `Dear ${name}, pay Rs. ${formatNumber(balance)} to ${firstName}.`;
+  return `${name} लाई, ${firstName} मा रु ${formatNumber(balance, "ne")} तिर्नुहोस्।`;
 }
 
 export default function SmsReminderModal({
