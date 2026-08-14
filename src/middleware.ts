@@ -9,6 +9,8 @@ const LOCALE_COOKIE = "qr_hisab_locale";
 const LOCALIZED_ROUTES = [
   "/",
   "/customer/dashboard",
+  "/customer/history",
+  "/customer/settings",
 ];
 
 function shouldLocalize(pathname: string): boolean {

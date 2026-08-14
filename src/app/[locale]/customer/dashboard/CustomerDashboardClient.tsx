@@ -344,7 +344,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                     ? t("dashboard.rejected")
                     : newStatus;
               addToast(
-                `${verb} Rs. ${formatNumber(payload.new?.amount)} ${t("dashboard.request")}`,
+                `${verb} Rs. ${formatNumber(payload.new?.amount, locale as "en" | "ne")} ${t("dashboard.request")}`,
                 newStatus === "approved" ? "success" : "warning"
               );
               setNotifications((prev) =>
@@ -366,7 +366,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
             if (!mountedRef.current) return;
             if (payload.new?.initiated_by === "customer") return;
             addToast(
-              `📥 ${t("toast.newEntry")}: Rs. ${formatNumber(payload.new?.amount)} — ${payload.new?.description || "Shop"}`,
+              `📥 ${t("toast.newEntry")}: Rs. ${formatNumber(payload.new?.amount, locale as "en" | "ne")} — ${payload.new?.description || "Shop"}`,
               "info"
             );
             loadStatsRef.current();
@@ -839,12 +839,12 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
               <div>
                 <p className="text-sm opacity-80 mb-1">{t("dashboard.outstandingBalance")}</p>
                 <p className="text-3xl font-bold mb-1">
-                  {t("currency.prefix")}{formatNumber(stats.totalOutstanding)}
+                  {t("currency.prefix")}{formatNumber(stats.totalOutstanding, locale as "en" | "ne")}
                 </p>
                 <p className="text-xs opacity-60">
                   {t("dashboard.acrossShops", { count: stats.shopsCount })}
                   {stats.totalCreditLimit > 0 && (
-                    <> &middot; {t("dashboard.creditLimit")} {t("currency.prefix")}{formatNumber(stats.totalCreditLimit)}</>
+                    <> &middot; {t("dashboard.creditLimit")} {t("currency.prefix")}{formatNumber(stats.totalCreditLimit, locale as "en" | "ne")}</>
                   )}
                 </p>
               </div>
@@ -875,7 +875,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                       {rel.merchants!.name || t("dashboard.shopName")}
                     </a>
                     <span className="text-lg font-bold text-[var(--color-text)] flex-shrink-0 ml-2">
-                      {t("currency.prefix")}{formatNumber(rel.current_balance)}
+                      {t("currency.prefix")}{formatNumber(rel.current_balance, locale as "en" | "ne")}
                     </span>
                   </div>
                   {rel.current_balance > 0 && (
@@ -1198,7 +1198,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
               <div className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] text-center">
                 <p className="text-xs text-[var(--color-text-muted)] mb-1">{t("modals.voucherUpload.shop")}</p>
                 <p className="font-bold text-lg text-[var(--color-text)]">{voucherMerchant.name}</p>
-                <p className="text-xs text-[var(--color-primary)] mt-1">{t("modals.voucherUpload.amount")}: {t("currency.prefix")}{formatNumber(Number(voucherAmount))}</p>
+                <p className="text-xs text-[var(--color-primary)] mt-1">{t("modals.voucherUpload.amount")}: {t("currency.prefix")}{formatNumber(Number(voucherAmount), locale as "en" | "ne")}</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--color-text)] mb-2">{t("modals.voucherUpload.selectFile")}</label>
