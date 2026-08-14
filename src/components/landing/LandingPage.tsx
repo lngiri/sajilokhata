@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
 import LogoWithAbout from "@/components/LogoWithAbout";
 import AboutSheet from "@/components/AboutSheet";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { content, faqItems, type Lang } from "./content";
 
 const LOGIN = "/login?signedOut=1";
@@ -60,29 +62,6 @@ const Icons = {
     </svg>
   ),
 };
-
-function LangToggle({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) {
-  return (
-    <div className="inline-flex rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] p-0.5 text-xs font-bold">
-      <button
-        type="button"
-        onClick={() => setLang("en")}
-        aria-pressed={lang === "en"}
-        className={`rounded-full px-3 py-1.5 transition-colors ${lang === "en" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
-      >
-        EN
-      </button>
-      <button
-        type="button"
-        onClick={() => setLang("ne")}
-        aria-pressed={lang === "ne"}
-        className={`rounded-full px-3 py-1.5 transition-colors ${lang === "ne" ? "bg-[var(--color-primary)] text-white" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"}`}
-      >
-        ने
-      </button>
-    </div>
-  );
-}
 
 function PhoneMockup() {
   return (
@@ -292,7 +271,7 @@ function SectionHeader({ label, title, sub }: { label: string; title: string; su
 
 export default function LandingPage() {
   useScrollReveal();
-  const [lang, setLang] = useState<Lang>("en");
+  const lang = useLocale() as Lang;
   const [aboutOpen, setAboutOpen] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -353,7 +332,7 @@ export default function LandingPage() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <LangToggle lang={lang} setLang={setLang} />
+            <LocaleSwitcher />
             <a href={LOGIN} className="hidden text-sm font-medium text-[var(--color-text-muted)] transition-colors hover:text-[var(--color-primary)] sm:block">
               {t.nav.login}
             </a>
@@ -649,7 +628,7 @@ export default function LandingPage() {
           </div>
           <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--color-border)] pt-8 sm:flex-row">
             <p className="text-sm text-[var(--color-text-muted)]">&copy; {new Date().getFullYear()} QR Hisab</p>
-            <LangToggle lang={lang} setLang={setLang} />
+            <LocaleSwitcher />
           </div>
         </div>
       </footer>

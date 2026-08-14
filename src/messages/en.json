@@ -63,6 +63,7 @@
     "viewAllTransactions": "View all your credit requests and their status",
     "pendingTransactions": "{{count}} pending transaction(s) awaiting approval",
     "tapToReview": "Tap to review and take action",
+    "yourShops": "Your Shops",
     "shopName": "Shop",
     "balance": "Balance",
     "payNow": "Pay Now",

@@ -14,6 +14,7 @@ import RoleSwitcher from "@/components/RoleSwitcher";
 import OtherRolePrompt from "@/components/OtherRolePrompt";
 import CustomerPinGate from "@/components/CustomerPinGate";
 import LogoWithAbout from "@/components/LogoWithAbout";
+import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { createClient } from "@/lib/supabase/client";
 import { normalizePhone } from "@/lib/phone";
 import { formatNumber } from "@/lib/format";
@@ -640,7 +641,8 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-0 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <LocaleSwitcher />
             <div ref={customerNotificationRef}>
               <button
                 onClick={() => {
@@ -826,6 +828,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
             <div className="w-6 h-6 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : stats ? (
+          <>
           <a
             href={`/${locale}/customer/history`}
             data-tour="balance"
@@ -841,65 +844,65 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                 <> &middot; {t("dashboard.creditLimit")} {t("currency.prefix")}{formatNumber(stats.totalCreditLimit)}</>
               )}
             </p>
+          </a>
 
-            {stats.relationships.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-white/20 space-y-2">
-                {stats.relationships.filter(r => r.merchants?.id).map((rel, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between text-sm py-1.5 -mx-1 px-2 rounded-lg"
-                  >
+          {stats.relationships.filter(r => r.merchants?.id).length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-[var(--color-text)] px-1">{t("dashboard.yourShops")}</p>
+              {stats.relationships.filter(r => r.merchants?.id).map((rel, i) => (
+                <div
+                  key={i}
+                  className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]"
+                >
+                  <div className="flex items-center justify-between mb-2">
                     <a
                       href={`/${locale}/customer/history?merchantId=${rel.merchants!.id}&shopName=${encodeURIComponent(rel.merchants!.name || "Shop")}`}
-                      className="flex-1 min-w-0 opacity-80 hover:opacity-100 transition-opacity truncate"
+                      className="font-semibold text-[var(--color-text)] truncate"
                     >
-                      {rel.merchants!.name || "Unknown Shop"}
+                      {rel.merchants!.name || t("dashboard.shopName")}
                     </a>
-                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                      <span className="font-semibold">{t("currency.prefix")}{formatNumber(rel.current_balance)}</span>
-                      {rel.current_balance > 0 && (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
-                              setShowPaymentMethods(true);
-                              setPaymentMethodsLoading(true);
-                              getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
-                                setPaymentMethods(methods);
-                                setPaymentMethodsLoading(false);
-                              }).catch(() => {
-                                setPaymentMethods([]);
-                                setPaymentMethodsLoading(false);
-                              });
-                            }}
-                            className="px-2.5 py-1 bg-white/20 text-white rounded-lg text-[10px] font-medium active:bg-white/30 transition-colors"
-                          >
-                            {t("dashboard.payNow")}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setVoucherMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
-                              setVoucherAmount(rel.current_balance > 0 ? String(rel.current_balance) : "");
-                              setVoucherFile(null);
-                              setVoucherPreview(null);
-                              setShowVoucherModal(true);
-                            }}
-                            className="px-2.5 py-1 bg-purple-500/20 text-purple-200 rounded-lg text-[10px] font-medium active:bg-purple-500/30 transition-colors"
-                          >
-                            {t("dashboard.uploadVoucher")}
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <span className="text-lg font-bold text-[var(--color-text)] flex-shrink-0 ml-2">
+                      {t("currency.prefix")}{formatNumber(rel.current_balance)}
+                    </span>
                   </div>
-                ))}
-              </div>
-            )}
-          </a>
+                  {rel.current_balance > 0 && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => {
+                          setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                          setShowPaymentMethods(true);
+                          setPaymentMethodsLoading(true);
+                          getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
+                            setPaymentMethods(methods);
+                            setPaymentMethodsLoading(false);
+                          }).catch(() => {
+                            setPaymentMethods([]);
+                            setPaymentMethodsLoading(false);
+                          });
+                        }}
+                        className="flex-1 py-2 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                      >
+                        {t("dashboard.payNow")}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setVoucherMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                          setVoucherAmount(rel.current_balance > 0 ? String(rel.current_balance) : "");
+                          setVoucherFile(null);
+                          setVoucherPreview(null);
+                          setShowVoucherModal(true);
+                        }}
+                        className="flex-1 py-2 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                      >
+                        {t("dashboard.uploadVoucher")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          </>
         ) : (
           <div className="bg-[var(--color-surface)] rounded-2xl p-8 shadow-sm border border-[var(--color-border)] text-center">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-[var(--color-primary)]/5 flex items-center justify-center">
@@ -966,6 +969,8 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
         </a>
       </div>
       </PullToRefresh>
+
+      <CustomerBottomNav locale={locale} />
 
       {/* ===== SCAN MODAL OVERLAY ===== */}
       {showScanner && (
