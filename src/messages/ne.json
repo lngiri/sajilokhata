@@ -36,7 +36,7 @@
   "navigation": {
     "home": "गृह",
     "history": "इतिहास",
-    "settings": "सेटिङ्ग",
+    "settings": "सेटिङ",
     "dashboard": "ड्यासबोर्ड",
     "scan": "QR स्क्यान",
     "login": "लग इन",
@@ -49,8 +49,8 @@
     "title": "ड्यासबोर्ड",
     "welcome": "फेरि स्वागत",
     "activeStatus": "QR Hisab · सक्रिय",
-    "outstandingBalance": "कुल बकाया ब्यालेन्स",
-    "acrossShops": "{{count}} पसलहरूमा",
+    "outstandingBalance": "कुल बकाया",
+    "acrossShops": "{{count}} वटा पसलमा",
     "creditLimit": "क्रेडिट सीमा",
     "noOutstanding": "अहिलेसम्म कुनै बकाया उधार छैन",
     "firstCreditHint": "पसलको QR स्क्यान गरी पहिलो उधार अनुरोध पठाउनुहोस्",
@@ -61,17 +61,17 @@
     "scanShopQRDesc": "पसलमा उधार वा भुक्तानी अनुरोध पठाउनुहोस्",
     "transactionHistory": "लेनदेन इतिहास",
     "viewAllTransactions": "तपाईंको सबै उधार अनुरोध र अवस्था हेर्नुहोस्",
-    "pendingTransactions": "{{count}} बन्डै उधार/भुक्तानी पुष्टिको लागि प्रतीक्षारत",
+    "pendingTransactions": "{{count}} वटा उधार/भुक्तानी पुष्टि हुन बाँकी",
     "tapToReview": "समीक्षा गर्न र कार्य गर्न ट्याप गर्नुहोस्",
     "yourShops": "तपाईंका पसलहरू",
     "shopName": "पसल",
     "balance": "ब्यालेन्स",
     "payNow": "अहिले भुक्तानी",
     "uploadVoucher": "भाउचर अपलोड",
-    "pendingApproval": "पुष्टि बन्डै",
+    "pendingApproval": "पुष्टि बाँकी",
     "approved": "स्वीकृत",
     "rejected": "अस्वीकृत",
-    "awaitingConfirmation": "पुष्टि अपेक्षा",
+    "awaitingConfirmation": "पुष्टि हुन बाँकी",
     "request": "अनुरोध"
   },
   "scan": {
@@ -81,7 +81,7 @@
     "pointCamera": "तपाईंको क्यामेरालाई पसलको QR बिन्दु गर्नुहोस्",
     "invalidQR": "अमान्य QR कोड। कृपया मान्य पसल QR स्क्यान गर्नुहोस्।",
     "scanValidQR": "कृपया मान्य पसल QR कोड स्क्यान गर्नुहोस्।",
-    "merchantName": "प्रविष्टि स्थल",
+    "merchantName": "पसलको नाम",
     "creditTaken": "उधार लियो",
     "payment": "भुक्तानी",
     "selectProduct": "सामान छान्नुहोस्",
@@ -91,8 +91,8 @@
     "descriptionPlaceholder": "उदाहरण: चामल १०के.जी., दूध २लिटर",
     "sendRequest": "अनुरोध पठाउनुहोस्",
     "sending": "पठाउँदै...",
-    "creditSubmitted": "उधार अनुरोध पठाइयो! व्यापारीको स्वीकृति अपेक्षा।",
-    "paymentSubmitted": "भुक्तानी पेश गरियो! व्यापारीको पुष्टि अपेक्षा।",
+    "creditSubmitted": "उधार अनुरोध पठाइयो! पसलको पुष्टि बाँकी।",
+    "paymentSubmitted": "भुक्तानी पेश गरियो! पसलको पुष्टि बाँकी।",
     "backToScan": "फिर्ता"
   },
   "history": {
@@ -101,7 +101,7 @@
     "filterByShop": "पसल अनुसार फिल्टर",
     "filterByStatus": "अवस्था अनुसार फिल्टर",
     "allStatus": "सबै अवस्था",
-    "pending": "बन्डै",
+    "pending": "बाँकी",
     "approved": "स्वीकृत",
     "rejected": "अस्वीकृत",
     "credit": "उधार",
@@ -113,7 +113,7 @@
     "type": "प्रकार"
   },
   "settings": {
-    "title": "सेटिङ्ग",
+    "title": "सेटिङ",
     "profile": "प्रोफाइल",
     "name": "पूरा नाम",
     "phone": "फोन नम्बर",
@@ -123,11 +123,11 @@
     "notifications": "सूचनाहरू",
     "language": "भाषा",
     "about": "बारे",
-    "version": "भेर्रजन",
+    "version": "संस्करण",
     "saveChanges": "परिवर्तन सेभ गर्नुहोस्",
     "saved": "सेभ भयो",
     "profileUpdated": "प्रोफाइल सफलतापूर्वक अपडेट भयो",
-    "pinUpdated": "पिन सफलतापूर्वक अपडेट भयो",
+    "pinUpdated": "पिन सफलतापूर्वक परिवर्तित भयो",
     "currentPin": "हालको पिन",
     "newPin": "नयाँ पिन",
     "confirmPin": "पिन पुष्टि",
@@ -137,7 +137,7 @@
   },
   "onboarding": {
     "title": "तपाईंको प्रोफाइल पूरा गर्नुहोस्",
-    "subtitle": "तपाईंको नाम बताउनुहोस् ताकि पसलहरू तपाईंलाई चिन्न सक्न्।",
+    "subtitle": "तपाईंको नाम बताउनुहोस् ताकि पसलहरू तपाईंलाई चिन्न सकून्।",
     "nameLabel": "पूरा नाम *",
     "namePlaceholder": "उदाहरण: राम शर्मा",
     "addressLabel": "ठेगाना (वैकल्पिक)",
@@ -166,7 +166,7 @@
     "markAsRead": "पढिएको चिन्ह",
     "approved": "स्वीकृत",
     "rejected": "अस्वीकृत",
-    "newEntry": "नयाँ प्रविष्टि",
+    "newEntry": "नयाँ लेनदेन",
     "creditLimitChanged": "क्रेडिट सीमा परिवर्तित",
     "justNow": "अहिल्यै",
     "minutesAgo": "{{count}} मिनेट अगाडि",
@@ -175,13 +175,13 @@
   },
   "modals": {
     "pendingApproval": {
-      "title": "स्वीकृति बन्डै",
+      "title": "पुष्टि हुन बाँकी",
       "message": "तपाईंको अनुरोध पसलमा पठाइयो। उनीहरूले जवाफ दिनुभएपछि सूचना आउनेछ।",
       "ok": "ठिक छ"
     },
     "insufficientCash": {
-      "title": "अपर्याप्त ब्यालेन्स",
-      "message": "यो लेनदेनको लागि तपाईंको पास पर्याप्त क्रेडिट सीमा छैन।",
+      "title": "क्रेडिट सीमा पर्याप्त छैन",
+      "message": "यो लेनदेनका लागि तपाईंसँग पर्याप्त क्रेडिट सीमा छैन।",
       "ok": "ठिक छ"
     },
     "voucherUpload": {
@@ -205,9 +205,9 @@
     }
   },
   "toast": {
-    "entrySubmitted": "प्रविष्टि सफलतापूर्वक पेश भयो",
-    "entryApproved": "प्रविष्टि स्वीकृत",
-    "entryRejected": "प्रविष्टि अस्वीकृत",
+    "entrySubmitted": "लेनदेन सफलतापूर्वक पेश भयो",
+    "entryApproved": "लेनदेन स्वीकृत",
+    "entryRejected": "लेनदेन अस्वीकृत",
     "paymentReceived": "भुक्तानी प्राप्त",
     "creditLimitUpdated": "क्रेडिट सीमा अपडेट",
     "profileSaved": "प्रोफाइल सेभ भयो",
@@ -215,14 +215,14 @@
     "pinChanged": "पिन सफलतापूर्वक परिवर्तित",
     "errorGeneric": "कतै त्रुटि भयो। कृपया फेरि प्रयास गर्नुहोस्।",
     "networkError": "नेटवर्क त्रुटि। कृपया कनेक्सन जाँच गर्नुहोस्।",
-    "offlineEntrySaved": "प्रविष्टि अफलाइनमा सेभ भयो। अनलाइन भएपछि सिंक हुनेछ।",
-    "syncComplete": "सबै प्रविष्टि सिंक भयो",
+    "offlineEntrySaved": "लेनदेन अफलाइनमा सेभ भयो। अनलाइन भएपछि सिंक हुनेछ।",
+    "syncComplete": "सबै लेनदेन सिंक भयो",
     "sessionExpired": "सेसन सकियो। कृपया फेरि लग इन गर्नुहोस्।"
   },
   "bottomNav": {
     "home": "गृह",
     "history": "इतिहास",
-    "settings": "सेटिङ्ग"
+    "settings": "सेटिङ"
   },
   "productPicker": {
     "title": "सामानहरू",
@@ -231,7 +231,7 @@
   },
   "errors": {
     "failedToLoad": "डाटा लोड गर्न असफल",
-    "failedToSubmit": "प्रविष्टि पेश गर्न असफल",
+    "failedToSubmit": "लेनदेन पेश गर्न असफल",
     "failedToSave": "सेभ गर्न असफल",
     "unauthorized": "अनधिकृत। कृपया फेरि लग इन गर्नुहोस्।",
     "notFound": "फेला परेन",
