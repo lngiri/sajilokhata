@@ -13,7 +13,7 @@ export const content = {
     hero: {
       eyebrow: "Made for Nepali shop owners & traders",
       h1: "Your entire business in one digital khata",
-      sub: "Track customer credits, manage shop-to-shop purchases, record expenses — all from your phone. One app for every rupee your business touches.",
+      sub: "Track customer credits, record expenses, and send SMS reminders — all from your phone. One app for every rupee your business touches.",
       startFree: "Start Free",
       seeHow: "See How It Works",
       trust: ["Free core khata", "Works on any phone", "No app download for customers", "Add to home screen"],
@@ -38,24 +38,14 @@ export const content = {
     features: {
       label: "Features",
       title: "Everything a Nepali shop needs",
-      sub: "Six tools that replace your paper khata — without the learning curve.",
+      sub: "Five tools that replace your paper khata — without the learning curve.",
       tiles: [
         { title: "QR access", desc: "Customers see their balance by scanning your QR. No app install." },
         { title: "Live dashboard", desc: "See who owes what, in realtime, from your phone." },
         { title: "Smart reminders", desc: "Send a polite SMS reminder and get paid faster." },
         { title: "Credit limits & flags", desc: "Give credit with confidence. Stop bad debt." },
-        { title: "Shop-to-shop", desc: "One app for buying on credit and selling on credit." },
         { title: "Offline khata", desc: "Works even where the network doesn't." },
       ],
-    },
-    shopToShop: {
-      label: "Shop-to-shop",
-      title: "Buy from your wholesaler on credit. Sell to shops on credit. Same app.",
-      sub: "The same account can be a merchant and a customer — your shop-to-shop khata finally matches on both sides.",
-      merchant: "As merchant",
-      merchantDesc: "Approve purchase requests from other shops. Set credit limits per partner.",
-      customer: "As customer",
-      customerDesc: "Scan a wholesaler's QR, request credit, track what you owe — all in one khata.",
     },
     offline: {
       label: "Offline",
@@ -96,7 +86,7 @@ export const content = {
       button: "Start Free",
     },
     footer: {
-      tagline: "Digital khata for Nepali shops — customer credit, shop-to-shop trade, and expenses in one place.",
+      tagline: "Digital khata for Nepali shops — customer credit, expenses, and SMS reminders in one place.",
       product: "Product",
       legal: "Legal",
       privacy: "Privacy Policy",
@@ -126,7 +116,7 @@ export const content = {
     hero: {
       eyebrow: "नेपाली पसल मालिक र व्यापारीहरूका लागि",
       h1: "तपाईंको सम्पूर्ण व्यवसाय एउटै डिजिटल खातामा",
-      sub: "ग्राहकको उधार, पसल-देखि-पसल खरिद, खर्च — सबै फोनबाट। तपाईंको व्यवसायको हरेक रुपैयाँ एउटै एपमा।",
+      sub: "ग्राहकको उधार, खर्च, SMS सम्झना — सबै फोनबाट। तपाईंको व्यवसायको हरेक रुपैयाँ एउटै एपमा।",
       startFree: "निःशुल्क सुरु",
       seeHow: "कसरी काम गर्छ",
       trust: ["मुख्य खाता निःशुल्क", "कुनै पनि फोनमा", "ग्राहकलाई एप चाहिँदैन", "होम स्क्रिनमा थप्नुहोस्"],
@@ -157,18 +147,8 @@ export const content = {
         { title: "लाइभ ड्यासबोर्ड", desc: "कसले कति दिन्छ, realtime मा फोनबाट हेर्नुहोस्।" },
         { title: "SMS सम्झना", desc: "विनम्र SMS सम्झना पठाएर छिटो भुक्तानी लिनुहोस्।" },
         { title: "क्रेडिट सीमा", desc: "विश्वासका साथ उधार दिनुहोस्। नराम्रो ऋण रोक्नुहोस्।" },
-        { title: "पसल-देखि-पसल", desc: "उधारमा किन्ने र बेच्ने — एउटै एप।" },
         { title: "अफलाइन खाता", desc: "नेटवर्क नभए पनि काम गर्छ।" },
       ],
-    },
-    shopToShop: {
-      label: "पसल-देखि-पसल",
-      title: "थोकबाट उधारमा किन्नुहोस्। पसललाई उधारमा बेच्नुहोस्। एउटै एप।",
-      sub: "एउटै खाता merchant पनि customer पनि — दुवै पक्षको खाता मिल्छ।",
-      merchant: "व्यापारीको रूपमा",
-      merchantDesc: "अन्य पसलबाट खरिद अनुरोध स्वीकृत गर्नुहोस्। साझेदार प्रति सीमा तोक्नुहोस्।",
-      customer: "ग्राहकको रूपमा",
-      customerDesc: "थोक व्यापारीको QR स्क्यान गर्नुहोस्, उधार अनुरोध गर्नुहोस्, देनदारी ट्र्याक गर्नुहोस्।",
     },
     offline: {
       label: "अफलाइन",
@@ -183,7 +163,7 @@ export const content = {
         "OTP लगइन र आफ्नो PIN।",
         "Session हस्ताक्षरित; फोन हराए force-logout।",
         "डाटाबेस-स्तरको पहुँच — तपाईंको खाता मात्र।",
-        "हरेक entry मा समय र कोले गरे — गोप्य सम्पादन छैन।",
+        "हरेक entry मा समय र कसले गरे — गोप्य सम्पादन छैन।",
         "अफलाइन काम, सुरक्षित sync — दोहोरो entry छैन।",
       ],
     },
@@ -209,7 +189,7 @@ export const content = {
       button: "निःशुल्क सुरु",
     },
     footer: {
-      tagline: "नेपाली पसलका लागि डिजिटल खाता — ग्राहक उधार, पसल-देखि-पसल, खर्च एउटै ठाउँमा।",
+      tagline: "नेपाली पसलका लागि डिजिटल खाता — ग्राहक उधार, खर्च, SMS सम्झना एउटै ठाउँमा।",
       product: "उत्पादन",
       legal: "कानूनी",
       privacy: "गोपनीयता नीति",
@@ -233,8 +213,8 @@ export const faqItems = [
   {
     q: { en: "What is QR Hisab?", ne: "QR Hisab के हो?" },
     a: {
-      en: "A digital khata (credit ledger) for Nepali shops. Record what customers owe you, manage shop-to-shop purchases, and track expenses from your phone.",
-      ne: "नेपाली पसलका लागि डिजिटल खाता। ग्राहकको देनदारी, पसल-देखि-पसल खरिद, खर्च — सबै फोनबाट।",
+      en: "A digital khata (credit ledger) for Nepali shops. Record what customers owe you, track expenses, and send payment reminders from your phone.",
+      ne: "नेपाली पसलका लागि डिजिटल खाता। ग्राहकको देनदारी, खर्च — सबै फोनबाट।",
     },
   },
   {
@@ -245,10 +225,10 @@ export const faqItems = [
     },
   },
   {
-    q: { en: "Is it really free?", ne: "सachi निःशुल्क हो?" },
+    q: { en: "Is it really free?", ne: "साँच्चै निःशुल्क हो?" },
     a: {
       en: "Yes. The core khata is free. The only paid feature is optional SMS reminder credits.",
-      ne: "हो। मुख्य खाता निःशुल्क। SMS सम्झana credits मात्र वैकल्पिक शुल्क।",
+      ne: "हो। मुख्य खाता निःशुल्क। SMS सम्झना credits मात्र वैकल्पिक शुल्क।",
     },
   },
   {
@@ -269,7 +249,7 @@ export const faqItems = [
     q: { en: "How do SMS reminders work?", ne: "SMS सम्झना कसरी?" },
     a: {
       en: "Buy SMS credits (Rs 101/201/501 packages) and send payment reminders from your dashboard. Payment gateway is currently in test mode.",
-      ne: "SMS credits किन्नुहोस् (रु १०१/२०१/५०१) र dashboard बाट सम्झana पठाउनुहोस्। Gateway हाल test mode मा।",
+      ne: "SMS credits किन्नुहोस् (रु १०१/२०१/५०१) र dashboard बाट सम्झना पठाउनुहोस्। Gateway हाल test mode मा।",
     },
   },
   {

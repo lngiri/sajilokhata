@@ -248,14 +248,12 @@ export default function AboutSheet({ open, onClose }: Props) {
                   Legal
                 </h3>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)]">
+                  <a href="/privacy" className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     Privacy Policy
-                    <span className="text-xs">Coming Soon</span>
-                  </div>
-                  <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)]">
+                  </a>
+                  <a href="/terms" className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     Terms &amp; Conditions
-                    <span className="text-xs">Coming Soon</span>
-                  </div>
+                  </a>
                 </div>
               </div>
             </div>

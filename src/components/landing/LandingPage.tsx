@@ -123,10 +123,9 @@ function PhoneMockup() {
               </div>
             </div>
             <div className="space-y-2">
-              {[
-                { name: "Sita Devi", amount: "Rs. 3,500", tag: "Customer" },
-                { name: "Kathmandu Traders", amount: "Rs. 12,800", tag: "M2M" },
-              ].map((row) => (
+                {[
+                  { name: "Sita Devi", amount: "Rs. 3,500", tag: "Customer" },
+                ].map((row) => (
                 <div key={row.name} className="flex items-center justify-between rounded-[var(--radius-button)] bg-[var(--color-bg)] p-3">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-[var(--color-text)]">{row.name}</span>
@@ -283,7 +282,7 @@ function SessionBlock({ t }: { t: { welcome: string; choose: string; merchant: s
 
 function SectionHeader({ label, title, sub }: { label: string; title: string; sub?: string }) {
   return (
-    <div className="mx-auto mb-14 max-w-2xl text-center">
+    <div className="mx-auto mb-10 max-w-2xl text-center">
       <p className="mb-3 text-sm font-bold uppercase tracking-wider text-[var(--color-primary)]">{label}</p>
       <h2 className="text-3xl font-extrabold text-[var(--color-text)] sm:text-4xl">{title}</h2>
       {sub && <p className="mt-4 text-lg leading-relaxed text-[var(--color-text-muted)]">{sub}</p>}
@@ -306,7 +305,7 @@ export default function LandingPage() {
     { href: "#faq", label: t.nav.faq },
   ];
 
-  const featureIcons = ["qr", "chart", "sms", "shield", "shop", "offline"] as const;
+  const featureIcons = ["qr", "chart", "sms", "shield", "offline"] as const;
   const featureIconMap = {
     qr: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -327,11 +326,6 @@ export default function LandingPage() {
     shield: (
       <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
-      </svg>
-    ),
-    shop: (
-      <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
       </svg>
     ),
     offline: (
@@ -450,7 +444,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="py-20 sm:py-28">
+      <section id="how-it-works" className="py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.howItWorks.label} title={t.howItWorks.title} sub={t.howItWorks.sub} />
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -467,7 +461,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="bg-[var(--color-surface)] py-20 sm:py-28">
+      <section id="features" className="bg-[var(--color-surface)] py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.features.label} title={t.features.title} sub={t.features.sub} />
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -484,38 +478,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="shop-to-shop" className="py-20 sm:py-28">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <SectionHeader label={t.shopToShop.label} title={t.shopToShop.title} sub={t.shopToShop.sub} />
-          <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-2">
-            <div className="animate-card-in rounded-[var(--radius-card)] border border-purple-200 bg-gradient-to-br from-purple-50 to-white p-8 dark:border-purple-900/40 dark:from-purple-950/20 dark:to-[var(--color-surface)]">
-              <div className="mb-4 inline-flex rounded-full bg-purple-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
-                {t.shopToShop.merchant}
-              </div>
-              <p className="leading-relaxed text-[var(--color-text-muted)]">{t.shopToShop.merchantDesc}</p>
-            </div>
-            <div className="animate-card-in delay-2 rounded-[var(--radius-card)] border border-[var(--color-primary)]/20 bg-gradient-to-br from-[var(--color-primary)]/5 to-[var(--color-surface)] p-8">
-              <div className="mb-4 inline-flex rounded-full bg-[var(--color-primary)]/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-[var(--color-primary-dark)]">
-                {t.shopToShop.customer}
-              </div>
-              <p className="leading-relaxed text-[var(--color-text-muted)]">{t.shopToShop.customerDesc}</p>
-            </div>
-          </div>
-          <div className="animate-card-in delay-3 mx-auto mt-8 max-w-xl rounded-2xl border border-dashed border-[var(--color-border)] bg-[var(--color-surface)] p-2" aria-hidden="true">
-            <div className="flex rounded-xl bg-[var(--color-bg)] p-1">
-              <div className="flex-1 rounded-lg bg-[var(--color-primary)] py-2.5 text-center text-sm font-bold text-white">
-                Merchant
-              </div>
-              <div className="flex-1 py-2.5 text-center text-sm font-bold text-[var(--color-text-muted)]">
-                Customer
-              </div>
-            </div>
-            <p className="px-4 py-3 text-center text-xs text-[var(--color-text-muted)]">Switch roles anytime — one account, two sides of trade.</p>
-          </div>
-        </div>
-      </section>
-
-      <section id="offline" className="bg-[var(--color-surface)] py-20 sm:py-28">
+      <section id="offline" className="bg-[var(--color-surface)] py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.offline.label} title={t.offline.title} sub={t.offline.sub} />
           <div className="grid items-start gap-10 lg:grid-cols-2">
@@ -545,7 +508,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="security" className="py-20 sm:py-28">
+      <section id="security" className="py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.security.label} title={t.security.title} />
           <ul className="mx-auto grid max-w-3xl gap-4">
@@ -559,10 +522,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="bg-[var(--color-surface)] py-20 sm:py-28">
+      <section id="pricing" className="bg-[var(--color-surface)] py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.pricing.label} title={t.pricing.title} sub={t.pricing.framing} />
-          <p className="-mt-8 mb-10 text-center text-sm font-semibold text-[var(--color-primary-dark)]">{t.pricing.freeForever}</p>
+          <p className="mb-8 text-center text-sm font-semibold text-[var(--color-primary-dark)]">{t.pricing.freeForever}</p>
           <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-3">
             {t.pricing.packages.map((pkg, i) => (
               <div
@@ -594,7 +557,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="faq" className="py-20 sm:py-28">
+      <section id="faq" className="py-16 sm:py-24">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.faq.label} title={t.faq.title} />
           <div className="space-y-3">
@@ -625,7 +588,7 @@ export default function LandingPage() {
 
       <SessionBlock t={t.session} />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] py-20 text-[var(--color-primary-foreground)] sm:py-28">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] py-16 text-[var(--color-primary-foreground)] sm:py-24">
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-extrabold sm:text-4xl lg:text-5xl">{t.cta.title}</h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-white/85">{t.cta.sub}</p>
@@ -670,11 +633,15 @@ export default function LandingPage() {
             <div>
               <h4 className="mb-3 font-bold text-[var(--color-text)]">{t.footer.legal}</h4>
               <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
-                {[t.footer.privacy, t.footer.terms, t.footer.refund].map((label) => (
-                  <li key={label}>
-                    <span className="cursor-default" title={t.footer.comingSoon}>
-                      {label} <span className="text-xs opacity-70">({t.footer.comingSoon})</span>
-                    </span>
+                {[
+                  { label: t.footer.privacy, href: "/privacy" },
+                  { label: t.footer.terms, href: "/terms" },
+                  { label: t.footer.refund, href: "/refund" },
+                ].map((item) => (
+                  <li key={item.href}>
+                    <a href={item.href} className="transition-colors hover:text-[var(--color-primary)]">
+                      {item.label}
+                    </a>
                   </li>
                 ))}
               </ul>

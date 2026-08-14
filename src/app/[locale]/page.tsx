@@ -13,10 +13,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: "QR Hisab — Digital Khata & Credit Ledger App for Nepali Shops",
-    description: "Replace your paper khata. Track customer credit, shop-to-shop purchases and expenses on your phone. Customers check balances by scanning your QR — no app download. Start free.",
+    description: "Replace your paper khata. Track customer credit, record expenses, and send SMS reminders on your phone. Customers check balances by scanning your QR — no app download. Start free.",
     openGraph: {
       title: "QR Hisab — Digital Khata for Nepali Shops",
-      description: "Track customer credit, shop-to-shop purchases and expenses on your phone. Start free.",
+      description: "Track customer credit, record expenses, and send SMS reminders on your phone. Start free.",
       type: "website",
       url: "https://qrhisab.com/",
       siteName: "QR Hisab",
