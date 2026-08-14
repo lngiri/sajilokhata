@@ -282,7 +282,7 @@ function SessionBlock({ t }: { t: { welcome: string; choose: string; merchant: s
 
 function SectionHeader({ label, title, sub }: { label: string; title: string; sub?: string }) {
   return (
-    <div className="mx-auto mb-10 max-w-2xl text-center">
+    <div className="mx-auto mb-8 max-w-2xl text-center">
       <p className="mb-3 text-sm font-bold uppercase tracking-wider text-[var(--color-primary)]">{label}</p>
       <h2 className="text-3xl font-extrabold text-[var(--color-text)] sm:text-4xl">{title}</h2>
       {sub && <p className="mt-4 text-lg leading-relaxed text-[var(--color-text-muted)]">{sub}</p>}
@@ -387,7 +387,7 @@ export default function LandingPage() {
 
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-b from-[var(--color-primary)]/8 via-[var(--color-primary)]/4 to-transparent blur-3xl" />
-        <div className="relative mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:py-24">
+        <div className="relative mx-auto grid max-w-6xl items-center gap-8 px-4 py-10 sm:px-6 lg:grid-cols-2 lg:gap-12 lg:py-16">
           <div className="text-center lg:text-left">
             <div className="animate-entrance mb-6 inline-flex items-center gap-2 rounded-full bg-[var(--color-primary)]/10 px-4 py-2">
               <span className="text-sm font-semibold text-[var(--color-primary-dark)]">{t.hero.eyebrow}</span>
@@ -429,7 +429,7 @@ export default function LandingPage() {
       </section>
 
       <section className="border-y border-[var(--color-border)] bg-[var(--color-surface)]">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-10 sm:px-6 md:grid-cols-4 lg:px-8">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-6 sm:px-6 md:grid-cols-4 lg:px-8">
           {[
             { label: t.trust.https },
             { label: t.trust.freeStart },
@@ -444,7 +444,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="how-it-works" className="py-16 sm:py-24">
+      <section id="how-it-works" className="py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.howItWorks.label} title={t.howItWorks.title} sub={t.howItWorks.sub} />
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -461,7 +461,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="features" className="bg-[var(--color-surface)] py-16 sm:py-24">
+      <section id="features" className="bg-[var(--color-surface)] py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.features.label} title={t.features.title} sub={t.features.sub} />
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -478,10 +478,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="offline" className="bg-[var(--color-surface)] py-16 sm:py-24">
+      <section id="offline" className="bg-[var(--color-surface)] py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.offline.label} title={t.offline.title} sub={t.offline.sub} />
-          <div className="grid items-start gap-10 lg:grid-cols-2">
+          <div className="grid items-start gap-8 lg:grid-cols-2">
             <div className="rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-bg)] p-5">
               <p className="text-sm font-medium leading-relaxed text-[var(--color-text)]">{t.offline.pwa}</p>
             </div>
@@ -508,10 +508,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="security" className="py-16 sm:py-24">
+      <section id="security" className="py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.security.label} title={t.security.title} />
-          <ul className="mx-auto grid max-w-3xl gap-4">
+          <ul className="mx-auto grid max-w-3xl gap-4 sm:grid-cols-2">
             {t.security.bullets.map((bullet, i) => (
               <li key={bullet} className={`animate-card-in ${i > 0 ? "delay-2" : ""} flex items-start gap-3 rounded-[var(--radius-card)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5`}>
                 <span className="mt-0.5 text-[var(--color-primary)]">{Icons.check}</span>
@@ -522,15 +522,15 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="bg-[var(--color-surface)] py-16 sm:py-24">
+      <section id="pricing" className="bg-[var(--color-surface)] py-12 sm:py-16">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.pricing.label} title={t.pricing.title} sub={t.pricing.framing} />
-          <p className="mb-8 text-center text-sm font-semibold text-[var(--color-primary-dark)]">{t.pricing.freeForever}</p>
+          <p className="mb-6 text-center text-sm font-semibold text-[var(--color-primary-dark)]">{t.pricing.freeForever}</p>
           <div className="mx-auto grid max-w-4xl gap-6 md:grid-cols-3">
             {t.pricing.packages.map((pkg, i) => (
               <div
                 key={pkg.price}
-                className={`animate-card-in ${i === 1 ? "delay-2" : i === 2 ? "delay-3" : "delay-1"} relative rounded-[var(--radius-card)] border p-8 text-center ${
+                className={`animate-card-in ${i === 1 ? "delay-2" : i === 2 ? "delay-3" : "delay-1"} relative rounded-[var(--radius-card)] border p-6 text-center ${
                   "popular" in pkg && pkg.popular
                     ? "border-[var(--color-primary)] bg-[var(--color-primary)]/5 shadow-lg"
                     : "border-[var(--color-border)] bg-[var(--color-bg)]"
@@ -547,8 +547,8 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
-          <p className="mx-auto mt-8 max-w-2xl text-center text-sm leading-relaxed text-[var(--color-text-muted)]">{t.pricing.footnote}</p>
-          <div className="mt-8 text-center">
+          <p className="mx-auto mt-6 max-w-2xl text-center text-sm leading-relaxed text-[var(--color-text-muted)]">{t.pricing.footnote}</p>
+          <div className="mt-6 text-center">
             <a href={LOGIN} className="btn-bounce inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-[var(--color-primary-surface)] px-8 py-4 text-lg font-bold text-[var(--color-primary-foreground)] shadow-lg transition-all hover:bg-[var(--color-primary-surface-hover)] active:scale-[0.98]">
               {t.nav.startFree}
               {Icons.arrow}
@@ -557,7 +557,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <section id="faq" className="py-16 sm:py-24">
+      <section id="faq" className="py-12 sm:py-16">
         <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
           <SectionHeader label={t.faq.label} title={t.faq.title} />
           <div className="space-y-3">
@@ -588,13 +588,13 @@ export default function LandingPage() {
 
       <SessionBlock t={t.session} />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] py-16 text-[var(--color-primary-foreground)] sm:py-24">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] py-12 text-[var(--color-primary-foreground)] sm:py-16">
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">
           <h2 className="text-3xl font-extrabold sm:text-4xl lg:text-5xl">{t.cta.title}</h2>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-white/85">{t.cta.sub}</p>
           <a
             href={LOGIN}
-            className="mt-10 inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-white px-8 py-4 text-lg font-bold text-[var(--color-primary-dark)] shadow-xl transition-all hover:bg-white/95 active:scale-[0.98] dark:bg-[var(--color-surface)] dark:text-[var(--color-primary)]"
+            className="mt-8 inline-flex items-center gap-2 rounded-[var(--radius-button)] bg-white px-8 py-4 text-lg font-bold text-[var(--color-primary-dark)] shadow-xl transition-all hover:bg-white/95 active:scale-[0.98] dark:bg-[var(--color-surface)] dark:text-[var(--color-primary)]"
           >
             {t.cta.button}
             {Icons.arrow}
@@ -603,7 +603,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-[var(--color-border)] bg-[var(--color-surface)]">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
           <div className="grid gap-8 md:grid-cols-4">
             <div className="md:col-span-2">
               <div className="mb-4 flex items-center gap-2.5">
@@ -647,7 +647,7 @@ export default function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="mt-10 flex flex-col items-center justify-between gap-4 border-t border-[var(--color-border)] pt-8 sm:flex-row">
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-[var(--color-border)] pt-8 sm:flex-row">
             <p className="text-sm text-[var(--color-text-muted)]">&copy; {new Date().getFullYear()} QR Hisab</p>
             <LangToggle lang={lang} setLang={setLang} />
           </div>
