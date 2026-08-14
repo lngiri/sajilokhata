@@ -118,6 +118,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
   const [editPhone, setEditPhone] = useState("");
   const [showFullPhone, setShowFullPhone] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showShops, setShowShops] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -829,25 +830,37 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
           </div>
         ) : stats ? (
           <>
-          <a
-            href={`/${locale}/customer/history`}
+          <button
+            onClick={() => setShowShops(!showShops)}
             data-tour="balance"
-            className="block bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-2xl p-5 shadow-sm text-white active:opacity-90 transition-opacity"
+            className="w-full text-left bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] rounded-2xl p-5 shadow-sm text-white active:opacity-90 transition-opacity"
           >
-            <p className="text-sm opacity-80 mb-1">{t("dashboard.outstandingBalance")}</p>
-            <p className="text-3xl font-bold mb-1">
-              {t("currency.prefix")}{formatNumber(stats.totalOutstanding)}
-            </p>
-            <p className="text-xs opacity-60">
-              {t("dashboard.acrossShops", { count: stats.shopsCount })}
-              {stats.totalCreditLimit > 0 && (
-                <> &middot; {t("dashboard.creditLimit")} {t("currency.prefix")}{formatNumber(stats.totalCreditLimit)}</>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm opacity-80 mb-1">{t("dashboard.outstandingBalance")}</p>
+                <p className="text-3xl font-bold mb-1">
+                  {t("currency.prefix")}{formatNumber(stats.totalOutstanding)}
+                </p>
+                <p className="text-xs opacity-60">
+                  {t("dashboard.acrossShops", { count: stats.shopsCount })}
+                  {stats.totalCreditLimit > 0 && (
+                    <> &middot; {t("dashboard.creditLimit")} {t("currency.prefix")}{formatNumber(stats.totalCreditLimit)}</>
+                  )}
+                </p>
+              </div>
+              {stats.relationships.filter(r => r.merchants?.id).length > 0 && (
+                <svg
+                  className={`w-5 h-5 opacity-60 transition-transform duration-200 ${showShops ? "rotate-180" : ""}`}
+                  fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
               )}
-            </p>
-          </a>
+            </div>
+          </button>
 
-          {stats.relationships.filter(r => r.merchants?.id).length > 0 && (
-            <div className="space-y-2">
+          {showShops && stats.relationships.filter(r => r.merchants?.id).length > 0 && (
+            <div className="space-y-2 animate-fade-in">
               <p className="text-sm font-semibold text-[var(--color-text)] px-1">{t("dashboard.yourShops")}</p>
               {stats.relationships.filter(r => r.merchants?.id).map((rel, i) => (
                 <div
