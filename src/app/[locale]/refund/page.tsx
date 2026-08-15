@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
-import { getTranslations, getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Refund Policy — QR Hisab",
   description: "Refund Policy for QR Hisab SMS credits.",
 };
 
-export default async function RefundPolicyPage() {
+interface Props {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function RefundPolicyPage({ params }: Props) {
+  const { locale } = await params;
   const t = await getTranslations("legal");
-  const locale = await getLocale();
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">

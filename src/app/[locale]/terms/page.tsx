@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
-import { getTranslations, getLocale } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Terms of Service — QR Hisab",
   description: "Terms of Service for QR Hisab — digital khata for Nepali shops.",
 };
 
-export default async function TermsPage() {
+interface Props {
+  params: Promise<{ locale: string }>;
+}
+
+export default async function TermsPage({ params }: Props) {
+  const { locale } = await params;
   const t = await getTranslations("legal");
-  const locale = await getLocale();
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
