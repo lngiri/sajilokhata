@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getRequestConfig } from "next-intl/server";
 
 export const locales = ["en", "ne"] as const;
@@ -11,8 +10,8 @@ export function isValidLocale(locale: string): locale is Locale {
 }
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  const locale = await requestLocale;
-  if (!locale || !isValidLocale(locale)) notFound();
+  let locale = await requestLocale;
+  if (!locale || !isValidLocale(locale)) locale = defaultLocale;
 
   return {
     locale,

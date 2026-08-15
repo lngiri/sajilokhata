@@ -17,12 +17,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
   setRequestLocale(locale);
 
-  let messages;
-  try {
-    messages = await getMessages();
-  } catch {
-    notFound();
-  }
+  const messages = await getMessages();
 
   return (
     <NextIntlClientProvider messages={messages}>
