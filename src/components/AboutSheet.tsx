@@ -9,6 +9,7 @@ import AppLogo from "./AppLogo";
 interface Props {
   open: boolean;
   onClose: () => void;
+  locale?: string;
 }
 
 const FEATURES = [
@@ -30,7 +31,7 @@ const SOCIALS = [
   "LinkedIn",
 ] as const;
 
-export default function AboutSheet({ open, onClose }: Props) {
+export default function AboutSheet({ open, onClose, locale = "en" }: Props) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
@@ -248,10 +249,10 @@ export default function AboutSheet({ open, onClose }: Props) {
                   Legal
                 </h3>
                 <div className="space-y-2">
-                  <a href="/privacy" className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <a href={`/${locale}/privacy`} className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     Privacy Policy
                   </a>
-                  <a href="/terms" className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <a href={`/${locale}/terms`} className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-sm text-[var(--color-text-muted)] hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
                     Terms &amp; Conditions
                   </a>
                 </div>

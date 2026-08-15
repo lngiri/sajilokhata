@@ -613,9 +613,9 @@ export default function LandingPage() {
               <h4 className="mb-3 font-bold text-[var(--color-text)]">{t.footer.legal}</h4>
               <ul className="space-y-2 text-sm text-[var(--color-text-muted)]">
                 {[
-                  { label: t.footer.privacy, href: "/privacy" },
-                  { label: t.footer.terms, href: "/terms" },
-                  { label: t.footer.refund, href: "/refund" },
+                  { label: t.footer.privacy, href: `/${lang}/privacy` },
+                  { label: t.footer.terms, href: `/${lang}/terms` },
+                  { label: t.footer.refund, href: `/${lang}/refund` },
                 ].map((item) => (
                   <li key={item.href}>
                     <a href={item.href} className="transition-colors hover:text-[var(--color-primary)]">
@@ -633,7 +633,7 @@ export default function LandingPage() {
         </div>
       </footer>
 
-      <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} />
+      <AboutSheet open={aboutOpen} onClose={() => setAboutOpen(false)} locale={lang} />
     </div>
   );
 }

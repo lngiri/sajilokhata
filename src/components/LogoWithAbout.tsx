@@ -9,9 +9,10 @@ interface LogoWithAboutProps {
   className?: string;
   showAnimation?: boolean;
   onClick?: () => void;
+  locale?: string;
 }
 
-export default function LogoWithAbout({ onClick, ...props }: LogoWithAboutProps) {
+export default function LogoWithAbout({ onClick, locale, ...props }: LogoWithAboutProps) {
   const [open, setOpen] = useState(false);
 
   const handleClick = () => {
@@ -43,7 +44,7 @@ export default function LogoWithAbout({ onClick, ...props }: LogoWithAboutProps)
       >
         <AppLogo {...props} clickable={false} />
       </div>
-      {!onClick && <AboutSheet open={open} onClose={() => setOpen(false)} />}
+      {!onClick && <AboutSheet open={open} onClose={() => setOpen(false)} locale={locale} />}
     </>
   );
 }

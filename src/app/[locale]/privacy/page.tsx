@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — QR Hisab",
@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 
 export default async function PrivacyPolicyPage() {
   const t = await getTranslations("legal");
+  const locale = await getLocale();
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
@@ -60,7 +61,7 @@ export default async function PrivacyPolicyPage() {
 
           <section>
             <h2 className="mb-3 text-xl font-bold">6. SMS क्रेडिट</h2>
-            <p>SMS रिमाइन्डर क्रेडिट eSewa वा बैंक ट्रान्सफर मार्फत खरिद गरिन्छ। क्रेडिट स्थानान्तरणयोग्य छैन। क्रेडिट फिर्ता सर्तहरूको लागि <a href="/refund" className="text-[var(--color-primary)] underline">फिर्ता नीति</a> हेर्नुहोस्।</p>
+            <p>SMS रिमाइन्डर क्रेडिट eSewa वा बैंक ट्रान्सफर मार्फत खरिद गरिन्छ। क्रेडिट स्थानान्तरणयोग्य छैन। क्रेडिट फिर्ता सर्तहरूको लागि <a href={`/${locale}/refund`} className="text-[var(--color-primary)] underline">फिर्ता नीति</a> हेर्नुहोस्।</p>
           </section>
 
           <section>
@@ -75,7 +76,7 @@ export default async function PrivacyPolicyPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <a href="/" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+          <a href={`/${locale}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
             &larr; मुख्य पृष्ठमा फर्कनुहोस्
           </a>
         </div>

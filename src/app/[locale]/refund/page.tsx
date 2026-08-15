@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Refund Policy — QR Hisab",
@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 
 export default async function RefundPolicyPage() {
   const t = await getTranslations("legal");
+  const locale = await getLocale();
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
@@ -57,7 +58,7 @@ export default async function RefundPolicyPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <a href="/" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+          <a href={`/${locale}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
             &larr; मुख्य पृष्ठमा फर्कनुहोस्
           </a>
         </div>

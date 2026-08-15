@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 
 export const metadata: Metadata = {
   title: "Terms of Service — QR Hisab",
@@ -8,6 +8,7 @@ export const metadata: Metadata = {
 
 export default async function TermsPage() {
   const t = await getTranslations("legal");
+  const locale = await getLocale();
 
   return (
     <div className="min-h-dvh bg-[var(--color-bg)]">
@@ -38,7 +39,7 @@ export default async function TermsPage() {
 
           <section>
             <h2 className="mb-3 text-xl font-bold">4. तपाईंको डाटा</h2>
-            <p>तपाईं तपाईंको खाता डाटाको मालिक हुनुहुन्छ। हामी यसलाई सुरक्षित रूपमा जोगाउँछौं र तेस्रो पक्षसँग बाँड्दैनौं। विवरणहरूको लागि हाम्रो <a href="/privacy" className="text-[var(--color-primary)] underline">गोपनीयता नीति</a> हेर्नुहोस्।</p>
+            <p>तपाईं तपाईंको खाता डाटाको मालिक हुनुहुन्छ। हामी यसलाई सुरक्षित रूपमा जोगाउँछौं र तेस्रो पक्षसँग बाँड्दैनौं। विवरणहरूको लागि हाम्रो <a href={`/${locale}/privacy`} className="text-[var(--color-primary)] underline">गोपनीयता नीति</a> हेर्नुहोस्।</p>
           </section>
 
           <section>
@@ -47,7 +48,7 @@ export default async function TermsPage() {
               <li>SMS क्रेडिट प्याकेजहरूमा खरिद गरिन्छ (रु १०१ / २०१ / ५०१)।</li>
               <li>क्रेडिट ग्राहकहरूलाई भुक्तानी रिमाइन्डर SMS पठाउन प्रयोग गरिन्छ।</li>
               <li>क्रेडिट स्थानान्तरणयोग्य छैन र प्रयोग भएपछि फिर्ता योग्य छैन।</li>
-              <li>प्रयोग नभएका क्रेडिट फिर्ताको लागि <a href="/refund" className="text-[var(--color-primary)] underline">फिर्ता नीति</a> हेर्नुहोस्।</li>
+              <li>प्रयोग नभएका क्रेडिट फिर्ताको लागि <a href={`/${locale}/refund`} className="text-[var(--color-primary)] underline">फिर्ता नीति</a> हेर्नुहोस्।</li>
             </ul>
           </section>
 
@@ -79,7 +80,7 @@ export default async function TermsPage() {
         </div>
 
         <div className="mt-12 text-center">
-          <a href="/" className="text-sm font-medium text-[var(--color-primary)] hover:underline">
+          <a href={`/${locale}`} className="text-sm font-medium text-[var(--color-primary)] hover:underline">
             &larr; मुख्य पृष्ठमा फर्कनुहोस्
           </a>
         </div>
