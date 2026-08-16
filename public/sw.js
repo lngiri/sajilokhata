@@ -1,21 +1,23 @@
-const CACHE_NAME = "qrhisab-v8";
+const CACHE_NAME = "qrhisab-v9";
 const STATIC_ASSETS = [
   "/",
   "/en",
   "/ne",
+  "/en/login",
+  "/ne/login",
+  "/login",
   "/en/customer/dashboard",
   "/en/customer/history",
-  "/en/customer/scan",
   "/en/customer/settings",
-  "/merchant/dashboard",
-  "/merchant/scan",
-  "/merchant/customers",
-  "/merchant/logs",
-  "/merchant/qr",
-  "/merchant/settings",
-  "/merchant/billing",
-  "/onboard",
-  "/login",
+  "/ne/customer/dashboard",
+  "/ne/customer/history",
+  "/ne/customer/settings",
+  "/en/privacy",
+  "/en/terms",
+  "/en/refund",
+  "/ne/privacy",
+  "/ne/terms",
+  "/ne/refund",
   "/manifest.json",
 ];
 const AUTH_ROUTES = ["/login", "/api/auth/"];
@@ -29,7 +31,11 @@ self.addEventListener("message", (event) => {
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      return Promise.allSettled(
+        STATIC_ASSETS.map((url) =>
+          cache.add(url).catch(() => {})
+        )
+      );
     })
   );
   self.skipWaiting();

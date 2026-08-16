@@ -29,7 +29,7 @@ export default function SessionGuard() {
       path === "/login" ||
       path === "/scan" ||
       path === "/onboard" ||
-      path.startsWith("/customer/") ||
+      /^\/(en|ne)\/customer\//.test(path) ||
       path.startsWith("/api/") ||
       path.startsWith("/business/") ||
       path === "/"
