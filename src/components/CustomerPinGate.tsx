@@ -189,7 +189,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
 
         {step === "pin" && (
           <>
-            {renderDots(pin, setPin, pinRefs, "PIN")}
+            {renderDots(pin, setPin, pinRefs, t("enterPin"))}
             {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
             <button
               onClick={handlePinSubmit}

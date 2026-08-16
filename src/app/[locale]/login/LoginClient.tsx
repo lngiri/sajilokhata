@@ -417,7 +417,7 @@ export default function LoginClient({ locale }: Props) {
       console.log("[Login] setPin result:", JSON.stringify(result));
       if (!result.success) {
         if (!mountedRef.current) return;
-        setError(result.error || "Failed to set PIN");
+        setError(result.error || t("errorSetPinFailed"));
         setLoading(false);
         return;
       }
@@ -791,7 +791,7 @@ export default function LoginClient({ locale }: Props) {
   const handleForgotOtpSubmit = async () => {
     if (otp.length < 4) return;
     const newPinStr = pinArrayToString(newPin);
-    if (newPinStr.length < 4) { setError("Enter a new 4-digit PIN"); return; }
+    if (newPinStr.length < 4) { setError(t("errorEnterNewPin")); return; }
     const confirmStr = pinArrayToString(confirmPin);
     if (newPinStr !== confirmStr) { setError(t("errorPinMismatch")); return; }
     setLoading(true);

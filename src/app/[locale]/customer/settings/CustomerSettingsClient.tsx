@@ -94,7 +94,7 @@ export default function CustomerSettingsClient({ locale, messages }: Props) {
   const hasChanges = editName.trim() !== customerName;
 
   return (
-    <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={() => {}}>
+    <CustomerPinGate phone={customerPhone} onUnlocked={() => {}} onSignOut={handleSignOut}>
     <div className="min-h-dvh bg-[var(--color-bg)] pb-20">
       {/* Header */}
       <div className="sticky top-0 z-40 bg-[var(--color-surface)]/80 backdrop-blur-md border-b border-[var(--color-border)]">

@@ -418,21 +418,12 @@ export default function CustomerHistoryClient({ locale, messages, merchantId: me
             <div className="flex gap-3 justify-center mt-4">
               <a
                 href={`/${locale}/customer/dashboard`}
-                className="px-5 py-2.5 bg-gray-100 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
+                className="px-5 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                 </svg>
                 {t("history.dashboard")}
-              </a>
-              <a
-                href={`/${locale}/customer/dashboard`}
-                className="px-5 py-2.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform inline-flex items-center gap-2"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM6.75 6.75h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h.75v.75h-.75v-.75zM13.5 19.5h.75v.75h-.75v-.75zM19.5 13.5h.75v.75h-.75v-.75zM19.5 19.5h.75v.75h-.75v-.75zM16.5 16.5h.75v.75h-.75v-.75z" />
-                </svg>
-                {t("history.scanShopQR")}
               </a>
             </div>
           </div>
@@ -590,7 +581,7 @@ export default function CustomerHistoryClient({ locale, messages, merchantId: me
               min="1"
               step="any"
               value={editModal.amount}
-              onChange={(e) => setEditModal({ ...editModal, amount: Number(e.target.value) })}
+              onChange={(e) => setEditModal({ ...editModal, amount: Math.max(1, Number(e.target.value) || 1) })}
               className="w-full mt-1 mb-3 px-4 py-3 bg-[var(--color-surface)] rounded-xl text-lg font-bold border border-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
             />
             <label className="text-sm font-medium text-[var(--color-text)]">{t("scan.description")}</label>

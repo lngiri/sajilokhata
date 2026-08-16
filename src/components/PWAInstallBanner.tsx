@@ -38,6 +38,33 @@ async function detectInstalledAsync(): Promise<boolean> {
   return false;
 }
 
+const PWA_STRINGS: Record<string, Record<string, string>> = {
+  en: {
+    installTitle: "Install QR Hisab App",
+    iosHint: 'Tap the Share button in Safari → "Add to Home Screen"',
+    androidHint: "A digital ledger that works offline too. Manage your daily accounts easily.",
+    dismiss: "Dismiss",
+    install: "Install",
+  },
+  ne: {
+    installTitle: "QR Hisab एप इन्स्टल गर्नुहोस्",
+    iosHint: 'Safari मा Share बटन थिच्नुहोस् → "होम स्क्रिनमा थप्नुहोस्"',
+    androidHint: "अफलाइनमा पनि काम गर्ने डिजिटल खाता। आफ्नो दैनिक हिसाब सजिलै व्यवस्थापन गर्नुहोस्।",
+    dismiss: "खारेज गर्नुहोस्",
+    install: "इन्स्टल गर्नुहोस्",
+  },
+};
+
+function getPwaStrings() {
+  try {
+    const match = window.location.pathname.match(/^\/(en|ne)(?:\/|$)/);
+    const locale = match?.[1] || "en";
+    return PWA_STRINGS[locale] || PWA_STRINGS.en;
+  } catch {
+    return PWA_STRINGS.en;
+  }
+}
+
 export default function PWAInstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
@@ -45,8 +72,10 @@ export default function PWAInstallBanner() {
   const [isDismissed, setIsDismissed] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [strings, setStrings] = useState(PWA_STRINGS.en);
 
   useEffect(() => {
+    setStrings(getPwaStrings());
     // ── Fast exit: persistent dismiss flag ──
     try {
       if (localStorage.getItem("pwa-install-dismissed")) {
@@ -180,13 +209,13 @@ export default function PWAInstallBanner() {
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-[var(--color-text)] text-sm">
-              Install QR Hisab App
+              {strings.installTitle}
             </h3>
             <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">
               {isIOS ? (
-                <>Tap the Share button in Safari → &quot;Add to Home Screen&quot;</>
+                <>{strings.iosHint}</>
               ) : (
-                <>A digital ledger that works offline too. Manage your daily accounts easily.</>
+                <>{strings.androidHint}</>
               )}
             </p>
           </div>
@@ -198,7 +227,7 @@ export default function PWAInstallBanner() {
             onClick={handleDismiss}
             className="flex-1 py-2.5 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
           >
-            Dismiss
+            {strings.dismiss}
           </button>
           {!isIOS && (
             <button
@@ -213,7 +242,7 @@ export default function PWAInstallBanner() {
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
                   </svg>
-                  Install
+                  {strings.install}
                 </>
               )}
             </button>

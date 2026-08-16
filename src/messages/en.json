@@ -75,7 +75,9 @@
     "request": "request",
     "showClearedShops": "Show {{count}} cleared shop(s)",
     "hideClearedShops": "Hide cleared shops",
-    "cleared": "Cleared"
+    "cleared": "Cleared",
+    "hideNumber": "Hide number",
+    "showNumber": "Show full number"
   },
   "scan": {
     "title": "Scan Shop QR",
@@ -259,7 +261,8 @@
   "bottomNav": {
     "home": "Home",
     "history": "History",
-    "settings": "Settings"
+    "settings": "Settings",
+    "customerNavigation": "Customer navigation"
   },
   "errors": {
     "failedToLoad": "Failed to load data",
@@ -328,7 +331,9 @@
     "errorInvalidOtp": "Invalid OTP",
     "errorNetwork": "Network error. Please try again.",
     "errorAccountNotFound": "Account not found. Please sign in again.",
-    "errorVerificationFailed": "Verification failed"
+    "errorVerificationFailed": "Verification failed",
+    "errorSetPinFailed": "Failed to set PIN",
+    "errorEnterNewPin": "Enter a new 4-digit PIN"
   },
   "notFound": {
     "title": "Oops! This page wandered off",
@@ -395,5 +400,12 @@
     "privacyTitle": "Privacy Policy",
     "termsTitle": "Terms of Service",
     "refundTitle": "Refund Policy"
+  },
+  "pwa": {
+    "installTitle": "Install QR Hisab App",
+    "iosHint": "Tap the Share button in Safari → \"Add to Home Screen\"",
+    "androidHint": "A digital ledger that works offline too. Manage your daily accounts easily.",
+    "dismiss": "Dismiss",
+    "install": "Install"
   }
 }

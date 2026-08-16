@@ -36,9 +36,20 @@ export default function VersionGuard() {
 
     // ── Version mismatch → deep clean ──
     (async () => {
-      // Preserve essential app config
+      // Preserve essential app config + customer sessions
       const swVersion = localStorage.getItem("sw_version");
       const pwaDismissed = localStorage.getItem("pwa-install-dismissed");
+      const merchantId = localStorage.getItem("merchant_id");
+      const merchantPhone = localStorage.getItem("merchant_phone");
+      const customerSession = localStorage.getItem("sajilo_customer_session");
+      // Preserve all PIN unlock tokens (qr_hisab_auth_*)
+      const pinTokens: [string, string][] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("qr_hisab_auth_")) {
+          pinTokens.push([key, localStorage.getItem(key)!]);
+        }
+      }
 
       localStorage.clear();
       sessionStorage.clear();
@@ -46,6 +57,13 @@ export default function VersionGuard() {
       // Restore app config
       if (swVersion) localStorage.setItem("sw_version", swVersion);
       if (pwaDismissed) localStorage.setItem("pwa-install-dismissed", pwaDismissed);
+      // Restore sessions
+      if (merchantId) localStorage.setItem("merchant_id", merchantId);
+      if (merchantPhone) localStorage.setItem("merchant_phone", merchantPhone);
+      if (customerSession) localStorage.setItem("sajilo_customer_session", customerSession);
+      for (const [key, val] of pinTokens) {
+        localStorage.setItem(key, val);
+      }
 
       // Preserve queued offline work (pending logs + photo attachments) so a
       // deploy never deletes entries captured without internet.

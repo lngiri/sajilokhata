@@ -1,10 +1,11 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import LogoWithAbout from "@/components/LogoWithAbout";
 
 export default function NotFound() {
   const t = useTranslations("notFound");
+  const locale = useLocale();
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-dvh px-6 bg-[var(--color-bg)]">
@@ -33,7 +34,7 @@ export default function NotFound() {
           {t("message")}
         </p>
         <a
-          href="/"
+          href={`/${locale}/`}
           className="px-8 py-3.5 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-[var(--radius-button)] font-bold active:scale-[0.98] transition-transform shadow-sm inline-block"
         >
           {t("home")}

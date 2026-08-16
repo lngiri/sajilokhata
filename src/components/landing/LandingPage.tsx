@@ -7,8 +7,6 @@ import AboutSheet from "@/components/AboutSheet";
 import LocaleSwitcher from "@/components/LocaleSwitcher";
 import { content, faqItems, type Lang } from "./content";
 
-const LOGIN = "/login?signedOut=1";
-
 function useScrollReveal() {
   const observed = useRef(false);
   useEffect(() => {
@@ -129,7 +127,7 @@ type SessionInfo = {
   customerName?: string;
 };
 
-function SessionBlock({ t }: { t: { welcome: string; choose: string; merchant: string; customer: string; different: string; or: string } }) {
+function SessionBlock({ t, loginUrl, locale }: { t: { welcome: string; choose: string; merchant: string; customer: string; different: string; or: string }; loginUrl: string; locale: string }) {
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<SessionInfo | null>(null);
   const [redirecting, setRedirecting] = useState<string | null>(null);
@@ -173,12 +171,12 @@ function SessionBlock({ t }: { t: { welcome: string; choose: string; merchant: s
       const res = await fetch("/api/auth/session", { cache: "no-store" });
       const data: { userId: string | null; roles: string[] } = await res.json();
       if (data.userId && data.roles.includes(role)) {
-        window.location.href = role === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
+        window.location.href = role === "merchant" ? "/merchant/dashboard" : `/${locale}/customer/dashboard`;
       } else {
-        window.location.href = LOGIN;
+        window.location.href = loginUrl;
       }
     } catch {
-      window.location.href = role === "merchant" ? "/merchant/dashboard" : "/customer/dashboard";
+      window.location.href = role === "merchant" ? "/merchant/dashboard" : `/${locale}/customer/dashboard`;
     }
   };
 
@@ -186,7 +184,7 @@ function SessionBlock({ t }: { t: { welcome: string; choose: string; merchant: s
     localStorage.removeItem("merchant_id");
     localStorage.removeItem("merchant_phone");
     localStorage.removeItem("sajilo_customer_session");
-    window.location.href = LOGIN;
+    window.location.href = loginUrl;
   };
 
   if (!mounted || !session) return null;
@@ -276,6 +274,7 @@ export default function LandingPage() {
   const [mobileNav, setMobileNav] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
+  const LOGIN = `/${lang}/login?signedOut=1`;
   const t = content[lang];
   const navLinks = [
     { href: "#how-it-works", label: t.nav.howItWorks },
@@ -565,7 +564,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <SessionBlock t={t.session} />
+      <SessionBlock t={t.session} loginUrl={LOGIN} locale={lang} />
 
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--color-primary-surface)] to-[var(--color-primary-surface-dark)] py-12 text-[var(--color-primary-foreground)] sm:py-16">
         <div className="relative mx-auto max-w-4xl px-4 text-center sm:px-6">

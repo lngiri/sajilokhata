@@ -75,7 +75,9 @@
     "request": "अनुरोध",
     "showClearedShops": "{{count}} पसल सफा देखाउनुहोस्",
     "hideClearedShops": "सफा पसल लुकाउनुहोस्",
-    "cleared": "सफा"
+    "cleared": "सफा",
+    "hideNumber": "नम्बर लुकाउनुहोस्",
+    "showNumber": "पूरा नम्बर देखाउनुहोस्"
   },
   "scan": {
     "title": "पसल QR स्क्यान",
@@ -259,7 +261,8 @@
   "bottomNav": {
     "home": "गृह",
     "history": "इतिहास",
-    "settings": "सेटिङ"
+    "settings": "सेटिङ",
+    "customerNavigation": "ग्राहक नेभिगेसन"
   },
   "errors": {
     "failedToLoad": "डाटा लोड गर्न असफल",
@@ -328,7 +331,9 @@
     "errorInvalidOtp": "अमान्य OTP",
     "errorNetwork": "नेटवर्क त्रुटि। कृपया फेरि प्रयास गर्नुहोस्।",
     "errorAccountNotFound": "खाता फेला भएन। कृपया फेरि साइन इन गर्नुहोस्।",
-    "errorVerificationFailed": "प्रमाणीकरण असफल"
+    "errorVerificationFailed": "प्रमाणीकरण असफल",
+    "errorSetPinFailed": "पिन तोक्न असफल",
+    "errorEnterNewPin": "नयाँ ४ अङ्कको पिन हाल्नुहोस्"
   },
   "notFound": {
     "title": "ओहो! यो पृष्ठ हराएको छ",
@@ -395,5 +400,12 @@
     "privacyTitle": "गोपनीयता नीति",
     "termsTitle": "सेवा शर्तहरू",
     "refundTitle": "फिर्ता नीति"
+  },
+  "pwa": {
+    "installTitle": "QR Hisab एप इन्स्टल गर्नुहोस्",
+    "iosHint": "Safari मा Share बटन थिच्नुहोस् → \"होम स्क्रिनमा थप्नुहोस्\"",
+    "androidHint": "अफलाइनमा पनि काम गर्ने डिजिटल खाता। आफ्नो दैनिक हिसाब सजिलै व्यवस्थापन गर्नुहोस्।",
+    "dismiss": "खारेज गर्नुहोस्",
+    "install": "इन्स्टल गर्नुहोस्"
   }
 }

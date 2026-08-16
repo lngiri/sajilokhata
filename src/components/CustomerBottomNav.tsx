@@ -23,7 +23,7 @@ export default function CustomerBottomNav({ locale }: Props) {
     <BottomNavBar
       items={navItems}
       isActive={(href) => pathname === href || (href !== "/" && pathname.startsWith(href))}
-      navLabel="Customer navigation"
+      navLabel={t("customerNavigation")}
     />
   );
 }
