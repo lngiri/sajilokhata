@@ -72,7 +72,10 @@
     "approved": "Approved",
     "rejected": "Rejected",
     "awaitingConfirmation": "Awaiting Confirmation",
-    "request": "request"
+    "request": "request",
+    "showClearedShops": "Show {{count}} cleared shop(s)",
+    "hideClearedShops": "Hide cleared shops",
+    "cleared": "Cleared"
   },
   "scan": {
     "title": "Scan Shop QR",

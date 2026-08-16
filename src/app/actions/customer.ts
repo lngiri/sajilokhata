@@ -759,7 +759,7 @@ export async function getCustomerStats(
 
   return {
     totalOutstanding,
-    shopsCount: relationships?.length || 0,
+    shopsCount: relationshipsWithBalance.filter((r: any) => r.current_balance > 0).length,
     totalCreditLimit,
     pendingCount,
     relationships: relationshipsWithBalance,

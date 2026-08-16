@@ -119,6 +119,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
   const [showFullPhone, setShowFullPhone] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showShops, setShowShops] = useState(false);
+  const [showClearedShops, setShowClearedShops] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
   const [customerId, setCustomerId] = useState<string | null>(null);
@@ -848,7 +849,7 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                   )}
                 </p>
               </div>
-              {stats.relationships.filter(r => r.merchants?.id).length > 0 && (
+              {stats.relationships.filter((r: any) => r.merchants?.id).length > 0 && (
                 <svg
                   className={`w-5 h-5 opacity-60 transition-transform duration-200 ${showShops ? "rotate-180" : ""}`}
                   fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
@@ -859,10 +860,10 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
             </div>
           </button>
 
-          {showShops && stats.relationships.filter(r => r.merchants?.id).length > 0 && (
+          {showShops && stats.relationships.filter((r: any) => r.merchants?.id).length > 0 && (
             <div className="space-y-2 animate-fade-in">
               <p className="text-sm font-semibold text-[var(--color-text)] px-1">{t("dashboard.yourShops")}</p>
-              {stats.relationships.filter(r => r.merchants?.id).map((rel, i) => (
+              {stats.relationships.filter((r: any) => r.merchants?.id && r.current_balance > 0).map((rel, i) => (
                 <div
                   key={i}
                   className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)]"
@@ -878,41 +879,79 @@ export default function CustomerDashboardClient({ messages, locale }: Props) {
                       {t("currency.prefix")}{formatNumber(rel.current_balance, locale as "en" | "ne")}
                     </span>
                   </div>
-                  {rel.current_balance > 0 && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
-                          setShowPaymentMethods(true);
-                          setPaymentMethodsLoading(true);
-                          getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
-                            setPaymentMethods(methods);
-                            setPaymentMethodsLoading(false);
-                          }).catch(() => {
-                            setPaymentMethods([]);
-                            setPaymentMethodsLoading(false);
-                          });
-                        }}
-                        className="flex-1 py-2 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
-                      >
-                        {t("dashboard.payNow")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setVoucherMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
-                          setVoucherAmount(rel.current_balance > 0 ? String(rel.current_balance) : "");
-                          setVoucherFile(null);
-                          setVoucherPreview(null);
-                          setShowVoucherModal(true);
-                        }}
-                        className="flex-1 py-2 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
-                      >
-                        {t("dashboard.uploadVoucher")}
-                      </button>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setPaymentMethodsMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                        setShowPaymentMethods(true);
+                        setPaymentMethodsLoading(true);
+                        getMerchantPaymentMethodsPublic(rel.merchants!.id).then((methods) => {
+                          setPaymentMethods(methods);
+                          setPaymentMethodsLoading(false);
+                        }).catch(() => {
+                          setPaymentMethods([]);
+                          setPaymentMethodsLoading(false);
+                        });
+                      }}
+                      className="flex-1 py-2 bg-[var(--color-primary-surface)] text-[var(--color-primary-foreground)] rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                    >
+                      {t("dashboard.payNow")}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setVoucherMerchant({ id: rel.merchants!.id, name: rel.merchants!.name || "Shop" });
+                        setVoucherAmount(String(rel.current_balance));
+                        setVoucherFile(null);
+                        setVoucherPreview(null);
+                        setShowVoucherModal(true);
+                      }}
+                      className="flex-1 py-2 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 rounded-xl text-sm font-medium active:scale-[0.98] transition-transform"
+                    >
+                      {t("dashboard.uploadVoucher")}
+                    </button>
+                  </div>
                 </div>
               ))}
+
+              {stats.relationships.filter((r: any) => r.merchants?.id && r.current_balance <= 0).length > 0 && (
+                <>
+                  {!showClearedShops ? (
+                    <button
+                      onClick={() => setShowClearedShops(true)}
+                      className="w-full text-center text-xs text-[var(--color-text-muted)] py-2 hover:underline"
+                    >
+                      {t("dashboard.showClearedShops", { count: stats.relationships.filter((r: any) => r.merchants?.id && r.current_balance <= 0).length })}
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setShowClearedShops(false)}
+                        className="w-full text-center text-xs text-[var(--color-text-muted)] py-2 hover:underline"
+                      >
+                        {t("dashboard.hideClearedShops")}
+                      </button>
+                      {stats.relationships.filter((r: any) => r.merchants?.id && r.current_balance <= 0).map((rel, i) => (
+                        <div
+                          key={`cleared-${i}`}
+                          className="bg-[var(--color-surface)] rounded-2xl p-4 shadow-sm border border-[var(--color-border)] opacity-50"
+                        >
+                          <div className="flex items-center justify-between">
+                            <a
+                              href={`/${locale}/customer/history?merchantId=${rel.merchants!.id}&shopName=${encodeURIComponent(rel.merchants!.name || "Shop")}`}
+                              className="font-semibold text-[var(--color-text)] truncate"
+                            >
+                              {rel.merchants!.name || t("dashboard.shopName")}
+                            </a>
+                            <span className="text-sm text-[var(--color-text-muted)] flex-shrink-0 ml-2">
+                              {t("dashboard.cleared")}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
             </div>
           )}
           </>

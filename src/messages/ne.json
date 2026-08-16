@@ -72,7 +72,10 @@
     "approved": "स्वीकृत",
     "rejected": "अस्वीकृत",
     "awaitingConfirmation": "पुष्टि हुन बाँकी",
-    "request": "अनुरोध"
+    "request": "अनुरोध",
+    "showClearedShops": "{{count}} पसल सफा देखाउनुहोस्",
+    "hideClearedShops": "सफा पसल लुकाउनुहोस्",
+    "cleared": "सफा"
   },
   "scan": {
     "title": "पसल QR स्क्यान",
