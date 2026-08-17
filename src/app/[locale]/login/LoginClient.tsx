@@ -452,6 +452,14 @@ export default function LoginClient({ locale }: Props) {
     }
   };
 
+  const handleSetPinConfirmAutoSubmit = () => {
+    const newPinStr = pinArrayToString(newPin);
+    const confirmStr = pinArrayToString(confirmPin);
+    if (newPinStr.length === 4 && confirmStr.length === 4 && newPinStr === confirmStr) {
+      handleSetPin();
+    }
+  };
+
   const handleSkipPin = async () => {
     const info = userInfoRef.current;
     if (info?.userId) {
@@ -846,6 +854,8 @@ export default function LoginClient({ locale }: Props) {
     );
   }
 
+  const PIN_INPUT_CLASS = "w-14 h-14 text-center text-2xl font-bold rounded-2xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] outline-none transition-all duration-150";
+
   const renderPinDots = (
     pinArr: string[],
     setter: (v: string[]) => void,
@@ -855,21 +865,26 @@ export default function LoginClient({ locale }: Props) {
   ) => (
     <div>
       <label className="block text-sm font-medium text-[var(--color-text)] mb-3 text-center">{label}</label>
-      <div className="flex justify-center gap-2">
+      <div className="flex justify-center gap-3">
         {pinArr.map((d, i) => (
-          <input
-            key={i}
-            ref={(el) => { refs.current[i] = el; }}
-            type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={1}
-            value={d}
-            onChange={(e) => handlePinDigit(e.target.value, i, pinArr, setter, refs, autoSubmit)}
-            onKeyDown={(e) => handlePinKeyDown(e, i, pinArr, setter, refs)}
-            onFocus={(e) => e.target.select()}
-            className="w-14 h-14 text-center text-2xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-          />
+          <div key={i} className="relative">
+            <input
+              ref={(el) => { refs.current[i] = el; }}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={1}
+              value={d}
+              onChange={(e) => handlePinDigit(e.target.value, i, pinArr, setter, refs, autoSubmit)}
+              onKeyDown={(e) => handlePinKeyDown(e, i, pinArr, setter, refs)}
+              onFocus={(e) => e.target.select()}
+              style={d ? { caretColor: "transparent", color: "transparent" } : undefined}
+              className={PIN_INPUT_CLASS}
+            />
+            {d && (
+              <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-[var(--color-text)] pointer-events-none select-none">•</span>
+            )}
+          </div>
         ))}
       </div>
     </div>
@@ -1318,7 +1333,7 @@ export default function LoginClient({ locale }: Props) {
           <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
             <p className="text-xs text-[var(--color-text-muted)] text-center">{t("setNewPin")}</p>
             {renderPinDots(newPin, setNewPin, newPinRefs, t("newPin"))}
-            {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, t("confirmPin"))}
+          {renderPinDots(confirmPin, setConfirmPin, confirmPinRefs, t("confirmPin"), handleSetPinConfirmAutoSubmit)}
           </div>
 
           {error && (

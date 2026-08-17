@@ -51,6 +51,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
   const [loading, setLoading] = useState(false);
   const pinRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
   const newPinRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
+  const confirmPinRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
 
   useEffect(() => {
     if (!phone) return;
@@ -79,13 +80,20 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
     arr: string[],
     setter: (v: string[]) => void,
     refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
+    autoSubmit?: () => void,
   ) => {
     if (!/^\d*$/.test(value)) return;
     const digit = value.slice(-1);
     const next = [...arr];
     next[idx] = digit;
     setter(next);
-    if (digit && idx < 3) focusInput(refs, idx + 1);
+    if (digit && idx < 3) {
+      focusInput(refs, idx + 1);
+    } else if (digit && idx === 3) {
+      if (autoSubmit) {
+        setTimeout(() => autoSubmit(), 150);
+      }
+    }
   };
 
   const handleKeyDown = (
@@ -140,31 +148,47 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
     setStep("unlocked");
   };
 
+  const handleConfirmAutoSubmit = () => {
+    const newP = pinArrToString(newPin);
+    const confirm = pinArrToString(confirmPin);
+    if (newP.length === 4 && confirm.length === 4 && newP === confirm) {
+      handleSetPin();
+    }
+  };
+
   if (step === "unlocked") return <>{children}</>;
+
+  const PIN_INPUT_CLASS = "w-14 h-14 text-center text-2xl font-bold rounded-2xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)] outline-none transition-all duration-150";
 
   const renderDots = (
     arr: string[],
     setter: (v: string[]) => void,
     refs: React.MutableRefObject<(HTMLInputElement | null)[]>,
     label: string,
+    autoSubmit?: () => void,
   ) => (
     <div>
       <p className="text-sm font-medium text-[var(--color-text)] mb-3 text-center">{label}</p>
       <div className="flex justify-center gap-3">
         {arr.map((d, i) => (
-          <input
-            key={i}
-            ref={(el) => { refs.current[i] = el; }}
-            type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={1}
-            value={d}
-            onChange={(e) => handleDigit(e.target.value, i, arr, setter, refs)}
-            onKeyDown={(e) => handleKeyDown(e, i, arr, setter, refs)}
-            onFocus={(e) => e.target.select()}
-            className="w-14 h-14 text-center text-2xl font-bold bg-[var(--color-surface)] rounded-xl border border-[var(--color-border)] focus:ring-2 focus:ring-[var(--color-primary)]/20 focus:border-[var(--color-primary)] outline-none transition-all"
-          />
+          <div key={i} className="relative">
+            <input
+              ref={(el) => { refs.current[i] = el; }}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={1}
+              value={d}
+              onChange={(e) => handleDigit(e.target.value, i, arr, setter, refs, autoSubmit)}
+              onKeyDown={(e) => handleKeyDown(e, i, arr, setter, refs)}
+              onFocus={(e) => e.target.select()}
+              style={d ? { caretColor: "transparent", color: "transparent" } : undefined}
+              className={PIN_INPUT_CLASS}
+            />
+            {d && (
+              <span className="absolute inset-0 flex items-center justify-center text-2xl font-bold text-[var(--color-text)] pointer-events-none select-none">•</span>
+            )}
+          </div>
         ))}
       </div>
     </div>
@@ -189,7 +213,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
 
         {step === "pin" && (
           <>
-            {renderDots(pin, setPin, pinRefs, t("enterPin"))}
+            {renderDots(pin, setPin, pinRefs, t("enterPin"), handlePinSubmit)}
             {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
             <button
               onClick={handlePinSubmit}
@@ -206,7 +230,7 @@ export default function CustomerPinGate({ phone, onUnlocked, onSignOut, children
         {step === "set_pin" && (
           <>
             {renderDots(newPin, setNewPin, newPinRefs, t("newPinLabel"))}
-            {renderDots(confirmPin, setConfirmPin, newPinRefs, t("confirmPinLabel"))}
+            {renderDots(confirmPin, setConfirmPin, confirmPinRefs, t("confirmPinLabel"), handleConfirmAutoSubmit)}
             {error && <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm px-4 py-2 rounded-xl text-center">{error}</div>}
             <button
               onClick={handleSetPin}
